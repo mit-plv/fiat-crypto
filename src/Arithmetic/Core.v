@@ -1,7 +1,7 @@
 (* Following http://adam.chlipala.net/theses/andreser.pdf chapter 3 *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.Structures.Orders.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith Lia.
+From Coq Require Import Orders.
+From Coq Require Import List.
 Require Import Crypto.Algebra.Nsatz.
 Require Import Crypto.Arithmetic.ModularArithmeticTheorems.
 Require Import Crypto.Util.Decidable.
@@ -571,7 +571,7 @@ Module Associational.
         apply (nodupb_split Z.eqb Z.eqb_eq) in E. destruct E as [l1 [l2 [H1 [H2 H3] ] ] ]. rewrite H1.
         repeat rewrite map_app. rewrite (map_ext_in _ _ l1 (funs_same l1 a0 a' H2)).
         rewrite (map_ext_in _ _ l2 (funs_same l2 a0 a' H3)). repeat rewrite Associational.eval_app. simpl.
-        repeat rewrite Associational.eval_cons. simpl. rewrite <- IHa'. simpl. rewrite Associational.eval_nil. 
+        repeat rewrite Associational.eval_cons. simpl. rewrite <- IHa'. simpl. rewrite Associational.eval_nil.
         cbv [dedup_weights]. rewrite H1. repeat rewrite map_app. repeat rewrite Associational.eval_app.
         cbv [value_at_weight]. simpl. rewrite Z.eqb_refl. simpl. cbv [Associational.eval]. simpl. lia.
       + simpl. apply (existsb_eqb_false_iff Z.eqb Z.eqb_eq) in E. rewrite (map_ext_in _ _ _ (funs_same _ _ _ E)).
@@ -858,8 +858,8 @@ Module Positional.
     destruct (dec (i < S n)%nat);
       break_innermost_match; cbn [fst snd] in *; Z.ltb_to_lt; [ | rewrite IHn | | rewrite IHn ];
         break_innermost_match;
-        rewrite ?Min.min_l in * by lia;
-        rewrite ?Min.min_r in * by lia;
+        rewrite ?Nat.min_l in * by lia;
+        rewrite ?Nat.min_r in * by lia;
         eauto with lia.
     { rewrite weight_mul_iff in * by auto.
       destruct_head'_or; try lia.
@@ -1106,7 +1106,7 @@ Module Positional.
     Lemma length_sub a b
       : length a = n -> length b = n ->
         length (sub a b) = n.
-    Proof using length_balance. intros; cbv [sub scmul negate_snd]; repeat distr_length. Qed.
+    Proof using length_balance. clear dependent s. intros; cbv [sub scmul negate_snd]; repeat distr_length. Qed.
     Hint Rewrite length_sub : distr_length.
     Definition opp (a:list Z) : list Z
       := sub (zeros n) a.
@@ -1119,7 +1119,7 @@ Module Positional.
     Proof using m_nz s_nz weight_0 weight_nz eval_balance length_balance. intros; cbv [opp]; push; distr_length; auto.       Qed.
     Lemma length_opp a
       : length a = n -> length (opp a) = n.
-    Proof using length_balance. cbv [opp]; intros; repeat distr_length.            Qed.
+    Proof using length_balance. clear dependent s. cbv [opp]; intros; repeat distr_length.            Qed.
   End sub.
   Hint Rewrite @eval_scmul @eval_opp @eval_sub : push_eval.
   Hint Rewrite @length_scmul @length_sub @length_opp : distr_length.

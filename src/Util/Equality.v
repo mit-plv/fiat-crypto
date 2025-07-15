@@ -4,7 +4,7 @@
     [eq].  We build up enough lemmas about this structure to deal
     nicely with proofs of equality that come up in practice in this
     project. *)
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Morphisms.
 Require Import Crypto.Util.Isomorphism.
 Require Import Crypto.Util.HProp.
 
@@ -121,7 +121,7 @@ Section hprop.
 
   Let hprop_encode {x y : A} (p : x = y) : unit := tt.
 
-  Local Hint Resolve (fun x => @isiso_encode A x (fun _ => unit)) : typeclass_instances.
+  Local Hint Extern 1 => simple apply (fun x => @isiso_encode A x (fun _ => unit)) : typeclass_instances.
 
   Global Instance ishprop_path_hprop : IsHPropRel (@eq A).
   Proof.

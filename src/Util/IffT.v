@@ -1,4 +1,4 @@
-Require Import Coq.Classes.RelationClasses.
+From Coq Require Import RelationClasses.
 Notation iffT A B := (((A -> B) * (B -> A)))%type.
 Notation iffTp := (fun A B => inhabited (iffT A B)).
 

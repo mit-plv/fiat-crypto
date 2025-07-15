@@ -3,13 +3,21 @@ Fiat-Crypto: Synthesizing Correct-by-Construction Code for Cryptographic Primiti
 
 Building
 --------
-[![CI (Coq)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq.yml?query=branch%3Amaster)
+[![CI (Coq, Docker)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-docker.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-docker.yml?query=branch%3Amaster)
+[![CI (Coq, Debian)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-debian.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-debian.yml?query=branch%3Amaster)
+[![CI (Coq, Alpine)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-alpine.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-alpine.yml?query=branch%3Amaster)
+[![CI (Coq, Arch Linux)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-archlinux.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-archlinux.yml?query=branch%3Amaster)
 [![CI (Coq, Windows)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-windows.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-windows.yml?query=branch%3Amaster)
 [![CI (Coq, MacOS)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-macos.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-macos.yml?query=branch%3Amaster)
+[![CI (opam)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-opam-package.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-opam-package.yml?query=branch%3Amaster)
 
+[![Release][release-shield]][release-link]
 [![Zulip][zulip-shield]][zulip-link]
 [![Rust Crate][crate-shield]][crate-link]
 [![Go Reference][pkg.go-shield]][pkg.go-link]
+
+[release-shield]: https://img.shields.io/github/v/release/mit-plv/fiat-crypto.svg?logo=github&include_prereleases
+[release-link]: https://github.com/mit-plv/fiat-crypto/releases
 
 [zulip-shield]: https://img.shields.io/badge/chat-on%20zulip-informational.svg
 [zulip-link]: https://coq.zulipchat.com/#narrow/stream/247791-fiat-crypto
@@ -20,7 +28,10 @@ Building
 [pkg.go-shield]: https://pkg.go.dev/badge/github.com/mit-plv/fiat-crypto/fiat-go.svg
 [pkg.go-link]: https://pkg.go.dev/github.com/mit-plv/fiat-crypto/fiat-go
 
-This repository requires [Coq](https://coq.inria.fr/) [8.16](https://github.com/coq/coq/releases/tag/V8.16.0) or later.
+🌐 Try out synthesis [on the web](https://mit-plv.github.io/fiat-crypto/)!
+(Supported by [`js_of_ocaml`](https://ocsigen.org/js_of_ocaml/latest/manual/overview) compilation.)
+
+This repository requires [Coq](https://coq.inria.fr/) [8.18](https://github.com/coq/coq/releases/tag/V8.18.0) or later.
 Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
 Note that in some cases (such as installing Coq via homebrew on Mac), you may also need to install `ocaml-findlib` (for `ocamlfind`).
 The extracted OCaml code for the standalone binaries requires [OCaml](https://ocaml.org/) [4.08](https://ocaml.org/p/ocaml/4.08.0) or later.
@@ -34,6 +45,7 @@ Package Manager | Command Line Invocation |
 Aptitude (Ubuntu / Debian) | `apt install coq ocaml-findlib libcoq-ocaml-dev jq` |
 Homebrew (OS X) | `brew install coq ocaml-findlib coreutils jq` |
 Pacman (Archlinux) | `pacman -S coq ocaml-findlib ocaml-zarith jq` |
+APK (Alpine) | `apk add --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing ocaml ocaml-findlib coq ocaml-zarith jq make` |
 
 You can clone this repository with
 
@@ -50,9 +62,9 @@ Then run:
 
 You can check out [our CI](https://github.com/mit-plv/fiat-crypto/actions?query=branch%3Amaster+workflow%3A%22CI+%28Coq%29%22) to see how long the build should take; as of the last update to this line in the README, it takes about 1h10m to run `make -j2` on Coq 8.11.1.
 
-If you want to build only the command-line binaries used for generating code, you can save a bit of time by making only the `standalone-ocaml` target with
+If you want to build only the command-line binaries used for generating code, you can save a bit of time by making only the `standalone-unified-ocaml` target with
 
-    make standalone-ocaml
+    make standalone-unified-ocaml
 
 Usage (Generating C Files)
 --------------------------
@@ -74,29 +86,42 @@ Just the compilers generating these C files can be made with
 or `make standalone-haskell` for compiler binaries generated with Haskell, or `make standalone` for both the Haskell and OCaml compiler binaries.
 The binaries are located in `src/ExtractionOcaml/` and `src/ExtractionHaskell/` respectively.
 
-There is a separate compiler binary for each implementation strategy:
+There is one compiler binary for all implementation strategies:
 
- - `saturated_solinas`
- - `unsaturated_solinas`
- - `word_by_word_montgomery`
+ - `fiat_crypto`
+
+This binary takes arguments for the strategy:
+
+ - `saturated-solinas`
+ - `unsaturated-solinas`
+ - `word-by-word-montgomery`
+ - `dettman-multiplication`
+ - `solinas-reduction`
+ - `base-conversion`
 
 Passing no arguments, or passing `-h` or `--help` (or any other invalid arguments) will result in a usage message being printed.  These binaries output C code on stdout.
 
 Here are some examples of ways to invoke the binaries (from the directories that they live in):
 
     # Generate code for 2^255-19
-    ./unsaturated_solinas '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
-    ./unsaturated_solinas '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
+    ./fiat_crypto unsaturated-solinas '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c # 1
+    ./fiat_crypto unsaturated-solinas '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c # 2
 
     # Generate code for NIST-P256 (2^256 - 2^224 + 2^192 + 2^96 - 1)
-    ./word_by_word_montgomery 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c
-    ./word_by_word_montgomery 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c
+    ./fiat_crypto word-by-word-montgomery 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c # 3
+    ./fiat_crypto word-by-word-montgomery 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c # 4
 
+Try out the above on the web [🌐<sub>1</sub>][web-1-link] [🌐<sub>2</sub>][web-2-link] [🌐<sub>3</sub>][web-3-link] [🌐<sub>4</sub>][web-4-link].
 You can find more examples in the [`Makefile`](./Makefile).
+
+[web-1-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22unsaturated-solinas%22%2C%2225519%22%2C%2264%22%2C%225%22%2C%222%5E255-19%22%2C%22carry_mul%22%2C%22carry_square%22%2C%22carry_scmul121666%22%2C%22carry%22%2C%22add%22%2C%22sub%22%2C%22opp%22%2C%22selectznz%22%2C%22to_bytes%22%2C%22from_bytes%22%5D&interactive
+[web-2-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22unsaturated-solinas%22%2C%2225519%22%2C%2232%22%2C%2210%22%2C%222%5E255-19%22%2C%22carry_mul%22%2C%22carry_square%22%2C%22carry_scmul121666%22%2C%22carry%22%2C%22add%22%2C%22sub%22%2C%22opp%22%2C%22selectznz%22%2C%22to_bytes%22%2C%22from_bytes%22%5D&interactive
+[web-3-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22word-by-word-montgomery%22%2C%22p256%22%2C%2232%22%2C%222%5E256-2%5E224%2B2%5E192%2B2%5E96-1%22%5D&interactive
+[web-4-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22word-by-word-montgomery%22%2C%22p256%22%2C%2264%22%2C%222%5E256-2%5E224%2B2%5E192%2B2%5E96-1%22%5D&interactive
 
 Note that for large primes, you may need to increase the stack size to avoid stack overflows.  For example:
 
-    ulimit -S -s 1048576; ./word_by_word_montgomery --static gost_512_paramSetB 32 '2^511 + 111'
+    ulimit -S -s 1048576; ./fiat_crypto word-by-word-montgomery --static gost_512_paramSetB 32 '2^511 + 111'
 
 This sets the stack size to 1 GB (= 1024 MB = 1024 * 1024 KB = 1048576 KB) before running the command.
 As of the last edit of this line, this command takes about an hour to run, but does in fact complete successfully.
@@ -122,29 +147,44 @@ Just the compilers generating these bedrock2/C files can be made with
 or `make standalone-haskell` for binaries generated with Haskell, or `make standalone` for both the Haskell and OCaml binaries.
 The binaries are located in `src/ExtractionOcaml/` and `src/ExtractionHaskell/` respectively.
 
-There is a separate compiler binary for each implementation strategy:
+There is one compiler binary for all implementation strategies:
 
- - `bedrock2_saturated_solinas`
- - `bedrock2_unsaturated_solinas`
- - `bedrock2_word_by_word_montgomery`
+ - `bedrock2_fiat_crypto`
+
+This binary takes arguments for the strategy:
+
+ - `saturated-solinas`
+ - `unsaturated-solinas`
+ - `word-by-word-montgomery`
+ - `dettman-multiplication`
+ - `solinas-reduction`
+ - `base-conversion`
 
 Passing no arguments, or passing `-h` or `--help` (or any other invalid arguments) will result in a usage message being printed.  These binaries output bedrock2/C code on stdout.
 
 Here are some examples of ways to invoke the binaries (from the directories that they live in):
 
     # Generate code for 2^255-19
-    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
-    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
+    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c # 1
+    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c # 2
 
     # Generate code for NIST-P256 (2^256 - 2^224 + 2^192 + 2^96 - 1)
-    ./bedrock2_word_by_word_montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c
-    ./bedrock2_word_by_word_montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c
+    ./bedrock2_fiat_crypto word-by-word-montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c # 3
+    ./bedrock2_fiat_crypto word-by-word-montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c # 4
 
     # Generate code for 2^130 - 5
-    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '64' '3' '2^130 - 5' > poly1305_64.c
-    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '32' '5' '2^130 - 5' > poly1305_32.c
+    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '64' '3' '2^130 - 5' > poly1305_64.c # 5
+    ./bedrock2_fiat_crypto unsaturated-solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '32' '5' '2^130 - 5' > poly1305_32.c # 6
 
+Try out the above on the web [🌐<sub>1</sub>][web-bedrock2-1-link] [🌐<sub>2</sub>][web-bedrock2-2-link] [🌐<sub>3</sub>][web-bedrock2-3-link] [🌐<sub>4</sub>][web-bedrock2-4-link] [🌐<sub>5</sub>][web-bedrock2-5-link] [🌐<sub>6</sub>][web-bedrock2-6-link].
 You can find more examples in [`Makefile.examples`](./Makefile.examples).
+
+[web-bedrock2-1-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22unsaturated-solinas%22%2C%22--lang%22%2C%22bedrock2%22%2C%22--no-wide-int%22%2C%22--widen-carry%22%2C%22--widen-bytes%22%2C%22--split-multiret%22%2C%22--no-select%22%2C%2225519%22%2C%2264%22%2C%225%22%2C%222%5E255-19%22%2C%22carry_mul%22%2C%22carry_square%22%2C%22carry_scmul121666%22%2C%22carry%22%2C%22add%22%2C%22sub%22%2C%22opp%22%2C%22selectznz%22%2C%22to_bytes%22%2C%22from_bytes%22%5D&interactive
+[web-bedrock2-2-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22unsaturated-solinas%22%2C%22--lang%22%2C%22bedrock2%22%2C%22--no-wide-int%22%2C%22--widen-carry%22%2C%22--widen-bytes%22%2C%22--split-multiret%22%2C%22--no-select%22%2C%2225519%22%2C%2232%22%2C%2210%22%2C%222%5E255-19%22%2C%22carry_mul%22%2C%22carry_square%22%2C%22carry_scmul121666%22%2C%22carry%22%2C%22add%22%2C%22sub%22%2C%22opp%22%2C%22selectznz%22%2C%22to_bytes%22%2C%22from_bytes%22%5D&interactive
+[web-bedrock2-3-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22word-by-word-montgomery%22%2C%22--lang%22%2C%22bedrock2%22%2C%22--no-wide-int%22%2C%22--widen-carry%22%2C%22--widen-bytes%22%2C%22--split-multiret%22%2C%22--no-select%22%2C%22p256%22%2C%2232%22%2C%222%5E256-2%5E224%2B2%5E192%2B2%5E96-1%22%5D&interactive
+[web-bedrock2-4-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22word-by-word-montgomery%22%2C%22--lang%22%2C%22bedrock2%22%2C%22--no-wide-int%22%2C%22--widen-carry%22%2C%22--widen-bytes%22%2C%22--split-multiret%22%2C%22--no-select%22%2C%22p256%22%2C%2264%22%2C%222%5E256-2%5E224%2B2%5E192%2B2%5E96-1%22%5D&interactive
+[web-bedrock2-5-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22unsaturated-solinas%22%2C%22--lang%22%2C%22bedrock2%22%2C%22--no-wide-int%22%2C%22--widen-carry%22%2C%22--widen-bytes%22%2C%22--split-multiret%22%2C%22--no-select%22%2C%22poly1305%22%2C%2264%22%2C%223%22%2C%222%5E130-5%22%5D&interactive
+[web-bedrock2-6-link]: https://mit-plv.github.io/fiat-crypto/?argv=%5B%22unsaturated-solinas%22%2C%22--lang%22%2C%22bedrock2%22%2C%22--no-wide-int%22%2C%22--widen-carry%22%2C%22--widen-bytes%22%2C%22--split-multiret%22%2C%22--no-select%22%2C%22poly1305%22%2C%2232%22%2C%225%22%2C%222%5E130-5%22%5D&interactive
 
 License
 -------
@@ -324,19 +364,19 @@ The files contain:
 
   + `Language.v`: Defines parts of the PHOAS basic infrastructure
         parameterized over base types and identifiers including:
-    . PHOAS
-    . reification
-    . denotation/intepretation
-    . utilities for inverting PHOAS exprs
-    . default/dummy values of PHOAS exprs
-    . default instantiation of generic PHOAS types
-    . Gallina reification of ground terms
-    . Flat/indexed syntax trees, and conversions to and from PHOAS
+    * PHOAS
+    * reification
+    * denotation/intepretation
+    * utilities for inverting PHOAS exprs
+    * default/dummy values of PHOAS exprs
+    * default instantiation of generic PHOAS types
+    * Gallina reification of ground terms
+    * Flat/indexed syntax trees, and conversions to and from PHOAS
 
     Defines the passes:
-    . ToFlat
-    . FromFlat
-    . GeneralizeVar
+    * ToFlat
+    * FromFlat
+    * GeneralizeVar
 
   + `API.v`: Specializes the type of PHOAS expressions to the
     particular identifiers we're using, and defines convenience
@@ -367,9 +407,9 @@ The files contain:
     is used to ensure that when we output C code, aliasing the input
     and the output arrays doesn't cause issues).
     Defines the passes:
-    . SubstVar
-    . SubstVarLike
-    . SubstVarOrIdent
+    * SubstVar
+    * SubstVarLike
+    * SubstVarOrIdent
 
   The following files in `Language/` are used only by the rewriter:
 
@@ -406,8 +446,8 @@ The files contain:
     from PHOAS to code in a language as strings.  (Depends on
     `AbstractInterpretation.v` for ZRange utilities.)  Defines the
     passes:
-    . ToString.LinesToString
-    . ToString.ToFunctionLines
+    * ToString.LinesToString
+    * ToString.ToFunctionLines
 
   + `IR.v`: Defines a common IR for C and Rust (and maybe eventually
     other languages), and builds most of the infrastructure necessary
@@ -603,7 +643,7 @@ For `Language.v`, there is a semi-arbitrary split between two files
 
 - `Wf.v`: Depends on `Inversion.v`
   Defines:
-  + expr.wf, expr.Wf, expr.wf3, expr.Wf3
+  + expr.wf, expr.Wf, expr.wf3, expr.wf4, expr.Wf3, expr.Wf4
   + GeneralizeVar.Flat.wf
   + `expr.inversion_wf` (and variants), which invert `wf` hypotheses
   + `expr.wf_t` (and variants wf_unsafe_t and wf_safe_t) which make

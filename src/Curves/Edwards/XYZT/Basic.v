@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Morphisms.
 
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.Curves.Edwards.AffineProofs.
 
@@ -29,14 +29,14 @@ Section ExtendedCoordinates.
   Local Notation onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2) (only parsing).
   (** [Extended.point] represents a point on an elliptic curve using extended projective
    * Edwards coordinates 1 (see <https://eprint.iacr.org/2008/522.pdf>). *)
-  Definition point := { P | let '(X,Y,Z,T) := P in
+  Definition point := { P | let '(X,Y,Z,Ta,Tb) := P in
                             a * X^2*Z^2 + Y^2*Z^2 = (Z^2)^2 + d * X^2 * Y^2
-                            /\ X * Y = Z * T
+                            /\ X * Y = Z * Ta * Tb
                             /\ Z <> 0 }.
-  Definition coordinates (P:point) : F*F*F*F := proj1_sig P.
+  Definition coordinates (P:point) : F*F*F*F*F := proj1_sig P.
   Definition eq (P1 P2:point) :=
-    let '(X1, Y1, Z1, _) := coordinates P1 in
-    let '(X2, Y2, Z2, _) := coordinates P2 in
+    let '(X1, Y1, Z1, _, _) := coordinates P1 in
+    let '(X2, Y2, Z2, _, _) := coordinates P2 in
     Z2*X1 = Z1*X2 /\ Z2*Y1 = Z1*Y2.
 
   Ltac t_step :=
@@ -58,14 +58,16 @@ Section ExtendedCoordinates.
   Proof. intros P Q; destruct P as [ [ [ [ ] ? ] ? ] ?], Q as [ [ [ [ ] ? ] ? ] ? ]; exact _. Defined.
 
   Program Definition from_twisted (P:Epoint) : point :=
-    let xy := E.coordinates P in (fst xy, snd xy, 1, fst xy * snd xy).
+    let xy := E.coordinates P in (fst xy, snd xy, 1, fst xy, snd xy).
   Next Obligation. t. Qed.
   Global Instance Proper_from_twisted : Proper (E.eq==>eq) from_twisted.
   Proof using Type. cbv [from_twisted]; t. Qed.
 
   Program Definition to_twisted (P:point) : Epoint :=
-    let XYZT := coordinates P in let T := snd XYZT in
-                                 let XYZ  := fst XYZT in      let Z := snd XYZ in
+    let XYZTT := coordinates P in let Ta := snd XYZTT in
+                                  let XYZT  := fst XYZTT in
+                                  let Tb := snd XYZT in
+                                  let XYZ := fst XYZT in      let Z := snd XYZ in
                                                               let XY   := fst XYZ in       let Y := snd XY in
                                                                                            let X    := fst XY in
                                                                                            let iZ := Finv Z in ((X*iZ), (Y*iZ)).
@@ -78,22 +80,22 @@ Section ExtendedCoordinates.
   Lemma from_twisted_to_twisted P : eq (from_twisted (to_twisted P)) P.
   Proof using Type. cbv [to_twisted from_twisted]; t. Qed.
 
-  Program Definition zero : point := (0, 1, 1, 0).
+  Program Definition zero : point := (0, 1, 1, 0, 1).
   Next Obligation. t. Qed.
 
   Program Definition opp P : point :=
-    match coordinates P return F*F*F*F with (X,Y,Z,T) => (Fopp X, Y, Z, Fopp T) end.
+    match coordinates P return F*F*F*F*F with (X,Y,Z,Ta,Tb) => (Fopp X, Y, Z, Fopp Ta, Tb) end.
   Next Obligation. t. Qed.
 
   Section TwistMinusOne.
     Context {a_eq_minus1:a = Fopp 1} {twice_d} {k_eq_2d:twice_d = d+d}.
     Program Definition m1add
             (P1 P2:point) : point :=
-      match coordinates P1, coordinates P2 return F*F*F*F with
-        (X1, Y1, Z1, T1), (X2, Y2, Z2, T2) =>
+      match coordinates P1, coordinates P2 return F*F*F*F*F with
+        (X1, Y1, Z1, Ta1, Tb1), (X2, Y2, Z2, Ta2, Tb2) =>
         let A := (Y1-X1)*(Y2-X2) in
         let B := (Y1+X1)*(Y2+X2) in
-        let C := T1*twice_d*T2 in
+        let C := (Ta1*Tb1)*twice_d*(Ta2*Tb2) in
         let D := Z1*(Z2+Z2) in
         let E := B-A in
         let F := D-C in
@@ -101,13 +103,12 @@ Section ExtendedCoordinates.
         let H := B+A in
         let X3 := E*F in
         let Y3 := G*H in
-        let T3 := E*H in
         let Z3 := F*G in
-        (X3, Y3, Z3, T3)
+        (X3, Y3, Z3, E, H)
       end.
     Next Obligation.
       match goal with
-      | [ |- match (let (_, _) := coordinates ?P1 in let (_, _) := _ in let (_, _) := _ in let (_, _) := coordinates ?P2 in _) with _ => _ end ]
+      | [ |- match (let (_, _) := coordinates ?P1 in let (_, _) := _ in let (_, _) := _ in let (_, _) := _ in let (_, _) := coordinates ?P2 in _) with _ => _ end ]
         => pose proof (E.denominator_nonzero _ nonzero_a square_a _ nonsquare_d _ _ (proj2_sig (to_twisted P1))  _ _  (proj2_sig (to_twisted P2)))
       end; t.
     Qed.
@@ -134,8 +135,8 @@ Section ExtendedCoordinates.
     Proof. pose proof isomorphic_commutative_group_m1 as H; destruct H as [ [] [] [] [] ]; trivial. Qed.
 
     Program Definition m1double (P : point) : point :=
-      match coordinates P return F*F*F*F with
-        (X, Y, Z, _) =>
+      match coordinates P return F*F*F*F*F with
+        (X, Y, Z, _, _) =>
         let trX := X^2 in
         let trZ := Y^2 in
         let trT := (let t0 := Z^2 in t0+t0) in
@@ -148,8 +149,7 @@ Section ExtendedCoordinates.
         let X3 := cX*cT in
         let Y3 := cY*cZ in
         let Z3 := cZ*cT in
-        let T3 := cX*cY in
-        (X3, Y3, Z3, T3)
+        (X3, Y3, Z3, cX, cY)
       end.
     Next Obligation.
       match goal with
@@ -167,8 +167,8 @@ Section ExtendedCoordinates.
 
   (* https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#doubling-double-2008-hwcd *)
   Program Definition double (P : point) : point :=
-    match coordinates P return F*F*F*F with
-      (X1, Y1, Z1, T1) =>
+    match coordinates P return F*F*F*F*F with
+      (X1, Y1, Z1, _, _) =>
       let A := X1^2 in
       let B := Y1^2 in
       let t0 := Z1^2 in
@@ -183,9 +183,8 @@ Section ExtendedCoordinates.
       let H := D-B in
       let X3 := E*F in
       let Y3 := G*H in
-      let T3 := E*H in
       let Z3 := F*G in
-      (X3, Y3, Z3, T3)
+      (X3, Y3, Z3, E, H)
     end.
   Next Obligation.
     match goal with

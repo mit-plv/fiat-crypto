@@ -1,5 +1,5 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
+From Coq Require Import Lia.
+From Coq Require Import ZArith Znumtheory.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
@@ -65,6 +65,7 @@ Require Crypto.Util.PrimitiveHList.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.Rewriter.Rules.
+Require Import Rewriter.Util.Prod.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Notations.
@@ -82,7 +83,7 @@ Local Ltac start_proof :=
   repeat apply PrimitiveProd.Primitive.pair; try exact tt.
 
 Local Hint Resolve
-      prod_rect_eta
+      prod_rect_nodep_eta
       eq_repeat_nat_rect
       eq_app_list_rect
       eq_combine_list_rect
@@ -98,6 +99,8 @@ Local Hint Resolve
       unfold1_list_rect_fbb_b_b_b_b_b
   : core.
 
+(* to catch [prod_rect] and not just [prod_rect_nodep] *)
+Local Hint Extern 0 (prod_rect _ _ _ = _)  => solve [ apply prod_rect_nodep_eta ] : core.
 
 Lemma nbe_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) nbe_rewrite_rulesT.
@@ -268,6 +271,13 @@ Local Ltac interp_good_t_step_arith :=
             => cbv [Z.ltz];
                apply unfold_is_bounded_by_bool in Hx;
                apply unfold_is_bounded_by_bool in Hy
+          | [ H : is_bounded_by_bool _ (ZRange.normalize r[0 ~> 1]) = true |- _ ]
+            => change (ZRange.normalize r[0 ~> 1]) with r[0 ~> 1]%zrange in *;
+               cbv [is_bounded_by_bool] in H; cbn [upper lower] in H
+          | [ H : ?x <> ?a, H' : ?a <= ?x |- _ ] => assert (a < x) by lia; clear H H'
+          | [ H : 0 < ?x, H' : ?x <= 1 |- _ ] => assert (x = 1) by lia; clear H H'
+          | [ H : ?x <= 1, H' : 0 <= ?x |- _ ] => assert (x = 0 \/ x = 1) by lia; clear H H'
+          | [ H : ?x = Z.neg _ |- context[?x] ] => rewrite H
           | [ |- context[ident.cast r[0~>0] ?v] ]
             => rewrite (ident.platform_specific_cast_0_is_mod 0 v) by reflexivity
           | [ H : ?x = Z.ones _ |- context [Z.land _ ?x] ] => rewrite H
@@ -293,6 +303,7 @@ Local Ltac interp_good_t_step_arith :=
         | progress destruct_head'_and
         | progress Z.ltb_to_lt
         | progress split_andb
+        | progress change (0 - 1) with (-1) in *
         | match goal with
           | [ |- ?a mod ?b = ?a' mod ?b ] => apply f_equal2; lia
           | [ |- ?a / ?b = ?a' / ?b ] => apply f_equal2; lia
@@ -403,6 +414,9 @@ Local Ltac interp_good_t_step_arith :=
           | [ |- - ident.cast (-?r) (- (?x / ?y)) = ident.cast ?r (?x' / ?y) ]
             => tryif constr_eq x x' then fail else replace x with x' by lia
           | [ |- _ = _ :> BinInt.Z ] => progress autorewrite with zsimplify_fast
+          end
+        | match goal with
+          | [ |- context[(- _) mod _] ] => rewrite Z.mod_opp_small by lia
           end
         | saturate_add_sub_bounds_step ].
 
@@ -581,17 +595,6 @@ Proof using Type.
   all: repeat interp_good_t_step_arith.
   all: remove_casts; try fin_with_nia.
   all: try (reflect_hyps; lia).
-
-  { repeat match goal with H5 : _ |- _ => apply unfold_is_bounded_by_bool in H5; cbn in H5 end.
-    replace x with 1 in *; nia. }
-  { repeat match goal with H5 : _ |- _ => apply unfold_is_bounded_by_bool in H5; cbn in H5 end.
-    replace x with 1 in *; nia. }
-  { (* cmov c 0 -1 -> sbb 0 0 c *)
-    enough (- c mod (M + 1) = M) as E by (rewrite E; remove_casts; trivial).
-    match goal with H5 : _ |- _ => apply unfold_is_bounded_by_bool in H5; cbn in H5 end.
-    rewrite Z.mod_opp_l_nz; rewrite ?Z.mod_small; nia. }
-  { repeat match goal with H5 : _ |- _ => apply unfold_is_bounded_by_bool in H5; cbn in H5 end.
-    assert (c = 0 \/ c = 1) as [->| ->] by lia;  cbn; try assert (-1 / s = -1) as -> by trivial; trivial. }
 Qed.
 
 Lemma relaxed_rules_work rland rm1 rv v :
@@ -619,9 +622,9 @@ Proof.
       -- rewrite <- Z.mod_divide_full. assumption.
     + rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper)). lia.
     + lia.
-    + rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper)). lia.  
+    + rewrite H2. apply Ones.Z.ones_nonneg. remember (Z.log2_nonneg (upper)). lia.
 Qed.
-      
+
 Lemma arith_with_relaxed_casts_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) arith_with_relaxed_casts_rewrite_rulesT.
 Proof using Type.
@@ -629,7 +632,7 @@ Proof using Type.
   - apply relaxed_rules_work; assumption.
   - rewrite Z.land_comm. apply relaxed_rules_work; assumption.
 Qed.
-      
+
 Lemma strip_literal_casts_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) strip_literal_casts_rewrite_rulesT.
 Proof using Type.

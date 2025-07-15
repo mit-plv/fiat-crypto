@@ -1,10 +1,10 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.NArith.NArith.
-Require Import Coq.FSets.FMapPositive.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Bool.Bool.
+From Coq Require Import ZArith.
+From Coq Require Import NArith.
+From Coq Require Import FMapPositive.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import Morphisms.
+From Coq Require Import Bool.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Bool.Reflect.
@@ -12,6 +12,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Assembly.Syntax.
 Require Crypto.Util.Tuple.
 Import ListNotations.
@@ -53,23 +54,23 @@ Definition havoc_flag (st : flag_state) (f : FLAG) : flag_state
 Definition havoc_flags : flag_state
   := (None, None, None, None, None, None).
 
-Definition reg_state := Tuple.tuple Z 16.
+Definition reg_state := Tuple.tuple Z (compute! (List.length widest_registers)).
 Definition bitmask_of_reg (r : REG) : Z
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
      Z.shiftl (Z.ones (Z.of_N bitcount)) (Z.of_N shift).
 Definition get_reg (st : reg_state) (r : REG) : Z
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
-  let rv := Tuple.nth_default 0%Z idx st in
+  let rv := Tuple.nth_default 0%Z (N.to_nat idx) st in
   Z.land (Z.shiftr rv (Z.of_N shift)) (Z.ones (Z.of_N bitcount)).
 Definition set_reg (st : reg_state) (r : REG) (v : Z) : reg_state
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
      Tuple.from_list_default 0%Z _ (ListUtil.update_nth
-       idx
+       (N.to_nat idx)
        (fun curv => Z.lor (Z.shiftl (Z.land v (Z.ones (Z.of_N bitcount))) (Z.of_N shift))
                           (Z.ldiff curv (Z.shiftl (Z.ones (Z.of_N bitcount)) (Z.of_N shift))))
        (Tuple.to_list _ st)).
 Definition annotate_reg_state (st : reg_state) : list (REG * Z)
-  := List.map (fun '(n, v) => (widest_register_of_index n, v)) (enumerate (Tuple.to_list _ st)).
+  := List.combine widest_registers (Tuple.to_list _ st).
 Ltac print_reg_state st := let st' := (eval cbv in (annotate_reg_state st)) in idtac st'.
 
 (* Kludge since [byte] isn't present in Coq 8.9 *)
@@ -148,9 +149,6 @@ Definition HavocFlagsFromResult s st v : machine_state :=
 Definition PreserveFlag (st : machine_state) (f : FLAG) st' :=
   update_flag_with st (fun fs => set_flag_internal fs f (get_flag st' f)).
 
-Definition signed (s : N) (z : Z) : Z :=
-  Z.land (Z.shiftl 1 (Z.of_N s-1) + z) (Z.ones (Z.of_N s)) - Z.shiftl 1 (Z.of_N s-1).
-
 Definition rcrcnt s cnt : Z :=
   if N.eqb s 8 then Z.land cnt 0x1f mod 9 else
   if N.eqb s 16 then Z.land cnt 0x1f mod 17 else
@@ -165,7 +163,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   let resize_reg r := reg_of_index_and_shift_and_bitcount_opt (reg_index r, 0%N (* offset *), s) in
   match instr.(prefix) with None =>
   match instr.(op), instr.(args) with
-  | (mov | movzx), [dst; src] => (* Note: unbundle when switching from N to Z *)
+  | (mov | movzx | movabs | movdqa | movdqu | movq | movd | movups), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- DenoteOperand sa s st src;
     SetOperand sa s st dst v
   | xchg, [a; b] => (* Flags Affected: None *)
@@ -207,7 +205,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     st <- SetOperand sa s st dst v;
     let st := HavocFlagsFromResult s st v in
     let st := SetFlag st CF (Z.odd (Z.shiftr (v1 + v2 + c) (Z.of_N s))) in
-    Some (SetFlag st OF (negb (signed s v =? signed s v1 + signed s v2 + signed s c)%Z))
+    Some (SetFlag st OF (negb (Z.signed s v =? Z.signed s v1 + Z.signed s v2 + Z.signed s c)%Z))
   | (adcx | adox) as opc, [dst; src] =>
     let flag := match opc with adcx => CF | _ => OF end in
     v1 <- DenoteOperand sa s st dst;
@@ -226,19 +224,19 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     st <- SetOperand sa s st dst v;
     let st := HavocFlagsFromResult s st v in
     let st := SetFlag st CF (Z.odd (Z.shiftr (v1 - (v2 + c)) (Z.of_N s))) in
-    Some (SetFlag st OF (negb (signed s v =? signed s v1 - (signed s v2 + c))%Z))
+    Some (SetFlag st OF (negb (Z.signed s v =? Z.signed s v1 - (Z.signed s v2 + c))%Z))
   | dec, [dst] =>
     v1 <- DenoteOperand sa s st dst;
     let v := Z.land (v1 - 1) (Z.ones (Z.of_N s)) in
     st <- SetOperand sa s st dst v;
     let st := PreserveFlag (HavocFlagsFromResult s st v) CF st in
-    Some (SetFlag st OF (negb (signed s v =? signed s v1 - 1)%Z))
+    Some (SetFlag st OF (negb (Z.signed s v =? Z.signed s v1 - 1)%Z))
   | inc, [dst] =>
     v1 <- DenoteOperand sa s st dst;
     let v := Z.land (v1 + 1) (Z.ones (Z.of_N s)) in
     st <- SetOperand sa s st dst v;
     let st := PreserveFlag (HavocFlagsFromResult s st v) CF st in
-    Some (SetFlag st OF (negb (signed s v =? signed s v1 + 1)%Z))
+    Some (SetFlag st OF (negb (Z.signed s v =? Z.signed s v1 + 1)%Z))
   | mulx, [hi; lo; src2] => (* Flags Affected: None *)
     let src1 : ARG := rdx in (* Note: assumes s=64 *)
     v1 <- DenoteOperand sa s st src1;
@@ -269,7 +267,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     v1 <- DenoteOperand sa s st dst;
     cnt' <- DenoteOperand sa s st cnt;
     let cnt := Z.land cnt' (Z.of_N s-1) in
-    let v := Z.land (Z.shiftr (signed s v1) cnt) (Z.ones (Z.of_N s)) in
+    let v := Z.land (Z.shiftr (Z.signed s v1) cnt) (Z.ones (Z.of_N s)) in
     st <- SetOperand sa s st dst v;
     Some (if cnt =? 0 then st else
       let st := HavocFlagsFromResult s st v in
@@ -324,10 +322,27 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     if cnt =? 0 then Some st else
     if Z.of_N s <? cnt then Some (HavocFlags st) else
       let st := HavocFlagsFromResult s st l in
-      let signchange := xorb (signed s lv <? 0)%Z (signed s v <? 0)%Z in
+      let signchange := xorb (Z.signed s lv <? 0)%Z (Z.signed s v <? 0)%Z in
       (* Note: IA-32 SDM does not make it clear what sign change is in question *)
       let st := if cnt =? 1 then SetFlag st OF signchange else st in
       let st := SetFlag st CF (Z.testbit l (cnt-1)) in
+      Some (HavocFlag st AF)
+  | shld, [dst as hi; lo; cnt] =>
+    lv <- DenoteOperand sa s st lo;
+    hv <- DenoteOperand sa s st hi;
+    cnt <- DenoteOperand sa s st cnt;
+    let l := Z.lor lv (Z.shiftl hv (Z.of_N s)) in
+    let l_shifted := Z.shiftl l (Z.land cnt (Z.of_N s-1)) in
+    let l_shifted_hi := Z.shiftr l_shifted (Z.of_N s) in
+    let v := Z.land l_shifted_hi (Z.ones (Z.of_N s)) in
+    st <- SetOperand sa s st dst v;
+    if cnt =? 0 then Some st else
+    if Z.of_N s <? cnt then Some (HavocFlags st) else
+      let st := HavocFlagsFromResult s st l in
+      let signchange := xorb (Z.signed s hv <? 0)%Z (Z.signed s v <? 0)%Z in
+      (* Note: IA-32 SDM does not make it clear what sign change is in question *)
+      let st := if cnt =? 1 then SetFlag st OF signchange else st in
+      let st := SetFlag st CF (Z.testbit hv (Z.of_N s - cnt)) in
       Some (HavocFlag st AF)
   | (and | xor | or) as opc, [dst; src] =>
     let f := match opc with and => Z.land | xor => Z.lxor | _ => Z.lor end in
@@ -368,6 +383,8 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
        let rsp' := Z.land (rsp' + (Z.of_N s / 8)) (Z.ones (Z.of_N stack_addr_size)) in (* we don't actually need to truncate here, but it makes proofs a bit easier *)
        st   <- SetOperand stack_addr_size s st rsp rsp';
                SetOperand sa s st dst v
+
+  | nop, [] => Some st
 
   | ret, _ => None (* not sure what to do with this ret, maybe exlude it? *)
 
@@ -415,6 +432,40 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | test, _
   | xor, _
   | xchg, _ => None
+  (* not yet supported *)
+  | cmove, _
+  | cmovne, _
+  | leave, _
+  | movabs, _
+  | movdqa, _
+  | movdqu, _
+  | movq, _
+  | movd, _
+  | movsx, _
+  | movups, _
+  | neg, _
+  | nop, _
+  | not, _
+  | paddq, _
+  | psubq, _
+  | pshufd, _
+  | pshufw, _
+  | punpcklqdq, _
+  | punpckhqdq, _
+  | pslld, _
+  | psrld, _
+  | pand, _
+  | pandn, _
+  | por, _
+  | pxor, _
+  | psrad, _
+  | rol, _
+  | ror, _
+  | sal, _
+  | sete, _
+  | setne, _
+  | shld, _
+    => None
  end | _ => None end | _ => None end%Z%option.
 
 
@@ -422,6 +473,8 @@ Definition DenoteRawLine (st : machine_state) (rawline : RawLine) : option machi
   match rawline with
   | EMPTY
   | LABEL _
+  | DIRECTIVE _
+  | ASCII_ _ _
     => Some st
   | INSTR instr
     => DenoteNormalInstruction st instr

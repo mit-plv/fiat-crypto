@@ -2,8 +2,8 @@
 (** This allows for something between [bool] and [Prop], where we can
     computationally reduce things like [True /\ True], but can still
     express equality of types. *)
-Require Import Coq.Setoids.Setoid.
-Require Import Coq.Program.Tactics.
+From Coq Require Import Setoid.
+From Coq.Program Require Import Tactics.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.DestructHyps.

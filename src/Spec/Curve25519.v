@@ -1,4 +1,4 @@
-Require Import Coq.PArith.BinPosDef.
+From Coq Require Import BinPosDef.
 Require Import Spec.ModularArithmetic.
 Local Open Scope positive_scope.
 
@@ -10,7 +10,7 @@ Notation twist_order := (4*l2).
 
 Lemma orders_match : (2*(p + 1) - order = twist_order)%Z. Proof. exact eq_refl. Qed.
 
-Require Import Coq.ZArith.Znumtheory Coq.Lists.List. Import ListNotations. 
+From Coq Require Import Znumtheory List. Import ListNotations.
 From Coqprime.PrimalityTest Require Import Pocklington PocklingtonCertificat.
 
 Lemma prime_p : prime p.
@@ -64,7 +64,60 @@ Proof.
   Pock_certif 383 5 [(191, 1); (2, 1)] 1;
   Pock_certif 191 7 [(5, 1); (2, 1)] 1; Pock_certif 7 3 [(2, 1)] 1;
   Pock_certif 5 2 [(2, 2)] 1;
-  Proof_certif 3 prime_3; 
+  Proof_certif 3 prime_3;
   Proof_certif 2 prime_2] _).
   native_cast_no_check (@eq_refl bool true).
 Time Qed. (* 1s *)
+
+Local Notation F := (F p).
+
+Require PrimeFieldTheorems.
+
+Lemma field : @Hierarchy.field F eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div.
+Proof. apply PrimeFieldTheorems.F.field_modulo, prime_p. Qed.
+Lemma char_ge_3 : @Ring.char_ge F eq F.zero F.one F.opp F.add F.sub F.mul 3.
+Proof. eapply Hierarchy.char_ge_weaken; try apply ModularArithmeticTheorems.F.char_gt; Decidable.vm_decide. Qed.
+
+Require Import Spec.CompleteEdwardsCurve.
+Module E.
+  Definition a : F := F.opp 1.
+  Definition d : F := F.div (F.opp (F.of_Z _ 121665)) (F.of_Z _ 121666).
+
+  Lemma nonzero_a : a <> F.zero. Proof. Decidable.vm_decide. Qed.
+  Lemma square_a : exists sqrt_a, F.mul sqrt_a sqrt_a = a.
+  Proof. epose (@PrimeFieldTheorems.F.Decidable_square p prime_p eq_refl); Decidable.vm_decide. Qed.
+  Lemma nonsquare_d : forall x, F.mul x x <> d.
+  Proof. epose (@PrimeFieldTheorems.F.Decidable_square p prime_p eq_refl); Decidable.vm_decide. Qed.
+
+  Definition point := @E.point F eq F.one F.add F.mul a d.
+  Definition add := E.add(field:=field)(char_ge_3:=char_ge_3)(a:=a)(d:=d)
+    (nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d).
+  Definition zero := E.zero(field:=field)(a:=a)(d:=d)(nonzero_a:=nonzero_a).
+  Definition B : E.point.
+    refine (
+    exist _ (F.of_Z _ 15112221349535400772501151409588531511454012693041857206046113283949847762202, F.div (F.of_Z _ 4) (F.of_Z _ 5)) _).
+    Decidable.vm_decide.
+  Defined.
+End E.
+
+Require Import Spec.MontgomeryCurve.
+Module M.
+  Definition a : F := F.of_Z _ 486662.
+  Definition b : F := F.one.
+  Definition a24 : F := ((a - F.of_Z _ 2) / F.of_Z _ 4)%F.
+  Definition point := @M.point F eq F.add F.mul a b.
+  Definition B : point :=
+    exist _ (inl (F.of_Z _ 9, F.of_Z _ 14781619447589544791020593568409986887264606134616475288964881837755586237401)) eq_refl.
+
+  Lemma a2m4_nonzero : F.sub (F.mul a a) (F.of_Z _ 4) <> F.zero. Decidable.vm_decide. Qed.
+  Lemma a2m4_nonsq : ~(exists r, F.mul r r = F.sub (F.mul a a) (F.of_Z _ 4)).
+  Proof. epose (@PrimeFieldTheorems.F.Decidable_square p prime_p eq_refl); Decidable.vm_decide. Qed.
+  Lemma b_nonzero : b <> F.zero. Decidable.vm_decide. Qed.
+
+  Definition add := (M.add(field:=field)(char_ge_3:=char_ge_3)(a:=a)(b_nonzero:=b_nonzero)).
+  Definition opp := (M.opp(field:=field)(a:=a)(b_nonzero:=b_nonzero)).
+  Definition X0 := (M.X0(Feq:=eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)).
+  Definition scalarmult := (@ScalarMult.scalarmult_ref _ add M.zero opp).
+End M.
+
+Definition clamp k := let s := k/8 mod 2^251 in 8*(2^251 + s).

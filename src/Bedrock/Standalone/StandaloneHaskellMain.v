@@ -1,5 +1,5 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
+From Coq Require Import List.
+From Coq Require Import String.
 Require Import Crypto.CLI.
 Require Export Crypto.StandaloneHaskellMain.
 Require Import Crypto.Bedrock.Field.Stringification.Stringification.
@@ -43,6 +43,11 @@ Module Bedrock2First.
     Definition main : IO_unit
       := main_gen ForExtraction.BaseConversion.PipelineMain.
   End BaseConversion.
+
+  Module FiatCrypto.
+    Definition main : IO_unit
+      := main_gen ForExtraction.FiatCrypto.PipelineMain.
+  End FiatCrypto.
 End Bedrock2First.
 
 Module Bedrock2Later.
@@ -82,4 +87,9 @@ Module Bedrock2Later.
     Definition main : IO_unit
       := main_gen ForExtraction.BaseConversion.PipelineMain.
   End BaseConversion.
+
+  Module FiatCrypto.
+    Definition main : IO_unit
+      := main_gen ForExtraction.FiatCrypto.PipelineMain.
+  End FiatCrypto.
 End Bedrock2Later.

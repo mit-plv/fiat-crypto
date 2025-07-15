@@ -1,7 +1,7 @@
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import List.
+From Coq Require Import ZArith.
 Require Import Lia.
-Require Import Coq.Sorting.Permutation.
+From Coq Require Import Permutation.
 Import ListNotations.
 
 Local Open Scope Z_scope.
@@ -105,9 +105,9 @@ Section TableMult.
 
   (* Table-based multiplication, as outlined in https://eprint.iacr.org/2012/309.pdf, Section 3.3 *)
 
-  (* Here, n denotes # of blocks, s denotes spacing, t denotes # of teeth, 
+  (* Here, n denotes # of blocks, s denotes spacing, t denotes # of teeth,
            and D = s * n * t denotes the total number of digits *)
-  Context (s : Z) (t : Z) (n : Z) (nt : Z) (D : Z) 
+  Context (s : Z) (t : Z) (n : Z) (nt : Z) (D : Z)
           (Hs: 0 <= s) (Ht: 1 <= t) (Hn: 1 <= n)
           (Hnt: nt = n * t) (HD: D = s * nt)
           (Hq: 0 < q) (HDq: q < 2 ^ D).
@@ -139,10 +139,10 @@ Section TableMult.
 
     Definition Zseq (k: Z) (l: Z) := List.map Z.of_nat (List.seq (Z.to_nat k) (Z.to_nat l)).
 
-    Definition entry (bnum: Z) (offset: Z) 
+    Definition entry (bnum: Z) (offset: Z)
       := List.map (fun x => (s * x, s * x + offset)) (Zseq (t * bnum) t).
-    
-    Definition comb (offset: Z) : state 
+
+    Definition comb (offset: Z) : state
       := List.map (fun x => (s * x, s * x + offset)) (Zseq 0 nt).
 
     Definition multicomb : state
@@ -179,7 +179,7 @@ Section TableMult.
       clear Hs Ht Hn Hnt HD HDq Hq odd_q mulP_q s t n nt q D.
       intros; apply Zseq_succ_r' with (b := 0); lia.
     Qed.
-    
+
     Lemma Zseq_bound': forall r : Z, 0 <= r
       -> forall b : Z, 0 <= b
       -> (forall a : Z, In a (Zseq b r) <-> b <= a < b + r).
@@ -371,7 +371,7 @@ Section TableMult.
     Qed.
 
     Theorem eval_stateseq_partial: forall n, 0 <= n < D
-      -> forall e : Z, - 2 ^ D < e < 2 ^ D 
+      -> forall e : Z, - 2 ^ D < e < 2 ^ D
                     -> Zodd e
                     -> eval (stateseq n) e = (e mod 2 ^ (n + 1)) - 2 ^ n.
     Proof.
@@ -438,9 +438,9 @@ Section TableMult.
         repeat rewrite Z.pow_1_r.
         rewrite H5.
         rewrite (Z.rem_mul_r (2 * f + 1) (2 ^ m * 2) 2) by lia.
-        lia. 
+        lia.
     Qed.
-        
+
     Theorem eval_stateseq: forall e : Z,
       - 2 ^ D < e < 2 ^ D
       -> Zodd e
@@ -456,7 +456,7 @@ Section TableMult.
         - nia.
       }
       assert (stateseq D = stateseq (D - 1) ++ [(D - 1, D - 1)]).
-      { 
+      {
         unfold stateseq.
         replace D with (Z.succ (D - 1)) at 1 by lia.
         rewrite Zseq_succ_r by lia.
@@ -512,7 +512,7 @@ Section TableMult.
         nia.
     Qed.
 
-    Theorem eval_permutation: forall st1 st2 : state, forall e : Z, 
+    Theorem eval_permutation: forall st1 st2 : state, forall e : Z,
       Permutation st1 st2 -> eval st1 e = eval st2 e.
     Proof.
       induction 1; simpl; auto.
@@ -532,7 +532,7 @@ Section TableMult.
         eapply IHPermutation2.
     Qed.
 
-    Theorem permute_comb_correct: forall e : Z, forall st : state, 
+    Theorem permute_comb_correct: forall e : Z, forall st : state,
       - 2 ^ D < e < 2 ^ D -> Zodd e -> Permutation (stateseq D) st -> eval st e = e.
     Proof.
       intros.
@@ -640,7 +640,7 @@ Section TableMult.
           * apply Z.div_lt_upper_bound; lia.
     Qed.
 
-    Theorem multicomb_stateseq: 
+    Theorem multicomb_stateseq:
       Permutation (stateseq D) multicomb.
     Proof.
       eapply NoDup_Permutation_bis.
@@ -669,7 +669,7 @@ Section TableMult.
         apply multicomb_elts; assumption.
     Qed.
 
-    Theorem multicomb_correct: forall e : Z, 
+    Theorem multicomb_correct: forall e : Z,
       - 2 ^ D < e < 2 ^ D -> Zodd e -> eval multicomb e = e.
     Proof.
       intros.
@@ -692,7 +692,7 @@ Section TableMult.
     *)
 
     (* TODO *)
-    (* 
+    (*
     - submit PR
     - make it clear which part is used at runtime
     - (potentially) split file into code and proofs
@@ -718,7 +718,7 @@ Section TableMult.
 
     Opaque table_entry.
 
-    Definition table_lookup (bnum: Z) (d: Z) : P 
+    Definition table_lookup (bnum: Z) (d: Z) : P
       := if Z.testbit d (t - 1) then negP (table_entry bnum (2 ^ t - 1 - d)) else table_entry bnum d.
 
     (* Definition table := List.map table_entry (Zseq 0 (2 ^ t)). *)
@@ -771,7 +771,7 @@ Section TableMult.
     Lemma bitmap_testbit: forall (t : Z), 0 <= t ->
       forall (x : Z), 0 <= x < t ->
       forall (f: Z -> bool),
-        Z.testbit (fold_right Z.add 0 
+        Z.testbit (fold_right Z.add 0
           (map (fun y : Z => Z.b2z (f y) * 2 ^ y) (Zseq 0 t))) x
         = f x.
     Proof.
@@ -799,7 +799,7 @@ Section TableMult.
           rewrite <- Z.mod_pow2_bits_low with (m := x0) (n := x) by lia.
           rewrite Z.mod_add by nia.
           rewrite Z.mod_small; [ apply H0 | apply bitmap_bound ]; lia.
-    Qed.   
+    Qed.
 
     Lemma extract_bits_bound: forall offset e,
      0 <= extract_bits offset e < 2 ^ t.
@@ -809,7 +809,7 @@ Section TableMult.
 
     Lemma extract_bits_spec: forall offset e x : Z,
       0 <= x -> 0 <= offset <= s * nt ->
-        (x < t -> Z.testbit (extract_bits offset e) x 
+        (x < t -> Z.testbit (extract_bits offset e) x
           = Z.testbit ((e + 2 ^ (s * nt) - 1) / 2) (s * x + offset))
         /\ (t <= x -> Z.testbit (extract_bits offset e) x = false).
     Proof.
@@ -836,7 +836,7 @@ Section TableMult.
     Lemma fold_right_ZtoP: forall fZ fP,
       (forall x y, fP (ZtoP x) (ZtoP y) = ZtoP (fZ x y)) ->
       forall f l,
-        fold_right fP O (map (fun x : Z => ZtoP (f x)) l ) = 
+        fold_right fP O (map (fun x : Z => ZtoP (f x)) l ) =
         ZtoP (fold_right fZ 0 (map f l)).
     Proof.
       intros. apply fold_right_map. exact H. unfold ZtoP. apply mulP_zero.
@@ -945,7 +945,7 @@ Section TableMult.
         symmetry.
         apply Z.div_small.
         lia.
-    Qed.      
+    Qed.
 
     Lemma table_entry'_flip: forall bnum d : Z,
       0 <= d < 2 ^ t -> 0 <= bnum
@@ -985,7 +985,7 @@ Section TableMult.
       unfold table_lookup.
       pose proof testbit_top_bit (extract_bits (offset + bnum * s * t) e) t Ht H1.
       case_eq (Z.testbit (extract_bits (offset + bnum * s * t) e) (t - 1)); intro; rewrite H3 in *.
-      - symmetry in H2. 
+      - symmetry in H2.
         rewrite Z.leb_le in H2.
         replace (2 ^ t) with (2 ^ (t - 1) + 2 ^ (t - 1)) in *;
           [ | replace t with (t - 1 + 1) at 3 by lia; rewrite Z.pow_add_r; nia ].
@@ -1002,7 +1002,7 @@ Section TableMult.
         rewrite Z.leb_gt in H2.
         rewrite table_entry_hyp by lia.
         apply table_entry'_spec; assumption.
-    Qed. 
+    Qed.
 
     (* -------------------- *)
     (* table_comb *)
@@ -1029,7 +1029,7 @@ Section TableMult.
       - intros. rewrite eval_add. trivial.
       - trivial.
     Qed.
-    
+
     (* -------------------- *)
     (* table_multicomb *)
 
@@ -1089,7 +1089,7 @@ Section TableMult.
 
     Definition oddify (e: Z) : Z := if Z.odd e then e else (e - q).
     Definition positify (e: Z) : Z := (2 ^ D - 1 + oddify (e mod q)) / 2.
-    (* 
+    (*
       This can always be computed without negative intermediate values:
       if oddify (e mod q) <= 0 then this amounts to flipping the last D bits from  - (oddify (e mod q));
       else, we compute 2 ^ (D - 1) + (oddify (e mod q) >> 1).
@@ -1097,7 +1097,7 @@ Section TableMult.
 
     (*
     Definition positify' (e: Z) : Z :=
-     let e := e mod q in 
+     let e := e mod q in
      if Z.odd e then
        2 ^ (D - 1) + (e >> 1)
      else
@@ -1124,7 +1124,7 @@ Section TableMult.
     List.fold_right (fun x y => addP x (doubleP y)) O (List.map (fun x => table_comb_positify x e) (Zseq 0 s)).
 
     (* Evenify has been replaced by positify *)
-    (* 
+    (*
     Definition evenify (e: Z) : Z := if Z.odd e then e + q else e.
 
     Definition sbit_evenify (e: Z) (x: Z) := 2 * Z.b2z (Z.testbit (evenify (e + 2 ^ D - 1) / 2) x) - 1.
@@ -1174,7 +1174,7 @@ Section TableMult.
         rewrite mod_sub by lia.
         rewrite Z.mod_mod; lia.
     Qed.
-    
+
     Lemma ZtoP_oddify: forall (e : Z), ZtoP (oddify (e mod q)) = ZtoP e.
     Proof.
       intros.
@@ -1233,7 +1233,7 @@ Section TableMult.
         f_equal.
         lia.
     Admitted.
-    *) 
+    *)
 
     (* -------------------- *)
     (* positify *)
@@ -1243,13 +1243,13 @@ Section TableMult.
       intros.
       unfold positify.
       pose proof oddify_bounds e.
-      intuition.
+      intuition auto with core.
       - apply Z.div_pos; lia.
       - apply Z.div_lt_upper_bound; lia.
     Qed.
 
     Lemma extract_bits_positify_spec: forall offset e,
-      extract_bits_positify offset e = extract_bits offset (oddify (e mod q)). 
+      extract_bits_positify offset e = extract_bits offset (oddify (e mod q)).
     Proof.
       intros.
       unfold extract_bits, extract_bits_positify.
@@ -1294,7 +1294,7 @@ Section TableMult.
       rewrite table_multicomb_positify_spec.
       apply table_multicomb_oddify_correct.
     Qed.
-    
+
   End Oddify.
 
 End TableMult.

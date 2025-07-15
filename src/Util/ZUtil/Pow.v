@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ListUtil.
 Local Open Scope Z_scope.
@@ -19,11 +19,15 @@ Module Z.
     lia.
   Qed.
 #[global]
-  Hint Resolve nonneg_pow_pos (fun n => nonneg_pow_pos 2 n Z.lt_0_2) : zarith.
+  Hint Resolve nonneg_pow_pos : zarith.
+#[global]
+  Hint Extern 1 => simple apply (fun n => nonneg_pow_pos 2 n Z.lt_0_2) : zarith.
   Lemma nonneg_pow_pos_helper a b dummy : 0 < a -> 0 <= dummy < a^b -> 0 <= b.
   Proof. eauto with zarith lia. Qed.
 #[global]
-  Hint Resolve nonneg_pow_pos_helper (fun n dummy => nonneg_pow_pos_helper 2 n dummy Z.lt_0_2) : zarith.
+  Hint Resolve nonneg_pow_pos_helper : zarith.
+#[global]
+  Hint Extern 2 => simple apply (fun n dummy => nonneg_pow_pos_helper 2 n dummy Z.lt_0_2) : zarith.
 
   Lemma div_pow2succ : forall n x, (0 <= x) ->
     n / 2 ^ Z.succ x = Z.div2 (n / 2 ^ x).
@@ -41,8 +45,11 @@ Module Z.
     := fun a b c y p H0 H1 => Logic.eq_sym (@Logic.eq_trans _ y _ _ (Logic.eq_sym p) (@Z.pow_sub_r a b c H0 H1)).
 #[global]
   Hint Resolve pow_sub_r' pow_sub_r'_sym Z.eq_le_incl : zarith.
+
+  Local Definition f_equal_pow_b b := f_equal (fun e => b ^ e).
+  Local Definition f_equal_pow_e e := f_equal (fun b => b ^ e).
 #[global]
-  Hint Resolve (fun b => f_equal (fun e => b ^ e)) (fun e => f_equal (fun b => b ^ e)) : zarith.
+  Hint Resolve f_equal_pow_b f_equal_pow_e : zarith.
 
   Lemma two_p_two_eq_four : 2^(2) = 4.
   Proof. reflexivity. Qed.

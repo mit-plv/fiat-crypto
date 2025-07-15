@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.derive.Derive.
-Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
+From Coq Require Import ZArith Lia.
+From Coq Require Import Derive.
+Require Import QArith_base Qround Crypto.Util.QUtil.
 Require Import Crypto.ArithmeticCPS.Core.
 Require Import Crypto.Util.CPSUtil.
 Require Import Crypto.Util.CPSNotations.

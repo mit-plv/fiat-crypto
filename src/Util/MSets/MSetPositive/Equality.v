@@ -1,4 +1,4 @@
-Require Import Coq.MSets.MSetPositive.
+From Coq Require Import MSetPositive.
 Require Import Crypto.Util.Bool.Equality.
 Require Import Crypto.Util.Decidable.
 

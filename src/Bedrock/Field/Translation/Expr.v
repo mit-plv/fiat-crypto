@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import List.
 Require Import bedrock2.Syntax.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Language.API.
@@ -110,7 +110,7 @@ Section Expr.
     fun c x y =>
       if literal_eqb x 0
       then if literal_eqb y (2^width - 1)
-           then expr.op bopname.add (expr.literal (-1))
+           then expr.op bopname.add (expr.op1 op1.opp (expr.literal 1))
                         (expr.op bopname.eq c (expr.literal 0))
            else base_make_error _
       else base_make_error _.

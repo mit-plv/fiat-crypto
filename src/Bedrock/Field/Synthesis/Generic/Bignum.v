@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
+From Coq Require Import ZArith.
+From Coq Require Import List.
+From Coq Require Import Lia.
 Require Import coqutil.Datatypes.List.
 Require Import bedrock2.Array.
 Require Import bedrock2.Scalars.
@@ -56,7 +56,7 @@ Section Bignum.
           | _ => idtac
           end.
         2:{
-          rewrite firstn_length, Min.min_l by lia.
+          rewrite firstn_length, Nat.min_l by lia.
           destruct Bitwidth.width_cases; subst width; trivial. }
         rewrite chunk_app_chunk; cycle 1.
         { destruct Bitwidth.width_cases; subst width; cbv; inversion 1. }
@@ -95,7 +95,7 @@ Section Bignum.
       { destruct Bitwidth.width_cases; subst width; inversion 1. }
       { intros; apply LittleEndianList.length_le_split. }
       erewrite List.map_ext with (g:=fun x=>x), map_id; try cancel; cbv [seps].
-      { rewrite sep_emp_emp. setoid_rewrite H. 
+      { rewrite sep_emp_emp. setoid_rewrite H.
         cbv [Lift1Prop.iff1 emp]; intuition (
           destruct Bitwidth.width_cases; subst width; subst; cbn in *; try nia). }
       intros.

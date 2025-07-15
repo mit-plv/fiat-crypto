@@ -1,6 +1,6 @@
-Require Import Coq.Structures.OrderedTypeEx.
-Require Import Coq.PArith.PArith.
-Require Import Coq.FSets.FMapPositive.
+From Coq Require Import OrderedTypeEx.
+From Coq Require Import PArith.
+From Coq Require Import FMapPositive.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.Structures.OrdersEx.

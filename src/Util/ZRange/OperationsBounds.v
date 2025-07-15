@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import ZArith.
+From Coq Require Import Morphisms.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.BasicLemmas.

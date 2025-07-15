@@ -20,18 +20,106 @@
 #![allow(unused_parens)]
 #![allow(non_camel_case_types)]
 
+/// Since `Index` and `IndexMut` aren't callable in `const` contexts yet, this helper type helps unify
+/// arrays and user-defined array-wrapper types into a single type which can be indexed in `const`
+/// contexts. Once `const trait`s are stabilized this type can go away
+struct IndexConst<T: ?Sized>(T);
+
+impl<'a, T, const N: usize> IndexConst<&'a [T; N]> {
+    #[inline(always)]
+    #[allow(unused)]
+    const fn index(self, i: usize) -> &'a T {
+        &self.0[i]
+    }
+}
+impl<'a, 'b, T, const N: usize> IndexConst<&'a mut &'b mut [T; N]> {
+    #[inline(always)]
+    #[allow(unused)]
+    const fn index_mut(self, i: usize) -> &'a mut T {
+        &mut self.0[i]
+    }
+}
+
+/** fiat_secp256k1_montgomery_u1 represents values of 1 bits, stored in one byte. */
 pub type fiat_secp256k1_montgomery_u1 = u8;
+/** fiat_secp256k1_montgomery_i1 represents values of 1 bits, stored in one byte. */
 pub type fiat_secp256k1_montgomery_i1 = i8;
+/** fiat_secp256k1_montgomery_u2 represents values of 2 bits, stored in one byte. */
 pub type fiat_secp256k1_montgomery_u2 = u8;
+/** fiat_secp256k1_montgomery_i2 represents values of 2 bits, stored in one byte. */
 pub type fiat_secp256k1_montgomery_i2 = i8;
 
-/* The type fiat_secp256k1_montgomery_montgomery_domain_field_element is a field element in the Montgomery domain. */
-/* Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
-pub type fiat_secp256k1_montgomery_montgomery_domain_field_element = [u64; 4];
+/** The type fiat_secp256k1_montgomery_montgomery_domain_field_element is a field element in the Montgomery domain. */
+/** Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
+#[derive(Clone, Copy)]
+pub struct fiat_secp256k1_montgomery_montgomery_domain_field_element(pub [u64; 4]);
 
-/* The type fiat_secp256k1_montgomery_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
-/* Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
-pub type fiat_secp256k1_montgomery_non_montgomery_domain_field_element = [u64; 4];
+impl core::ops::Index<usize> for fiat_secp256k1_montgomery_montgomery_domain_field_element {
+    type Output = u64;
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl core::ops::IndexMut<usize> for fiat_secp256k1_montgomery_montgomery_domain_field_element {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
+
+impl<'a> IndexConst<&'a fiat_secp256k1_montgomery_montgomery_domain_field_element> {
+    #[allow(unused)]
+    #[inline(always)]
+    const fn index(self, i: usize) -> &'a u64 {
+        &self.0.0[i]
+    }
+}
+
+impl<'a, 'b> IndexConst<&'a mut &'b mut fiat_secp256k1_montgomery_montgomery_domain_field_element> {
+    #[allow(unused)]
+    #[inline(always)]
+    const fn index_mut(self, i: usize) -> &'a mut u64 {
+        &mut self.0.0[i]
+    }
+}
+
+/** The type fiat_secp256k1_montgomery_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
+/** Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
+#[derive(Clone, Copy)]
+pub struct fiat_secp256k1_montgomery_non_montgomery_domain_field_element(pub [u64; 4]);
+
+impl core::ops::Index<usize> for fiat_secp256k1_montgomery_non_montgomery_domain_field_element {
+    type Output = u64;
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl core::ops::IndexMut<usize> for fiat_secp256k1_montgomery_non_montgomery_domain_field_element {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
+
+impl<'a> IndexConst<&'a fiat_secp256k1_montgomery_non_montgomery_domain_field_element> {
+    #[allow(unused)]
+    #[inline(always)]
+    const fn index(self, i: usize) -> &'a u64 {
+        &self.0.0[i]
+    }
+}
+
+impl<'a, 'b> IndexConst<&'a mut &'b mut fiat_secp256k1_montgomery_non_montgomery_domain_field_element> {
+    #[allow(unused)]
+    #[inline(always)]
+    const fn index_mut(self, i: usize) -> &'a mut u64 {
+        &mut self.0.0[i]
+    }
+}
 
 
 /// The function fiat_secp256k1_montgomery_addcarryx_u64 is an addition with carry.
@@ -48,7 +136,7 @@ pub type fiat_secp256k1_montgomery_non_montgomery_domain_field_element = [u64; 4
 ///   out1: [0x0 ~> 0xffffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_secp256k1_montgomery_addcarryx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_montgomery_u1, arg1: fiat_secp256k1_montgomery_u1, arg2: u64, arg3: u64) -> () {
+pub const fn fiat_secp256k1_montgomery_addcarryx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_montgomery_u1, arg1: fiat_secp256k1_montgomery_u1, arg2: u64, arg3: u64) {
   let x1: u128 = (((arg1 as u128) + (arg2 as u128)) + (arg3 as u128));
   let x2: u64 = ((x1 & (0xffffffffffffffff as u128)) as u64);
   let x3: fiat_secp256k1_montgomery_u1 = ((x1 >> 64) as fiat_secp256k1_montgomery_u1);
@@ -70,7 +158,7 @@ pub fn fiat_secp256k1_montgomery_addcarryx_u64(out1: &mut u64, out2: &mut fiat_s
 ///   out1: [0x0 ~> 0xffffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_secp256k1_montgomery_subborrowx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_montgomery_u1, arg1: fiat_secp256k1_montgomery_u1, arg2: u64, arg3: u64) -> () {
+pub const fn fiat_secp256k1_montgomery_subborrowx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_montgomery_u1, arg1: fiat_secp256k1_montgomery_u1, arg2: u64, arg3: u64) {
   let x1: i128 = (((arg2 as i128) - (arg1 as i128)) - (arg3 as i128));
   let x2: fiat_secp256k1_montgomery_i1 = ((x1 >> 64) as fiat_secp256k1_montgomery_i1);
   let x3: u64 = ((x1 & (0xffffffffffffffff as i128)) as u64);
@@ -91,7 +179,7 @@ pub fn fiat_secp256k1_montgomery_subborrowx_u64(out1: &mut u64, out2: &mut fiat_
 ///   out1: [0x0 ~> 0xffffffffffffffff]
 ///   out2: [0x0 ~> 0xffffffffffffffff]
 #[inline]
-pub fn fiat_secp256k1_montgomery_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: u64) -> () {
+pub const fn fiat_secp256k1_montgomery_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: u64) {
   let x1: u128 = ((arg1 as u128) * (arg2 as u128));
   let x2: u64 = ((x1 & (0xffffffffffffffff as u128)) as u64);
   let x3: u64 = ((x1 >> 64) as u64);
@@ -111,7 +199,7 @@ pub fn fiat_secp256k1_montgomery_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: 
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffffffffffff]
 #[inline]
-pub fn fiat_secp256k1_montgomery_cmovznz_u64(out1: &mut u64, arg1: fiat_secp256k1_montgomery_u1, arg2: u64, arg3: u64) -> () {
+pub const fn fiat_secp256k1_montgomery_cmovznz_u64(out1: &mut u64, arg1: fiat_secp256k1_montgomery_u1, arg2: u64, arg3: u64) {
   let x1: fiat_secp256k1_montgomery_u1 = (!(!arg1));
   let x2: u64 = ((((((0x0 as fiat_secp256k1_montgomery_i2) - (x1 as fiat_secp256k1_montgomery_i2)) as fiat_secp256k1_montgomery_i1) as i128) & (0xffffffffffffffff as i128)) as u64);
   let x3: u64 = ((x2 & arg3) | ((!x2) & arg2));
@@ -128,23 +216,23 @@ pub fn fiat_secp256k1_montgomery_cmovznz_u64(out1: &mut u64, arg1: fiat_secp256k
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_secp256k1_montgomery_mul(out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_montgomery_domain_field_element, arg2: &fiat_secp256k1_montgomery_montgomery_domain_field_element) -> () {
-  let x1: u64 = (arg1[1]);
-  let x2: u64 = (arg1[2]);
-  let x3: u64 = (arg1[3]);
-  let x4: u64 = (arg1[0]);
+pub const fn fiat_secp256k1_montgomery_mul(mut out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_montgomery_domain_field_element, arg2: &fiat_secp256k1_montgomery_montgomery_domain_field_element) {
+  let x1: u64 = (*IndexConst(arg1).index(1));
+  let x2: u64 = (*IndexConst(arg1).index(2));
+  let x3: u64 = (*IndexConst(arg1).index(3));
+  let x4: u64 = (*IndexConst(arg1).index(0));
   let mut x5: u64 = 0;
   let mut x6: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x5, &mut x6, x4, (arg2[3]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x5, &mut x6, x4, (*IndexConst(arg2).index(3)));
   let mut x7: u64 = 0;
   let mut x8: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x7, &mut x8, x4, (arg2[2]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x7, &mut x8, x4, (*IndexConst(arg2).index(2)));
   let mut x9: u64 = 0;
   let mut x10: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x9, &mut x10, x4, (arg2[1]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x9, &mut x10, x4, (*IndexConst(arg2).index(1)));
   let mut x11: u64 = 0;
   let mut x12: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x11, &mut x12, x4, (arg2[0]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x11, &mut x12, x4, (*IndexConst(arg2).index(0)));
   let mut x13: u64 = 0;
   let mut x14: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x13, &mut x14, 0x0, x12, x9);
@@ -197,16 +285,16 @@ pub fn fiat_secp256k1_montgomery_mul(out1: &mut fiat_secp256k1_montgomery_montgo
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x45, &mut x46, x44, x19, x36);
   let mut x47: u64 = 0;
   let mut x48: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x47, &mut x48, x1, (arg2[3]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x47, &mut x48, x1, (*IndexConst(arg2).index(3)));
   let mut x49: u64 = 0;
   let mut x50: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x49, &mut x50, x1, (arg2[2]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x49, &mut x50, x1, (*IndexConst(arg2).index(2)));
   let mut x51: u64 = 0;
   let mut x52: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x51, &mut x52, x1, (arg2[1]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x51, &mut x52, x1, (*IndexConst(arg2).index(1)));
   let mut x53: u64 = 0;
   let mut x54: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x53, &mut x54, x1, (arg2[0]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x53, &mut x54, x1, (*IndexConst(arg2).index(0)));
   let mut x55: u64 = 0;
   let mut x56: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x55, &mut x56, 0x0, x54, x51);
@@ -275,16 +363,16 @@ pub fn fiat_secp256k1_montgomery_mul(out1: &mut fiat_secp256k1_montgomery_montgo
   let x99: u64 = ((x98 as u64) + (x71 as u64));
   let mut x100: u64 = 0;
   let mut x101: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x100, &mut x101, x2, (arg2[3]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x100, &mut x101, x2, (*IndexConst(arg2).index(3)));
   let mut x102: u64 = 0;
   let mut x103: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x102, &mut x103, x2, (arg2[2]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x102, &mut x103, x2, (*IndexConst(arg2).index(2)));
   let mut x104: u64 = 0;
   let mut x105: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x104, &mut x105, x2, (arg2[1]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x104, &mut x105, x2, (*IndexConst(arg2).index(1)));
   let mut x106: u64 = 0;
   let mut x107: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x106, &mut x107, x2, (arg2[0]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x106, &mut x107, x2, (*IndexConst(arg2).index(0)));
   let mut x108: u64 = 0;
   let mut x109: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x108, &mut x109, 0x0, x107, x104);
@@ -353,16 +441,16 @@ pub fn fiat_secp256k1_montgomery_mul(out1: &mut fiat_secp256k1_montgomery_montgo
   let x152: u64 = ((x151 as u64) + (x124 as u64));
   let mut x153: u64 = 0;
   let mut x154: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x153, &mut x154, x3, (arg2[3]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x153, &mut x154, x3, (*IndexConst(arg2).index(3)));
   let mut x155: u64 = 0;
   let mut x156: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x155, &mut x156, x3, (arg2[2]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x155, &mut x156, x3, (*IndexConst(arg2).index(2)));
   let mut x157: u64 = 0;
   let mut x158: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x157, &mut x158, x3, (arg2[1]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x157, &mut x158, x3, (*IndexConst(arg2).index(1)));
   let mut x159: u64 = 0;
   let mut x160: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x159, &mut x160, x3, (arg2[0]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x159, &mut x160, x3, (*IndexConst(arg2).index(0)));
   let mut x161: u64 = 0;
   let mut x162: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x161, &mut x162, 0x0, x160, x157);
@@ -452,10 +540,10 @@ pub fn fiat_secp256k1_montgomery_mul(out1: &mut fiat_secp256k1_montgomery_montgo
   fiat_secp256k1_montgomery_cmovznz_u64(&mut x218, x215, x210, x201);
   let mut x219: u64 = 0;
   fiat_secp256k1_montgomery_cmovznz_u64(&mut x219, x215, x212, x203);
-  out1[0] = x216;
-  out1[1] = x217;
-  out1[2] = x218;
-  out1[3] = x219;
+  *IndexConst(&mut out1).index_mut(0) = x216;
+  *IndexConst(&mut out1).index_mut(1) = x217;
+  *IndexConst(&mut out1).index_mut(2) = x218;
+  *IndexConst(&mut out1).index_mut(3) = x219;
 }
 
 /// The function fiat_secp256k1_montgomery_square squares a field element in the Montgomery domain.
@@ -467,23 +555,23 @@ pub fn fiat_secp256k1_montgomery_mul(out1: &mut fiat_secp256k1_montgomery_montgo
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_secp256k1_montgomery_square(out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_montgomery_domain_field_element) -> () {
-  let x1: u64 = (arg1[1]);
-  let x2: u64 = (arg1[2]);
-  let x3: u64 = (arg1[3]);
-  let x4: u64 = (arg1[0]);
+pub const fn fiat_secp256k1_montgomery_square(mut out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_montgomery_domain_field_element) {
+  let x1: u64 = (*IndexConst(arg1).index(1));
+  let x2: u64 = (*IndexConst(arg1).index(2));
+  let x3: u64 = (*IndexConst(arg1).index(3));
+  let x4: u64 = (*IndexConst(arg1).index(0));
   let mut x5: u64 = 0;
   let mut x6: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x5, &mut x6, x4, (arg1[3]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x5, &mut x6, x4, (*IndexConst(arg1).index(3)));
   let mut x7: u64 = 0;
   let mut x8: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x7, &mut x8, x4, (arg1[2]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x7, &mut x8, x4, (*IndexConst(arg1).index(2)));
   let mut x9: u64 = 0;
   let mut x10: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x9, &mut x10, x4, (arg1[1]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x9, &mut x10, x4, (*IndexConst(arg1).index(1)));
   let mut x11: u64 = 0;
   let mut x12: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x11, &mut x12, x4, (arg1[0]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x11, &mut x12, x4, (*IndexConst(arg1).index(0)));
   let mut x13: u64 = 0;
   let mut x14: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x13, &mut x14, 0x0, x12, x9);
@@ -536,16 +624,16 @@ pub fn fiat_secp256k1_montgomery_square(out1: &mut fiat_secp256k1_montgomery_mon
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x45, &mut x46, x44, x19, x36);
   let mut x47: u64 = 0;
   let mut x48: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x47, &mut x48, x1, (arg1[3]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x47, &mut x48, x1, (*IndexConst(arg1).index(3)));
   let mut x49: u64 = 0;
   let mut x50: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x49, &mut x50, x1, (arg1[2]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x49, &mut x50, x1, (*IndexConst(arg1).index(2)));
   let mut x51: u64 = 0;
   let mut x52: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x51, &mut x52, x1, (arg1[1]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x51, &mut x52, x1, (*IndexConst(arg1).index(1)));
   let mut x53: u64 = 0;
   let mut x54: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x53, &mut x54, x1, (arg1[0]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x53, &mut x54, x1, (*IndexConst(arg1).index(0)));
   let mut x55: u64 = 0;
   let mut x56: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x55, &mut x56, 0x0, x54, x51);
@@ -614,16 +702,16 @@ pub fn fiat_secp256k1_montgomery_square(out1: &mut fiat_secp256k1_montgomery_mon
   let x99: u64 = ((x98 as u64) + (x71 as u64));
   let mut x100: u64 = 0;
   let mut x101: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x100, &mut x101, x2, (arg1[3]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x100, &mut x101, x2, (*IndexConst(arg1).index(3)));
   let mut x102: u64 = 0;
   let mut x103: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x102, &mut x103, x2, (arg1[2]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x102, &mut x103, x2, (*IndexConst(arg1).index(2)));
   let mut x104: u64 = 0;
   let mut x105: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x104, &mut x105, x2, (arg1[1]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x104, &mut x105, x2, (*IndexConst(arg1).index(1)));
   let mut x106: u64 = 0;
   let mut x107: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x106, &mut x107, x2, (arg1[0]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x106, &mut x107, x2, (*IndexConst(arg1).index(0)));
   let mut x108: u64 = 0;
   let mut x109: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x108, &mut x109, 0x0, x107, x104);
@@ -692,16 +780,16 @@ pub fn fiat_secp256k1_montgomery_square(out1: &mut fiat_secp256k1_montgomery_mon
   let x152: u64 = ((x151 as u64) + (x124 as u64));
   let mut x153: u64 = 0;
   let mut x154: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x153, &mut x154, x3, (arg1[3]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x153, &mut x154, x3, (*IndexConst(arg1).index(3)));
   let mut x155: u64 = 0;
   let mut x156: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x155, &mut x156, x3, (arg1[2]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x155, &mut x156, x3, (*IndexConst(arg1).index(2)));
   let mut x157: u64 = 0;
   let mut x158: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x157, &mut x158, x3, (arg1[1]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x157, &mut x158, x3, (*IndexConst(arg1).index(1)));
   let mut x159: u64 = 0;
   let mut x160: u64 = 0;
-  fiat_secp256k1_montgomery_mulx_u64(&mut x159, &mut x160, x3, (arg1[0]));
+  fiat_secp256k1_montgomery_mulx_u64(&mut x159, &mut x160, x3, (*IndexConst(arg1).index(0)));
   let mut x161: u64 = 0;
   let mut x162: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x161, &mut x162, 0x0, x160, x157);
@@ -791,10 +879,10 @@ pub fn fiat_secp256k1_montgomery_square(out1: &mut fiat_secp256k1_montgomery_mon
   fiat_secp256k1_montgomery_cmovznz_u64(&mut x218, x215, x210, x201);
   let mut x219: u64 = 0;
   fiat_secp256k1_montgomery_cmovznz_u64(&mut x219, x215, x212, x203);
-  out1[0] = x216;
-  out1[1] = x217;
-  out1[2] = x218;
-  out1[3] = x219;
+  *IndexConst(&mut out1).index_mut(0) = x216;
+  *IndexConst(&mut out1).index_mut(1) = x217;
+  *IndexConst(&mut out1).index_mut(2) = x218;
+  *IndexConst(&mut out1).index_mut(3) = x219;
 }
 
 /// The function fiat_secp256k1_montgomery_add adds two field elements in the Montgomery domain.
@@ -807,19 +895,19 @@ pub fn fiat_secp256k1_montgomery_square(out1: &mut fiat_secp256k1_montgomery_mon
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_secp256k1_montgomery_add(out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_montgomery_domain_field_element, arg2: &fiat_secp256k1_montgomery_montgomery_domain_field_element) -> () {
+pub const fn fiat_secp256k1_montgomery_add(mut out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_montgomery_domain_field_element, arg2: &fiat_secp256k1_montgomery_montgomery_domain_field_element) {
   let mut x1: u64 = 0;
   let mut x2: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x1, &mut x2, 0x0, (arg1[0]), (arg2[0]));
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x1, &mut x2, 0x0, (*IndexConst(arg1).index(0)), (*IndexConst(arg2).index(0)));
   let mut x3: u64 = 0;
   let mut x4: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x3, &mut x4, x2, (arg1[1]), (arg2[1]));
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x3, &mut x4, x2, (*IndexConst(arg1).index(1)), (*IndexConst(arg2).index(1)));
   let mut x5: u64 = 0;
   let mut x6: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x5, &mut x6, x4, (arg1[2]), (arg2[2]));
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x5, &mut x6, x4, (*IndexConst(arg1).index(2)), (*IndexConst(arg2).index(2)));
   let mut x7: u64 = 0;
   let mut x8: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x7, &mut x8, x6, (arg1[3]), (arg2[3]));
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x7, &mut x8, x6, (*IndexConst(arg1).index(3)), (*IndexConst(arg2).index(3)));
   let mut x9: u64 = 0;
   let mut x10: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_subborrowx_u64(&mut x9, &mut x10, 0x0, x1, 0xfffffffefffffc2f);
@@ -843,10 +931,10 @@ pub fn fiat_secp256k1_montgomery_add(out1: &mut fiat_secp256k1_montgomery_montgo
   fiat_secp256k1_montgomery_cmovznz_u64(&mut x21, x18, x13, x5);
   let mut x22: u64 = 0;
   fiat_secp256k1_montgomery_cmovznz_u64(&mut x22, x18, x15, x7);
-  out1[0] = x19;
-  out1[1] = x20;
-  out1[2] = x21;
-  out1[3] = x22;
+  *IndexConst(&mut out1).index_mut(0) = x19;
+  *IndexConst(&mut out1).index_mut(1) = x20;
+  *IndexConst(&mut out1).index_mut(2) = x21;
+  *IndexConst(&mut out1).index_mut(3) = x22;
 }
 
 /// The function fiat_secp256k1_montgomery_sub subtracts two field elements in the Montgomery domain.
@@ -859,38 +947,37 @@ pub fn fiat_secp256k1_montgomery_add(out1: &mut fiat_secp256k1_montgomery_montgo
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_secp256k1_montgomery_sub(out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_montgomery_domain_field_element, arg2: &fiat_secp256k1_montgomery_montgomery_domain_field_element) -> () {
+pub const fn fiat_secp256k1_montgomery_sub(mut out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_montgomery_domain_field_element, arg2: &fiat_secp256k1_montgomery_montgomery_domain_field_element) {
   let mut x1: u64 = 0;
   let mut x2: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x1, &mut x2, 0x0, (arg1[0]), (arg2[0]));
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x1, &mut x2, 0x0, (*IndexConst(arg1).index(0)), (*IndexConst(arg2).index(0)));
   let mut x3: u64 = 0;
   let mut x4: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x3, &mut x4, x2, (arg1[1]), (arg2[1]));
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x3, &mut x4, x2, (*IndexConst(arg1).index(1)), (*IndexConst(arg2).index(1)));
   let mut x5: u64 = 0;
   let mut x6: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x5, &mut x6, x4, (arg1[2]), (arg2[2]));
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x5, &mut x6, x4, (*IndexConst(arg1).index(2)), (*IndexConst(arg2).index(2)));
   let mut x7: u64 = 0;
   let mut x8: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x7, &mut x8, x6, (arg1[3]), (arg2[3]));
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x7, &mut x8, x6, (*IndexConst(arg1).index(3)), (*IndexConst(arg2).index(3)));
   let mut x9: u64 = 0;
-  let mut x10: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x9, &mut x10, x8, (0x0 as u64), (0x0 as u64));
-  let mut x11: u64 = 0;
-  let mut x12: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x11, &mut x12, 0x0, x1, (x9 & 0xfffffffefffffc2f));
-  let mut x13: u64 = 0;
-  let mut x14: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x13, &mut x14, x12, x3, x9);
-  let mut x15: u64 = 0;
-  let mut x16: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x15, &mut x16, x14, x5, x9);
-  let mut x17: u64 = 0;
-  let mut x18: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x17, &mut x18, x16, x7, x9);
-  out1[0] = x11;
-  out1[1] = x13;
-  out1[2] = x15;
-  out1[3] = x17;
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x9, x8, (0x0 as u64), 0xffffffffffffffff);
+  let mut x10: u64 = 0;
+  let mut x11: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x10, &mut x11, 0x0, x1, (x9 & 0xfffffffefffffc2f));
+  let mut x12: u64 = 0;
+  let mut x13: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x12, &mut x13, x11, x3, x9);
+  let mut x14: u64 = 0;
+  let mut x15: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x14, &mut x15, x13, x5, x9);
+  let mut x16: u64 = 0;
+  let mut x17: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x16, &mut x17, x15, x7, x9);
+  *IndexConst(&mut out1).index_mut(0) = x10;
+  *IndexConst(&mut out1).index_mut(1) = x12;
+  *IndexConst(&mut out1).index_mut(2) = x14;
+  *IndexConst(&mut out1).index_mut(3) = x16;
 }
 
 /// The function fiat_secp256k1_montgomery_opp negates a field element in the Montgomery domain.
@@ -902,38 +989,37 @@ pub fn fiat_secp256k1_montgomery_sub(out1: &mut fiat_secp256k1_montgomery_montgo
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_secp256k1_montgomery_opp(out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_montgomery_domain_field_element) -> () {
+pub const fn fiat_secp256k1_montgomery_opp(mut out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_montgomery_domain_field_element) {
   let mut x1: u64 = 0;
   let mut x2: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x1, &mut x2, 0x0, (0x0 as u64), (arg1[0]));
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x1, &mut x2, 0x0, (0x0 as u64), (*IndexConst(arg1).index(0)));
   let mut x3: u64 = 0;
   let mut x4: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x3, &mut x4, x2, (0x0 as u64), (arg1[1]));
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x3, &mut x4, x2, (0x0 as u64), (*IndexConst(arg1).index(1)));
   let mut x5: u64 = 0;
   let mut x6: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x5, &mut x6, x4, (0x0 as u64), (arg1[2]));
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x5, &mut x6, x4, (0x0 as u64), (*IndexConst(arg1).index(2)));
   let mut x7: u64 = 0;
   let mut x8: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x7, &mut x8, x6, (0x0 as u64), (arg1[3]));
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x7, &mut x8, x6, (0x0 as u64), (*IndexConst(arg1).index(3)));
   let mut x9: u64 = 0;
-  let mut x10: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x9, &mut x10, x8, (0x0 as u64), (0x0 as u64));
-  let mut x11: u64 = 0;
-  let mut x12: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x11, &mut x12, 0x0, x1, (x9 & 0xfffffffefffffc2f));
-  let mut x13: u64 = 0;
-  let mut x14: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x13, &mut x14, x12, x3, x9);
-  let mut x15: u64 = 0;
-  let mut x16: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x15, &mut x16, x14, x5, x9);
-  let mut x17: u64 = 0;
-  let mut x18: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x17, &mut x18, x16, x7, x9);
-  out1[0] = x11;
-  out1[1] = x13;
-  out1[2] = x15;
-  out1[3] = x17;
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x9, x8, (0x0 as u64), 0xffffffffffffffff);
+  let mut x10: u64 = 0;
+  let mut x11: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x10, &mut x11, 0x0, x1, (x9 & 0xfffffffefffffc2f));
+  let mut x12: u64 = 0;
+  let mut x13: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x12, &mut x13, x11, x3, x9);
+  let mut x14: u64 = 0;
+  let mut x15: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x14, &mut x15, x13, x5, x9);
+  let mut x16: u64 = 0;
+  let mut x17: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x16, &mut x17, x15, x7, x9);
+  *IndexConst(&mut out1).index_mut(0) = x10;
+  *IndexConst(&mut out1).index_mut(1) = x12;
+  *IndexConst(&mut out1).index_mut(2) = x14;
+  *IndexConst(&mut out1).index_mut(3) = x16;
 }
 
 /// The function fiat_secp256k1_montgomery_from_montgomery translates a field element out of the Montgomery domain.
@@ -945,8 +1031,8 @@ pub fn fiat_secp256k1_montgomery_opp(out1: &mut fiat_secp256k1_montgomery_montgo
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_secp256k1_montgomery_from_montgomery(out1: &mut fiat_secp256k1_montgomery_non_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_montgomery_domain_field_element) -> () {
-  let x1: u64 = (arg1[0]);
+pub const fn fiat_secp256k1_montgomery_from_montgomery(mut out1: &mut fiat_secp256k1_montgomery_non_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_montgomery_domain_field_element) {
+  let x1: u64 = (*IndexConst(arg1).index(0));
   let mut x2: u64 = 0;
   let mut x3: u64 = 0;
   fiat_secp256k1_montgomery_mulx_u64(&mut x2, &mut x3, x1, 0xd838091dd2253531);
@@ -988,7 +1074,7 @@ pub fn fiat_secp256k1_montgomery_from_montgomery(out1: &mut fiat_secp256k1_montg
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x26, &mut x27, x25, (0x0 as u64), ((x17 as u64) + x5));
   let mut x28: u64 = 0;
   let mut x29: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x28, &mut x29, 0x0, x20, (arg1[1]));
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x28, &mut x29, 0x0, x20, (*IndexConst(arg1).index(1)));
   let mut x30: u64 = 0;
   let mut x31: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x30, &mut x31, x29, x22, (0x0 as u64));
@@ -1039,7 +1125,7 @@ pub fn fiat_secp256k1_montgomery_from_montgomery(out1: &mut fiat_secp256k1_montg
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x60, &mut x61, x59, ((x35 as u64) + (x27 as u64)), ((x51 as u64) + x39));
   let mut x62: u64 = 0;
   let mut x63: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x62, &mut x63, 0x0, x54, (arg1[2]));
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x62, &mut x63, 0x0, x54, (*IndexConst(arg1).index(2)));
   let mut x64: u64 = 0;
   let mut x65: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x64, &mut x65, x63, x56, (0x0 as u64));
@@ -1090,7 +1176,7 @@ pub fn fiat_secp256k1_montgomery_from_montgomery(out1: &mut fiat_secp256k1_montg
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x94, &mut x95, x93, ((x69 as u64) + (x61 as u64)), ((x85 as u64) + x73));
   let mut x96: u64 = 0;
   let mut x97: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x96, &mut x97, 0x0, x88, (arg1[3]));
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x96, &mut x97, 0x0, x88, (*IndexConst(arg1).index(3)));
   let mut x98: u64 = 0;
   let mut x99: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x98, &mut x99, x97, x90, (0x0 as u64));
@@ -1162,10 +1248,10 @@ pub fn fiat_secp256k1_montgomery_from_montgomery(out1: &mut fiat_secp256k1_montg
   fiat_secp256k1_montgomery_cmovznz_u64(&mut x142, x139, x134, x126);
   let mut x143: u64 = 0;
   fiat_secp256k1_montgomery_cmovznz_u64(&mut x143, x139, x136, x128);
-  out1[0] = x140;
-  out1[1] = x141;
-  out1[2] = x142;
-  out1[3] = x143;
+  *IndexConst(&mut out1).index_mut(0) = x140;
+  *IndexConst(&mut out1).index_mut(1) = x141;
+  *IndexConst(&mut out1).index_mut(2) = x142;
+  *IndexConst(&mut out1).index_mut(3) = x143;
 }
 
 /// The function fiat_secp256k1_montgomery_to_montgomery translates a field element into the Montgomery domain.
@@ -1177,11 +1263,11 @@ pub fn fiat_secp256k1_montgomery_from_montgomery(out1: &mut fiat_secp256k1_montg
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_secp256k1_montgomery_to_montgomery(out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_non_montgomery_domain_field_element) -> () {
-  let x1: u64 = (arg1[1]);
-  let x2: u64 = (arg1[2]);
-  let x3: u64 = (arg1[3]);
-  let x4: u64 = (arg1[0]);
+pub const fn fiat_secp256k1_montgomery_to_montgomery(mut out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_non_montgomery_domain_field_element) {
+  let x1: u64 = (*IndexConst(arg1).index(1));
+  let x2: u64 = (*IndexConst(arg1).index(2));
+  let x3: u64 = (*IndexConst(arg1).index(3));
+  let x4: u64 = (*IndexConst(arg1).index(0));
   let mut x5: u64 = 0;
   let mut x6: u64 = 0;
   fiat_secp256k1_montgomery_mulx_u64(&mut x5, &mut x6, x4, 0x7a2000e90a1);
@@ -1421,10 +1507,10 @@ pub fn fiat_secp256k1_montgomery_to_montgomery(out1: &mut fiat_secp256k1_montgom
   fiat_secp256k1_montgomery_cmovznz_u64(&mut x161, x158, x153, x145);
   let mut x162: u64 = 0;
   fiat_secp256k1_montgomery_cmovznz_u64(&mut x162, x158, x155, x147);
-  out1[0] = x159;
-  out1[1] = x160;
-  out1[2] = x161;
-  out1[3] = x162;
+  *IndexConst(&mut out1).index_mut(0) = x159;
+  *IndexConst(&mut out1).index_mut(1) = x160;
+  *IndexConst(&mut out1).index_mut(2) = x161;
+  *IndexConst(&mut out1).index_mut(3) = x162;
 }
 
 /// The function fiat_secp256k1_montgomery_nonzero outputs a single non-zero word if the input is non-zero and zero otherwise.
@@ -1439,8 +1525,8 @@ pub fn fiat_secp256k1_montgomery_to_montgomery(out1: &mut fiat_secp256k1_montgom
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffffffffffff]
 #[inline]
-pub fn fiat_secp256k1_montgomery_nonzero(out1: &mut u64, arg1: &[u64; 4]) -> () {
-  let x1: u64 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | (arg1[3]))));
+pub const fn fiat_secp256k1_montgomery_nonzero(out1: &mut u64, arg1: &[u64; 4]) {
+  let x1: u64 = ((*IndexConst(arg1).index(0)) | ((*IndexConst(arg1).index(1)) | ((*IndexConst(arg1).index(2)) | (*IndexConst(arg1).index(3)))));
   *out1 = x1;
 }
 
@@ -1456,19 +1542,19 @@ pub fn fiat_secp256k1_montgomery_nonzero(out1: &mut u64, arg1: &[u64; 4]) -> () 
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_secp256k1_montgomery_selectznz(out1: &mut [u64; 4], arg1: fiat_secp256k1_montgomery_u1, arg2: &[u64; 4], arg3: &[u64; 4]) -> () {
+pub const fn fiat_secp256k1_montgomery_selectznz(mut out1: &mut [u64; 4], arg1: fiat_secp256k1_montgomery_u1, arg2: &[u64; 4], arg3: &[u64; 4]) {
   let mut x1: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x1, arg1, (arg2[0]), (arg3[0]));
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x1, arg1, (*IndexConst(arg2).index(0)), (*IndexConst(arg3).index(0)));
   let mut x2: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x2, arg1, (arg2[1]), (arg3[1]));
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x2, arg1, (*IndexConst(arg2).index(1)), (*IndexConst(arg3).index(1)));
   let mut x3: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x3, arg1, (arg2[2]), (arg3[2]));
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x3, arg1, (*IndexConst(arg2).index(2)), (*IndexConst(arg3).index(2)));
   let mut x4: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x4, arg1, (arg2[3]), (arg3[3]));
-  out1[0] = x1;
-  out1[1] = x2;
-  out1[2] = x3;
-  out1[3] = x4;
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x4, arg1, (*IndexConst(arg2).index(3)), (*IndexConst(arg3).index(3)));
+  *IndexConst(&mut out1).index_mut(0) = x1;
+  *IndexConst(&mut out1).index_mut(1) = x2;
+  *IndexConst(&mut out1).index_mut(2) = x3;
+  *IndexConst(&mut out1).index_mut(3) = x4;
 }
 
 /// The function fiat_secp256k1_montgomery_to_bytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
@@ -1483,11 +1569,11 @@ pub fn fiat_secp256k1_montgomery_selectznz(out1: &mut [u64; 4], arg1: fiat_secp2
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff]]
 #[inline]
-pub fn fiat_secp256k1_montgomery_to_bytes(out1: &mut [u8; 32], arg1: &[u64; 4]) -> () {
-  let x1: u64 = (arg1[3]);
-  let x2: u64 = (arg1[2]);
-  let x3: u64 = (arg1[1]);
-  let x4: u64 = (arg1[0]);
+pub const fn fiat_secp256k1_montgomery_to_bytes(mut out1: &mut [u8; 32], arg1: &[u64; 4]) {
+  let x1: u64 = (*IndexConst(arg1).index(3));
+  let x2: u64 = (*IndexConst(arg1).index(2));
+  let x3: u64 = (*IndexConst(arg1).index(1));
+  let x4: u64 = (*IndexConst(arg1).index(0));
   let x5: u8 = ((x4 & (0xff as u64)) as u8);
   let x6: u64 = (x4 >> 8);
   let x7: u8 = ((x6 & (0xff as u64)) as u8);
@@ -1544,38 +1630,38 @@ pub fn fiat_secp256k1_montgomery_to_bytes(out1: &mut [u8; 32], arg1: &[u64; 4]) 
   let x58: u64 = (x56 >> 8);
   let x59: u8 = ((x58 & (0xff as u64)) as u8);
   let x60: u8 = ((x58 >> 8) as u8);
-  out1[0] = x5;
-  out1[1] = x7;
-  out1[2] = x9;
-  out1[3] = x11;
-  out1[4] = x13;
-  out1[5] = x15;
-  out1[6] = x17;
-  out1[7] = x18;
-  out1[8] = x19;
-  out1[9] = x21;
-  out1[10] = x23;
-  out1[11] = x25;
-  out1[12] = x27;
-  out1[13] = x29;
-  out1[14] = x31;
-  out1[15] = x32;
-  out1[16] = x33;
-  out1[17] = x35;
-  out1[18] = x37;
-  out1[19] = x39;
-  out1[20] = x41;
-  out1[21] = x43;
-  out1[22] = x45;
-  out1[23] = x46;
-  out1[24] = x47;
-  out1[25] = x49;
-  out1[26] = x51;
-  out1[27] = x53;
-  out1[28] = x55;
-  out1[29] = x57;
-  out1[30] = x59;
-  out1[31] = x60;
+  *IndexConst(&mut out1).index_mut(0) = x5;
+  *IndexConst(&mut out1).index_mut(1) = x7;
+  *IndexConst(&mut out1).index_mut(2) = x9;
+  *IndexConst(&mut out1).index_mut(3) = x11;
+  *IndexConst(&mut out1).index_mut(4) = x13;
+  *IndexConst(&mut out1).index_mut(5) = x15;
+  *IndexConst(&mut out1).index_mut(6) = x17;
+  *IndexConst(&mut out1).index_mut(7) = x18;
+  *IndexConst(&mut out1).index_mut(8) = x19;
+  *IndexConst(&mut out1).index_mut(9) = x21;
+  *IndexConst(&mut out1).index_mut(10) = x23;
+  *IndexConst(&mut out1).index_mut(11) = x25;
+  *IndexConst(&mut out1).index_mut(12) = x27;
+  *IndexConst(&mut out1).index_mut(13) = x29;
+  *IndexConst(&mut out1).index_mut(14) = x31;
+  *IndexConst(&mut out1).index_mut(15) = x32;
+  *IndexConst(&mut out1).index_mut(16) = x33;
+  *IndexConst(&mut out1).index_mut(17) = x35;
+  *IndexConst(&mut out1).index_mut(18) = x37;
+  *IndexConst(&mut out1).index_mut(19) = x39;
+  *IndexConst(&mut out1).index_mut(20) = x41;
+  *IndexConst(&mut out1).index_mut(21) = x43;
+  *IndexConst(&mut out1).index_mut(22) = x45;
+  *IndexConst(&mut out1).index_mut(23) = x46;
+  *IndexConst(&mut out1).index_mut(24) = x47;
+  *IndexConst(&mut out1).index_mut(25) = x49;
+  *IndexConst(&mut out1).index_mut(26) = x51;
+  *IndexConst(&mut out1).index_mut(27) = x53;
+  *IndexConst(&mut out1).index_mut(28) = x55;
+  *IndexConst(&mut out1).index_mut(29) = x57;
+  *IndexConst(&mut out1).index_mut(30) = x59;
+  *IndexConst(&mut out1).index_mut(31) = x60;
 }
 
 /// The function fiat_secp256k1_montgomery_from_bytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
@@ -1591,39 +1677,39 @@ pub fn fiat_secp256k1_montgomery_to_bytes(out1: &mut [u8; 32], arg1: &[u64; 4]) 
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_secp256k1_montgomery_from_bytes(out1: &mut [u64; 4], arg1: &[u8; 32]) -> () {
-  let x1: u64 = (((arg1[31]) as u64) << 56);
-  let x2: u64 = (((arg1[30]) as u64) << 48);
-  let x3: u64 = (((arg1[29]) as u64) << 40);
-  let x4: u64 = (((arg1[28]) as u64) << 32);
-  let x5: u64 = (((arg1[27]) as u64) << 24);
-  let x6: u64 = (((arg1[26]) as u64) << 16);
-  let x7: u64 = (((arg1[25]) as u64) << 8);
-  let x8: u8 = (arg1[24]);
-  let x9: u64 = (((arg1[23]) as u64) << 56);
-  let x10: u64 = (((arg1[22]) as u64) << 48);
-  let x11: u64 = (((arg1[21]) as u64) << 40);
-  let x12: u64 = (((arg1[20]) as u64) << 32);
-  let x13: u64 = (((arg1[19]) as u64) << 24);
-  let x14: u64 = (((arg1[18]) as u64) << 16);
-  let x15: u64 = (((arg1[17]) as u64) << 8);
-  let x16: u8 = (arg1[16]);
-  let x17: u64 = (((arg1[15]) as u64) << 56);
-  let x18: u64 = (((arg1[14]) as u64) << 48);
-  let x19: u64 = (((arg1[13]) as u64) << 40);
-  let x20: u64 = (((arg1[12]) as u64) << 32);
-  let x21: u64 = (((arg1[11]) as u64) << 24);
-  let x22: u64 = (((arg1[10]) as u64) << 16);
-  let x23: u64 = (((arg1[9]) as u64) << 8);
-  let x24: u8 = (arg1[8]);
-  let x25: u64 = (((arg1[7]) as u64) << 56);
-  let x26: u64 = (((arg1[6]) as u64) << 48);
-  let x27: u64 = (((arg1[5]) as u64) << 40);
-  let x28: u64 = (((arg1[4]) as u64) << 32);
-  let x29: u64 = (((arg1[3]) as u64) << 24);
-  let x30: u64 = (((arg1[2]) as u64) << 16);
-  let x31: u64 = (((arg1[1]) as u64) << 8);
-  let x32: u8 = (arg1[0]);
+pub const fn fiat_secp256k1_montgomery_from_bytes(mut out1: &mut [u64; 4], arg1: &[u8; 32]) {
+  let x1: u64 = (((*IndexConst(arg1).index(31)) as u64) << 56);
+  let x2: u64 = (((*IndexConst(arg1).index(30)) as u64) << 48);
+  let x3: u64 = (((*IndexConst(arg1).index(29)) as u64) << 40);
+  let x4: u64 = (((*IndexConst(arg1).index(28)) as u64) << 32);
+  let x5: u64 = (((*IndexConst(arg1).index(27)) as u64) << 24);
+  let x6: u64 = (((*IndexConst(arg1).index(26)) as u64) << 16);
+  let x7: u64 = (((*IndexConst(arg1).index(25)) as u64) << 8);
+  let x8: u8 = (*IndexConst(arg1).index(24));
+  let x9: u64 = (((*IndexConst(arg1).index(23)) as u64) << 56);
+  let x10: u64 = (((*IndexConst(arg1).index(22)) as u64) << 48);
+  let x11: u64 = (((*IndexConst(arg1).index(21)) as u64) << 40);
+  let x12: u64 = (((*IndexConst(arg1).index(20)) as u64) << 32);
+  let x13: u64 = (((*IndexConst(arg1).index(19)) as u64) << 24);
+  let x14: u64 = (((*IndexConst(arg1).index(18)) as u64) << 16);
+  let x15: u64 = (((*IndexConst(arg1).index(17)) as u64) << 8);
+  let x16: u8 = (*IndexConst(arg1).index(16));
+  let x17: u64 = (((*IndexConst(arg1).index(15)) as u64) << 56);
+  let x18: u64 = (((*IndexConst(arg1).index(14)) as u64) << 48);
+  let x19: u64 = (((*IndexConst(arg1).index(13)) as u64) << 40);
+  let x20: u64 = (((*IndexConst(arg1).index(12)) as u64) << 32);
+  let x21: u64 = (((*IndexConst(arg1).index(11)) as u64) << 24);
+  let x22: u64 = (((*IndexConst(arg1).index(10)) as u64) << 16);
+  let x23: u64 = (((*IndexConst(arg1).index(9)) as u64) << 8);
+  let x24: u8 = (*IndexConst(arg1).index(8));
+  let x25: u64 = (((*IndexConst(arg1).index(7)) as u64) << 56);
+  let x26: u64 = (((*IndexConst(arg1).index(6)) as u64) << 48);
+  let x27: u64 = (((*IndexConst(arg1).index(5)) as u64) << 40);
+  let x28: u64 = (((*IndexConst(arg1).index(4)) as u64) << 32);
+  let x29: u64 = (((*IndexConst(arg1).index(3)) as u64) << 24);
+  let x30: u64 = (((*IndexConst(arg1).index(2)) as u64) << 16);
+  let x31: u64 = (((*IndexConst(arg1).index(1)) as u64) << 8);
+  let x32: u8 = (*IndexConst(arg1).index(0));
   let x33: u64 = (x31 + (x32 as u64));
   let x34: u64 = (x30 + x33);
   let x35: u64 = (x29 + x34);
@@ -1652,10 +1738,10 @@ pub fn fiat_secp256k1_montgomery_from_bytes(out1: &mut [u64; 4], arg1: &[u8; 32]
   let x58: u64 = (x3 + x57);
   let x59: u64 = (x2 + x58);
   let x60: u64 = (x1 + x59);
-  out1[0] = x39;
-  out1[1] = x46;
-  out1[2] = x53;
-  out1[3] = x60;
+  *IndexConst(&mut out1).index_mut(0) = x39;
+  *IndexConst(&mut out1).index_mut(1) = x46;
+  *IndexConst(&mut out1).index_mut(2) = x53;
+  *IndexConst(&mut out1).index_mut(3) = x60;
 }
 
 /// The function fiat_secp256k1_montgomery_set_one returns the field element one in the Montgomery domain.
@@ -1665,11 +1751,11 @@ pub fn fiat_secp256k1_montgomery_from_bytes(out1: &mut [u64; 4], arg1: &[u8; 32]
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_secp256k1_montgomery_set_one(out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element) -> () {
-  out1[0] = 0x1000003d1;
-  out1[1] = (0x0 as u64);
-  out1[2] = (0x0 as u64);
-  out1[3] = (0x0 as u64);
+pub const fn fiat_secp256k1_montgomery_set_one(mut out1: &mut fiat_secp256k1_montgomery_montgomery_domain_field_element) {
+  *IndexConst(&mut out1).index_mut(0) = 0x1000003d1;
+  *IndexConst(&mut out1).index_mut(1) = (0x0 as u64);
+  *IndexConst(&mut out1).index_mut(2) = (0x0 as u64);
+  *IndexConst(&mut out1).index_mut(3) = (0x0 as u64);
 }
 
 /// The function fiat_secp256k1_montgomery_msat returns the saturated representation of the prime modulus.
@@ -1681,12 +1767,12 @@ pub fn fiat_secp256k1_montgomery_set_one(out1: &mut fiat_secp256k1_montgomery_mo
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_secp256k1_montgomery_msat(out1: &mut [u64; 5]) -> () {
-  out1[0] = 0xfffffffefffffc2f;
-  out1[1] = 0xffffffffffffffff;
-  out1[2] = 0xffffffffffffffff;
-  out1[3] = 0xffffffffffffffff;
-  out1[4] = (0x0 as u64);
+pub const fn fiat_secp256k1_montgomery_msat(mut out1: &mut [u64; 5]) {
+  *IndexConst(&mut out1).index_mut(0) = 0xfffffffefffffc2f;
+  *IndexConst(&mut out1).index_mut(1) = 0xffffffffffffffff;
+  *IndexConst(&mut out1).index_mut(2) = 0xffffffffffffffff;
+  *IndexConst(&mut out1).index_mut(3) = 0xffffffffffffffff;
+  *IndexConst(&mut out1).index_mut(4) = (0x0 as u64);
 }
 
 /// The function fiat_secp256k1_montgomery_divstep computes a divstep.
@@ -1718,59 +1804,59 @@ pub fn fiat_secp256k1_montgomery_msat(out1: &mut [u64; 5]) -> () {
 ///   out4: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 ///   out5: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_secp256k1_montgomery_divstep(out1: &mut u64, out2: &mut [u64; 5], out3: &mut [u64; 5], out4: &mut [u64; 4], out5: &mut [u64; 4], arg1: u64, arg2: &[u64; 5], arg3: &[u64; 5], arg4: &[u64; 4], arg5: &[u64; 4]) -> () {
+pub const fn fiat_secp256k1_montgomery_divstep(out1: &mut u64, mut out2: &mut [u64; 5], mut out3: &mut [u64; 5], mut out4: &mut [u64; 4], mut out5: &mut [u64; 4], arg1: u64, arg2: &[u64; 5], arg3: &[u64; 5], arg4: &[u64; 4], arg5: &[u64; 4]) {
   let mut x1: u64 = 0;
   let mut x2: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x1, &mut x2, 0x0, (!arg1), (0x1 as u64));
-  let x3: fiat_secp256k1_montgomery_u1 = (((x1 >> 63) as fiat_secp256k1_montgomery_u1) & (((arg3[0]) & (0x1 as u64)) as fiat_secp256k1_montgomery_u1));
+  let x3: fiat_secp256k1_montgomery_u1 = (((x1 >> 63) as fiat_secp256k1_montgomery_u1) & (((*IndexConst(arg3).index(0)) & (0x1 as u64)) as fiat_secp256k1_montgomery_u1));
   let mut x4: u64 = 0;
   let mut x5: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x4, &mut x5, 0x0, (!arg1), (0x1 as u64));
   let mut x6: u64 = 0;
   fiat_secp256k1_montgomery_cmovznz_u64(&mut x6, x3, arg1, x4);
   let mut x7: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x7, x3, (arg2[0]), (arg3[0]));
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x7, x3, (*IndexConst(arg2).index(0)), (*IndexConst(arg3).index(0)));
   let mut x8: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x8, x3, (arg2[1]), (arg3[1]));
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x8, x3, (*IndexConst(arg2).index(1)), (*IndexConst(arg3).index(1)));
   let mut x9: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x9, x3, (arg2[2]), (arg3[2]));
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x9, x3, (*IndexConst(arg2).index(2)), (*IndexConst(arg3).index(2)));
   let mut x10: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x10, x3, (arg2[3]), (arg3[3]));
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x10, x3, (*IndexConst(arg2).index(3)), (*IndexConst(arg3).index(3)));
   let mut x11: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x11, x3, (arg2[4]), (arg3[4]));
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x11, x3, (*IndexConst(arg2).index(4)), (*IndexConst(arg3).index(4)));
   let mut x12: u64 = 0;
   let mut x13: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x12, &mut x13, 0x0, (0x1 as u64), (!(arg2[0])));
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x12, &mut x13, 0x0, (0x1 as u64), (!(*IndexConst(arg2).index(0))));
   let mut x14: u64 = 0;
   let mut x15: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x14, &mut x15, x13, (0x0 as u64), (!(arg2[1])));
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x14, &mut x15, x13, (0x0 as u64), (!(*IndexConst(arg2).index(1))));
   let mut x16: u64 = 0;
   let mut x17: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x16, &mut x17, x15, (0x0 as u64), (!(arg2[2])));
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x16, &mut x17, x15, (0x0 as u64), (!(*IndexConst(arg2).index(2))));
   let mut x18: u64 = 0;
   let mut x19: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x18, &mut x19, x17, (0x0 as u64), (!(arg2[3])));
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x18, &mut x19, x17, (0x0 as u64), (!(*IndexConst(arg2).index(3))));
   let mut x20: u64 = 0;
   let mut x21: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x20, &mut x21, x19, (0x0 as u64), (!(arg2[4])));
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x20, &mut x21, x19, (0x0 as u64), (!(*IndexConst(arg2).index(4))));
   let mut x22: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x22, x3, (arg3[0]), x12);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x22, x3, (*IndexConst(arg3).index(0)), x12);
   let mut x23: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x23, x3, (arg3[1]), x14);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x23, x3, (*IndexConst(arg3).index(1)), x14);
   let mut x24: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x24, x3, (arg3[2]), x16);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x24, x3, (*IndexConst(arg3).index(2)), x16);
   let mut x25: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x25, x3, (arg3[3]), x18);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x25, x3, (*IndexConst(arg3).index(3)), x18);
   let mut x26: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x26, x3, (arg3[4]), x20);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x26, x3, (*IndexConst(arg3).index(4)), x20);
   let mut x27: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x27, x3, (arg4[0]), (arg5[0]));
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x27, x3, (*IndexConst(arg4).index(0)), (*IndexConst(arg5).index(0)));
   let mut x28: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x28, x3, (arg4[1]), (arg5[1]));
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x28, x3, (*IndexConst(arg4).index(1)), (*IndexConst(arg5).index(1)));
   let mut x29: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x29, x3, (arg4[2]), (arg5[2]));
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x29, x3, (*IndexConst(arg4).index(2)), (*IndexConst(arg5).index(2)));
   let mut x30: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x30, x3, (arg4[3]), (arg5[3]));
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x30, x3, (*IndexConst(arg4).index(3)), (*IndexConst(arg5).index(3)));
   let mut x31: u64 = 0;
   let mut x32: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_addcarryx_u64(&mut x31, &mut x32, 0x0, x27, x27);
@@ -1798,10 +1884,10 @@ pub fn fiat_secp256k1_montgomery_divstep(out1: &mut u64, out2: &mut [u64; 5], ou
   let mut x47: u64 = 0;
   let mut x48: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_subborrowx_u64(&mut x47, &mut x48, x46, (x38 as u64), (0x0 as u64));
-  let x49: u64 = (arg4[3]);
-  let x50: u64 = (arg4[2]);
-  let x51: u64 = (arg4[1]);
-  let x52: u64 = (arg4[0]);
+  let x49: u64 = (*IndexConst(arg4).index(3));
+  let x50: u64 = (*IndexConst(arg4).index(2));
+  let x51: u64 = (*IndexConst(arg4).index(1));
+  let x52: u64 = (*IndexConst(arg4).index(0));
   let mut x53: u64 = 0;
   let mut x54: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_subborrowx_u64(&mut x53, &mut x54, 0x0, (0x0 as u64), x52);
@@ -1815,132 +1901,131 @@ pub fn fiat_secp256k1_montgomery_divstep(out1: &mut u64, out2: &mut [u64; 5], ou
   let mut x60: fiat_secp256k1_montgomery_u1 = 0;
   fiat_secp256k1_montgomery_subborrowx_u64(&mut x59, &mut x60, x58, (0x0 as u64), x49);
   let mut x61: u64 = 0;
-  let mut x62: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x61, &mut x62, x60, (0x0 as u64), (0x0 as u64));
-  let mut x63: u64 = 0;
-  let mut x64: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x63, &mut x64, 0x0, x53, (x61 & 0xfffffffefffffc2f));
-  let mut x65: u64 = 0;
-  let mut x66: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x65, &mut x66, x64, x55, x61);
-  let mut x67: u64 = 0;
-  let mut x68: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x67, &mut x68, x66, x57, x61);
-  let mut x69: u64 = 0;
-  let mut x70: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x69, &mut x70, x68, x59, x61);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x61, x60, (0x0 as u64), 0xffffffffffffffff);
+  let mut x62: u64 = 0;
+  let mut x63: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x62, &mut x63, 0x0, x53, (x61 & 0xfffffffefffffc2f));
+  let mut x64: u64 = 0;
+  let mut x65: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x64, &mut x65, x63, x55, x61);
+  let mut x66: u64 = 0;
+  let mut x67: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x66, &mut x67, x65, x57, x61);
+  let mut x68: u64 = 0;
+  let mut x69: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x68, &mut x69, x67, x59, x61);
+  let mut x70: u64 = 0;
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x70, x3, (*IndexConst(arg5).index(0)), x62);
   let mut x71: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x71, x3, (arg5[0]), x63);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x71, x3, (*IndexConst(arg5).index(1)), x64);
   let mut x72: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x72, x3, (arg5[1]), x65);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x72, x3, (*IndexConst(arg5).index(2)), x66);
   let mut x73: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x73, x3, (arg5[2]), x67);
-  let mut x74: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x74, x3, (arg5[3]), x69);
-  let x75: fiat_secp256k1_montgomery_u1 = ((x22 & (0x1 as u64)) as fiat_secp256k1_montgomery_u1);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x73, x3, (*IndexConst(arg5).index(3)), x68);
+  let x74: fiat_secp256k1_montgomery_u1 = ((x22 & (0x1 as u64)) as fiat_secp256k1_montgomery_u1);
+  let mut x75: u64 = 0;
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x75, x74, (0x0 as u64), x7);
   let mut x76: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x76, x75, (0x0 as u64), x7);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x76, x74, (0x0 as u64), x8);
   let mut x77: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x77, x75, (0x0 as u64), x8);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x77, x74, (0x0 as u64), x9);
   let mut x78: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x78, x75, (0x0 as u64), x9);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x78, x74, (0x0 as u64), x10);
   let mut x79: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x79, x75, (0x0 as u64), x10);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x79, x74, (0x0 as u64), x11);
   let mut x80: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x80, x75, (0x0 as u64), x11);
-  let mut x81: u64 = 0;
-  let mut x82: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x81, &mut x82, 0x0, x22, x76);
-  let mut x83: u64 = 0;
-  let mut x84: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x83, &mut x84, x82, x23, x77);
-  let mut x85: u64 = 0;
-  let mut x86: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x85, &mut x86, x84, x24, x78);
-  let mut x87: u64 = 0;
-  let mut x88: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x87, &mut x88, x86, x25, x79);
-  let mut x89: u64 = 0;
-  let mut x90: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x89, &mut x90, x88, x26, x80);
+  let mut x81: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x80, &mut x81, 0x0, x22, x75);
+  let mut x82: u64 = 0;
+  let mut x83: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x82, &mut x83, x81, x23, x76);
+  let mut x84: u64 = 0;
+  let mut x85: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x84, &mut x85, x83, x24, x77);
+  let mut x86: u64 = 0;
+  let mut x87: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x86, &mut x87, x85, x25, x78);
+  let mut x88: u64 = 0;
+  let mut x89: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x88, &mut x89, x87, x26, x79);
+  let mut x90: u64 = 0;
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x90, x74, (0x0 as u64), x27);
   let mut x91: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x91, x75, (0x0 as u64), x27);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x91, x74, (0x0 as u64), x28);
   let mut x92: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x92, x75, (0x0 as u64), x28);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x92, x74, (0x0 as u64), x29);
   let mut x93: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x93, x75, (0x0 as u64), x29);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x93, x74, (0x0 as u64), x30);
   let mut x94: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x94, x75, (0x0 as u64), x30);
-  let mut x95: u64 = 0;
-  let mut x96: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x95, &mut x96, 0x0, x71, x91);
-  let mut x97: u64 = 0;
-  let mut x98: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x97, &mut x98, x96, x72, x92);
-  let mut x99: u64 = 0;
-  let mut x100: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x99, &mut x100, x98, x73, x93);
-  let mut x101: u64 = 0;
-  let mut x102: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x101, &mut x102, x100, x74, x94);
-  let mut x103: u64 = 0;
-  let mut x104: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x103, &mut x104, 0x0, x95, 0xfffffffefffffc2f);
-  let mut x105: u64 = 0;
-  let mut x106: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x105, &mut x106, x104, x97, 0xffffffffffffffff);
-  let mut x107: u64 = 0;
-  let mut x108: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x107, &mut x108, x106, x99, 0xffffffffffffffff);
-  let mut x109: u64 = 0;
-  let mut x110: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x109, &mut x110, x108, x101, 0xffffffffffffffff);
-  let mut x111: u64 = 0;
-  let mut x112: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_subborrowx_u64(&mut x111, &mut x112, x110, (x102 as u64), (0x0 as u64));
-  let mut x113: u64 = 0;
-  let mut x114: fiat_secp256k1_montgomery_u1 = 0;
-  fiat_secp256k1_montgomery_addcarryx_u64(&mut x113, &mut x114, 0x0, x6, (0x1 as u64));
-  let x115: u64 = ((x81 >> 1) | ((x83 << 63) & 0xffffffffffffffff));
-  let x116: u64 = ((x83 >> 1) | ((x85 << 63) & 0xffffffffffffffff));
-  let x117: u64 = ((x85 >> 1) | ((x87 << 63) & 0xffffffffffffffff));
-  let x118: u64 = ((x87 >> 1) | ((x89 << 63) & 0xffffffffffffffff));
-  let x119: u64 = ((x89 & 0x8000000000000000) | (x89 >> 1));
+  let mut x95: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x94, &mut x95, 0x0, x70, x90);
+  let mut x96: u64 = 0;
+  let mut x97: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x96, &mut x97, x95, x71, x91);
+  let mut x98: u64 = 0;
+  let mut x99: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x98, &mut x99, x97, x72, x92);
+  let mut x100: u64 = 0;
+  let mut x101: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x100, &mut x101, x99, x73, x93);
+  let mut x102: u64 = 0;
+  let mut x103: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x102, &mut x103, 0x0, x94, 0xfffffffefffffc2f);
+  let mut x104: u64 = 0;
+  let mut x105: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x104, &mut x105, x103, x96, 0xffffffffffffffff);
+  let mut x106: u64 = 0;
+  let mut x107: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x106, &mut x107, x105, x98, 0xffffffffffffffff);
+  let mut x108: u64 = 0;
+  let mut x109: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x108, &mut x109, x107, x100, 0xffffffffffffffff);
+  let mut x110: u64 = 0;
+  let mut x111: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_subborrowx_u64(&mut x110, &mut x111, x109, (x101 as u64), (0x0 as u64));
+  let mut x112: u64 = 0;
+  let mut x113: fiat_secp256k1_montgomery_u1 = 0;
+  fiat_secp256k1_montgomery_addcarryx_u64(&mut x112, &mut x113, 0x0, x6, (0x1 as u64));
+  let x114: u64 = ((x80 >> 1) | ((x82 << 63) & 0xffffffffffffffff));
+  let x115: u64 = ((x82 >> 1) | ((x84 << 63) & 0xffffffffffffffff));
+  let x116: u64 = ((x84 >> 1) | ((x86 << 63) & 0xffffffffffffffff));
+  let x117: u64 = ((x86 >> 1) | ((x88 << 63) & 0xffffffffffffffff));
+  let x118: u64 = ((x88 & 0x8000000000000000) | (x88 >> 1));
+  let mut x119: u64 = 0;
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x119, x48, x39, x31);
   let mut x120: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x120, x48, x39, x31);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x120, x48, x41, x33);
   let mut x121: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x121, x48, x41, x33);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x121, x48, x43, x35);
   let mut x122: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x122, x48, x43, x35);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x122, x48, x45, x37);
   let mut x123: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x123, x48, x45, x37);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x123, x111, x102, x94);
   let mut x124: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x124, x112, x103, x95);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x124, x111, x104, x96);
   let mut x125: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x125, x112, x105, x97);
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x125, x111, x106, x98);
   let mut x126: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x126, x112, x107, x99);
-  let mut x127: u64 = 0;
-  fiat_secp256k1_montgomery_cmovznz_u64(&mut x127, x112, x109, x101);
-  *out1 = x113;
-  out2[0] = x7;
-  out2[1] = x8;
-  out2[2] = x9;
-  out2[3] = x10;
-  out2[4] = x11;
-  out3[0] = x115;
-  out3[1] = x116;
-  out3[2] = x117;
-  out3[3] = x118;
-  out3[4] = x119;
-  out4[0] = x120;
-  out4[1] = x121;
-  out4[2] = x122;
-  out4[3] = x123;
-  out5[0] = x124;
-  out5[1] = x125;
-  out5[2] = x126;
-  out5[3] = x127;
+  fiat_secp256k1_montgomery_cmovznz_u64(&mut x126, x111, x108, x100);
+  *out1 = x112;
+  *IndexConst(&mut out2).index_mut(0) = x7;
+  *IndexConst(&mut out2).index_mut(1) = x8;
+  *IndexConst(&mut out2).index_mut(2) = x9;
+  *IndexConst(&mut out2).index_mut(3) = x10;
+  *IndexConst(&mut out2).index_mut(4) = x11;
+  *IndexConst(&mut out3).index_mut(0) = x114;
+  *IndexConst(&mut out3).index_mut(1) = x115;
+  *IndexConst(&mut out3).index_mut(2) = x116;
+  *IndexConst(&mut out3).index_mut(3) = x117;
+  *IndexConst(&mut out3).index_mut(4) = x118;
+  *IndexConst(&mut out4).index_mut(0) = x119;
+  *IndexConst(&mut out4).index_mut(1) = x120;
+  *IndexConst(&mut out4).index_mut(2) = x121;
+  *IndexConst(&mut out4).index_mut(3) = x122;
+  *IndexConst(&mut out5).index_mut(0) = x123;
+  *IndexConst(&mut out5).index_mut(1) = x124;
+  *IndexConst(&mut out5).index_mut(2) = x125;
+  *IndexConst(&mut out5).index_mut(3) = x126;
 }
 
 /// The function fiat_secp256k1_montgomery_divstep_precomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
@@ -1952,9 +2037,9 @@ pub fn fiat_secp256k1_montgomery_divstep(out1: &mut u64, out2: &mut [u64; 5], ou
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_secp256k1_montgomery_divstep_precomp(out1: &mut [u64; 4]) -> () {
-  out1[0] = 0xf201a41831525e0a;
-  out1[1] = 0x9953f9ddcd648d85;
-  out1[2] = 0xe86029463db210a9;
-  out1[3] = 0x24fb8a3104b03709;
+pub const fn fiat_secp256k1_montgomery_divstep_precomp(mut out1: &mut [u64; 4]) {
+  *IndexConst(&mut out1).index_mut(0) = 0xf201a41831525e0a;
+  *IndexConst(&mut out1).index_mut(1) = 0x9953f9ddcd648d85;
+  *IndexConst(&mut out1).index_mut(2) = 0xe86029463db210a9;
+  *IndexConst(&mut out1).index_mut(3) = 0x24fb8a3104b03709;
 }

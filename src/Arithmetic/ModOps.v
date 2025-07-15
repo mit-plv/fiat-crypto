@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.derive.Derive.
-Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
+From Coq Require Import ZArith Lia.
+From Coq Require Import Derive.
+Require Import QArith_base Qround Crypto.Util.QUtil.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
@@ -59,10 +59,15 @@ Section mod_ops.
     { t_weight_with (@pow_ceil_mul_nat_multiples 2). }
     { intros; apply Z.gt_lt. t_weight_with (@pow_ceil_mul_nat_divide 2). }
   Defined.
-  Local Hint Immediate (weight_0 wprops) : core.
-  Local Hint Immediate (weight_positive wprops) : core.
-  Local Hint Immediate (weight_multiples wprops) : core.
-  Local Hint Immediate (weight_divides wprops) : core.
+  Local Definition weight_0_wprops := weight_0 wprops.
+  Local Definition weight_positive_wprops := weight_positive wprops.
+  Local Definition weight_multiples_wprops := weight_multiples wprops.
+  Local Definition weight_divides_wprops := weight_divides wprops.
+
+  Local Hint Immediate weight_0_wprops : core.
+  Local Hint Immediate weight_positive_wprops : core.
+  Local Hint Immediate weight_multiples_wprops : core.
+  Local Hint Immediate weight_divides_wprops : core.
 
   Local Lemma weight_1_gt_1 : weight 1 > 1.
   Proof using limbwidth_good.

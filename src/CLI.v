@@ -1,9 +1,9 @@
-Require Import Coq.QArith.QArith.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
-Require Import Coq.Strings.HexString.
+From Coq Require Import QArith.
+From Coq Require Import ZArith.
+From Coq Require Import Ascii.
+From Coq Require Import List.
+From Coq Require Import String.
+From Coq Require Import HexString.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Parse.
@@ -17,6 +17,7 @@ Require Import Crypto.Util.Strings.NamingConventions.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.Strings.Show.Enum.
 Require Import Crypto.Util.Strings.Sorting.
 Require Import Crypto.Util.Strings.ParseFlagOptions.
 Require Import Crypto.Util.DebugMonad.
@@ -43,6 +44,30 @@ Import
   Stringification.C.Compilers.
 
 Module ForExtraction.
+  Variant SynthesisKind : Set :=
+    | word_by_word_montgomery
+    | unsaturated_solinas
+    | dettman_multiplication
+    | base_conversion
+  .
+
+  Derive SynthesisKind_Listable SuchThat (@FinitelyListable SynthesisKind SynthesisKind_Listable) As SynthesisKind_FinitelyListable.
+  Proof. prove_ListableDerive. Qed.
+  Global Existing Instances SynthesisKind_Listable SynthesisKind_FinitelyListable.
+
+  Global Instance show_SynthesisKind : Show SynthesisKind.
+  Proof. prove_Show_enum (). Defined.
+  Global Instance show_lvl_SynthesisKind : ShowLevel SynthesisKind := show_SynthesisKind.
+
+  Definition parse_SynthesisKind_list : list (string * SynthesisKind)
+    := Eval vm_compute in
+      List.map
+        (fun r => (String.replace "_" "-" (show r), r))
+        (list_all SynthesisKind).
+
+  Definition parse_SynthesisKind_act : ParserAction SynthesisKind
+    := parse_strs parse_SynthesisKind_list.
+
   Definition parse_string_and {T} (parse_T : string -> option T) (s : string) : option (string * T)
     := option_map (@pair _ _ s) (parse_T s).
   Definition parse_Z (s : string) : option Z := parseZ_arith_strict s.
@@ -61,6 +86,9 @@ Module ForExtraction.
           ls <-- List.map ParseArithmetic.Q_to_Z_strict ls;
           Some ls).
 
+  Definition parse_SynthesisKind (s : string) : option SynthesisKind
+    := finalize parse_SynthesisKind_act s.
+
   Definition parse_list_REG (s : string) : option (list REG)
     := finalize (parse_comma_list parse_REG) s.
 
@@ -75,9 +103,6 @@ Module ForExtraction.
 
   Definition parse_callee_saved_registers (s : string) : option assembly_callee_saved_registers_opt
     := finalize parse_assembly_callee_saved_registers_opt s.
-
-  (* Workaround for lack of notation in 8.8 *)
-  Local Notation "x =? y" := (if string_dec x y then true else false) : string_scope.
 
   Definition parse_n (n : string) : option MaybeLimbCount
     := match parse_nat n with
@@ -300,6 +325,10 @@ Module ForExtraction.
                     end)%string
                 special_options)).
 
+  Definition synthesis_kind_spec : anon_argT
+    := ("synthesis_kind",
+         Arg.CustomSymbol parse_SynthesisKind_list,
+         ["The algorithm for field arithmetic.  Further options depend on the choice of algorithm, and can be viewed by passing -h after this argument.  Note that no options other than -h are permitted before this argument."]).
   Definition curve_description_spec : anon_argT
     := ("curve_description",
         Arg.String,
@@ -473,6 +502,10 @@ Module ForExtraction.
     := ([Arg.long_key "output-asm"],
         Arg.String,
         ["The name of the file to write generated assembly to.  Use - for stdout.  (default: -)"]).
+  Definition asm_label_exact_match_spec : named_argT
+    := ([Arg.long_key "asm-label-exact-match"],
+        Arg.Unit,
+        ["Assembly labels must exactly match the requested function names, rather than permitting arbitrary prefixes and suffixes.  Only relevant when --hints-file is specified."]).
   Definition asm_reg_spec : named_argT
     := ([Arg.long_key "asm-reg"],
         Arg.Custom (parse_string_and parse_list_REG) "REG",
@@ -483,6 +516,10 @@ Module ForExtraction.
          Arg.Custom (parse_string_and parse_callee_saved_registers) "REG",
          ["Either '" ++ show System_V_AMD64 ++ "' (indicating " ++ String.concat "," (List.map show system_v_amd64_assembly_callee_saved_registers) ++ "), '" ++ show Microsoft_x64 ++ "' (indicating " ++ String.concat "," (List.map show microsoft_x64_assembly_callee_saved_registers) ++ "), or a comma-separated list of registers which are callee-saved / non-volatile.  Only relevant when --hints-file is specified."
           ; "Defaults to " ++ show default_assembly_callee_saved_registers ++ "."]).
+  Definition asm_node_reveal_depth_spec : named_argT
+    := ([Arg.long_key "asm-node-reveal-depth"],
+        Arg.Custom (parse_string_and parse_nat) "ℕ",
+        ["The depth of nodes to reveal in the assembly equivalence checker.  Only relevant when --hints-file is specified.  In most situations, this should not have to be changed.  Defaults to " ++ show default_node_reveal_depth ++ "."]).
   Definition asm_stack_size_spec : named_argT
     := ([Arg.long_key "asm-stack-size"],
         Arg.Custom (parse_string_and parse_N) "ℕ",
@@ -506,11 +543,15 @@ Module ForExtraction.
   Definition asm_rewriting_pipeline_spec : named_argT
     := ([Arg.long_key "asm-rewriting-pipeline"],
          Arg.Custom (parse_string_and parse_list_rewrite_pass) "REWRITE_PASS",
-         ["Specifies the order and multiplicity of rewriting passes used in the assembly equivalence checker.  Default: " ++ default_asm_rewriting_passes]).
+         ["Specifies the order and multiplicity of rewriting passes used in the assembly equivalence checker.  Default: " ++ default_asm_rewriting_pipeline]).
   Definition asm_rewriting_passes_spec : named_argT
     := ([Arg.long_key "asm-rewriting-passes"],
          Arg.String,
          ["A comma-separated list of rewriting passes to enable.  Prefix with - to disable a pass.  This list only impacts passes listed in --asm-rewriting-pipeline.  Default : " ++ (if default_asm_rewriting_passes =? "" then "(none)" else default_asm_rewriting_passes)]%string ++ describe_flag_options "rewriting pass" "Enable all rewriting passes" special_asm_rewriting_pass_flags known_asm_rewriting_pass_flags_with_spec)%list.
+  Definition asm_debug_symex_asm_first_spec : named_argT
+    := ([Arg.long_key "debug-asm-symex-first"],
+        Arg.Unit,
+        ["Debug option: If true, the assembly equivalence checker will symex the assembly first, even though this may be more inefficient.  This may be useful for having a more concise description of errors in assembly symbolic execution."]).
   Definition doc_text_before_function_name_spec : named_argT
     := ([Arg.long_key "doc-text-before-function-name"],
         Arg.String,
@@ -555,57 +596,57 @@ Module ForExtraction.
   Class ParsedSynthesizeOptions :=
     {
       (** Is the code static / private *)
-      static :> static_opt
+      #[global] static :: static_opt
       (** Is the internal code static / private *)
-      ; internal_static :> internal_static_opt
+      ; #[global] internal_static :: internal_static_opt
       (** Is the code inlined *)
-      ; inline :> inline_opt
+      ; #[global] inline :: inline_opt
       (** Is the internal code inlined *)
-      ; inline_internal :> inline_internal_opt
+      ; #[global] inline_internal :: inline_internal_opt
       (** Should we only use signed integers *)
-      ; only_signed :> only_signed_opt
+      ; #[global] only_signed :: only_signed_opt
       (** Should we emit expressions requiring cmov *)
-      ; no_select :> no_select_opt
+      ; #[global] no_select :: no_select_opt
       (** Should we emit primitive operations *)
-      ; emit_primitives :> emit_primitives_opt
+      ; #[global] emit_primitives :: emit_primitives_opt
       (** Various output options including: *)
       (** Should we skip emitting typedefs for field elements *)
       (** Should we relax the bounds on the return carry type of sbb/adc operations? *)
-      ; output_options :> output_options_opt
+      ; #[global] output_options :: output_options_opt
       (** Should we use the alternate implementation of cmovznz *)
-      ; use_mul_for_cmovznz :> use_mul_for_cmovznz_opt
+      ; #[global] use_mul_for_cmovznz :: use_mul_for_cmovznz_opt
       (** Various abstract interpretation options *)
       (** Should we avoid uint1 at the output of shiftr *)
-      ; abstract_interpretation_options :> AbstractInterpretation.Options
+      ; #[global] abstract_interpretation_options :: AbstractInterpretation.Options
       (** Should we split apart oversized operations? *)
-      ; should_split_mul :> should_split_mul_opt
+      ; #[global] should_split_mul :: should_split_mul_opt
       (** Should we split apart multi-return operations? *)
-      ; should_split_multiret :> should_split_multiret_opt
+      ; #[global] should_split_multiret :: should_split_multiret_opt
       (** Should we remove use of value_barrier? *)
-      ; unfold_value_barrier :> unfold_value_barrier_opt
+      ; #[global] unfold_value_barrier :: unfold_value_barrier_opt
       (** Should we widen the carry to the full bitwidth? *)
-      ; widen_carry :> widen_carry_opt
+      ; #[global] widen_carry :: widen_carry_opt
       (** Should we widen the byte type to the full bitwidth? *)
-      ; widen_bytes :> widen_bytes_opt
+      ; #[global] widen_bytes :: widen_bytes_opt
       (** Should we ignore function-name mismatch errors when there's only one assembly function and only one actual function requested? *)
-      ; ignore_unique_asm_names :> ignore_unique_asm_names_opt
+      ; #[global] ignore_unique_asm_names :: ignore_unique_asm_names_opt
       (** What method should we use for rewriting? *)
-      ; low_level_rewriter_method :> low_level_rewriter_method_opt
+      ; #[global] low_level_rewriter_method :: low_level_rewriter_method_opt
         := default_low_level_rewriter_method
       (** What's the bitwidth? *)
-      ; machine_wordsize :> machine_wordsize_opt
+      ; #[global] machine_wordsize :: machine_wordsize_opt
       (** What's the package name *)
-      ; internal_package_name :> package_name_opt
+      ; #[global] internal_package_name :: package_name_opt
       (** What's the class name *)
-      ; internal_class_name :> class_name_opt
+      ; #[global] internal_class_name :: class_name_opt
       (** What's are the naming conventions to use? *)
-      ; language_naming_conventions :> language_naming_conventions_opt
+      ; #[global] language_naming_conventions :: language_naming_conventions_opt
       (** Documentation options *)
-      ; documentation_options :> documentation_options_opt
+      ; #[global] documentation_options :: documentation_options_opt
       (** assembly equivalence checker options *)
-      ; equivalence_checker_options :> equivalence_checker_options_opt
+      ; #[global] equivalence_checker_options :: equivalence_checker_options_opt
       (** error if there are un-requested assembly functions *)
-      ; error_on_unused_assembly_functions :> error_on_unused_assembly_functions_opt
+      ; #[global] error_on_unused_assembly_functions :: error_on_unused_assembly_functions_opt
       (** don't prepend fiat to prefix *)
       ; no_prefix_fiat : bool
       (** Extra lines before the documentation header *)
@@ -613,15 +654,15 @@ Module ForExtraction.
       (** Extra lines at the beginning of the documentation header *)
       ; extra_early_header_lines : list string
       (** Debug rewriting *)
-      ; debug_rewriting :> debug_rewriting_opt
+      ; #[global] debug_rewriting :: debug_rewriting_opt
       (** Print debug info on success too *)
       ; debug_on_success : bool
     }.
   Class SynthesizeOptions :=
     {
-      parsed_synthesize_options :> ParsedSynthesizeOptions
+      #[global] parsed_synthesize_options :: ParsedSynthesizeOptions
       (** Lines of assembly hints *)
-      ; assembly_hints_lines :> assembly_hints_lines_opt
+      ; #[global] assembly_hints_lines :: assembly_hints_lines_opt
     }.
 
   (** We define a class for holding the various options about file interaction that we don't pass to [Synthesize] *)
@@ -684,6 +725,7 @@ Module ForExtraction.
         ; hint_file_spec
         ; output_file_spec
         ; asm_output_spec
+        ; asm_label_exact_match_spec
         ; asm_reg_spec
         ; asm_callee_saved_registers_spec
         ; asm_stack_size_spec
@@ -693,6 +735,8 @@ Module ForExtraction.
         ; asm_error_on_unique_names_mismatch_spec
         ; asm_rewriting_pipeline_spec
         ; asm_rewriting_passes_spec
+        ; asm_node_reveal_depth_spec
+        ; asm_debug_symex_asm_first_spec
         ; doc_text_before_function_name_spec
         ; doc_text_before_type_name_spec
         ; doc_newline_before_package_declaration_spec
@@ -741,6 +785,7 @@ Module ForExtraction.
              , hint_file_namesv
              , output_file_namev
              , asm_output_file_namev
+             , asm_label_exact_matchv
              , asm_regv
              , asm_callee_saved_registersv
              , asm_stack_sizev
@@ -750,6 +795,8 @@ Module ForExtraction.
              , asm_error_on_unique_names_mismatchv
              , asm_rewriting_pipelinev
              , asm_rewriting_passesv
+             , asm_node_reveal_depthv
+             , asm_debug_symex_asm_firstv
              , doc_text_before_function_namev
              , doc_text_before_type_namev
              , doc_newline_before_package_declarationv
@@ -762,6 +809,7 @@ Module ForExtraction.
        let to_bool ls := (0 <? List.length ls)%nat in
        let to_string_list ls := List.map (@snd _ _) ls in
        let to_N_list ls := List.map (@snd _ _) (List.map (@snd _ _) ls) in
+       let to_nat_list ls := List.map (@snd _ _) (List.map (@snd _ _) ls) in
        let to_Z_flat_list ls := List.flat_map (@snd _ _) (List.map (@snd _ _) ls) in
        let to_reg_list ls := match List.map (@snd _ _) (List.map (@snd _ _) ls) with
                              | nil => None
@@ -776,6 +824,8 @@ Module ForExtraction.
        let to_assembly_callee_saved_registers_default ls default := Option.value (to_assembly_callee_saved_registers_opt ls) default in
        let to_N_opt ls := choose_one_of_many (to_N_list ls) in
        let to_N_default ls default := Option.value (to_N_opt ls) default in
+       let to_nat_opt ls := choose_one_of_many (to_nat_list ls) in
+       let to_nat_default ls default := Option.value (to_nat_opt ls) default in
        let to_string_opt ls := choose_one_of_many (to_string_list ls) in
        let to_string_default ls default := Option.value (to_string_opt ls) default in
        let to_capitalization_data_opt ls := choose_one_of_many (List.map (fun '(_, (_, v)) => v) ls) in
@@ -831,10 +881,14 @@ Module ForExtraction.
                       ; assembly_stack_size_ := to_N_opt asm_stack_sizev
                       ; assembly_output_first_ := negb (to_bool asm_input_firstv)
                       ; assembly_argument_registers_left_to_right_ := negb (to_bool asm_reg_rtlv)
+                      ; assembly_labels_fuzzy_suffixes_ := negb (to_bool asm_label_exact_matchv)
+                      ; assembly_labels_fuzzy_prefixes_ := negb (to_bool asm_label_exact_matchv)
                       |}
                     ; symbolic_options_ :=
                       {| asm_rewriting_pipeline := to_rewriting_pipeline_list asm_rewriting_pipelinev
                       ; asm_rewriting_pass_filter := fun p => asm_rewriting_pass_filterv (show_rewrite_pass p)
+                      ; asm_debug_symex_asm_first := to_bool asm_debug_symex_asm_firstv
+                      ; asm_node_reveal_depth := to_nat_default asm_node_reveal_depthv default_node_reveal_depth
                       |}
                     |}
                   ; ignore_unique_asm_names := negb (to_bool asm_error_on_unique_names_mismatchv)
@@ -1002,6 +1056,7 @@ Module ForExtraction.
            end.
 
       Definition PipelineMain
+                 {prog_name_count : Arg.prog_name_countT}
                  {supported_languages : supported_languagesT}
                  {A}
                  {io_driver : IODriverAPI A}
@@ -1104,6 +1159,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {prog_name_count : Arg.prog_name_countT}
                {supported_languages : supported_languagesT}
                {A}
                {io_driver : IODriverAPI A}
@@ -1146,6 +1202,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {prog_name_count : Arg.prog_name_countT}
                {supported_languages : supported_languagesT}
                {A}
                {io_driver : IODriverAPI A}
@@ -1192,6 +1249,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {prog_name_count : Arg.prog_name_countT}
                {supported_languages : supported_languagesT}
                {A}
                {io_driver : IODriverAPI A}
@@ -1226,6 +1284,7 @@ Module ForExtraction.
       }.
 
     Definition PipelineMain
+               {prog_name_count : Arg.prog_name_countT}
                {supported_languages : supported_languagesT}
                {A}
                {io_driver : IODriverAPI A}
@@ -1294,6 +1353,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {prog_name_count : Arg.prog_name_countT}
                {supported_languages : supported_languagesT}
                {A}
                {io_driver : IODriverAPI A}
@@ -1301,4 +1361,42 @@ Module ForExtraction.
       : A
       := Parameterized.PipelineMain argv.
   End BaseConversion.
+
+  (** The combined binary that delegates *)
+  Module FiatCrypto.
+    Definition PipelineMain
+      {supported_languages : supported_languagesT}
+      {A}
+      {io_driver : IODriverAPI A}
+      (argv : list string)
+      : A
+      := let spec
+           := {| Arg.named_args := []
+              ; Arg.anon_args := [synthesis_kind_spec]
+              ; Arg.anon_opt_args := []
+              ; Arg.anon_opt_repeated_arg := None |} in
+         match Arg.parse_argv (List.firstn 2 argv) spec with
+         | ErrorT.Success (tt as _named_data, anon_data, tt as _anon_opt_data, tt as _anon_opt_repeated_data)
+           => let synthesis_kind := anon_data in
+              let prog_name_count : Arg.prog_name_countT := 2%nat in
+              match synthesis_kind with
+              | word_by_word_montgomery
+                => WordByWordMontgomery.PipelineMain (prog_name_count:=prog_name_count) argv
+              | unsaturated_solinas
+                => UnsaturatedSolinas.PipelineMain (prog_name_count:=prog_name_count) argv
+              | dettman_multiplication
+                => DettmanMultiplication.PipelineMain (prog_name_count:=prog_name_count) argv
+              | base_conversion
+                => BaseConversion.PipelineMain (prog_name_count:=prog_name_count) argv
+              end
+         | ErrorT.Error err
+           => let display := Arg.show_list_parse_error spec err in
+              if Arg.is_real_error err
+              then error display
+              else (* just a requested help/usage message *)
+                write_stdout_then
+                  (List.map (fun s => s ++ String.NewLine)%string display)
+                  ret
+         end.
+  End FiatCrypto.
 End ForExtraction.

@@ -1,6 +1,7 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
-Require Import Coq.derive.Derive.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith Lia.
+Require Import Crypto.Algebra.Nsatz.
+From Coq Require Import Derive.
+From Coq Require Import List.
 Require Import Crypto.Algebra.Ring.
 Require Import Crypto.Arithmetic.BaseConversion.
 Require Import Crypto.Arithmetic.Core.
@@ -101,7 +102,7 @@ Section Generic.
     rewrite xt_correct, q1_correct, q3_correct by auto with lia.
     assert (exists cond : bool, ((mu * (x / b^(k-1))) / b^(k+1)) = x / M + (if cond then -1 else 0)) as Hq3.
     { destruct q_nice_strong with (b:=b) (k:=k) (m:=mu) (offset:=1) (a:=x) (n:=M) as [cond Hcond];
-        eauto using Z.lt_gt with zarith. }
+        eauto 2 using Z.lt_gt with zarith. }
     eauto using r_correct with lia.
   Qed.
 End Generic.
@@ -314,7 +315,7 @@ Module Fancy.
       Proof.
         intros. subst a b. autorewrite with push_Zmul.
         ring_simplify_subterms. rewrite Z.pow_2_r.
-        rewrite Z.div_add_exact by (push_Zmod; autorewrite with zsimplify; lia).
+        rewrite Z.div_add_exact by (push_Zmod; rewrite ?Zmod_0_l; lia).
         repeat match goal with
                | |- context [d * ?a * ?b * ?c] =>
                  replace (d * a * b * c) with (a * b * c * d) by ring

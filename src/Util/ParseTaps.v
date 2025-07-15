@@ -1,5 +1,5 @@
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.BinInt.
+From Coq Require Import List.
+From Coq Require Import BinInt.
 Require Import Crypto.Util.Notations.
 Import ListNotations.
 

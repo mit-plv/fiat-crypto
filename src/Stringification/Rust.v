@@ -1,5 +1,5 @@
-From Coq Require Import ZArith.ZArith MSets.MSetPositive FSets.FMapPositive
-     Strings.String Strings.Ascii Bool.Bool Lists.List Strings.HexString.
+From Coq Require Import ZArith MSetPositive FMapPositive
+     String Ascii Bool List HexString.
 From Crypto.Util Require Import
      ListUtil
      Strings.String Strings.Decimal Strings.Show
@@ -24,7 +24,7 @@ Import Stringification.Language.Compilers.ToString.int.Notations.
 
 Module Rust.
   Definition comment_module_header_block := List.map (fun line => "//! " ++ line)%string.
-  Definition comment_block := List.map (fun line => "/* " ++ line ++ " */")%string.
+  Definition comment_block := List.map (fun line => "/** " ++ line ++ " */")%string.
 
 
   (* Supported integer bitwidths *)
@@ -45,18 +45,46 @@ Module Rust.
     : list string
     := let '(name, (ty, array_len), description) := name_and_type_and_describe_typedef prefix private typedef in
        ((comment_block description)
-          ++ [(if private then "type " else "pub type ")
-                ++ name ++ " = " ++
+          ++ [
                 let ty_string := match ty with
                                  | Some ty => int_type_to_string internal_private prefix ty
                                  | None => "ℤ" (* blackboard bold Z for unbounded integers (which don't actually exist, and thus will error) *)
                                  end in
+                let visibility := (if private then "" else "pub ") in
                 match array_len with
-                | None (* just an integer *) => ty_string
-                | Some None (* unknown array length *) => "*mut " ++ ty_string
-                | Some (Some len) => "[" ++ ty_string ++ "; " ++ Decimal.Z.to_string (Z.of_nat len) ++ "]"
+                | None (* just an integer *) => visibility ++ "type " ++ name ++ " = " ++ ty_string ++ ";"
+                | Some None (* unknown array length *) => visibility ++ "type " ++ name ++ " = *mut " ++ ty_string ++ ";"
+                | Some (Some len) => "#[derive(Clone, Copy)]" ++ String.NewLine
+                  ++ visibility ++ "struct " ++ name ++ "(pub [" ++ ty_string ++ "; " ++ Decimal.Z.to_string (Z.of_nat len) ++ "]);" ++ String.NewLine ++ String.NewLine
+                  ++ "impl core::ops::Index<usize> for " ++ name ++ " {" ++ String.NewLine
+                  ++ "    type Output = " ++ ty_string ++ ";" ++ String.NewLine
+                  ++ "    #[inline]" ++ String.NewLine
+                  ++ "    fn index(&self, index: usize) -> &Self::Output {" ++ String.NewLine
+                  ++ "        &self.0[index]" ++ String.NewLine
+                  ++ "    }" ++ String.NewLine
+                  ++ "}" ++ String.NewLine ++ String.NewLine
+                  ++ "impl core::ops::IndexMut<usize> for " ++ name ++ " {" ++ String.NewLine
+                  ++ "    #[inline]" ++ String.NewLine
+                  ++ "    fn index_mut(&mut self, index: usize) -> &mut Self::Output {" ++ String.NewLine
+                  ++ "        &mut self.0[index]" ++ String.NewLine
+                  ++ "    }" ++ String.NewLine
+                  ++ "}" ++ String.NewLine ++ String.NewLine
+                  ++ "impl<'a> IndexConst<&'a " ++ name ++ "> {" ++ String.NewLine
+                  ++ "    #[allow(unused)]" ++ String.NewLine
+                  ++ "    #[inline(always)]" ++ String.NewLine
+                  ++ "    const fn index(self, i: usize) -> &'a " ++ ty_string ++ " {" ++ String.NewLine
+                  ++ "        &self.0.0[i]" ++ String.NewLine
+                  ++ "    }" ++ String.NewLine
+                  ++ "}" ++ String.NewLine ++ String.NewLine
+                  ++ "impl<'a, 'b> IndexConst<&'a mut &'b mut " ++ name ++ "> {" ++ String.NewLine
+                  ++ "    #[allow(unused)]" ++ String.NewLine
+                  ++ "    #[inline(always)]" ++ String.NewLine
+                  ++ "    const fn index_mut(self, i: usize) -> &'a mut " ++ ty_string ++ " {" ++ String.NewLine
+                  ++ "        &mut self.0.0[i]" ++ String.NewLine
+                  ++ "    }" ++ String.NewLine
+                  ++ "}"
                 end
-                ++ ";"]%string)%list.
+                ]%string)%list.
 
   (* Header imports and type defs *)
   Definition header
@@ -73,12 +101,35 @@ Module Rust.
        (["";
         "#![allow(unused_parens)]";
         "#![allow(non_camel_case_types)]";
+        "";
+        "/// Since `Index` and `IndexMut` aren't callable in `const` contexts yet, this helper type helps unify";
+        "/// arrays and user-defined array-wrapper types into a single type which can be indexed in `const`";
+        "/// contexts. Once `const trait`s are stabilized this type can go away";
+        "struct IndexConst<T: ?Sized>(T);";
+        "";
+        "impl<'a, T, const N: usize> IndexConst<&'a [T; N]> {";
+        "    #[inline(always)]";
+        "    #[allow(unused)]";
+        "    const fn index(self, i: usize) -> &'a T {";
+        "        &self.0[i]";
+        "    }";
+        "}";
+        "impl<'a, 'b, T, const N: usize> IndexConst<&'a mut &'b mut [T; N]> {";
+        "    #[inline(always)]";
+        "    #[allow(unused)]";
+        "    const fn index_mut(self, i: usize) -> &'a mut T {";
+        "        &mut self.0[i]";
+        "    }";
+        "}";
         ""]%string
            ++ (List.flat_map
                  (fun bw
-                  => (if IntSet.mem (int.of_bitwidth false bw) bitwidths_used || IntSet.mem (int.of_bitwidth true bw) bitwidths_used
-                      then [type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth false bw) ++ " = u8;"; (* C: typedef unsigned char prefix_uint1 *)
-                           type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth true bw) ++ " = i8;" ]%string (* C: typedef signed char prefix_int1 *)
+                  => let type_suffix (b : bool) := (int.of_bitwidth b bw) in
+                     let typedef_name (b : bool) := int_type_to_string internal_private prefix (type_suffix b) in
+                     let type_comment (name : string) := String.concat String.NewLine (comment_block [( name ++ " represents values of " ++ show bw ++ " bits, stored in one byte.")%string]) in
+                     (if IntSet.mem (type_suffix false) bitwidths_used || IntSet.mem (type_suffix true) bitwidths_used
+                      then [type_comment (typedef_name false) ++ String.NewLine ++ type_prefix ++ (typedef_name false) ++ " = u8;"; (* C: typedef unsigned char prefix_uint1 *)
+                            type_comment (typedef_name true ) ++ String.NewLine ++ type_prefix ++ (typedef_name true)  ++ " = i8;"]%string (* C: typedef signed char prefix_int1 *)
                       else []))
                  [1; 2])
            ++ (if skip_typedefs
@@ -155,7 +206,7 @@ Module Rust.
        (* integer literals *)
        | (IR.literal v @@@ _) => int_literal_to_string prefix IR.type.Z v
        (* array dereference *)
-       | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
+       | (IR.List_nth n @@@ IR.Var _ v) => "(*IndexConst(" ++ v ++ ").index(" ++ Decimal.Z.to_string (Z.of_nat n) ++ "))"
        (* (de)referencing *)
        | (IR.Addr @@@ IR.Var _ v) => "&mut " ++ v (* borrow a mutable ref to v *)
        | (IR.Dereference @@@ e) => "( *" ++ arith_to_string internal_private prefix e ++ " )"
@@ -234,7 +285,7 @@ Module Rust.
     | IR.Comment lines _ =>
       String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
     | IR.AssignNth name n val =>
-      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string internal_private prefix val ++ ";"
+      "*IndexConst(&mut " ++ name ++ ").index_mut(" ++ Decimal.Z.to_string (Z.of_nat n) ++ ") = " ++ arith_to_string internal_private prefix val ++ ";"
     end.
 
   Definition to_strings {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (e : IR.expr) : list string :=
@@ -258,11 +309,11 @@ Module Rust.
       fun '(va, vb) => (to_base_arg_list internal_private all_private prefix mode va ++ to_base_arg_list internal_private all_private prefix mode vb)%list
     | base.type.list tZ =>
       fun '(n, r, len, typedef) =>
-        let modifier := match mode with
-                        | In => (* arrays for inputs are immutable borrows *) "&"
-                        | Out => (* arrays for outputs are mutable borrows *) "&mut "
+        let (modifier1, modifier2) := match mode with
+                        | In => (* arrays for inputs are immutable *) ("", "&")
+                        | Out => (* arrays for outputs are mutable *) ("mut ", "&mut ")
                         end in
-        [n ++ ": " ++ modifier ++ primitive_array_type_to_string internal_private all_private prefix IR.type.Z r len typedef]
+        [modifier1 ++ n ++ ": " ++ modifier2 ++ primitive_array_type_to_string internal_private all_private prefix IR.type.Z r len typedef]
     | base.type.list _ => fun _ => ["#error ""complex list"";"]
     | base.type.option _ => fun _ => ["#error option;"]
     | base.type.unit => fun _ => ["#error unit;"]
@@ -375,9 +426,9 @@ Module Rust.
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
-    ((if inline then "#[inline]" ++ String.NewLine else "") ++ (if private then "fn " else "pub fn ") ++ name ++
+    ((if inline then "#[inline]" ++ String.NewLine else "") ++ (if private then "const fn " else "pub const fn ") ++ name ++
       "(" ++ String.concat ", " (to_arg_list internal_private all_private prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow internal_private all_private prefix args) ++
-      ") -> () {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
+      ") {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
 
   (** In Rust, there is no munging of return arguments (they remain
       passed by pointers), so all variables are live *)

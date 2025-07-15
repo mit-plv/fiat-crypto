@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Bool.Bool.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
+From Coq Require Import Bool.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Hints.Core.
@@ -67,7 +67,7 @@ Module Z.
     intros. rewrite Z.sub_1_r, <- Z.ones_equiv.
     apply Z.land_ones; auto with zarith.
   Qed.
-  
+
   Lemma land_pow2_testbit a b :
   a &' 2^b = if Z.testbit a b then 2^b else 0.
   Proof.
@@ -96,6 +96,15 @@ Module Z.
   Proof.
     destruct (Z.ltb_spec b 0).
     - now rewrite Pow.Z.base_pow_neg, Z.land_0_r.
-    - rewrite land_pow2_testbit, Z.div2_bits, Testbit.Z.bits_above_pow2; 
+    - rewrite land_pow2_testbit, Z.div2_bits, Testbit.Z.bits_above_pow2;
       try (replace (Z.succ b) with (b + 1); nia). Qed.
+
+  Lemma land_ones_eq_of_bounded v n
+    (H : (0 <= v < 2 ^ (Z.of_N n))%Z)
+  : Z.land v (Z.ones (Z.of_N n)) = v.
+  Proof.
+    rewrite Z.land_ones by lia.
+    rewrite Z.mod_small by lia.
+    reflexivity.
+  Qed.
 End Z.

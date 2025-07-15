@@ -1,5 +1,5 @@
-Require Import Coq.NArith.NArith.
-Require Import Coq.Strings.Ascii.
+From Coq Require Import NArith.
+From Coq Require Import Ascii.
 Require Import Crypto.Util.Notations.
 
 Local Open Scope bool_scope.
@@ -11,11 +11,14 @@ Local Open Scope char_scope.
 Example Null := "000".
 Example Backspace := "008".
 Example Tab := "009".
+Example HorizontalTab := "009".
 Example LF := "010".
+Example NewLine := "010".
+Example VerticalTab := "011".
 Example NewPage := "012".
+Example FormFeed := "012".
 Example CR := "013".
 Example Escape := "027".
-Example NewLine := "010".
 
 Local Coercion N_of_ascii : ascii >-> N.
 Definition ltb (x y : ascii) : bool := N.ltb x y.
@@ -39,3 +42,6 @@ Definition to_upper (ch : ascii) : ascii
 
 Definition is_whitespace (x : ascii) : bool
   := ((x =? " ") || (x =? NewPage) || (x =? LF) || (x =? CR) || (x =? Tab))%char%bool.
+
+Definition is_printable (x : ascii) : bool
+  := (" " <=? x) && (x <=? "~").

@@ -1,6 +1,6 @@
 (** * Push-Button Synthesis of Unsaturated Solinas: Reification Cache *)
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.derive.Derive.
+From Coq Require Import ZArith.
+From Coq Require Import Derive.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.BaseConversion.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
@@ -13,11 +13,13 @@ Module Export BaseConversion.
          SuchThat (is_reification_of reified_convert_bases_gen convert_basesmod)
          As reified_convert_bases_gen_correct.
   Proof. Time cache_reify (). Time Qed.
-#[global]
-  Hint Extern 1 (_ = _) => apply_cached_reification convert_basesmod (proj1 reified_convert_bases_gen_correct) : reify_cache_gen.
-#[global]
-  Hint Immediate (proj2 reified_convert_bases_gen_correct) : wf_gen_cache.
-#[global]
-  Hint Rewrite (proj1 reified_convert_bases_gen_correct) : interp_gen_cache.
+  Local Definition reified_convert_bases_gen_correct_proj1 := proj1 reified_convert_bases_gen_correct.
+  Local Definition reified_convert_bases_gen_correct_proj2 := proj2 reified_convert_bases_gen_correct.
+  #[global]
+  Hint Extern 1 (_ = _) => apply_cached_reification convert_basesmod reified_convert_bases_gen_correct_proj1 : reify_cache_gen.
+  #[global]
+  Hint Immediate reified_convert_bases_gen_correct_proj2 : wf_gen_cache.
+  #[global]
+  Hint Rewrite reified_convert_bases_gen_correct_proj1 : interp_gen_cache.
   Local Opaque reified_convert_bases_gen. (* needed for making [autorewrite] not take a very long time *)
 End BaseConversion.

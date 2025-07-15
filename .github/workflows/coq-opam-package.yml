@@ -1,4 +1,4 @@
-name: Test opam package
+name: CI (Coq, opam)
 
 # Note that we must split up each command into a separate step for Windows, because otherwise we don't get error code
 # See also https://github.com/avsm/setup-ocaml/issues/72
@@ -16,36 +16,46 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        coq-version: ['dev', '8.16.0']
-        ocaml-compiler: ['4.11.1']
-        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
-        coq-extra-flags: ['-async-proofs-j 1', '']
-        opam-jobs-flag: ['-j 1', '']
-        exclude:
-        - os: 'ubuntu-latest'
-          coq-extra-flags: '-async-proofs-j 1'
-        - os: 'macos-latest'
-          coq-extra-flags: '-async-proofs-j 1'
-        - os: 'windows-latest'
-          coq-extra-flags: ''
-        - os: 'ubuntu-latest'
-          opam-jobs-flag: '-j 1'
-        - os: 'macos-latest'
-          opam-jobs-flag: '-j 1'
-        - os: 'windows-latest'
-          opam-jobs-flag: ''
+        coq-version: ['dev', '8.20.0', '8.19.0', '8.18.0']
+        os: [{name: 'Ubuntu',
+              runs-on: 'ubuntu-latest',
+              ocaml-compiler: '4.14.0',
+              coq-extra-flags: '',
+              ocamlfind-pin: '',
+              opam-jobs-flag: ''},
+             {name: 'macOS',
+              runs-on: 'macos-latest',
+              ocaml-compiler: '4.14.2',
+              coq-extra-flags: '',
+              ocamlfind-pin: '',
+              opam-jobs-flag: ''},
+             {name: 'Windows',
+              runs-on: 'windows-latest',
+              ocaml-compiler: '4.14.0',
+              coq-extra-flags: '-async-proofs-j 1',
+              ocamlfind-pin: 'git+https://github.com/ocaml/ocamlfind.git#master',
+              opam-jobs-flag: '-j 1'}]
 
-
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os.runs-on }}
 
     env:
       OPAMYES: "true"
+      OPAMCONFIRMLEVEL: "unsafe-yes"
 
     steps:
+    - name: Work around https://github.com/ocaml/opam-repository/pull/26891#issuecomment-2486598516
+      run: |
+        # Alternative: brew update; brew upgrade; brew install pkgconf
+        brew unlink pkg-config
+        brew install pkgconf
+        brew unlink pkgconf
+        brew link pkg-config
+      if: ${{ runner.os == 'macOS' }}
+        
     - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v2
+      uses: ocaml/setup-ocaml@v3
       with:
-        ocaml-compiler: ${{ matrix.ocaml-compiler }}
+        ocaml-compiler: ${{ matrix.os.ocaml-compiler }}
 
     - name: echo Linux build params
       run: |
@@ -94,9 +104,7 @@ jobs:
       if: ${{ runner.os == 'Windows' }}
 
     - name: Work around https://github.com/actions/checkout/issues/766 / https://github.com/ocaml/setup-ocaml/issues/479 / https://github.com/actions/checkout/issues/767 / https://github.com/actions/checkout/issues/760
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'git config --global --add safe.directory "*"'
-      shell: cmd
+      run: opam exec -- bash -l -c 'git config --global --add safe.directory "*"'
       if: ${{ runner.os == 'Windows' }}
 
     - name: echo opam build params
@@ -112,9 +120,9 @@ jobs:
     - run: opam repo add coq-released https://coq.inria.fr/opam/released
     - run: opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
     - run: opam update
-    - run: opam install opam-depext
-    - run: opam exec -- opam-depext coq.${{ matrix.coq-version }}
-    - run: opam pin --kind=version add coq ${{ matrix.coq-version }}
+    - run: opam pin add ocamlfind '${{ matrix.os.ocamlfind-pin }}'
+      if: matrix.os.ocamlfind-pin != ''
+    - run: opam pin --kind=version add coq ${{ matrix.coq-version }} --verbose 
 
     - name: echo more build params
       run: |
@@ -131,10 +139,9 @@ jobs:
         echo "" | opam exec -- coqtop
         echo ::endgroup::
 
-    - run: opam exec -- opam-depext coq-fiat-crypto
-    - run: opam install coq-fiat-crypto ${{ matrix.opam-jobs-flag }}
+    - run: opam install coq-fiat-crypto --with-test ${{ matrix.os.opam-jobs-flag }}
       env:
-        COQEXTRAFLAGS: ${{ matrix.coq-extra-flags }}
+        COQEXTRAFLAGS: ${{ matrix.os.coq-extra-flags }}
 
     - name: cat opam logs (Linux, Mac)
       run: |
@@ -148,13 +155,12 @@ jobs:
       if: ${{ always() && runner.os == 'Windows' }}
 
     - name: cat opam logs (Windows)
-      run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'for i in $(find ~/.opam/log/ -type f); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done'
-      shell: cmd
+      run: opam exec -- bash -l -c 'for i in $(find ~/.opam/log/ -type f); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done'
       if: ${{ always() && runner.os == 'Windows' }}
 
     - run: opam list
-    - run: opam exec -- word_by_word_montgomery -h
-    - run: opam exec -- unsaturated_solinas -h
-    - run: opam exec -- saturated_solinas -h
-    - run: opam exec -- base_conversion -h
+    - run: opam exec -- fiat_crypto -h
+    - run: opam exec -- fiat_crypto word-by-word-montgomery -h
+    - run: opam exec -- fiat_crypto unsaturated-solinas -h
+    - run: opam exec -- fiat_crypto saturated-solinas -h
+    - run: opam exec -- fiat_crypto base-conversion -h

@@ -7,7 +7,7 @@
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
 	bedrock2-compiler clean-bedrock2-compiler install-bedrock2-compiler \
 	rupicola clean-rupicola install-rupicola \
-	util all-except-generated all \
+	util all-except-generated all all-except-generated-and-js-of-ocaml all-except-js-of-ocaml \
 	bedrock2-backend \
 	deps \
 	nobigmem print-nobigmem \
@@ -53,6 +53,7 @@ endif
 # coq .vo files that are not compiled using coq_makefile
 SPECIAL_VOFILES := \
 	src/ExtractionOCaml/%.vo \
+	src/ExtractionJsOfOCaml/%.vo \
 	src/ExtractionHaskell/%.vo \
 	src/Rewriter/PerfTesting/Specific/generated/%.vo
 GREP_EXCLUDE_SPECIAL := grep -v '^\(src/Extraction\(OCaml\|Haskell\)/\|src/Rewriter/PerfTesting/Specific/generated/\)'
@@ -69,10 +70,12 @@ PERFTESTING_VO := \
 	src/Rewriter/PerfTesting/Core.vo \
 	src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
 BEDROCK2_FILES_PATTERN := \
+	src/ExtractionJsOfOCaml/bedrock2_% \
 	src/ExtractionOCaml/bedrock2_% \
 	src/ExtractionHaskell/bedrock2_% \
-	src/ExtractionOCaml/with_bedrock2_% \
-	src/ExtractionHaskell/with_bedrock2_% \
+	src/ExtractionJsOfOCaml/WithBedrock/% \
+	src/ExtractionOCaml/WithBedrock/% \
+	src/ExtractionHaskell/WithBedrock/% \
 	src/Assembly/WithBedrock/% \
 	src/Bedrock/% # it's important to catch not just the .vo files, but also the .glob files, etc, because this is used to filter FILESTOINSTALL
 EXCLUDE_PATTERN :=
@@ -84,8 +87,15 @@ endif
 EXCLUDED_VOFILES := $(filter $(EXCLUDE_PATTERN),$(VOFILES))
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
-LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
-	src/Curves/Weierstrass/Jacobian.vo \
+LITE_UNMADE_VOFILES := \
+	src/Bedrock/Secp256k1/Addchain.vo \
+	src/Bedrock/Secp256k1/Field256k1.vo \
+	src/Bedrock/Secp256k1/JacobianCoZ.vo \
+	src/Bedrock/Secp256k1/JoyeLadder.vo \
+	src/Curves/Weierstrass/AffineProofs.vo \
+	src/Curves/Weierstrass/Jacobian/Jacobian.vo \
+	src/Curves/Weierstrass/Jacobian/CoZ.vo \
+	src/Curves/Weierstrass/Jacobian/ScalarMult.vo \
 	src/Curves/Weierstrass/Projective.vo \
 	src/Rewriter/RulesGood.vo \
 	src/Rewriter/All.vo \
@@ -93,7 +103,9 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	$(EXCLUDED_VO)
 NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
-	src/Curves/Weierstrass/Jacobian.vo \
+	src/Curves/Weierstrass/Jacobian/Jacobian.vo \
+	src/Curves/Weierstrass/Jacobian/CoZ.vo \
+	src/Curves/Weierstrass/Jacobian/ScalarMult.vo \
 	src/Curves/Weierstrass/Projective.vo \
 	$(PERFTESTING_VO) \
 	$(EXCLUDED_VO)
@@ -148,8 +160,10 @@ CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS) fiat-amd64.test)
 
 all-except-compiled: coq pre-standalone-extracted check-output
-all-except-generated: standalone-ocaml perf-standalone all-except-compiled
-all: all-except-generated generated-files copy-to-fiat-rust copy-to-fiat-go
+all-except-generated-and-js-of-ocaml: standalone-ocaml perf-standalone all-except-compiled
+all-except-generated: all-except-generated-and-js-of-ocaml standalone-js-of-ocaml
+all-except-js-of-ocaml: all-except-generated-and-js-of-ocaml generated-files
+all: all-except-generated-and-js-of-ocaml standalone-js-of-ocaml generated-files copy-to-fiat-rust copy-to-fiat-go
 	@true
 coq: $(REGULAR_VOFILES)
 coq-without-bedrock2: $(REGULAR_EXCEPT_BEDROCK2_VOFILES)
@@ -330,15 +344,18 @@ Makefile.coq: Makefile _CoqProject
 
 include Makefile.examples
 include Makefile.standalone
+include Makefile.js-html
 
 $(STANDALONE:%=src/ExtractionOCaml/%.ml): src/StandaloneOCamlMain.vo
 $(BEDROCK2_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Bedrock/Standalone/StandaloneOCamlMain.vo
 $(PERF_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
 $(STANDALONE:%=src/ExtractionHaskell/%.hs): src/StandaloneHaskellMain.vo
 $(BEDROCK2_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Bedrock/Standalone/StandaloneHaskellMain.vo
+$(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml): src/StandaloneJsOfOCamlMain.vo
+$(BEDROCK2_STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml): src/Bedrock/Standalone/StandaloneJsOfOCamlMain.vo
 # $(PERF_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Rewriter/PerfTesting/StandaloneHaskellMain.vo
 
-pre-standalone-extracted: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs)
+pre-standalone-extracted: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) $(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml) $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs)
 
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) : %.ml : %.v
 	$(SHOW)'COQC $<'
@@ -346,7 +363,13 @@ $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) : %.ml : %.v
 	$(HIDE)cat $*.tmp.ml | tr -d '\r' > $@ && rm $*.tmp.ml
 	$(HIDE)cat $*.tmp.mli | tr -d '\r' > $*.mli && rm $*.tmp.mli
 
-$(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
+$(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml) : %.ml : %.v
+	$(SHOW)'COQC $<'
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $<
+	$(HIDE)cat $*.tmp.ml | tr -d '\r' > $@ && rm $*.tmp.ml
+	$(HIDE)cat $*.tmp.mli | tr -d '\r' > $*.mli && rm $*.tmp.mli
+
+$(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed src/StandaloneHaskellMain.vo
 	$(SHOW)'COQC $< > $@'
 	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
 	$(HIDE)cat $@.tmp | tr -d '\r' | sed -f src/haskell.sed > $@ && rm $@.tmp
@@ -474,14 +497,14 @@ clean::
 cleanall:: clean
 	rm -rf src/Rewriter/PerfTesting/Specific/generated
 
-install: coq
-install-without-bedrock2: coq-without-bedrock2
+install: coq $(filter %.vo,$(FILESTOINSTALL))
+install-without-bedrock2: coq-without-bedrock2 $(filter %.vo,$(filter-out $(BEDROCK2_FILES_PATTERN),$(FILESTOINSTALL)))
 
 install-without-bedrock2:
 	$(HIDE)$(MAKE) -f Makefile.coq install FILESTOINSTALL="$(filter-out $(BEDROCK2_FILES_PATTERN),$(FILESTOINSTALL))"
 
-install-standalone-ocaml: standalone-ocaml
-install-standalone-haskell: standalone-haskell
+install-standalone-ocaml:: standalone-ocaml
+install-standalone-haskell:: standalone-haskell
 
 .PHONY: validate
 validate: Makefile.coq
@@ -495,7 +518,7 @@ print_DEPFLAGS:
 # This target is used to update the _CoqProject file.
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 EXISTING_COQPROJECT_CONTENTS_SORTED:=$(shell cat _CoqProject 2>&1 | $(SORT_COQPROJECT))
-WARNINGS_PLUS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+unexpected-implicit-declaration,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,+undeclared-scope,+deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,+deprecated-typeclasses-transparency-without-locality
+WARNINGS_PLUS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+unexpected-implicit-declaration,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,+undeclared-scope,+deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,+deprecated-typeclasses-transparency-without-locality,+fragile-hint-constr
 # Remove unsupported-attributes once we stop supporting < 8.14
 WARNINGS := $(WARNINGS_PLUS),unsupported-attributes
 COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; printf -- '$(DEPFLAGS_NL)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; echo 'src/Everything.v'; echo 'src/Bedrock/Everything.v'; find src -type f -name '*.v' | $(GREP_EXCLUDE_SPECIAL) | $(GREP_EXCLUDE_GENERATED) | $(SORT_COQPROJECT))

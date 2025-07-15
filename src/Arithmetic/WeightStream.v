@@ -117,7 +117,7 @@ Module Saturated.
   Lemma weight_1 bound : weight bound 1%nat = bound O. Proof. cbn. lia. Qed.
 
   Lemma tl_weight bound i : stream.tl (weight bound) i = (stream.hd bound * weight (stream.tl bound) i).
-  Proof. cbv [weight]. rewrite tl_map. cbv [stream.map]. rewrite tl_prefixes; trivial. Qed.
+  Proof. cbv [weight]. rewrite stream.tl_map. cbv [stream.map]. rewrite tl_prefixes; trivial. Qed.
 
   Lemma tl_weight' bound i : stream.tl (weight bound) i = (weight bound i * bound i).
   Proof.

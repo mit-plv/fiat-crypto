@@ -2,7 +2,7 @@
 (** This allows for something between [bool] and [Prop], where we can
     computationally reduce things like [True /\ True], but can still
     express equality of types. *)
-Require Import Coq.Setoids.Setoid.
+From Coq Require Import Setoid.
 Require Import Crypto.Util.Notations.
 
 Declare Scope pointed_prop_scope.

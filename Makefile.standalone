@@ -2,6 +2,10 @@
 # files on .v files, so that we can compile them by invoking this
 # makefile directly even when Coq is not available
 
+.SUFFIXES:
+
+SELF_MAKEFILE_STANDALONE := $(lastword $(MAKEFILE_LIST))
+
 include Makefile.config
 
 GHC?=ghc
@@ -10,6 +14,7 @@ GHCFLAGS?= # -XStrict
 # in case we didn't include Makefile.coq
 OCAMLFIND?=ocamlfind
 OCAMLOPT?="$(OCAMLFIND)" ocamlopt
+OCAMLC?="$(OCAMLFIND)" ocamlc
 OCAMLOPTP?="$(OCAMLFIND)" ocamloptp
 ifneq ($(WITH_PERF),1)
 CAMLOPT_PERF ?= $(OCAMLOPT)
@@ -18,14 +23,54 @@ else
 CAMLOPT_PERF ?= $(OCAMLOPTP)
 CAMLOPT_PERF_SHOW:=OCAMLOPTP
 endif
+CAMLEXTRAFLAGS ?=
+
+JSOO_NO_INLINE?=1
+ifneq ($(JSOO_NO_INLINE),)
+JSOO_NO_INLINE_FLAG ?= --no-inline
+else
+JSOO_NO_INLINE_FLAG ?=
+endif
+EMIT_WAT?=1
+ifneq ($(EMIT_WAT),)
+EMIT_WAT_FLAG ?= --debug wat
+else
+EMIT_WAT_FLAG ?=
+endif
+JS_OF_OCAML ?= js_of_ocaml
+WASM_OF_OCAML ?= wasm_of_ocaml
+STANDALONE_CAMLFLAGS ?= -package unix -w -20 -g $(CAMLEXTRAFLAGS)
+STANDALONE_JS_CAMLFLAGS ?= -package js_of_ocaml $(STANDALONE_CAMLFLAGS)
+JS_OF_OCAML_EXTRAFLAGS ?=
+JS_OF_OCAML_FLAGS ?= --source-map $(JSOO_NO_INLINE_FLAG) --enable=effects $(JS_OF_OCAML_EXTRAFLAGS)
+WASM_OF_OCAML_EXTRAFLAGS ?=
+WASM_OF_OCAML_FLAGS ?= --source-map $(JSOO_NO_INLINE_FLAG) $(EMIT_WAT_FLAG) $(WASM_OF_OCAML_EXTRAFLAGS)
+
+PACKAGE ?= standalone.tar.gz
+PACKAGE_CMD ?= tar -czvf
+PACKAGE_CMD_FUNC ?= $(PACKAGE_CMD) $(1) $(2)
+MKTEMP_D ?= etc/ci/mktemp_d.sh
+GZIP ?= gzip
+GZIP_KEEP_FLAGS ?= -k
 
 ENSURE_STACK_LIMIT := . etc/ensure_stack_limit.sh || true
 
 .PHONY: \
 	perf-standalone \
+	standalone-unified install-standalone-unified install-standalone-unified \
+	standalone-separate install-standalone-separate uninstall-standalone-separate \
 	standalone install-standalone uninstall-standalone \
+	standalone-unified-ocaml install-standalone-unified-ocaml uninstall-standalone-unified-ocaml \
+	standalone-separate-ocaml install-standalone-separate-ocaml uninstall-standalone-separate-ocaml \
 	standalone-ocaml install-standalone-ocaml uninstall-standalone-ocaml \
+	standalone-unified-haskell install-standalone-unified-haskell uninstall-standalone-unified-haskell \
+	standalone-separate-haskell install-standalone-separate-haskell uninstall-standalone-separate-haskell \
 	standalone-haskell install-standalone-haskell uninstall-standalone-haskell \
+	standalone-js-of-ocaml install-standalone-js-of-ocaml uninstall-standalone-js-of-ocaml \
+	standalone-wasm-of-ocaml install-standalone-wasm-of-ocaml uninstall-standalone-wasm-of-ocaml \
+	package-standalone package-standalone-ocaml package-standalone-haskell \
+	package-standalone-unified package-standalone-unified-ocaml package-standalone-unified-haskell \
+	package-standalone-separate package-standalone-separate-ocaml package-standalone-separate-haskell \
 	#
 
 # pass -w -20 to disable the unused argument warning
@@ -33,63 +78,167 @@ ENSURE_STACK_LIMIT := . etc/ensure_stack_limit.sh || true
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.cmi) : %.cmi : %.ml
 	$(SHOW)'$(CAMLOPT_PERF_SHOW) $*.mli'
 	$(HIDE)$(ENSURE_STACK_LIMIT); \
-	 $(TIMER) $(CAMLOPT_PERF) -package unix -w -20 -g $*.mli
+	 $(TIMER) $(CAMLOPT_PERF) $(STANDALONE_CAMLFLAGS) $*.mli
 
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml %.cmi
 	$(SHOW)'$(CAMLOPT_PERF_SHOW) $< -o $@'
 	$(HIDE)$(ENSURE_STACK_LIMIT); \
-	 $(TIMER) $(CAMLOPT_PERF) -package unix -linkpkg -w -20 -g -I src/ExtractionOCaml/ -o $@ $<
+	 $(TIMER) $(CAMLOPT_PERF) $(STANDALONE_CAMLFLAGS) -linkpkg -I $(dir $@) -o $@ $<
+
+$(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.cmi) : %.cmi : %.ml
+	$(SHOW)'OCAMLC $*.mli'
+	$(HIDE)$(ENSURE_STACK_LIMIT); \
+	 $(TIMER) $(OCAMLC) $(STANDALONE_JS_CAMLFLAGS) $*.mli
+
+$(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.byte) : %.byte : %.ml %.cmi
+	$(SHOW)'OCAMLC $< -o $@'
+	$(HIDE)$(ENSURE_STACK_LIMIT); \
+	 $(TIMER) $(OCAMLC) $(STANDALONE_JS_CAMLFLAGS) -linkpkg -I $(dir $@) -o $@ $<
+
+$(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.js) : %.js : %.byte
+	$(SHOW)'JS_OF_OCAML $<'
+	$(HIDE)$(ENSURE_STACK_LIMIT); \
+	 $(TIMER) $(JS_OF_OCAML) $(JS_OF_OCAML_FLAGS) $<
+
+$(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.wasm) : %.wasm : %.byte
+	$(SHOW)'WASM_OF_OCAML $<'
+	$(HIDE)$(ENSURE_STACK_LIMIT); \
+	 $(TIMER) $(WASM_OF_OCAML) $(WASM_OF_OCAML_FLAGS) $<
+
+$(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.wat.gz) : %.wat.gz : %.wasm
+	$(SHOW)'GZIP $*'
+	$(HIDE)$(TIMER) $(GZIP) $(GZIP_KEEP_FLAGS) $*.wat
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
 	$(SHOW)'GHC $< -o $@'
 	$(HIDE)$(TIMER) $(GHC) $(GHCFLAGS) -o $@ $<
 
-standalone: standalone-haskell standalone-ocaml
+standalone: standalone-haskell standalone-ocaml standalone-js-of-ocaml
+standalone-unified: standalone-unified-haskell standalone-unified-ocaml standalone-js-of-ocaml
+standalone-separate: standalone-separate-haskell standalone-separate-ocaml
 perf-standalone: $(PERF_STANDALONE:%=src/ExtractionOCaml/%)
 
-standalone-ocaml: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%)
-standalone-haskell: $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
-
-uninstall-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
-uninstall-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
-
-ifeq ($(SKIP_BEDROCK2),1)
-install-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
-install-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
-
-install-standalone-ocaml install-standalone-haskell:
-	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
-	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
-	done; exit $$code
-	$(HIDE)for f in $(FILESTOINSTALL); do\
-	   install -d "$(BINDIR)/" &&\
-	   install -m 0755 "$$f" "$(BINDIR)/" &&\
-	   echo INSTALL "$$f" "$(BINDIR)/";\
-	done
-else
-install-standalone-ocaml: FILESTOINSTALL=$(WITH_BEDROCK2_OCAML_BINARIES)
-install-standalone-haskell: FILESTOINSTALL=$(WITH_BEDROCK2_HASKELL_BINARIES)
-
-install-standalone-ocaml install-standalone-haskell:
-	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
-	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
-	done; exit $$code
-	$(HIDE)for f in $(FILESTOINSTALL); do\
-	   fdir="$$(dirname "$$f")" &&\
-	   fname="$$(basename "$$f")" &&\
-	   df="$${fname#with_bedrock2_}" &&\
-	   install -d "$(BINDIR)/" &&\
-	   install -m 0755 "$$f" "$(BINDIR)/$$df" &&\
-	   echo INSTALL "$$f" "$(BINDIR)/$$df";\
-	done
+standalone-ocaml: standalone-unified-ocaml standalone-separate-ocaml
+standalone-unified-ocaml: $(UNIFIED_STANDALONE_OCAML:%=src/ExtractionOCaml/%)
+standalone-separate-ocaml: $(SEPARATE_STANDALONE_OCAML:%=src/ExtractionOCaml/%)
+standalone-haskell: standalone-unified-haskell standalone-separate-haskell
+standalone-unified-haskell: $(UNIFIED_STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
+standalone-separate-haskell: $(SEPARATE_STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
+standalone-js-of-ocaml: $(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.js)
+standalone-wasm-of-ocaml: $(STANDALONE_WASM_OF_OCAML:%=src/ExtractionJsOfOCaml/%.wasm)
+ifneq ($(EMIT_WAT),)
+standalone-wasm-of-ocaml: $(STANDALONE_WASM_OF_OCAML:%=src/ExtractionJsOfOCaml/%.wat.gz)
 endif
 
-uninstall-standalone-ocaml uninstall-standalone-haskell:
+uninstall-standalone-ocaml:: FILESTOINSTALL=$(OCAML_BINARIES)
+uninstall-standalone-unified-ocaml:: FILESTOINSTALL=$(UNIFIED_OCAML_BINARIES)
+uninstall-standalone-separate-ocaml:: FILESTOINSTALL=$(SEPARATE_OCAML_BINARIES)
+uninstall-standalone-haskell:: FILESTOINSTALL=$(HASKELL_BINARIES)
+uninstall-standalone-unified-haskell:: FILESTOINSTALL=$(UNIFIED_HASKELL_BINARIES)
+uninstall-standalone-separate-haskell:: FILESTOINSTALL=$(SEPARATE_HASKELL_BINARIES)
+uninstall-standalone-js-of-ocaml:: FILESTOINSTALL=$(JS_OF_OCAML_FILES)
+uninstall-standalone-wasm-of-ocaml:: FILESTOINSTALL=$(WASM_OF_OCAML_FILES)
+uninstall-standalone-wasm-of-ocaml: EXTRAFILESTOINSTALL=$(WASM_OF_OCAML_EXTRA_FILES)
+uninstall-standalone-wasm-of-ocaml:: EXTRAFILESBASEDIR=$(WASM_OF_OCAML_BASEDIR)
+
+install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell:: PERMS=0755
+install-standalone-js-of-ocaml install-standalone-wasm-of-ocaml:: PERMS=0644
+install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell:: INSTALLDIR=$(BINDIR)
+install-standalone-js-of-ocaml:: INSTALLDIR=$(JSDIR)
+install-standalone-wasm-of-ocaml:: INSTALLDIR=$(WASMDIR)
+
+
+
+ifeq ($(SKIP_BEDROCK2),1)
+install-standalone-ocaml:: FILESTOINSTALL=$(OCAML_BINARIES)
+install-standalone-unified-ocaml:: FILESTOINSTALL=$(UNIFIED_OCAML_BINARIES)
+install-standalone-separate-ocaml:: FILESTOINSTALL=$(SEPARATE_OCAML_BINARIES)
+install-standalone-haskell:: FILESTOINSTALL=$(HASKELL_BINARIES)
+install-standalone-unified-haskell:: FILESTOINSTALL=$(UNIFIED_HASKELL_BINARIES)
+install-standalone-separate-haskell:: FILESTOINSTALL=$(SEPARATE_HASKELL_BINARIES)
+install-standalone-js-of-ocaml:: FILESTOINSTALL=$(JS_OF_OCAML_FILES)
+install-standalone-wasm-of-ocaml:: FILESTOINSTALL=$(WASM_OF_OCAML_FILES)
+install-standalone-wasm-of-ocaml:: EXTRAFILESTOINSTALL1=$(WASM_OF_OCAML_EXTRA_FILES_WASM)
+install-standalone-wasm-of-ocaml:: EXTRAFILESTOINSTALL2=$(WASM_OF_OCAML_EXTRA_FILES_WASM_MAP)
+install-standalone-wasm-of-ocaml:: EXTRAFILESTOINSTALL=$(WASM_OF_OCAML_EXTRA_FILES)
+install-standalone-wasm-of-ocaml:: EXTRAFILESBASEDIR=$(WASM_OF_OCAML_BASEDIR)
+
+else
+install-standalone-ocaml:: FILESTOINSTALL=$(WITH_BEDROCK2_OCAML_BINARIES)
+install-standalone-unified-ocaml:: FILESTOINSTALL=$(WITH_BEDROCK2_UNIFIED_OCAML_BINARIES)
+install-standalone-separate-ocaml:: FILESTOINSTALL=$(WITH_BEDROCK2_SEPARATE_OCAML_BINARIES)
+install-standalone-haskell:: FILESTOINSTALL=$(WITH_BEDROCK2_HASKELL_BINARIES)
+install-standalone-unified-haskell:: FILESTOINSTALL=$(WITH_BEDROCK2_UNIFIED_HASKELL_BINARIES)
+install-standalone-separate-haskell:: FILESTOINSTALL=$(WITH_BEDROCK2_SEPARATE_HASKELL_BINARIES)
+install-standalone-js-of-ocaml:: FILESTOINSTALL=$(WITH_BEDROCK2_JS_OF_OCAML_FILES)
+install-standalone-wasm-of-ocaml:: FILESTOINSTALL=$(WITH_BEDROCK2_WASM_OF_OCAML_FILES)
+install-standalone-wasm-of-ocaml:: EXTRAFILESTOINSTALL1=$(WITH_BEDROCK2_WASM_OF_OCAML_EXTRA_FILES_WASM)
+install-standalone-wasm-of-ocaml:: EXTRAFILESTOINSTALL2=$(WITH_BEDROCK2_WASM_OF_OCAML_EXTRA_FILES_WASM_MAP)
+install-standalone-wasm-of-ocaml:: EXTRAFILESTOINSTALL=$(WITH_BEDROCK2_WASM_OF_OCAML_EXTRA_FILES)
+install-standalone-wasm-of-ocaml:: EXTRAFILESBASEDIR=$(WITH_BEDROCK2_WASM_OF_OCAML_BASEDIR)
+
+endif
+
+install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell install-standalone-js-of-ocaml install-standalone-wasm-of-ocaml::
+	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
+	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
+	done; exit $$code
+
+install-standalone-wasm-of-ocaml::
+	$(HIDE)code=0; if [ -z "$(strip $(wildcard $(EXTRAFILESTOINSTALL1)))" ]; then \
+	  >&2 echo "Missing $(EXTRAFILESTOINSTALL1)"; code=1; \
+	fi; \
+	if [ -z "$(strip $(wildcard $(EXTRAFILESTOINSTALL2)))" ]; then \
+	  >&2 echo "Missing $(EXTRAFILESTOINSTALL2)"; code=1; \
+	fi; \
+	exit $$code
+
+install-standalone-ocaml install-standalone-unified-ocaml install-standalone-separate-ocaml install-standalone-haskell install-standalone-unified-haskell install-standalone-separate-haskell install-standalone-js-of-ocaml install-standalone-wasm-of-ocaml::
+	$(HIDE)for f in $(FILESTOINSTALL); do\
+	   install -d "$(INSTALLDIR)/" &&\
+	   install -m $(PERMS) "$$f" "$(INSTALLDIR)/" &&\
+	   echo INSTALL "$$f" "$(INSTALLDIR)/";\
+	done
+
+install-standalone-wasm-of-ocaml::
+	$(HIDE)for f in $(patsubst $(EXTRAFILESBASEDIR)%,%,$(wildcard $(EXTRAFILESTOINSTALL))); do\
+	  fdir="$$(dirname "$$f")" &&\
+	  fname="$$(basename "$$f")" &&\
+	  install -d "$(INSTALLDIR)/$$fdir" &&\
+	  install -m $(PERMS) "$(EXTRAFILESBASEDIR)$$f" "$(INSTALLDIR)/$$fdir/" &&\
+	  echo INSTALL "$(EXTRAFILESBASEDIR)$$f" "$(INSTALLDIR)/$$fdir/";\
+	done
+
+uninstall-standalone-ocaml uninstall-standalone-unified-ocaml uninstall-standalone-separate-ocaml uninstall-standalone-haskell uninstall-standalone-unified-haskell uninstall-standalone-separate-haskell uninstall-standalone-wasm-of-ocaml uninstall-standalone-js-of-ocaml::
 	$(HIDE)for f in $(FILESTOINSTALL); do \
-	 instf="$(BINDIR)/`basename $$f`" &&\
+	 instf="$(INSTALLDIR)/`basename $$f`" &&\
 	 rm -f "$$instf" &&\
 	 echo RM "$$instf"; \
 	done
 
+uninstall-standalone-wasm-of-ocaml::
+	$(HIDE)for f in $(wildcard $(patsubst $(EXTRAFILESBASEDIR)%,$(INSTALLDIR)/%,$(EXTRAFILESTOINSTALL))); do\
+	  rm -f "$$f" &&\
+	  echo RM "$$f"; \
+	done
+
 install-standalone: install-standalone-ocaml # install-standalone-haskell
+install-standalone-unified: install-standalone-unified-ocaml # install-standalone-unified-haskell
+install-standalone-separate: install-standalone-separate-ocaml # install-standalone-separate-haskell
 uninstall-standalone: uninstall-standalone-ocaml # uninstall-standalone-haskell
+uninstall-standalone-unified: uninstall-standalone-unified-ocaml # uninstall-standalone-unified-haskell
+uninstall-standalone-separate: uninstall-standalone-separate-ocaml # uninstall-standalone-separate-haskell
+
+package-standalone: package-standalone-ocaml # package-standalone-haskell
+package-standalone-unified: package-standalone-unified-ocaml # package-standalone-unified-haskell
+package-standalone-separate: package-standalone-separate-ocaml # package-standalone-separate-haskell
+
+package-standalone-ocaml package-standalone-unified-ocaml package-standalone-separate-ocaml package-standalone-haskell package-standalone-unified-haskell package-standalone-separate-haskell : package-standalone-% :
+	$(SHOW)'PACKAGE STANDALONE $*'
+	$(HIDE)rm -f "$(PACKAGE)"
+	+$(HIDE)standalonedir="$$(TMPDIR="$$(pwd)" $(MKTEMP_D))"; \
+	 $(MAKE) -f $(SELF_MAKEFILE_STANDALONE) install-standalone-$* BINDIR="$$standalonedir" && \
+	 cd "$$standalonedir" && \
+	 $(call PACKAGE_CMD_FUNC,../$(PACKAGE),./*) && \
+	 cd ../ && \
+	 rm -rf "$$standalonedir"

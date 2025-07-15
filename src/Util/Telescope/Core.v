@@ -1,4 +1,4 @@
-Require Import Coq.Relations.Relation_Definitions Coq.Classes.Morphisms.
+From Coq Require Import Relation_Definitions Morphisms.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Module Export Telescope.

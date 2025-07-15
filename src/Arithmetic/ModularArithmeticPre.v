@@ -1,7 +1,7 @@
-Require Import Coq.ZArith.ZArith Coq.NArith.NArith Coq.Numbers.BinNums Coq.ZArith.Znumtheory.
-Require Import Coq.Logic.Eqdep_dec.
-Require Import Coq.Logic.EqdepFacts.
-Require Import Coq.micromega.Lia.
+From Coq Require Import ZArith NArith BinNums Znumtheory.
+From Coq Require Import Eqdep_dec.
+From Coq Require Import EqdepFacts.
+From Coq Require Import Lia.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Tactics.BreakMatch.

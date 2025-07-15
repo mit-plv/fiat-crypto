@@ -1,7 +1,6 @@
 (** NUtil that doesn't depend on ZUtil stuff *)
 (** Should probably come up with a better organization of this stuff *)
-Require Import Coq.NArith.NArith.
-Require Import Coq.Numbers.Natural.Peano.NPeano.
+From Coq Require Import NArith PeanoNat.
 Require Import Crypto.Util.NatUtil Crypto.Util.Decidable.
 
 Module N.

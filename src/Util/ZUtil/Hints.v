@@ -1,5 +1,5 @@
 (** * Hint Databases with lemmas about ℤ from the standard library *)
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 Require Export Crypto.Util.ZUtil.Hints.Core.
 Require Export Crypto.Util.ZUtil.Hints.ZArith.
 Require Export Crypto.Util.ZUtil.Hints.Ztestbit.

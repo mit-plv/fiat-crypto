@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
 Require Import Crypto.Util.ZUtil.Pow2.
 Require Import Crypto.Util.ZUtil.Log2.
 Require Import Crypto.Util.ZUtil.Lnot.

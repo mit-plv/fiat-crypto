@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.ZArith.Znumtheory.
+From Coq Require Import ZArith Lia.
+From Coq Require Import Znumtheory.
 Require Import Crypto.Util.ZUtil.Tactics.CompareToSgn.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
@@ -377,8 +377,9 @@ Module Z.
   Qed.
 
 #[global]
-  Hint Resolve (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1))
-       (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
+  Hint Extern 2 => simple apply (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
+#[global]
+  Hint Extern 2 => simple apply (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
 
   Lemma sub_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (a - b) / X = if a <? b then -1 else 0.
   Proof.

@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.ZUtil.Div.Bootstrap.
 Require Import Crypto.Util.ZUtil.Modulo.Bootstrap.
 Require Import Crypto.Util.ZUtil.Hints.Core.

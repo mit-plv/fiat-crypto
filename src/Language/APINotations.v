@@ -1,8 +1,8 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.FSets.FMapPositive.
-Require Import Coq.Bool.Bool.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Relations.Relation_Definitions.
+From Coq Require Import ZArith.
+From Coq Require Import FMapPositive.
+From Coq Require Import Bool.
+From Coq Require Import Morphisms.
+From Coq Require Import Relation_Definitions.
 Require Import Ltac2.Ltac2.
 Require Import Ltac2.Printf.
 Require Import Crypto.Language.PreExtra.
@@ -81,10 +81,17 @@ Module Compilers.
   Global Arguments ident_nat_rect_arrow {_ _} : assert.
   Global Arguments ident_eager_nat_rect {_} : assert.
   Global Arguments ident_eager_nat_rect_arrow {_ _} : assert.
+  Global Arguments ident_nat_rect_fbb_b {_ _ _} : assert.
+  Global Arguments ident_nat_rect_fbb_b_b {_ _ _ _} : assert.
   Global Arguments ident_list_rect {_ _} : assert.
-  Global Arguments ident_list_rect_arrow {_ _ _} : assert.
   Global Arguments ident_eager_list_rect {_ _} : assert.
   Global Arguments ident_eager_list_rect_arrow {_ _ _} : assert.
+  Global Arguments ident_list_rect_arrow {_ _ _} : assert.
+  Global Arguments ident_list_rect_fbb_b {_ _ _ _} : assert.
+  Global Arguments ident_list_rect_fbb_b_b {_ _ _ _ _} : assert.
+  Global Arguments ident_list_rect_fbb_b_b_b {_ _ _ _ _ _} : assert.
+  Global Arguments ident_list_rect_fbb_b_b_b_b {_ _ _ _ _ _ _} : assert.
+  Global Arguments ident_list_rect_fbb_b_b_b_b_b {_ _ _ _ _ _ _ _} : assert.
   Global Arguments ident_list_case {_ _} : assert.
   Global Arguments ident_List_length {_} : assert.
   Global Arguments ident_List_firstn {_} : assert.
@@ -165,6 +172,7 @@ Module Compilers.
       Import IdentifiersBasicGENERATED.Compilers.
       Notation base := base (only parsing).
       Notation Z := Z (only parsing).
+      Notation positive := positive (only parsing).
       Notation nat := nat (only parsing).
       Notation zrange := zrange (only parsing).
       Notation bool := bool (only parsing).
@@ -245,10 +253,17 @@ Module Compilers.
     Notation nat_rect_arrow := Compilers.ident_nat_rect_arrow (only parsing).
     Notation eager_nat_rect := Compilers.ident_eager_nat_rect (only parsing).
     Notation eager_nat_rect_arrow := Compilers.ident_eager_nat_rect_arrow (only parsing).
+    Notation nat_rect_fbb_b := Compilers.ident_nat_rect_fbb_b (only parsing).
+    Notation nat_rect_fbb_b_b := Compilers.ident_nat_rect_fbb_b_b (only parsing).
     Notation list_rect := Compilers.ident_list_rect (only parsing).
     Notation list_rect_arrow := Compilers.ident_list_rect_arrow (only parsing).
     Notation eager_list_rect := Compilers.ident_eager_list_rect (only parsing).
     Notation eager_list_rect_arrow := Compilers.ident_eager_list_rect_arrow (only parsing).
+    Notation list_rect_fbb_b := Compilers.ident_list_rect_fbb_b (only parsing).
+    Notation list_rect_fbb_b_b := Compilers.ident_list_rect_fbb_b_b (only parsing).
+    Notation list_rect_fbb_b_b_b := Compilers.ident_list_rect_fbb_b_b_b (only parsing).
+    Notation list_rect_fbb_b_b_b_b := Compilers.ident_list_rect_fbb_b_b_b_b (only parsing).
+    Notation list_rect_fbb_b_b_b_b_b := Compilers.ident_list_rect_fbb_b_b_b_b_b (only parsing).
     Notation list_case := Compilers.ident_list_case (only parsing).
     Notation List_length := Compilers.ident_List_length (only parsing).
     Notation List_seq := Compilers.ident_List_seq (only parsing).
@@ -266,6 +281,8 @@ Module Compilers.
     Notation List_update_nth := Compilers.ident_List_update_nth (only parsing).
     Notation List_nth_default := Compilers.ident_List_nth_default (only parsing).
     Notation eager_List_nth_default := Compilers.ident_eager_List_nth_default (only parsing).
+    Notation Pos_add := Compilers.ident_Pos_add (only parsing).
+    Notation Pos_mul := Compilers.ident_Pos_mul (only parsing).
     Notation Z_add := Compilers.ident_Z_add (only parsing).
     Notation Z_mul := Compilers.ident_Z_mul (only parsing).
     Notation Z_pow := Compilers.ident_Z_pow (only parsing).
@@ -282,12 +299,15 @@ Module Compilers.
     Notation Z_gtb := Compilers.ident_Z_gtb (only parsing).
     Notation Z_of_nat := Compilers.ident_Z_of_nat (only parsing).
     Notation Z_to_nat := Compilers.ident_Z_to_nat (only parsing).
+    Notation Z_pos := Compilers.ident_Z_pos (only parsing).
+    Notation Z_to_pos := Compilers.ident_Z_to_pos (only parsing).
     Notation Z_shiftr := Compilers.ident_Z_shiftr (only parsing).
     Notation Z_shiftl := Compilers.ident_Z_shiftl (only parsing).
     Notation Z_land := Compilers.ident_Z_land (only parsing).
     Notation Z_lor := Compilers.ident_Z_lor (only parsing).
     Notation Z_min := Compilers.ident_Z_min (only parsing).
     Notation Z_max := Compilers.ident_Z_max (only parsing).
+    Notation Z_abs := Compilers.ident_Z_abs (only parsing).
     Notation Z_bneg := Compilers.ident_Z_bneg (only parsing).
     Notation Z_lnot_modulo := Compilers.ident_Z_lnot_modulo (only parsing).
     Notation Z_lxor := Compilers.ident_Z_lxor (only parsing).
@@ -431,6 +451,7 @@ Module Compilers.
   Ltac Reify_rhs _ :=
     ltac2:(_Reify_rhs ()).
 
+  Local Set Default Proof Mode "Classic".
   Global Hint Extern 1 (@expr.Reified_of _ _ _ _ ?t ?v ?rv)
   => cbv [expr.Reified_of]; Reify_rhs (); reflexivity : typeclass_instances.
 

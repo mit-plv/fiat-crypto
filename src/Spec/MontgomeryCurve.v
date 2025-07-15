@@ -61,5 +61,21 @@ Module M.
     Proof.
       cbv [coordinates]; BreakMatch.break_match; trivial; Field.fsatz.
     Qed.
+
+    Program Definition opp (P : point) : point :=
+      match P return F*F+∞ with
+      | (x, y) => (x, -y)
+      | ∞ => ∞
+      end.
+    Next Obligation.
+    Proof.
+      DestructHead.destruct_head @point; cbv; BreakMatch.break_match; trivial; Field.fsatz.
+    Qed.
+
+    Definition X0 (P : point) : F :=
+      match coordinates P with
+      | (x, y) => x
+      | _ => Fzero
+      end.
   End MontgomeryCurve.
 End M.

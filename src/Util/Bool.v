@@ -1,5 +1,5 @@
 (*** Boolean Utility Lemmas and Databases *)
-Require Import Coq.Bool.Bool.
+From Coq Require Import Bool.
 Require Import Crypto.Util.Notations.
 
 (** For equalities of booleans *)

@@ -1,15 +1,15 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.FSets.FMapPositive.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Strings.String.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Bool.Bool.
-Require Import Coq.Structures.Orders.
-Require Import Coq.Structures.OrdersEx.
-Require Import Coq.MSets.MSetInterface.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.Strings.HexString.
+From Coq Require Import ZArith.
+From Coq Require Import MSetPositive.
+From Coq Require Import FMapPositive.
+From Coq Require Import Lia.
+From Coq Require Import String.
+From Coq Require Import Ascii.
+From Coq Require Import Bool.
+From Coq Require Import Orders.
+From Coq Require Import OrdersEx.
+From Coq Require Import MSetInterface.
+From Coq Require Import MSetPositive.
+From Coq Require Import HexString.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
@@ -154,9 +154,9 @@ Module Compilers.
          |}.
 
     Class output_options_opt :=
-      { skip_typedefs_ :> skip_typedefs_opt
-      ; relax_adc_sbb_return_carry_to_bitwidth_ :> relax_adc_sbb_return_carry_to_bitwidth_opt
-      ; language_specific_cast_adjustment_ :> language_specific_cast_adjustment_opt
+      { #[global] skip_typedefs_ :: skip_typedefs_opt
+      ; #[global] relax_adc_sbb_return_carry_to_bitwidth_ :: relax_adc_sbb_return_carry_to_bitwidth_opt
+      ; #[global] language_specific_cast_adjustment_ :: language_specific_cast_adjustment_opt
       }.
 
     Definition default_output_options : output_options_opt
@@ -177,7 +177,7 @@ Module Compilers.
             := match t return ShowLevel (ZRange.type.base.interp t) with
                | base.type.unit => @show_lvl unit _
                | base.type.type_base base.type.Z => @show_lvl zrange _
-               | base.type.type_base Compilers.positive => @show_lvl positive _
+               | base.type.type_base base.type.positive => @show_lvl positive _
                | base.type.type_base base.type.bool => @show_lvl bool _
                | base.type.type_base base.type.nat => @show_lvl nat _
                | base.type.type_base base.type.zrange => @show_lvl zrange _
@@ -192,12 +192,7 @@ Module Compilers.
             Fixpoint show_lvl_interp {t} : ShowLevel (ZRange.type.base.option.interp t)
               := match t return ShowLevel (ZRange.type.base.option.interp t) with
                  | base.type.unit => @show_lvl unit _
-                 | base.type.type_base base.type.Z => @show_lvl (option zrange) _
-                 | base.type.type_base Compilers.positive => @show_lvl (option positive) _
-                 | base.type.type_base base.type.bool => @show_lvl (option bool) _
-                 | base.type.type_base base.type.nat => @show_lvl (option nat) _
-                 | base.type.type_base base.type.zrange => @show_lvl (option zrange) _
-                 | base.type.type_base base.type.string => @show_lvl (option string) _
+                 | base.type.type_base _ as t => @show_lvl (option (ZRange.type.base.interp t)) _
                  | base.type.prod A B => @show_lvl (ZRange.type.base.option.interp A * ZRange.type.base.option.interp B) _
                  | base.type.list A => @show_lvl (option (list (ZRange.type.base.option.interp A))) _
                  | base.type.option A => @show_lvl (option (option (ZRange.type.base.option.interp A))) _
@@ -224,7 +219,7 @@ Module Compilers.
           Global Instance show_base : Show base.type.base
             := fun t => match t with
                         | base.type.Z => "ℤ"
-                        | Compilers.positive => "ℤ⁺"
+                        | base.type.positive => "ℤ⁺"
                         | base.type.bool => "𝔹"
                         | base.type.nat => "ℕ"
                         | base.type.zrange => "zrange"
@@ -402,6 +397,8 @@ Module Compilers.
                 | ident.Nat_add => neg_wrap_parens "Nat.add"
                 | ident.Nat_sub => neg_wrap_parens "Nat.sub"
                 | ident.Nat_eqb => neg_wrap_parens "Nat.eqb"
+                | ident.Pos_mul => neg_wrap_parens "Pos.mul"
+                | ident.Pos_add => neg_wrap_parens "Pos.add"
                 | ident.nil t => neg_wrap_parens "[]"
                 | ident.cons t => fun _ => "(::)"
                 | ident.pair A B => fun _ => "(,)"
@@ -460,10 +457,13 @@ Module Compilers.
                 | ident.Z_gtb => fun _ => "(>)"
                 | ident.Z_min => neg_wrap_parens "min"
                 | ident.Z_max => neg_wrap_parens "max"
+                | ident.Z_abs => neg_wrap_parens "abs"
                 | ident.Z_log2 => neg_wrap_parens "log₂"
                 | ident.Z_log2_up => neg_wrap_parens "⌈log₂⌉"
                 | ident.Z_of_nat => fun _ => "(ℕ→ℤ)"
                 | ident.Z_to_nat => fun _ => "(ℤ→ℕ)"
+                | ident.Z_pos => fun _ => "(ℤ⁺→ℤ)"
+                | ident.Z_to_pos => fun _ => "(ℤ→ℤ⁺)"
                 | ident.Z_shiftr => fun _ => "(>>)"
                 | ident.Z_shiftl => fun _ => "(<<)"
                 | ident.Z_land => fun _ => "(&)"
@@ -502,11 +502,6 @@ Module Compilers.
                 | ident.fancy_selm => neg_wrap_parens "fancy.selm"
                 | ident.fancy_sell => neg_wrap_parens "fancy.sell"
                 | ident.fancy_addm => neg_wrap_parens "fancy.addm"
-                | Compilers.ident_Pos_add => neg_wrap_parens "Pos.add"
-                | Compilers.ident_Pos_mul => neg_wrap_parens "Pos.mul"
-                | Compilers.ident_Z_abs => neg_wrap_parens "Z.abs"
-                | Compilers.ident_Z_pos => neg_wrap_parens "Z.pos"
-                | Compilers.ident_Z_to_pos => neg_wrap_parens "Z.to_pos"
                 end.
         Global Instance show_ident {t} : Show (ident.ident t) := show_lvl_ident.
 
@@ -522,6 +517,8 @@ Module Compilers.
               ; ("+ℕ", (add_assoc, add_lvl))
               ; ("-ℕ", (sub_assoc, sub_lvl))
               ; ("=ℕ", (NoAssoc, Level.level 70))
+              ; ("*ℤ⁺", (mul_assoc, mul_lvl))
+              ; ("+ℤ⁺", (add_assoc, add_lvl))
               ; ("::", (RightAssoc, Level.level 60))
               ; ("++", (FullyAssoc, Level.level 60))
               ; ("*", (mul_assoc, mul_lvl))
@@ -594,12 +591,12 @@ Module Compilers.
              | ident.Nat_add => "+ℕ"
              | ident.Nat_sub => "-ℕ"
              | ident.Nat_eqb => "=ℕ"
+             | ident.Pos_mul => "*ℤ⁺"
+             | ident.Pos_add => "+ℤ⁺"
              | ident.cons _ => "::"
              | ident.List_app _ => "++"
              | ident.Z_mul => "*"
              | ident.Z_add => "+"
-             | Compilers.ident_Pos_mul => "*ℤ⁺"
-             | Compilers.ident_Pos_add => "+ℤ⁺"
              | ident.Z_sub => "-"
              | ident.Z_pow => "^"
              | ident.Z_lxor => "⊕"
@@ -648,12 +645,12 @@ Module Compilers.
              | ident.Nat_add as idc
              | ident.Nat_sub as idc
              | ident.Nat_eqb as idc
+             | ident.Pos_mul as idc
+             | ident.Pos_add as idc
              | ident.cons _ as idc
              | ident.List_app _ as idc
              | ident.Z_mul as idc
              | ident.Z_add as idc
-             | Compilers.ident_Pos_add as idc
-             | Compilers.ident_Pos_mul as idc
              | ident.Z_sub as idc
              | ident.Z_pow as idc
              | ident.Z_lxor as idc
@@ -709,14 +706,14 @@ Module Compilers.
              | ident.nat_rect _ as idc
              | ident.eager_nat_rect _ as idc
              | ident.eager_nat_rect_arrow _ _ as idc
-             | @Compilers.ident_nat_rect_fbb_b    _ _ _ as idc
-             | @Compilers.ident_nat_rect_fbb_b_b  _ _ _ _ as idc
-             | @Compilers.ident_list_rect_fbb_b   _ _ _ _ as idc
-             | @Compilers.ident_list_rect_fbb_b_b _ _ _ _ _ as idc
-             | @Compilers.ident_list_rect_fbb_b_b_b _ _ _ _ _ _ as idc
-             | @Compilers.ident_list_rect_fbb_b_b_b_b _ _ _ _ _ _ _ as idc
-             | @Compilers.ident_list_rect_fbb_b_b_b_b_b  _ _ _ _ _ _ _ _ as idc
              | ident.nat_rect_arrow _ _ as idc
+             | @ident.nat_rect_fbb_b    _ _ _ as idc
+             | @ident.nat_rect_fbb_b_b  _ _ _ _ as idc
+             | @ident.list_rect_fbb_b   _ _ _ _ as idc
+             | @ident.list_rect_fbb_b_b _ _ _ _ _ as idc
+             | @ident.list_rect_fbb_b_b_b _ _ _ _ _ _ as idc
+             | @ident.list_rect_fbb_b_b_b_b _ _ _ _ _ _ _ as idc
+             | @ident.list_rect_fbb_b_b_b_b_b  _ _ _ _ _ _ _ _ as idc
              | ident.option_rect _ _ as idc
              | ident.list_rect _ _ as idc
              | ident.eager_list_rect _ _ as idc
@@ -740,11 +737,11 @@ Module Compilers.
              | ident.Z_log2_up as idc
              | ident.Z_of_nat as idc
              | ident.Z_to_nat as idc
-             | Compilers.ident_Z_pos as idc
-             | Compilers.ident_Z_to_pos as idc
-             | Compilers.ident_Z_abs as idc
+             | ident.Z_pos as idc
+             | ident.Z_to_pos as idc
              | ident.Z_min as idc
              | ident.Z_max as idc
+             | ident.Z_abs as idc
              | ident.Z_mul_split as idc
              | ident.Z_mul_high as idc
              | ident.Z_add_get_carry as idc

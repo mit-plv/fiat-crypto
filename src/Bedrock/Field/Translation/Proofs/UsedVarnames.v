@@ -1,13 +1,13 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Strings.String.
-Require Import Coq.micromega.Lia.
+From Coq Require Import ZArith.
+From Coq Require Import String.
+From Coq Require Import Lia.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Datatypes.PropSet.
-Require Import Coq.Lists.List. (* after SeparationLogic *)
+From Coq Require Import List. (* after SeparationLogic *)
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.VarnameSet.
 Require Import Crypto.Bedrock.Field.Common.Tactics.
@@ -52,7 +52,7 @@ Section UsedVarnames.
              | |- exists _, _ => eexists; solve [eauto with lia]
              end; [ ].
     match goal with H : _ <= _ |- _ =>
-                    apply le_lt_or_eq in H; destruct H; [right | left]
+                    apply Nat.lt_eq_cases in H; destruct H; [right | left]
     end.
     { eexists; eauto with lia. }
     { congruence. }

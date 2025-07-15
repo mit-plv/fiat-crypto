@@ -4,80 +4,122 @@ on:
   push:
     branches: [ master , sp2019latest , v8.6 , v8.8 , v8.10 ]
   pull_request:
+  merge_group:
   workflow_dispatch:
+  release:
+    types: [published]
   schedule:
     - cron: '0 0 1 * *'
 
 jobs:
-  build-macos:
+  build:
 
-    runs-on: macOS-11
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS 12, 13 are x86_64; macOS 14 is arm64
+        include:
+        - os: { name: 'macOS 13', arch: 'x86_64', runs-on: 'macos-13' }
+          ocaml-compiler: '4.13.0'
+        - os: { name: 'macOS 14', arch: 'arm64' , runs-on: 'macos-14' }
+          ocaml-compiler: '4.14.2'
+
+    runs-on: ${{ matrix.os.runs-on }}
 
     concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+      group: ${{ github.workflow }}-${{ matrix.os.runs-on }}-${{ matrix.ocaml-compiler }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "8.16.0" # minimal major version required for bedrock2 components
+      COQ_VERSION: "8.18.0" # pick a version not tested on other platforms
       COQCHKEXTRAFLAGS: ""
       SKIP_BEDROCK2: "0"
+      OPAMYES: "true"
+      OPAMCONFIRMLEVEL: "unsafe-yes"
+
+    name: ${{ matrix.os.name }} (${{ matrix.os.arch }})
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
     - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v2
+      uses: ocaml/setup-ocaml@v3
       with:
-        ocaml-compiler: 4.11.1
+        ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
+    - name: Work around https://github.com/ocaml/opam-repository/pull/26891#issuecomment-2486598516
+      run: |
+        # Alternative: brew update; brew upgrade; brew install pkgconf
+        brew unlink pkg-config
+        brew install pkgconf
+        brew unlink pkgconf
+        brew link pkg-config
     - name: Install system dependencies
-      run: |
-        set -e
-        brew install gnu-time coreutils
-
-    - name: Install Coq
-      run: |
-        set -e
-        eval $(opam env)
-        opam update
-        opam pin add coq ${COQ_VERSION}
-      env:
-        OPAMYES: "true"
-        OPAMCONFIRMLEVEL: "unsafe-yes"
-
+      run: brew install gnu-time gnu-sed coreutils grep
+    - run: opam update
+    - run: opam pin add coq ${COQ_VERSION}
+    - run: opam install js_of_ocaml
     - name: echo build params
-      run: |
-        eval $(opam env)
-        etc/ci/describe-system-config-macos.sh
+      run: etc/ci/describe-system-config-macos.sh
     - name: deps
-      run: |
-        eval $(opam env)
-        etc/ci/github-actions-make.sh -j2 deps
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 deps
+    - name: all-except-js-of-ocaml
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 all-except-js-of-ocaml
+    - name: pre-standalone-extracted
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 pre-standalone-extracted
     - name: all
-      run: |
-        eval $(opam env)
-        etc/ci/github-actions-make.sh -j2 all
-
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 all
+    - run: find . -name "*.timing" | xargs tar -czvf timing-files.tgz
+      if: failure()
+    - name: upload generated timing files
+      uses: actions/upload-artifact@v4
+      with:
+        name: timing-files-${{ matrix.os.runs-on }}
+        path: timing-files.tgz
+      if: failure()
+    - name: install-standalone-unified-ocaml
+      run: opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
+    - name: install-standalone-js-of-ocaml
+      run: opam exec -- etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
     - name: only-test-amd64-files-lite
-      run: |
-        eval $(opam env)
-        etc/ci/github-actions-make.sh -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
 
     - name: upload OCaml files
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: ExtractionOCaml
+        name: ExtractionOCaml-${{ matrix.os.arch }}
         path: src/ExtractionOCaml
+    - name: upload js_of_ocaml files
+      uses: actions/upload-artifact@v4
+      with:
+        name: ExtractionJsOfOCaml-${{ matrix.os.arch }}
+        path: src/ExtractionJsOfOCaml
+    - name: upload standalone files
+      uses: actions/upload-artifact@v4
+      with:
+        name: standalone-macos-${{ matrix.os.arch }}
+        path: dist/fiat_crypto
+    - name: upload standalone js files
+      uses: actions/upload-artifact@v4
+      with:
+        name: standalone-html-macos-${{ matrix.os.arch }}
+        path: fiat-html
+    - name: install
+      run: opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml
+    - name: install-without-bedrock2
+      run: opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 install-without-bedrock2 install-standalone-ocaml
+    - name: install-dev
+      run: opam exec -- etc/ci/github-actions-make.sh EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 install install-standalone-ocaml
     - name: display timing info
       run: cat time-of-build-pretty.log
     - name: display per-line timing info
       run: etc/ci/github-actions-display-per-line-timing.sh
 #    - name: upload timing and .vo info
-#      uses: actions/upload-artifact@v3
+#      uses: actions/upload-artifact@v4
 #      with:
-#        name: build-outputs
+#        name: build-outputs-${{ matrix.os.arch }}
 #        path: .
 #      if: always ()
 #    - name: validate
@@ -85,3 +127,120 @@ jobs:
 #        eval $(opam env)
 #        make TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"
 #      if: github.event_name != 'pull_request'
+
+  combine-standalone:
+    runs-on: macos-latest
+    needs: build
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download standalone MacOS x86_64
+      uses: actions/download-artifact@v4
+      with:
+        name: standalone-macos-x86_64
+        path: dist-x86_64/
+    - name: Download standalone MacOS arm64
+      uses: actions/download-artifact@v4
+      with:
+        name: standalone-macos-arm64
+        path: dist-arm64/
+    - name: Create universal binary
+      run: |
+        mkdir -p dist
+        lipo -create -output dist/fiat_crypto dist-x86_64/fiat_crypto dist-arm64/fiat_crypto
+    - name: upload universal binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: standalone-macos
+        path: dist/fiat_crypto
+
+  test-standalone:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ['', '-x86_64', '-arm64']
+        os: ['macos-13', 'macos-14', 'macos-latest']
+        exclude:
+          - os: 'macos-13'
+            arch: '-arm64'
+    runs-on: ${{ matrix.os }}
+    needs: [build, combine-standalone]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download standalone MacOS${{ matrix.arch }}
+      uses: actions/download-artifact@v4
+      with:
+        name: standalone-macos${{ matrix.arch }}
+        path: dist/
+    - name: List files
+      run: find dist
+    - run: chmod +x dist/fiat_crypto
+    - name: Test files (${{ matrix.arch }} on ${{ matrix.os }})
+      run: |
+        echo "::group::file fiat_crypto"
+        file dist/fiat_crypto
+        echo "::endgroup::"
+        echo "::group::otool -L fiat_crypto"
+        otool -L dist/fiat_crypto
+        echo "::endgroup::"
+        echo "::group::lipo -info fiat_crypto"
+        lipo -info dist/fiat_crypto
+        echo "::endgroup::"
+        etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
+
+  publish-standalone:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ['', '-x86_64', '-arm64']
+    runs-on: ubuntu-latest
+    needs: [build, combine-standalone]
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch all history for all tags and branches
+        tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
+    - name: Download standalone MacOS${{ matrix.arch }}
+      uses: actions/download-artifact@v4
+      with:
+        name: standalone-macos${{ matrix.arch }}
+        path: dist/
+    - name: List files
+      run: find dist
+    - name: Rename files
+      run: |
+        arch="$(etc/ci/find-arch.sh dist/fiat_crypto)"
+        tag="$(git describe --tags HEAD)"
+        fname="Fiat-Cryptography_${tag}_macOS_${arch}"
+        echo "$fname"
+        mv dist/fiat_crypto "dist/$fname"
+        find dist
+    - name: Upload macOS-${{ matrix.arch }} artifacts to GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      # Upload to GitHub Release using the `gh` CLI.
+      # `dist/` contains the built packages
+      run: >-
+        gh release upload
+        '${{ github.ref_name }}' dist/**
+        --repo '${{ github.repository }}'
+      if: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name == 'release' }}
+
+  macos-check-all:
+    runs-on: ubuntu-latest
+    needs: [build, test-standalone, publish-standalone]
+    if: always()
+    steps:
+    - run: echo 'build passed'
+      if: ${{ needs.build.result == 'success' }}
+    - run: echo 'test-standalone passed'
+      if: ${{ needs.test-standalone.result == 'success' }}
+    - run: echo 'publish-standalone passed'
+      if: ${{ needs.publish-standalone.result == 'success' }}
+    - run: echo 'build failed' && false
+      if: ${{ needs.build.result != 'success' }}
+    - run: echo 'test-standalone failed' && false
+      if: ${{ needs.test-standalone.result != 'success' }}
+    - run: echo 'publish-standalone failed' && false
+      if: ${{ needs.publish-standalone.result != 'success' }}

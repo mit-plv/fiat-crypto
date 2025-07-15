@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List.
+From Coq Require Import List.
 Require Export Crypto.StandaloneOCamlMain.
 Require Import Crypto.Rewriter.PerfTesting.Core.
 Require Import Crypto.Util.Notations.

@@ -1,8 +1,9 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Classes.RelationPairs.
-Require Import Coq.Relations.Relations.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
+From Coq Require Import Morphisms.
+From Coq Require Import RelationPairs.
+From Coq Require Import Relations.
+From Coq Require Import List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.BasicLemmas.
@@ -41,12 +42,17 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.PrintGoal.
+Require Import Crypto.Util.Tactics.DoWithHyp.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.AbstractInterpretation.ZRange.
+Require Import Crypto.AbstractInterpretation.ZRangeCommonProofs.
+Import ListNotations. Import EqNotations.
 
 Module Compilers.
   Import AbstractInterpretation.ZRange.Compilers.
+  Import AbstractInterpretation.ZRangeCommonProofs.Compilers.
+  Import Rewriter.Language.Wf.Compilers. (* for properties about type.related_hetero *)
   Export ZRange.Settings.
 
   Module ZRange.
@@ -58,32 +64,49 @@ Module Compilers.
 
           Lemma tighter_than_union t (rx ry : ZRange.type.base.option.interp t) :
             ZRange.type.base.option.is_tighter_than rx (ZRange.type.base.option.union rx ry) = true /\
-            ZRange.type.base.option.is_tighter_than ry (ZRange.type.base.option.union rx ry) = true.
+              ZRange.type.base.option.is_tighter_than ry (ZRange.type.base.option.union rx ry) = true.
           Proof.
-            induction t; [destruct t|..]; destruct rx, ry; cbn [
-              ZRange.type.base.interp
-              ZRange.type.base.option.interp
-              ZRange.type.base.option.is_tighter_than
-              ZRange.type.base.is_tighter_than
-              ZRange.type.base.option.union
-              ZRange.type.base.option.option_map_2
-              RingMicromega.map_option2
-              ] in *; try auto 2.
-            { split. apply ZRange.is_tighter_than_bool_union_l. apply ZRange.is_tighter_than_bool_union_r. }
-            { rewrite 2 Bool.andb_true_iff; split; split; try apply IHt1; try apply IHt2. }
-            { break_innermost_match; [|intuition]. apply Nat.eqb_eq in Heqb.
-              rewrite 2 fold_andb_map_map. (* apply fold_andb_map_iff, conj; intros.
-              { rewrite List.combine_length, Heqb, Nat.min_id; trivial. }
-              cbv [uncurry]; break_innermost_match; inversion_prod; subst.
-                                            *) admit. }
-          Admitted.
+            induction t; [destruct t|..]; destruct rx, ry;
+              cbn [
+                  ZRange.type.base.interp
+                    ZRange.type.base.option.interp
+                    ZRange.type.base.option.is_tighter_than
+                    ZRange.type.base.is_tighter_than
+                    ZRange.type.base.option.union
+                    Option.map2
+                    Option.bind2
+                ] in *; auto 2.
+            all: fold (@ZRange.type.base.option.interp) in *.
+            all: break_innermost_match; reflect_hyps; inversion_option; subst; auto 2.
+            all: split_and.
+            all: cbn [option_beq].
+            all: rewrite ?Bool.andb_true_iff; auto.
+            all: try now split; first [ apply ZRange.is_tighter_than_bool_union_l | apply ZRange.is_tighter_than_bool_union_r ].
+            all: do 2 try (match goal with
+                           | [ |- context[?x = true] ]
+                             => lazymatch x with true => fail | false => fail | _ => idtac end;
+                                destruct x eqn:?; progress reflect_hyps
+                           end;
+                           cbn [ZRange.type.base.option.None] in *;
+                           auto 2; subst; try congruence).
+            { rewrite 2 fold_andb_map_map.
+              rewrite 2 fold_andb_map_iff.
+              rewrite List.combine_length.
+              do_with_hyp' ltac:(fun H => rewrite H).
+              rewrite Nat.min_id.
+              repeat split; intros *; destruct_head'_prod; cbn [uncurry fst snd].
+              all: rewrite In_nth_error_iff.
+              all: intros [n H']; revert H'.
+              all: rewrite !nth_error_combine.
+              all: break_innermost_match; intros; inversion_option; inversion_pair; subst; auto. }
+          Qed.
 
           Lemma is_bounded_by_union_l t (rx ry : ZRange.type.base.option.interp t) x :
             ZRange.type.base.option.is_bounded_by rx x = true ->
             ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union rx ry) x = true.
           Proof.
             eapply ZRange.type.base.option.is_tighter_than_is_bounded_by; try eassumption;
-            eapply tighter_than_union.
+              eapply tighter_than_union.
           Qed.
 
           Lemma is_bounded_by_union_r t (rx ry : ZRange.type.base.option.interp t) y :
@@ -91,17 +114,55 @@ Module Compilers.
             ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union rx ry) y = true.
           Proof.
             eapply ZRange.type.base.option.is_tighter_than_is_bounded_by; try eassumption;
-            eapply tighter_than_union.
+              eapply tighter_than_union.
           Qed.
         End option.
       End base.
 
       Module option.
+        Lemma app_curried_None {t args} : type.app_curried (@ZRange.type.option.None t) args = ZRange.type.base.option.None.
+        Proof. induction t; cbn; auto. Qed.
+
         Lemma is_bounded_by_impl_related_hetero t
-              (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
+          (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
         : ZRange.type.option.is_bounded_by x v = true
           -> type.related_hetero (fun t x v => ZRange.type.base.option.is_bounded_by x v = true) x v.
         Proof. induction t; cbn in *; intuition congruence. Qed.
+
+        Lemma is_bounded_by_impl_related_hetero_and_Proper {skip_base} t
+              (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
+        : ZRange.type.option.is_bounded_by x v = true
+          -> type.related_hetero_and_Proper (skip_base:=skip_base) (fun _ => eq) (fun _ => eq) (fun t x v => ZRange.type.base.option.is_bounded_by x v = true) x v.
+        Proof. induction t; cbn in *; break_innermost_match; intuition congruence. Qed.
+
+        Lemma is_bounded_by_impl_eqv_refl t
+          (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
+          : ZRange.type.option.is_bounded_by x v = true
+            -> x == x /\ v == v.
+        Proof. induction t; cbn; split; try reflexivity; try congruence. Qed.
+
+        Lemma is_bounded_by_impl_eqv_refl1 t
+          (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
+          : ZRange.type.option.is_bounded_by x v = true
+            -> x == x.
+        Proof. intros; eapply is_bounded_by_impl_eqv_refl; eassumption. Qed.
+
+        Lemma is_bounded_by_impl_eqv_refl2 t
+          (x : ZRange.type.option.interp t) (v : type.interp base.interp t)
+          : ZRange.type.option.is_bounded_by x v = true
+            -> v == v.
+        Proof. intros; eapply is_bounded_by_impl_eqv_refl; eassumption. Qed.
+
+        Lemma andb_bool_for_each_lhs_of_arrow_is_bounded_by_impl_and_for_each_lhs_of_arrow_eqv_refl t
+          (x : type.for_each_lhs_of_arrow ZRange.type.option.interp t) (v : type.for_each_lhs_of_arrow (type.interp base.interp) t)
+          : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) x v = true
+            -> type.and_for_each_lhs_of_arrow (@type.eqv) v v.
+        Proof.
+          induction t; cbn; [ reflexivity | ].
+          rewrite Bool.andb_true_iff.
+          intros [H0 H1].
+          split; eauto using is_bounded_by_impl_eqv_refl2.
+        Qed.
       End option.
     End type.
 
@@ -113,6 +174,14 @@ Module Compilers.
                   (assume_cast_truncates : bool).
           Local Notation interp_is_related idc
             := (type.related_hetero
+                  (fun t st v => ZRange.type.base.option.is_bounded_by st v = true)
+                  (ZRange.ident.option.interp assume_cast_truncates idc)
+                  (ident.interp idc)).
+          Local Notation interp_is_related_and_Proper idc
+            := (type.related_hetero_and_Proper
+                  (skip_base:=true)
+                  (fun t => eq)
+                  (fun t => eq)
                   (fun t st v => ZRange.type.base.option.is_bounded_by st v = true)
                   (ZRange.ident.option.interp assume_cast_truncates idc)
                   (ident.interp idc)).
@@ -372,7 +441,7 @@ Module Compilers.
                          | break_innermost_match_step
                          | break_innermost_match_hyps_step
                          | progress cbn [id
-                                           ZRange.type.base.option.is_bounded_by is_bounded_by_bool ZRange.type.base.is_bounded_by lower upper fst snd projT1 projT2 bool_eq base.interp base.base_interp Crypto.Util.Option.bind fold_andb_map negb ZRange.ident.option.to_literal ZRange.type.base.option.None fst snd ZRange.type.base.option.interp ZRange.type.base.interp List.combine List.In base.interp_beq base.base_interp_beq base.base_interp] in *
+                                           ZRange.type.base.option.is_bounded_by is_bounded_by_bool ZRange.type.base.is_bounded_by lower upper fst snd projT1 projT2 bool_eq base.interp base.base_interp Crypto.Util.Option.bind fold_andb_map negb ZRange.ident.option.to_literal ZRange.type.base.option.None fst snd ZRange.type.base.option.interp ZRange.type.base.interp List.combine List.In base.interp_beq base.base_interp_beq base.base_interp ZRange.type.option.None] in *
                          | progress ident.fancy.cbv_fancy_in_all
                          | progress destruct_head'_bool
                          | solve [ auto with nocore ]
@@ -418,16 +487,43 @@ Module Compilers.
                            | [ |- and _ _ ] => apply conj
                            end
                          | progress cbv [bool_eq Bool.eqb option_map List.nth_default Definitions.Z.bneg is_bounded_by_bool zrange_beq] in *
+                         | let rec do_rect_head lhs rhs k :=
+                             lazymatch lhs with
+                             | nat_rect ?P ?O ?S ?n
+                               => lazymatch rhs with
+                                  | nat_rect ?P' ?O' ?S' n
+                                    => is_var n;
+                                       k ();
+                                       induction n; cbn [nat_rect];
+                                       generalize dependent (nat_rect P O S); generalize dependent (nat_rect P' O' S');
+                                       intros
+                                  end
+                             | list_rect ?P ?N ?C ?ls
+                               => lazymatch rhs with
+                                  | list_rect ?P' ?N' ?C' ?ls'
+                                    => lazymatch goal with
+                                       | [ H : length ls = length ls' |- _ ]
+                                         => is_var ls; is_var ls'; k ();
+                                            let IH := fresh "IH" in
+                                            (revert dependent ls'; induction ls as [|? ls IH]; intros [|? ls']; intros; cbn [list_rect length] in * );
+                                            [
+                                            | exfalso; discriminate | exfalso; discriminate
+                                            | specialize (IH ls');
+                                              generalize dependent (list_rect P N C); generalize dependent (list_rect P' N' C') ];
+                                            intros
+                                       end
+                                  end
+                             | ?f ?x
+                               => lazymatch rhs with
+                                  | ?g ?y
+                                    => is_var x; is_var y;
+                                       do_rect_head f g ltac:(fun _ => k (); revert dependent x; try revert dependent y)
+                                  end
+                             end in
+                           lazymatch goal with
+                           | [ |- ?R ?lhs ?rhs = true ] => do_rect_head lhs rhs ltac:(fun _ => idtac)
+                           end
                          | match goal with
-                           | [ |- ?R (nat_rect ?P ?O ?S ?n) (nat_rect ?P' ?O' ?S' ?n) = true ]
-                             => is_var n; induction n; cbn [nat_rect];
-                                generalize dependent (nat_rect P O S); generalize dependent (nat_rect P' O' S');
-                                intros
-                           | [ |- ?R (nat_rect ?P ?O ?S ?n ?x) (nat_rect ?P' ?O' ?S' ?n ?y) = true ]
-                             => is_var n; is_var x; is_var y;
-                                revert dependent x; revert dependent y; induction n; cbn [nat_rect];
-                                generalize dependent (nat_rect P O S); generalize dependent (nat_rect P' O' S');
-                                intros
                            | [ H : length ?ls = length ?ls' |- ?R (List.fold_right ?f ?x ?ls) (List.fold_right ?f' ?x' ?ls') = true ]
                              => is_var ls; is_var ls';
                                 let IH := fresh "IH" in
@@ -446,25 +542,6 @@ Module Compilers.
                                  | specialize (IH ls');
                                    generalize dependent (List.fold_right f x); generalize dependent (List.fold_right f' x') ];
                                 intros
-                           | [ H : length ?ls = length ?ls' |- ?R (list_rect ?P ?N ?C ?ls) (list_rect ?P' ?N' ?C' ?ls') = true ]
-                             => is_var ls; is_var ls';
-                                let IH := fresh "IH" in
-                                revert dependent ls'; induction ls as [|? ls IH]; intros [|? ls']; intros; cbn [list_rect length] in *;
-                                [
-                                 | exfalso; discriminate | exfalso; discriminate
-                                 | specialize (IH ls');
-                                   generalize dependent (list_rect P N C); generalize dependent (list_rect P' N' C') ];
-                                intros
-                           | [ H : length ?ls = length ?ls' |- ?R (list_rect ?P ?N ?C ?ls ?x) (list_rect ?P' ?N' ?C' ?ls' ?y) = true ]
-                             => is_var ls; is_var ls'; is_var x; is_var y;
-                                revert dependent y; try revert dependent x;
-                                let IH := fresh "IH" in
-                                revert dependent ls'; induction ls as [|? ls IH]; intros [|? ls']; intros; cbn [list_rect length] in *;
-                                [
-                                | exfalso; discriminate | exfalso; discriminate
-                                | specialize (IH ls');
-                                  generalize dependent (list_rect P N C); generalize dependent (list_rect P' N' C') ];
-                                intros
                            | [ H : forall a b, ?R a b = true -> ?R' (?f a) (?g b) = true |- ?R' (?f _) (?g _) = true ] => apply H; clear H
                            | [ H : forall a b, ?R a b = true -> forall c d, ?R' c d = true -> ?R'' (?f a c) (?g b d) = true |- ?R'' (?f _ _) (?g _ _) = true ]
                              => apply H; clear H
@@ -476,7 +553,18 @@ Module Compilers.
                            | [ H : (forall a b, ?R0 a b = true -> forall c d, ?R1 c d = true -> forall e f, (forall g h, ?R3 g h = true -> ?R4 (e g) (f h) = true) -> forall i j, ?R5 i j = true -> ?R6 (?F _ _ _ _) (?G _ _ _ _) = true)
                                |- ?R6 (?F _ _ _ _) (?G _ _ _ _) = true ]
                              => apply H; clear H
-                           end ].
+                           end
+                         | match goal with
+                           | [ |- ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union _ _) (Bool.Thunked.bool_rect _ _ _ true) = true ]
+                             => apply ZRange.type.base.option.is_bounded_by_union_l
+                           | [ |- ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union _ _) (Bool.Thunked.bool_rect _ _ _ false) = true ]
+                             => apply ZRange.type.base.option.is_bounded_by_union_r
+                           | [ |- ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union _ _) (Bool.bool_rect_nodep _ _ true) = true ]
+                             => apply ZRange.type.base.option.is_bounded_by_union_l
+                           | [ |- ZRange.type.base.option.is_bounded_by (ZRange.type.base.option.union _ _) (Bool.bool_rect_nodep _ _ false) = true ]
+                             => apply ZRange.type.base.option.is_bounded_by_union_r
+                           end
+                         | do_with_hyp' ltac:(fun H => apply H; clear H; now non_arith_t) ].
 
           Local Lemma mul_by_halves_bounds x y n :
             (0 <= x < 2^ (n / 2))%Z ->
@@ -624,9 +712,13 @@ Module Compilers.
                break_innermost_match; apply Bool.andb_true_iff; split; apply Z.leb_le; try apply Z.le_sub_1_iff; auto with zarith. }
           Qed.
 
-          Lemma interp_related {t} (idc : ident t) : interp_is_related idc.
+          (** In abstract interpretation, we only need this version of the lemma for less-than-third-order types, but in Assembly/Symbolic, we use it for all identifiers *)
+          Lemma interp_related {t} (idc : ident t) (*H : type.is_not_higher_order_than 3 t = true*) : interp_is_related idc.
           Proof using Type.
             destruct idc.
+            (*
+            (** clear out higher-than-third-order types *)
+            all: cbn in H; try congruence.*)
             all: lazymatch goal with
                  | [ |- context[ident.Z_cast] ] => apply interp_related_Z_cast
                  | [ |- context[ident.Z_cast2] ] => apply interp_related_Z_cast2
@@ -645,6 +737,15 @@ Module Compilers.
             all: change (@list_rect_arrow_nodep) with (fun A P Q => @list_rect A (fun _ => P -> Q)).
             all: change (@Thunked.list_case) with (fun A P PNil => @list_case A (fun _ => P) (PNil Datatypes.tt)) in *.
             all: change (@Thunked.option_rect) with (fun A P PS PN => @option_rect A (fun _ => P) PS (PN Datatypes.tt)) in *.
+            all: cbv [
+                     nat_rect_fbb_b
+                       nat_rect_fbb_b_b
+                       list_rect_fbb_b
+                       list_rect_fbb_b_b
+                       list_rect_fbb_b_b_b
+                       list_rect_fbb_b_b_b_b
+                       list_rect_fbb_b_b_b_b_b
+                   ] in *.
             all: cbv [respectful_hetero option_map option_rect zrange_rect list_case].
             all: intros.
             all: destruct_head_hnf' prod.
@@ -708,6 +809,9 @@ Module Compilers.
                         | [ Hx : is_bounded_by_bool _ ?x = true
                             |- is_bounded_by_bool _ (ZRange.two_corners ?f ?x) = true ]
                           => apply (fun pf => @ZRange.monotoneb_two_corners_gen f pf x _ Hx); intros; auto with zarith
+                        | [ Hx : is_bounded_by_bool _ ?x = true
+                            |- is_bounded_by_bool _ (ZRange.two_corners_and_zero ?f ?x) = true ]
+                          => apply (fun pf1 pf2 => @ZRange.monotoneb_two_corners_and_zero_gen f pf1 pf2 x _ Hx); intros; auto with zarith
                         | [ |- is_bounded_by_bool (if _ then _ else _) (ZRange.four_corners _ _ _) = true ]
                           => apply ZRange.is_bounded_by_bool_Proper_if_bool_union_dep; intros; Z.ltb_to_lt
                         | [ _ : is_bounded_by_bool ?x1 ?r1 = true,
@@ -739,7 +843,11 @@ Module Compilers.
                                => Z.div_mod_to_quot_rem; nia
                              end
                            | intros; mul_by_halves_t ].
-            (** For command-line debugging, we display goals that should not remain *)
+            all: try solve [ non_arith_t; Z.ltb_to_lt; reflexivity ].
+            all: try solve [ non_arith_t; try match goal with |- ?x = true => destruct x eqn:? end; reflect_hyps; subst; nia ].
+            all: try solve [ cbv [ZRange.ToConstant.four_corners ZRange.ToConstant.Option.four_corners ZRange.ToConstant.Option.apply_to_range ZRange.ToConstant.Option.two_corners ZRange.ToConstant.Option.union option_beq Bool.eqb] in *; non_arith_t; Z.ltb_to_lt; lia ].
+(*
+<<<<<<< HEAD
             all: [ > idtac "WARNING: Remaining goal:"; print_context_and_goal () .. | | ].
             { destruct y1.
               eapply type.base.option.is_bounded_by_union_l; eauto.
@@ -752,7 +860,191 @@ Module Compilers.
               break_innermost_match; Z.ltb_to_lt;
                 auto with zarith. }
             { non_arith_t; Z.ltb_to_lt; reflexivity. }
+=======
+*)
+            (** For command-line debugging, we display goals that should not remain *)
+            all: [ > idtac "WARNING: Remaining goal:"; print_context_and_goal () .. ].
           Qed.
+
+          Variant rect_arg_kind := fin (_ : API.type) | recr.
+          Definition ctor_descr := list rect_arg_kind.
+          Definition rect_spec := list ctor_descr.
+          Definition interp_rect_arg_kind (recrT : API.type) (r : rect_arg_kind) : API.type
+            := match r with
+               | fin t => t
+               | recr => recrT
+               end.
+          Fixpoint interp_ctor_descr (containerT : API.type) (motive : API.type) (r : ctor_descr) : API.type
+            := match r with
+               | nil => motive
+               | cons (fin t) rs => t -> interp_ctor_descr containerT motive rs
+               | cons recr rs => containerT -> motive -> interp_ctor_descr containerT motive rs
+               end%etype.
+          Fixpoint interp_rect (containerT : API.type) (motive : API.type) (r : rect_spec) : API.type
+            := match r with
+               | nil => containerT -> motive
+               | cons r rs => interp_ctor_descr containerT motive r -> interp_rect containerT motive rs
+               end%etype.
+          Variant rect_kind := rect_nat | rect_list (t : base.type).
+
+          Definition rect_spec_of_kind (r : rect_kind) : rect_spec
+            := match r with
+               | rect_nat => [ [] ; [recr] ]
+               | rect_list t => [ [] ; [fin (type.base t); recr] ]
+               end.
+          Definition rect_container_of_kind (r : rect_kind) : base.type
+            := match r with
+               | rect_nat => base.type.type_base base.type.nat
+               | rect_list t => base.type.list t
+               end.
+
+          (* TODO: move? *)
+          (** N.B. We don't say yes for thunked recursors, which are a bit different in shape *)
+          Definition is_rect {t} (idc : ident t) : option { k : rect_kind & { m : _ | t = interp_rect (type.base (rect_container_of_kind k)) m (rect_spec_of_kind k) } }.
+          Proof.
+            refine match idc with
+                   | ident.nat_rect_arrow _ _
+                   | ident.eager_nat_rect_arrow _ _
+                   | ident.nat_rect_fbb_b _ _ _
+                   | ident.nat_rect_fbb_b_b _ _ _ _
+                     => Some (existT _ rect_nat _)
+                   | ident.list_rect_arrow _ _ _
+                   | ident.eager_list_rect_arrow _ _ _
+                   | ident.list_rect_fbb_b _ _ _ _
+                   | ident.list_rect_fbb_b_b _ _ _ _ _
+                   | ident.list_rect_fbb_b_b_b _ _ _ _ _ _
+                   | ident.list_rect_fbb_b_b_b_b _ _ _ _ _ _ _
+                   | ident.list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _
+                     => Some (existT _ (rect_list _) _)
+                   | _
+                     => None
+                   end.
+            all: eexists; cbv; reflexivity.
+          Defined.
+
+          Lemma rect_interp_rect {t} {idc : ident t} {k} (H : is_rect idc = Some k)
+            : match k with
+              | existT rect_nat (exist p H)
+                => forall z s, let f := (rew [API.interp_type] H in ident.interp idc) in f z s 0 = z /\ forall n, f z s (S n) = s n (f z s n)
+              | existT (rect_list _) (exist p H)
+                => forall n c, let f := (rew [API.interp_type] H in ident.interp idc) in f n c nil = n /\ forall x xs, f n c (cons x xs) = c x xs (f n c xs)
+              end.
+          Proof using Type.
+            fold (@type.interp) in *.
+            destruct idc; cbn in H; inversion_option; subst.
+            all: cbn; repeat split.
+          Qed.
+
+          Lemma rect_ZRange_interp_rect {t} {idc : ident t} {k} (H : is_rect idc = Some k)
+            : match k with
+              | existT rect_nat (exist p H)
+                => forall z s, let f := (rew [ZRange.type.option.interp] H in ZRange.ident.option.interp assume_cast_truncates idc) in f z s None = ZRange.type.option.None /\ f z s (Some 0) = z /\ forall n, f z s (Some (S n)) = s (Some n) (f z s (Some n))
+              | existT (rect_list _) (exist p H)
+                => forall n c, let f := (rew [ZRange.type.option.interp] H in ZRange.ident.option.interp assume_cast_truncates idc) in f n c None = ZRange.type.option.None /\ f n c (Some nil) = n /\ forall x xs, f n c (Some (cons x xs)) = c x (Some xs) (f n c (Some xs))
+              end.
+          Proof using Type.
+            fold (@type.interp) in *.
+            fold (@ZRange.type.base.option.interp) in *.
+            destruct idc; cbn in H; inversion_option; subst.
+            all: cbn; repeat split.
+          Qed.
+
+          Lemma interp_related_and_Proper {t} (idc : ident t) : interp_is_related_and_Proper idc.
+          Proof using Type.
+            destruct (type.is_not_higher_order_than 3 t) eqn:Hho;
+              [ | destruct (is_rect idc) eqn:Hrect ].
+            { apply type.related_hetero_impl_related_hetero_and_Proper_eqv_not_higher_order_than_3.
+              all: try apply interp_related.
+              all: try apply ident.interp_Proper.
+              all: try apply ZRange.ident.option.interp_Proper.
+              all: try assumption.
+              all: try reflexivity. }
+            { apply type.related_hetero_and_Proper_iff_app_curried.
+              all: try now intros; hnf.
+              repeat split.
+              all: try now apply ident.interp_Proper.
+              all: try now apply ZRange.ident.option.interp_Proper.
+              all: [ > ].
+              intros x y Hxy.
+
+              (*pose proof (interp_related idc) as Hir.*)
+              pose proof (ident.interp_Proper idc idc eq_refl) as Hip.
+              pose proof (ZRange.ident.option.interp_Proper assume_cast_truncates idc idc eq_refl) as Hzip.
+              pose proof Hrect as Hrect'.
+              apply rect_interp_rect in Hrect.
+              apply rect_ZRange_interp_rect in Hrect'.
+              fold base.interp in *.
+              fold (@type.interp) in *.
+              fold (@ZRange.type.base.option.interp) in *.
+              fold (@ZRange.type.option.interp) in *.
+              clear Hho.
+              let k := match goal with H : sigT _ |- _ => H end in
+              destruct k as [k [p Ht] ].
+              subst t.
+
+              generalize dependent (ident.interp idc).
+              generalize dependent (ZRange.ident.option.interp assume_cast_truncates idc).
+              clear idc.
+              destruct_head' rect_kind.
+              all: cbn [eq_rect].
+              all: cbn [interp_rect rect_spec_of_kind interp_ctor_descr rect_container_of_kind type.app_curried type.final_codomain ZRange.type.option.interp type.interp type.and_for_each_lhs_of_arrow type.for_each_lhs_of_arrow] in *.
+              all: destruct_head'_prod; cbn [fst snd] in *.
+              all: intros; split_and.
+              all: repeat match goal with
+                     | [ H : type.related_hetero_and_Proper _ _ _ _ _ |- _ ]
+                       => apply type.related_hetero_and_Proper_iff_app_curried in H;
+                          [ | clear H; repeat intro; hnf; reflexivity .. ]
+                     end.
+              all: destruct_head'_and.
+              all: cbn [type.related] in *.
+              all: cbv [Proper] in *.
+              all: cbn in *.
+              all: specialize_by first [ exact tt | exact I ].
+              all: destruct_head' option; reflect_hyps; subst.
+              all: eliminate_hprop_eq.
+              all: match goal with
+                   | [ |- ?R (type.app_curried (?f (Some ?n)) ?x) (type.app_curried (?g ?n) ?y) = true ]
+                     => revert dependent y; revert dependent x;
+                        induction n; intros
+                   | [ |- ?R (type.app_curried (?f None) ?x) (type.app_curried (?g ?n) ?y) = true ]
+                     => revert dependent y; revert dependent x;
+                        induction n; intros
+                   | [ |- ?R (type.app_curried (?f (Some ?n')) ?x) (type.app_curried (?g ?n) ?y) = true ]
+                     => revert dependent y; revert dependent x;
+                        revert dependent n'; induction n; intro n'; destruct n'; intros
+                   end.
+              all: repeat do_with_hyp' ltac:(fun H => rewrite !H; []).
+              all: auto.
+              all: repeat match goal with
+                     | [ H : forall x y : _ * (_ * (_ * _)), _ |- _ ]
+                       => specialize (fun x1 y1 x2 y2 x3 y3 x4 y4 => H (x1, (x2, (x3, x4))) (y1, (y2, (y3, y4))))
+                     | [ H : forall x y : _ * _ * _, _ |- _ ]
+                       => specialize (fun x1 y1 x2 y2 x3 y3 => H (x1, x2, x3) (y1, y2, y3))
+                     | [ H : forall x y : _ * (_ * _), _ |- _ ]
+                       => specialize (fun x1 y1 x2 y2 x3 y3 => H (x1, (x2, x3)) (y1, (y2, y3)))
+                     end.
+              all: cbn [fst snd] in *.
+              all: try do_with_exactly_one_hyp ltac:(fun H => apply H).
+              all: repeat split; intros; auto.
+              all: rewrite ?ZRange.type.option.app_curried_None.
+              all: try apply type.base.option.is_bounded_by_None.
+              all: rewrite ?type.related_hetero_and_Proper_iff_app_curried by now intros; hnf.
+              all: repeat split; intros; cbv [Proper] in *.
+              all: auto.
+              all: repeat match goal with
+                   | [ |- ?x = true ] => destruct x eqn:?; reflect_hyps; congruence
+                     end.
+              all: repeat do_with_hyp' ltac:(fun H => rewrite !H; []).
+              all: reflect_hyps; destruct_head'_False.
+              all: cbn [fold_andb_map] in *; rewrite ?Bool.andb_true_iff in *; destruct_head'_and.
+              all: auto.
+              all: try now repeat do_with_hyp' ltac:(fun H => apply H); repeat intro; subst; auto. }
+            { destruct idc.
+              all: try (apply Bool.diff_true_false in Hho; exfalso; exact Hho).
+              all: try solve [ cbn in Hrect; inversion_option ].
+              (** For command-line debugging, we display goals that should not remain *)
+              all: [ > idtac "WARNING: Remaining non-rect goal of order > 3:"; print_context_and_goal () .. ]. }
+          Time Qed.
         End interp_related.
       End option.
     End ident.

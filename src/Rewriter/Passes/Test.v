@@ -44,7 +44,7 @@ Module Compilers.
 End Compilers.
 
 Module Example.
-  Import Coq.ZArith.ZArith.
+  Import ZArith.
   Import Compilers.RewriteRules.
   Import Crypto.Util.ZRange.
   Import Crypto.Language.PreExtra.

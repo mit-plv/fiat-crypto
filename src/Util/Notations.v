@@ -124,6 +124,13 @@ Reserved Notation "A <-- X ; B" (at level 70, X at next level, right associativi
 Reserved Notation "A <--- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <---  X ; '/' B ']'").
 Reserved Notation "A <---- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <----  X ; '/' B ']'").
 Reserved Notation "A <----- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <-----  X ; '/' B ']'").
+(*
+Reserved Notation "A , A' <- X , X' ; B" (at level 70, A' at next level, X at next level, X' at next level, right associativity, format "'[v' A ,  A'  <-  X ,  X' ; '/' B ']'").
+Reserved Notation "A , A' <-- X , X' ; B" (at level 70, A' at next level, X at next level, X' at next level, right associativity, format "'[v' A ,  A'  <--  X ,  X' ; '/' B ']'").
+Reserved Notation "A , A' <--- X , X' ; B" (at level 70, A' at next level, X at next level, X' at next level, right associativity, format "'[v' A ,  A'  <---  X ,  X' ; '/' B ']'").
+Reserved Notation "A , A' <---- X , X' ; B" (at level 70, A' at next level, X at next level, X' at next level, right associativity, format "'[v' A ,  A'  <----  X ,  X' ; '/' B ']'").
+Reserved Notation "A , A' <----- X , X' ; B" (at level 70, A' at next level, X at next level, X' at next level, right associativity, format "'[v' A ,  A'  <-----  X ,  X' ; '/' B ']'").
+*)
 Reserved Notation "A ;; B" (at level 70, right associativity, format "'[v' A ;; '/' B ']'").
 Reserved Notation "A ';;L' B" (at level 70, right associativity, format "'[v' A ';;L' '/' B ']'").
 Reserved Notation "A ';;R' B" (at level 70, right associativity, format "'[v' A ';;R' '/' B ']'").
@@ -198,3 +205,13 @@ Reserved Notation "##### x" (at level 9, x at level 9, format "##### x").
 Reserved Notation "\ x .. y , t" (at level 200, x binder, y binder, right associativity, format "\  x .. y , '//' t").
 (** If we use "( x |? y )", it conflicts with things like [destruct x as [?|?]; ...] *)
 Reserved Notation "( x | ? y )" (format "(  x  | ?  y  )").
+
+Notation "'typeof!' x" := (match x with y => ltac:(let T := type of y in exact T) end) (at level 10, only parsing).
+
+Notation "'compute!' x" := (match x with y => ltac:(let z := (eval compute in y) in exact z) end) (at level 10, only parsing).
+Notation "'cbv!' x" := (match x with y => ltac:(let z := (eval cbv in y) in exact z) end) (at level 10, only parsing).
+Notation "'lazy!' x" := (match x with y => ltac:(let z := (eval lazy in y) in exact z) end) (at level 10, only parsing).
+Notation "'cbn!' x" := (match x with y => ltac:(let z := (eval cbn in y) in exact z) end) (at level 10, only parsing).
+Notation "'simpl!' x" := (match x with y => ltac:(let z := (eval simpl in y) in exact z) end) (at level 10, only parsing).
+Notation "'native_compute!' x" := (match x with y => ltac:(let z := (eval native_compute in y) in exact z) end) (at level 10, only parsing).
+Notation "'vm_compute!' x" := (match x with y => ltac:(let z := (eval vm_compute in y) in exact z) end) (at level 10, only parsing).

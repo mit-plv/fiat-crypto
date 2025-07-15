@@ -3,6 +3,7 @@ name: Test Generated Zig
 on:
   push:
   pull_request:
+  merge_group:
   schedule:
     - cron: "0 0 1 * *"
 
@@ -16,10 +17,10 @@ jobs:
 
     steps:
       - name: Install Zig
-        uses: goto-bus-stop/setup-zig@v2
+        uses: mlugg/setup-zig@v2
         with:
-          version: master
-      - uses: actions/checkout@v3
+          version: 0.14.0
+      - uses: actions/checkout@v4
       - name: Test Zig files
         run: (cd fiat-zig && zig build && zig build test)
       - name: Test Zig field inversion example

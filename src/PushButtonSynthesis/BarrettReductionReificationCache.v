@@ -1,7 +1,7 @@
 (** * Push-Button Synthesis of Barrett Reduction: Reification Cache *)
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.derive.Derive.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import Derive.
+From Coq Require Import List.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Arithmetic.BarrettReduction.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
@@ -20,14 +20,16 @@ Module Export BarrettReduction.
          SuchThat (is_reification_of reified_barrett_red_gen Fancy.fancy_reduce)
          As reified_barrett_red_gen_correct.
   Proof. Time cache_reify (). Time Qed.
+  Local Definition reified_barrett_red_gen_correct_proj1 := proj1 reified_barrett_red_gen_correct.
+  Local Definition reified_barrett_red_gen_correct_proj2 := proj2 reified_barrett_red_gen_correct.
 
   Module Export ReifyHints.
 #[global]
     Hint Extern 1 (_ = _) => apply_cached_reification Fancy.fancy_reduce (proj1 reified_barrett_red_gen_correct) : reify_cache_gen.
 #[global]
-    Hint Immediate (proj2 reified_barrett_red_gen_correct) : wf_gen_cache.
+    Hint Immediate reified_barrett_red_gen_correct_proj2 : wf_gen_cache.
 #[global]
-    Hint Rewrite (proj1 reified_barrett_red_gen_correct) : interp_gen_cache.
+    Hint Rewrite reified_barrett_red_gen_correct_proj1 : interp_gen_cache.
   End ReifyHints.
   Local Opaque reified_barrett_red_gen. (* needed for making [autorewrite] not take a very long time *)
 End BarrettReduction.

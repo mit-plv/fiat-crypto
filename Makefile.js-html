@@ -1,0 +1,7 @@
+.SUFFIXES:
+
+EXTRA_HTML_VERSION_INFO?=
+
+.PHONY: fiat-html/version.js
+fiat-html/version.js:
+	 printf 'const fiat_crypto_version = "%s%s";\n' "$(shell git describe --tags HEAD)" "$(EXTRA_HTML_VERSION_INFO)" > $@

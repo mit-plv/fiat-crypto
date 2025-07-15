@@ -1,4 +1,4 @@
-Require Import Coq.MSets.MSetPositive.
+From Coq Require Import MSetPositive.
 Require Import Crypto.Util.MSets.Show.
 Require Import Crypto.Util.Strings.Show.
 

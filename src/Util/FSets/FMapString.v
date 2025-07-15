@@ -1,7 +1,7 @@
-Require Import Coq.Strings.String.
-Require Import Coq.FSets.FMapFullAVL.
-Require Import Coq.FSets.FMapInterface.
-Require Import Coq.Structures.OrderedTypeEx.
+From Coq Require Import String.
+From Coq Require Import FMapFullAVL.
+From Coq Require Import FMapInterface.
+From Coq Require Import OrderedTypeEx.
 Require Export Crypto.Util.FixCoqMistakes.
 (* TODO: use tries instead? *)
 

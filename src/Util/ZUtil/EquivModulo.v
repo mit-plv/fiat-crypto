@@ -1,6 +1,6 @@
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Structures.Equalities.
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+From Coq Require Import Morphisms.
+From Coq Require Import Equalities.
+From Coq Require Import ZArith Lia.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.

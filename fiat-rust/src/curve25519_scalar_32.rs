@@ -20,18 +20,106 @@
 #![allow(unused_parens)]
 #![allow(non_camel_case_types)]
 
+/// Since `Index` and `IndexMut` aren't callable in `const` contexts yet, this helper type helps unify
+/// arrays and user-defined array-wrapper types into a single type which can be indexed in `const`
+/// contexts. Once `const trait`s are stabilized this type can go away
+struct IndexConst<T: ?Sized>(T);
+
+impl<'a, T, const N: usize> IndexConst<&'a [T; N]> {
+    #[inline(always)]
+    #[allow(unused)]
+    const fn index(self, i: usize) -> &'a T {
+        &self.0[i]
+    }
+}
+impl<'a, 'b, T, const N: usize> IndexConst<&'a mut &'b mut [T; N]> {
+    #[inline(always)]
+    #[allow(unused)]
+    const fn index_mut(self, i: usize) -> &'a mut T {
+        &mut self.0[i]
+    }
+}
+
+/** fiat_25519_scalar_u1 represents values of 1 bits, stored in one byte. */
 pub type fiat_25519_scalar_u1 = u8;
+/** fiat_25519_scalar_i1 represents values of 1 bits, stored in one byte. */
 pub type fiat_25519_scalar_i1 = i8;
+/** fiat_25519_scalar_u2 represents values of 2 bits, stored in one byte. */
 pub type fiat_25519_scalar_u2 = u8;
+/** fiat_25519_scalar_i2 represents values of 2 bits, stored in one byte. */
 pub type fiat_25519_scalar_i2 = i8;
 
-/* The type fiat_25519_scalar_montgomery_domain_field_element is a field element in the Montgomery domain. */
-/* Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]] */
-pub type fiat_25519_scalar_montgomery_domain_field_element = [u32; 8];
+/** The type fiat_25519_scalar_montgomery_domain_field_element is a field element in the Montgomery domain. */
+/** Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]] */
+#[derive(Clone, Copy)]
+pub struct fiat_25519_scalar_montgomery_domain_field_element(pub [u32; 8]);
 
-/* The type fiat_25519_scalar_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
-/* Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]] */
-pub type fiat_25519_scalar_non_montgomery_domain_field_element = [u32; 8];
+impl core::ops::Index<usize> for fiat_25519_scalar_montgomery_domain_field_element {
+    type Output = u32;
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl core::ops::IndexMut<usize> for fiat_25519_scalar_montgomery_domain_field_element {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
+
+impl<'a> IndexConst<&'a fiat_25519_scalar_montgomery_domain_field_element> {
+    #[allow(unused)]
+    #[inline(always)]
+    const fn index(self, i: usize) -> &'a u32 {
+        &self.0.0[i]
+    }
+}
+
+impl<'a, 'b> IndexConst<&'a mut &'b mut fiat_25519_scalar_montgomery_domain_field_element> {
+    #[allow(unused)]
+    #[inline(always)]
+    const fn index_mut(self, i: usize) -> &'a mut u32 {
+        &mut self.0.0[i]
+    }
+}
+
+/** The type fiat_25519_scalar_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
+/** Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]] */
+#[derive(Clone, Copy)]
+pub struct fiat_25519_scalar_non_montgomery_domain_field_element(pub [u32; 8]);
+
+impl core::ops::Index<usize> for fiat_25519_scalar_non_montgomery_domain_field_element {
+    type Output = u32;
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl core::ops::IndexMut<usize> for fiat_25519_scalar_non_montgomery_domain_field_element {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
+
+impl<'a> IndexConst<&'a fiat_25519_scalar_non_montgomery_domain_field_element> {
+    #[allow(unused)]
+    #[inline(always)]
+    const fn index(self, i: usize) -> &'a u32 {
+        &self.0.0[i]
+    }
+}
+
+impl<'a, 'b> IndexConst<&'a mut &'b mut fiat_25519_scalar_non_montgomery_domain_field_element> {
+    #[allow(unused)]
+    #[inline(always)]
+    const fn index_mut(self, i: usize) -> &'a mut u32 {
+        &mut self.0.0[i]
+    }
+}
 
 
 /// The function fiat_25519_scalar_addcarryx_u32 is an addition with carry.
@@ -48,7 +136,7 @@ pub type fiat_25519_scalar_non_montgomery_domain_field_element = [u32; 8];
 ///   out1: [0x0 ~> 0xffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_25519_scalar_addcarryx_u32(out1: &mut u32, out2: &mut fiat_25519_scalar_u1, arg1: fiat_25519_scalar_u1, arg2: u32, arg3: u32) -> () {
+pub const fn fiat_25519_scalar_addcarryx_u32(out1: &mut u32, out2: &mut fiat_25519_scalar_u1, arg1: fiat_25519_scalar_u1, arg2: u32, arg3: u32) {
   let x1: u64 = (((arg1 as u64) + (arg2 as u64)) + (arg3 as u64));
   let x2: u32 = ((x1 & (0xffffffff as u64)) as u32);
   let x3: fiat_25519_scalar_u1 = ((x1 >> 32) as fiat_25519_scalar_u1);
@@ -70,7 +158,7 @@ pub fn fiat_25519_scalar_addcarryx_u32(out1: &mut u32, out2: &mut fiat_25519_sca
 ///   out1: [0x0 ~> 0xffffffff]
 ///   out2: [0x0 ~> 0x1]
 #[inline]
-pub fn fiat_25519_scalar_subborrowx_u32(out1: &mut u32, out2: &mut fiat_25519_scalar_u1, arg1: fiat_25519_scalar_u1, arg2: u32, arg3: u32) -> () {
+pub const fn fiat_25519_scalar_subborrowx_u32(out1: &mut u32, out2: &mut fiat_25519_scalar_u1, arg1: fiat_25519_scalar_u1, arg2: u32, arg3: u32) {
   let x1: i64 = (((arg2 as i64) - (arg1 as i64)) - (arg3 as i64));
   let x2: fiat_25519_scalar_i1 = ((x1 >> 32) as fiat_25519_scalar_i1);
   let x3: u32 = ((x1 & (0xffffffff as i64)) as u32);
@@ -91,7 +179,7 @@ pub fn fiat_25519_scalar_subborrowx_u32(out1: &mut u32, out2: &mut fiat_25519_sc
 ///   out1: [0x0 ~> 0xffffffff]
 ///   out2: [0x0 ~> 0xffffffff]
 #[inline]
-pub fn fiat_25519_scalar_mulx_u32(out1: &mut u32, out2: &mut u32, arg1: u32, arg2: u32) -> () {
+pub const fn fiat_25519_scalar_mulx_u32(out1: &mut u32, out2: &mut u32, arg1: u32, arg2: u32) {
   let x1: u64 = ((arg1 as u64) * (arg2 as u64));
   let x2: u32 = ((x1 & (0xffffffff as u64)) as u32);
   let x3: u32 = ((x1 >> 32) as u32);
@@ -111,7 +199,7 @@ pub fn fiat_25519_scalar_mulx_u32(out1: &mut u32, out2: &mut u32, arg1: u32, arg
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffff]
 #[inline]
-pub fn fiat_25519_scalar_cmovznz_u32(out1: &mut u32, arg1: fiat_25519_scalar_u1, arg2: u32, arg3: u32) -> () {
+pub const fn fiat_25519_scalar_cmovznz_u32(out1: &mut u32, arg1: fiat_25519_scalar_u1, arg2: u32, arg3: u32) {
   let x1: fiat_25519_scalar_u1 = (!(!arg1));
   let x2: u32 = ((((((0x0 as fiat_25519_scalar_i2) - (x1 as fiat_25519_scalar_i2)) as fiat_25519_scalar_i1) as i64) & (0xffffffff as i64)) as u32);
   let x3: u32 = ((x2 & arg3) | ((!x2) & arg2));
@@ -128,39 +216,39 @@ pub fn fiat_25519_scalar_cmovznz_u32(out1: &mut u32, arg1: fiat_25519_scalar_u1,
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element, arg2: &fiat_25519_scalar_montgomery_domain_field_element) -> () {
-  let x1: u32 = (arg1[1]);
-  let x2: u32 = (arg1[2]);
-  let x3: u32 = (arg1[3]);
-  let x4: u32 = (arg1[4]);
-  let x5: u32 = (arg1[5]);
-  let x6: u32 = (arg1[6]);
-  let x7: u32 = (arg1[7]);
-  let x8: u32 = (arg1[0]);
+pub const fn fiat_25519_scalar_mul(mut out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element, arg2: &fiat_25519_scalar_montgomery_domain_field_element) {
+  let x1: u32 = (*IndexConst(arg1).index(1));
+  let x2: u32 = (*IndexConst(arg1).index(2));
+  let x3: u32 = (*IndexConst(arg1).index(3));
+  let x4: u32 = (*IndexConst(arg1).index(4));
+  let x5: u32 = (*IndexConst(arg1).index(5));
+  let x6: u32 = (*IndexConst(arg1).index(6));
+  let x7: u32 = (*IndexConst(arg1).index(7));
+  let x8: u32 = (*IndexConst(arg1).index(0));
   let mut x9: u32 = 0;
   let mut x10: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x9, &mut x10, x8, (arg2[7]));
+  fiat_25519_scalar_mulx_u32(&mut x9, &mut x10, x8, (*IndexConst(arg2).index(7)));
   let mut x11: u32 = 0;
   let mut x12: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x11, &mut x12, x8, (arg2[6]));
+  fiat_25519_scalar_mulx_u32(&mut x11, &mut x12, x8, (*IndexConst(arg2).index(6)));
   let mut x13: u32 = 0;
   let mut x14: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x13, &mut x14, x8, (arg2[5]));
+  fiat_25519_scalar_mulx_u32(&mut x13, &mut x14, x8, (*IndexConst(arg2).index(5)));
   let mut x15: u32 = 0;
   let mut x16: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x15, &mut x16, x8, (arg2[4]));
+  fiat_25519_scalar_mulx_u32(&mut x15, &mut x16, x8, (*IndexConst(arg2).index(4)));
   let mut x17: u32 = 0;
   let mut x18: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x17, &mut x18, x8, (arg2[3]));
+  fiat_25519_scalar_mulx_u32(&mut x17, &mut x18, x8, (*IndexConst(arg2).index(3)));
   let mut x19: u32 = 0;
   let mut x20: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x19, &mut x20, x8, (arg2[2]));
+  fiat_25519_scalar_mulx_u32(&mut x19, &mut x20, x8, (*IndexConst(arg2).index(2)));
   let mut x21: u32 = 0;
   let mut x22: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x21, &mut x22, x8, (arg2[1]));
+  fiat_25519_scalar_mulx_u32(&mut x21, &mut x22, x8, (*IndexConst(arg2).index(1)));
   let mut x23: u32 = 0;
   let mut x24: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x23, &mut x24, x8, (arg2[0]));
+  fiat_25519_scalar_mulx_u32(&mut x23, &mut x24, x8, (*IndexConst(arg2).index(0)));
   let mut x25: u32 = 0;
   let mut x26: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x25, &mut x26, 0x0, x24, x21);
@@ -240,28 +328,28 @@ pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
   fiat_25519_scalar_addcarryx_u32(&mut x75, &mut x76, x74, x39, x43);
   let mut x77: u32 = 0;
   let mut x78: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x77, &mut x78, x1, (arg2[7]));
+  fiat_25519_scalar_mulx_u32(&mut x77, &mut x78, x1, (*IndexConst(arg2).index(7)));
   let mut x79: u32 = 0;
   let mut x80: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x79, &mut x80, x1, (arg2[6]));
+  fiat_25519_scalar_mulx_u32(&mut x79, &mut x80, x1, (*IndexConst(arg2).index(6)));
   let mut x81: u32 = 0;
   let mut x82: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x81, &mut x82, x1, (arg2[5]));
+  fiat_25519_scalar_mulx_u32(&mut x81, &mut x82, x1, (*IndexConst(arg2).index(5)));
   let mut x83: u32 = 0;
   let mut x84: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x83, &mut x84, x1, (arg2[4]));
+  fiat_25519_scalar_mulx_u32(&mut x83, &mut x84, x1, (*IndexConst(arg2).index(4)));
   let mut x85: u32 = 0;
   let mut x86: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x85, &mut x86, x1, (arg2[3]));
+  fiat_25519_scalar_mulx_u32(&mut x85, &mut x86, x1, (*IndexConst(arg2).index(3)));
   let mut x87: u32 = 0;
   let mut x88: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x87, &mut x88, x1, (arg2[2]));
+  fiat_25519_scalar_mulx_u32(&mut x87, &mut x88, x1, (*IndexConst(arg2).index(2)));
   let mut x89: u32 = 0;
   let mut x90: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x89, &mut x90, x1, (arg2[1]));
+  fiat_25519_scalar_mulx_u32(&mut x89, &mut x90, x1, (*IndexConst(arg2).index(1)));
   let mut x91: u32 = 0;
   let mut x92: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x91, &mut x92, x1, (arg2[0]));
+  fiat_25519_scalar_mulx_u32(&mut x91, &mut x92, x1, (*IndexConst(arg2).index(0)));
   let mut x93: u32 = 0;
   let mut x94: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x93, &mut x94, 0x0, x92, x89);
@@ -369,28 +457,28 @@ pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
   let x163: u32 = ((x162 as u32) + (x125 as u32));
   let mut x164: u32 = 0;
   let mut x165: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x164, &mut x165, x2, (arg2[7]));
+  fiat_25519_scalar_mulx_u32(&mut x164, &mut x165, x2, (*IndexConst(arg2).index(7)));
   let mut x166: u32 = 0;
   let mut x167: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x166, &mut x167, x2, (arg2[6]));
+  fiat_25519_scalar_mulx_u32(&mut x166, &mut x167, x2, (*IndexConst(arg2).index(6)));
   let mut x168: u32 = 0;
   let mut x169: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x168, &mut x169, x2, (arg2[5]));
+  fiat_25519_scalar_mulx_u32(&mut x168, &mut x169, x2, (*IndexConst(arg2).index(5)));
   let mut x170: u32 = 0;
   let mut x171: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x170, &mut x171, x2, (arg2[4]));
+  fiat_25519_scalar_mulx_u32(&mut x170, &mut x171, x2, (*IndexConst(arg2).index(4)));
   let mut x172: u32 = 0;
   let mut x173: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x172, &mut x173, x2, (arg2[3]));
+  fiat_25519_scalar_mulx_u32(&mut x172, &mut x173, x2, (*IndexConst(arg2).index(3)));
   let mut x174: u32 = 0;
   let mut x175: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x174, &mut x175, x2, (arg2[2]));
+  fiat_25519_scalar_mulx_u32(&mut x174, &mut x175, x2, (*IndexConst(arg2).index(2)));
   let mut x176: u32 = 0;
   let mut x177: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x176, &mut x177, x2, (arg2[1]));
+  fiat_25519_scalar_mulx_u32(&mut x176, &mut x177, x2, (*IndexConst(arg2).index(1)));
   let mut x178: u32 = 0;
   let mut x179: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x178, &mut x179, x2, (arg2[0]));
+  fiat_25519_scalar_mulx_u32(&mut x178, &mut x179, x2, (*IndexConst(arg2).index(0)));
   let mut x180: u32 = 0;
   let mut x181: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x180, &mut x181, 0x0, x179, x176);
@@ -498,28 +586,28 @@ pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
   let x250: u32 = ((x249 as u32) + (x212 as u32));
   let mut x251: u32 = 0;
   let mut x252: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x251, &mut x252, x3, (arg2[7]));
+  fiat_25519_scalar_mulx_u32(&mut x251, &mut x252, x3, (*IndexConst(arg2).index(7)));
   let mut x253: u32 = 0;
   let mut x254: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x253, &mut x254, x3, (arg2[6]));
+  fiat_25519_scalar_mulx_u32(&mut x253, &mut x254, x3, (*IndexConst(arg2).index(6)));
   let mut x255: u32 = 0;
   let mut x256: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x255, &mut x256, x3, (arg2[5]));
+  fiat_25519_scalar_mulx_u32(&mut x255, &mut x256, x3, (*IndexConst(arg2).index(5)));
   let mut x257: u32 = 0;
   let mut x258: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x257, &mut x258, x3, (arg2[4]));
+  fiat_25519_scalar_mulx_u32(&mut x257, &mut x258, x3, (*IndexConst(arg2).index(4)));
   let mut x259: u32 = 0;
   let mut x260: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x259, &mut x260, x3, (arg2[3]));
+  fiat_25519_scalar_mulx_u32(&mut x259, &mut x260, x3, (*IndexConst(arg2).index(3)));
   let mut x261: u32 = 0;
   let mut x262: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x261, &mut x262, x3, (arg2[2]));
+  fiat_25519_scalar_mulx_u32(&mut x261, &mut x262, x3, (*IndexConst(arg2).index(2)));
   let mut x263: u32 = 0;
   let mut x264: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x263, &mut x264, x3, (arg2[1]));
+  fiat_25519_scalar_mulx_u32(&mut x263, &mut x264, x3, (*IndexConst(arg2).index(1)));
   let mut x265: u32 = 0;
   let mut x266: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x265, &mut x266, x3, (arg2[0]));
+  fiat_25519_scalar_mulx_u32(&mut x265, &mut x266, x3, (*IndexConst(arg2).index(0)));
   let mut x267: u32 = 0;
   let mut x268: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x267, &mut x268, 0x0, x266, x263);
@@ -627,28 +715,28 @@ pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
   let x337: u32 = ((x336 as u32) + (x299 as u32));
   let mut x338: u32 = 0;
   let mut x339: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x338, &mut x339, x4, (arg2[7]));
+  fiat_25519_scalar_mulx_u32(&mut x338, &mut x339, x4, (*IndexConst(arg2).index(7)));
   let mut x340: u32 = 0;
   let mut x341: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x340, &mut x341, x4, (arg2[6]));
+  fiat_25519_scalar_mulx_u32(&mut x340, &mut x341, x4, (*IndexConst(arg2).index(6)));
   let mut x342: u32 = 0;
   let mut x343: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x342, &mut x343, x4, (arg2[5]));
+  fiat_25519_scalar_mulx_u32(&mut x342, &mut x343, x4, (*IndexConst(arg2).index(5)));
   let mut x344: u32 = 0;
   let mut x345: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x344, &mut x345, x4, (arg2[4]));
+  fiat_25519_scalar_mulx_u32(&mut x344, &mut x345, x4, (*IndexConst(arg2).index(4)));
   let mut x346: u32 = 0;
   let mut x347: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x346, &mut x347, x4, (arg2[3]));
+  fiat_25519_scalar_mulx_u32(&mut x346, &mut x347, x4, (*IndexConst(arg2).index(3)));
   let mut x348: u32 = 0;
   let mut x349: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x348, &mut x349, x4, (arg2[2]));
+  fiat_25519_scalar_mulx_u32(&mut x348, &mut x349, x4, (*IndexConst(arg2).index(2)));
   let mut x350: u32 = 0;
   let mut x351: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x350, &mut x351, x4, (arg2[1]));
+  fiat_25519_scalar_mulx_u32(&mut x350, &mut x351, x4, (*IndexConst(arg2).index(1)));
   let mut x352: u32 = 0;
   let mut x353: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x352, &mut x353, x4, (arg2[0]));
+  fiat_25519_scalar_mulx_u32(&mut x352, &mut x353, x4, (*IndexConst(arg2).index(0)));
   let mut x354: u32 = 0;
   let mut x355: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x354, &mut x355, 0x0, x353, x350);
@@ -756,28 +844,28 @@ pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
   let x424: u32 = ((x423 as u32) + (x386 as u32));
   let mut x425: u32 = 0;
   let mut x426: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x425, &mut x426, x5, (arg2[7]));
+  fiat_25519_scalar_mulx_u32(&mut x425, &mut x426, x5, (*IndexConst(arg2).index(7)));
   let mut x427: u32 = 0;
   let mut x428: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x427, &mut x428, x5, (arg2[6]));
+  fiat_25519_scalar_mulx_u32(&mut x427, &mut x428, x5, (*IndexConst(arg2).index(6)));
   let mut x429: u32 = 0;
   let mut x430: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x429, &mut x430, x5, (arg2[5]));
+  fiat_25519_scalar_mulx_u32(&mut x429, &mut x430, x5, (*IndexConst(arg2).index(5)));
   let mut x431: u32 = 0;
   let mut x432: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x431, &mut x432, x5, (arg2[4]));
+  fiat_25519_scalar_mulx_u32(&mut x431, &mut x432, x5, (*IndexConst(arg2).index(4)));
   let mut x433: u32 = 0;
   let mut x434: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x433, &mut x434, x5, (arg2[3]));
+  fiat_25519_scalar_mulx_u32(&mut x433, &mut x434, x5, (*IndexConst(arg2).index(3)));
   let mut x435: u32 = 0;
   let mut x436: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x435, &mut x436, x5, (arg2[2]));
+  fiat_25519_scalar_mulx_u32(&mut x435, &mut x436, x5, (*IndexConst(arg2).index(2)));
   let mut x437: u32 = 0;
   let mut x438: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x437, &mut x438, x5, (arg2[1]));
+  fiat_25519_scalar_mulx_u32(&mut x437, &mut x438, x5, (*IndexConst(arg2).index(1)));
   let mut x439: u32 = 0;
   let mut x440: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x439, &mut x440, x5, (arg2[0]));
+  fiat_25519_scalar_mulx_u32(&mut x439, &mut x440, x5, (*IndexConst(arg2).index(0)));
   let mut x441: u32 = 0;
   let mut x442: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x441, &mut x442, 0x0, x440, x437);
@@ -885,28 +973,28 @@ pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
   let x511: u32 = ((x510 as u32) + (x473 as u32));
   let mut x512: u32 = 0;
   let mut x513: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x512, &mut x513, x6, (arg2[7]));
+  fiat_25519_scalar_mulx_u32(&mut x512, &mut x513, x6, (*IndexConst(arg2).index(7)));
   let mut x514: u32 = 0;
   let mut x515: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x514, &mut x515, x6, (arg2[6]));
+  fiat_25519_scalar_mulx_u32(&mut x514, &mut x515, x6, (*IndexConst(arg2).index(6)));
   let mut x516: u32 = 0;
   let mut x517: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x516, &mut x517, x6, (arg2[5]));
+  fiat_25519_scalar_mulx_u32(&mut x516, &mut x517, x6, (*IndexConst(arg2).index(5)));
   let mut x518: u32 = 0;
   let mut x519: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x518, &mut x519, x6, (arg2[4]));
+  fiat_25519_scalar_mulx_u32(&mut x518, &mut x519, x6, (*IndexConst(arg2).index(4)));
   let mut x520: u32 = 0;
   let mut x521: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x520, &mut x521, x6, (arg2[3]));
+  fiat_25519_scalar_mulx_u32(&mut x520, &mut x521, x6, (*IndexConst(arg2).index(3)));
   let mut x522: u32 = 0;
   let mut x523: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x522, &mut x523, x6, (arg2[2]));
+  fiat_25519_scalar_mulx_u32(&mut x522, &mut x523, x6, (*IndexConst(arg2).index(2)));
   let mut x524: u32 = 0;
   let mut x525: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x524, &mut x525, x6, (arg2[1]));
+  fiat_25519_scalar_mulx_u32(&mut x524, &mut x525, x6, (*IndexConst(arg2).index(1)));
   let mut x526: u32 = 0;
   let mut x527: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x526, &mut x527, x6, (arg2[0]));
+  fiat_25519_scalar_mulx_u32(&mut x526, &mut x527, x6, (*IndexConst(arg2).index(0)));
   let mut x528: u32 = 0;
   let mut x529: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x528, &mut x529, 0x0, x527, x524);
@@ -1014,28 +1102,28 @@ pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
   let x598: u32 = ((x597 as u32) + (x560 as u32));
   let mut x599: u32 = 0;
   let mut x600: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x599, &mut x600, x7, (arg2[7]));
+  fiat_25519_scalar_mulx_u32(&mut x599, &mut x600, x7, (*IndexConst(arg2).index(7)));
   let mut x601: u32 = 0;
   let mut x602: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x601, &mut x602, x7, (arg2[6]));
+  fiat_25519_scalar_mulx_u32(&mut x601, &mut x602, x7, (*IndexConst(arg2).index(6)));
   let mut x603: u32 = 0;
   let mut x604: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x603, &mut x604, x7, (arg2[5]));
+  fiat_25519_scalar_mulx_u32(&mut x603, &mut x604, x7, (*IndexConst(arg2).index(5)));
   let mut x605: u32 = 0;
   let mut x606: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x605, &mut x606, x7, (arg2[4]));
+  fiat_25519_scalar_mulx_u32(&mut x605, &mut x606, x7, (*IndexConst(arg2).index(4)));
   let mut x607: u32 = 0;
   let mut x608: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x607, &mut x608, x7, (arg2[3]));
+  fiat_25519_scalar_mulx_u32(&mut x607, &mut x608, x7, (*IndexConst(arg2).index(3)));
   let mut x609: u32 = 0;
   let mut x610: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x609, &mut x610, x7, (arg2[2]));
+  fiat_25519_scalar_mulx_u32(&mut x609, &mut x610, x7, (*IndexConst(arg2).index(2)));
   let mut x611: u32 = 0;
   let mut x612: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x611, &mut x612, x7, (arg2[1]));
+  fiat_25519_scalar_mulx_u32(&mut x611, &mut x612, x7, (*IndexConst(arg2).index(1)));
   let mut x613: u32 = 0;
   let mut x614: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x613, &mut x614, x7, (arg2[0]));
+  fiat_25519_scalar_mulx_u32(&mut x613, &mut x614, x7, (*IndexConst(arg2).index(0)));
   let mut x615: u32 = 0;
   let mut x616: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x615, &mut x616, 0x0, x614, x611);
@@ -1184,14 +1272,14 @@ pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
   fiat_25519_scalar_cmovznz_u32(&mut x710, x703, x698, x681);
   let mut x711: u32 = 0;
   fiat_25519_scalar_cmovznz_u32(&mut x711, x703, x700, x683);
-  out1[0] = x704;
-  out1[1] = x705;
-  out1[2] = x706;
-  out1[3] = x707;
-  out1[4] = x708;
-  out1[5] = x709;
-  out1[6] = x710;
-  out1[7] = x711;
+  *IndexConst(&mut out1).index_mut(0) = x704;
+  *IndexConst(&mut out1).index_mut(1) = x705;
+  *IndexConst(&mut out1).index_mut(2) = x706;
+  *IndexConst(&mut out1).index_mut(3) = x707;
+  *IndexConst(&mut out1).index_mut(4) = x708;
+  *IndexConst(&mut out1).index_mut(5) = x709;
+  *IndexConst(&mut out1).index_mut(6) = x710;
+  *IndexConst(&mut out1).index_mut(7) = x711;
 }
 
 /// The function fiat_25519_scalar_square squares a field element in the Montgomery domain.
@@ -1203,39 +1291,39 @@ pub fn fiat_25519_scalar_mul(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element) -> () {
-  let x1: u32 = (arg1[1]);
-  let x2: u32 = (arg1[2]);
-  let x3: u32 = (arg1[3]);
-  let x4: u32 = (arg1[4]);
-  let x5: u32 = (arg1[5]);
-  let x6: u32 = (arg1[6]);
-  let x7: u32 = (arg1[7]);
-  let x8: u32 = (arg1[0]);
+pub const fn fiat_25519_scalar_square(mut out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element) {
+  let x1: u32 = (*IndexConst(arg1).index(1));
+  let x2: u32 = (*IndexConst(arg1).index(2));
+  let x3: u32 = (*IndexConst(arg1).index(3));
+  let x4: u32 = (*IndexConst(arg1).index(4));
+  let x5: u32 = (*IndexConst(arg1).index(5));
+  let x6: u32 = (*IndexConst(arg1).index(6));
+  let x7: u32 = (*IndexConst(arg1).index(7));
+  let x8: u32 = (*IndexConst(arg1).index(0));
   let mut x9: u32 = 0;
   let mut x10: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x9, &mut x10, x8, (arg1[7]));
+  fiat_25519_scalar_mulx_u32(&mut x9, &mut x10, x8, (*IndexConst(arg1).index(7)));
   let mut x11: u32 = 0;
   let mut x12: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x11, &mut x12, x8, (arg1[6]));
+  fiat_25519_scalar_mulx_u32(&mut x11, &mut x12, x8, (*IndexConst(arg1).index(6)));
   let mut x13: u32 = 0;
   let mut x14: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x13, &mut x14, x8, (arg1[5]));
+  fiat_25519_scalar_mulx_u32(&mut x13, &mut x14, x8, (*IndexConst(arg1).index(5)));
   let mut x15: u32 = 0;
   let mut x16: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x15, &mut x16, x8, (arg1[4]));
+  fiat_25519_scalar_mulx_u32(&mut x15, &mut x16, x8, (*IndexConst(arg1).index(4)));
   let mut x17: u32 = 0;
   let mut x18: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x17, &mut x18, x8, (arg1[3]));
+  fiat_25519_scalar_mulx_u32(&mut x17, &mut x18, x8, (*IndexConst(arg1).index(3)));
   let mut x19: u32 = 0;
   let mut x20: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x19, &mut x20, x8, (arg1[2]));
+  fiat_25519_scalar_mulx_u32(&mut x19, &mut x20, x8, (*IndexConst(arg1).index(2)));
   let mut x21: u32 = 0;
   let mut x22: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x21, &mut x22, x8, (arg1[1]));
+  fiat_25519_scalar_mulx_u32(&mut x21, &mut x22, x8, (*IndexConst(arg1).index(1)));
   let mut x23: u32 = 0;
   let mut x24: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x23, &mut x24, x8, (arg1[0]));
+  fiat_25519_scalar_mulx_u32(&mut x23, &mut x24, x8, (*IndexConst(arg1).index(0)));
   let mut x25: u32 = 0;
   let mut x26: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x25, &mut x26, 0x0, x24, x21);
@@ -1315,28 +1403,28 @@ pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_f
   fiat_25519_scalar_addcarryx_u32(&mut x75, &mut x76, x74, x39, x43);
   let mut x77: u32 = 0;
   let mut x78: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x77, &mut x78, x1, (arg1[7]));
+  fiat_25519_scalar_mulx_u32(&mut x77, &mut x78, x1, (*IndexConst(arg1).index(7)));
   let mut x79: u32 = 0;
   let mut x80: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x79, &mut x80, x1, (arg1[6]));
+  fiat_25519_scalar_mulx_u32(&mut x79, &mut x80, x1, (*IndexConst(arg1).index(6)));
   let mut x81: u32 = 0;
   let mut x82: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x81, &mut x82, x1, (arg1[5]));
+  fiat_25519_scalar_mulx_u32(&mut x81, &mut x82, x1, (*IndexConst(arg1).index(5)));
   let mut x83: u32 = 0;
   let mut x84: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x83, &mut x84, x1, (arg1[4]));
+  fiat_25519_scalar_mulx_u32(&mut x83, &mut x84, x1, (*IndexConst(arg1).index(4)));
   let mut x85: u32 = 0;
   let mut x86: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x85, &mut x86, x1, (arg1[3]));
+  fiat_25519_scalar_mulx_u32(&mut x85, &mut x86, x1, (*IndexConst(arg1).index(3)));
   let mut x87: u32 = 0;
   let mut x88: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x87, &mut x88, x1, (arg1[2]));
+  fiat_25519_scalar_mulx_u32(&mut x87, &mut x88, x1, (*IndexConst(arg1).index(2)));
   let mut x89: u32 = 0;
   let mut x90: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x89, &mut x90, x1, (arg1[1]));
+  fiat_25519_scalar_mulx_u32(&mut x89, &mut x90, x1, (*IndexConst(arg1).index(1)));
   let mut x91: u32 = 0;
   let mut x92: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x91, &mut x92, x1, (arg1[0]));
+  fiat_25519_scalar_mulx_u32(&mut x91, &mut x92, x1, (*IndexConst(arg1).index(0)));
   let mut x93: u32 = 0;
   let mut x94: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x93, &mut x94, 0x0, x92, x89);
@@ -1444,28 +1532,28 @@ pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_f
   let x163: u32 = ((x162 as u32) + (x125 as u32));
   let mut x164: u32 = 0;
   let mut x165: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x164, &mut x165, x2, (arg1[7]));
+  fiat_25519_scalar_mulx_u32(&mut x164, &mut x165, x2, (*IndexConst(arg1).index(7)));
   let mut x166: u32 = 0;
   let mut x167: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x166, &mut x167, x2, (arg1[6]));
+  fiat_25519_scalar_mulx_u32(&mut x166, &mut x167, x2, (*IndexConst(arg1).index(6)));
   let mut x168: u32 = 0;
   let mut x169: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x168, &mut x169, x2, (arg1[5]));
+  fiat_25519_scalar_mulx_u32(&mut x168, &mut x169, x2, (*IndexConst(arg1).index(5)));
   let mut x170: u32 = 0;
   let mut x171: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x170, &mut x171, x2, (arg1[4]));
+  fiat_25519_scalar_mulx_u32(&mut x170, &mut x171, x2, (*IndexConst(arg1).index(4)));
   let mut x172: u32 = 0;
   let mut x173: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x172, &mut x173, x2, (arg1[3]));
+  fiat_25519_scalar_mulx_u32(&mut x172, &mut x173, x2, (*IndexConst(arg1).index(3)));
   let mut x174: u32 = 0;
   let mut x175: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x174, &mut x175, x2, (arg1[2]));
+  fiat_25519_scalar_mulx_u32(&mut x174, &mut x175, x2, (*IndexConst(arg1).index(2)));
   let mut x176: u32 = 0;
   let mut x177: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x176, &mut x177, x2, (arg1[1]));
+  fiat_25519_scalar_mulx_u32(&mut x176, &mut x177, x2, (*IndexConst(arg1).index(1)));
   let mut x178: u32 = 0;
   let mut x179: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x178, &mut x179, x2, (arg1[0]));
+  fiat_25519_scalar_mulx_u32(&mut x178, &mut x179, x2, (*IndexConst(arg1).index(0)));
   let mut x180: u32 = 0;
   let mut x181: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x180, &mut x181, 0x0, x179, x176);
@@ -1573,28 +1661,28 @@ pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_f
   let x250: u32 = ((x249 as u32) + (x212 as u32));
   let mut x251: u32 = 0;
   let mut x252: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x251, &mut x252, x3, (arg1[7]));
+  fiat_25519_scalar_mulx_u32(&mut x251, &mut x252, x3, (*IndexConst(arg1).index(7)));
   let mut x253: u32 = 0;
   let mut x254: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x253, &mut x254, x3, (arg1[6]));
+  fiat_25519_scalar_mulx_u32(&mut x253, &mut x254, x3, (*IndexConst(arg1).index(6)));
   let mut x255: u32 = 0;
   let mut x256: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x255, &mut x256, x3, (arg1[5]));
+  fiat_25519_scalar_mulx_u32(&mut x255, &mut x256, x3, (*IndexConst(arg1).index(5)));
   let mut x257: u32 = 0;
   let mut x258: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x257, &mut x258, x3, (arg1[4]));
+  fiat_25519_scalar_mulx_u32(&mut x257, &mut x258, x3, (*IndexConst(arg1).index(4)));
   let mut x259: u32 = 0;
   let mut x260: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x259, &mut x260, x3, (arg1[3]));
+  fiat_25519_scalar_mulx_u32(&mut x259, &mut x260, x3, (*IndexConst(arg1).index(3)));
   let mut x261: u32 = 0;
   let mut x262: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x261, &mut x262, x3, (arg1[2]));
+  fiat_25519_scalar_mulx_u32(&mut x261, &mut x262, x3, (*IndexConst(arg1).index(2)));
   let mut x263: u32 = 0;
   let mut x264: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x263, &mut x264, x3, (arg1[1]));
+  fiat_25519_scalar_mulx_u32(&mut x263, &mut x264, x3, (*IndexConst(arg1).index(1)));
   let mut x265: u32 = 0;
   let mut x266: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x265, &mut x266, x3, (arg1[0]));
+  fiat_25519_scalar_mulx_u32(&mut x265, &mut x266, x3, (*IndexConst(arg1).index(0)));
   let mut x267: u32 = 0;
   let mut x268: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x267, &mut x268, 0x0, x266, x263);
@@ -1702,28 +1790,28 @@ pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_f
   let x337: u32 = ((x336 as u32) + (x299 as u32));
   let mut x338: u32 = 0;
   let mut x339: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x338, &mut x339, x4, (arg1[7]));
+  fiat_25519_scalar_mulx_u32(&mut x338, &mut x339, x4, (*IndexConst(arg1).index(7)));
   let mut x340: u32 = 0;
   let mut x341: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x340, &mut x341, x4, (arg1[6]));
+  fiat_25519_scalar_mulx_u32(&mut x340, &mut x341, x4, (*IndexConst(arg1).index(6)));
   let mut x342: u32 = 0;
   let mut x343: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x342, &mut x343, x4, (arg1[5]));
+  fiat_25519_scalar_mulx_u32(&mut x342, &mut x343, x4, (*IndexConst(arg1).index(5)));
   let mut x344: u32 = 0;
   let mut x345: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x344, &mut x345, x4, (arg1[4]));
+  fiat_25519_scalar_mulx_u32(&mut x344, &mut x345, x4, (*IndexConst(arg1).index(4)));
   let mut x346: u32 = 0;
   let mut x347: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x346, &mut x347, x4, (arg1[3]));
+  fiat_25519_scalar_mulx_u32(&mut x346, &mut x347, x4, (*IndexConst(arg1).index(3)));
   let mut x348: u32 = 0;
   let mut x349: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x348, &mut x349, x4, (arg1[2]));
+  fiat_25519_scalar_mulx_u32(&mut x348, &mut x349, x4, (*IndexConst(arg1).index(2)));
   let mut x350: u32 = 0;
   let mut x351: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x350, &mut x351, x4, (arg1[1]));
+  fiat_25519_scalar_mulx_u32(&mut x350, &mut x351, x4, (*IndexConst(arg1).index(1)));
   let mut x352: u32 = 0;
   let mut x353: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x352, &mut x353, x4, (arg1[0]));
+  fiat_25519_scalar_mulx_u32(&mut x352, &mut x353, x4, (*IndexConst(arg1).index(0)));
   let mut x354: u32 = 0;
   let mut x355: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x354, &mut x355, 0x0, x353, x350);
@@ -1831,28 +1919,28 @@ pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_f
   let x424: u32 = ((x423 as u32) + (x386 as u32));
   let mut x425: u32 = 0;
   let mut x426: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x425, &mut x426, x5, (arg1[7]));
+  fiat_25519_scalar_mulx_u32(&mut x425, &mut x426, x5, (*IndexConst(arg1).index(7)));
   let mut x427: u32 = 0;
   let mut x428: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x427, &mut x428, x5, (arg1[6]));
+  fiat_25519_scalar_mulx_u32(&mut x427, &mut x428, x5, (*IndexConst(arg1).index(6)));
   let mut x429: u32 = 0;
   let mut x430: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x429, &mut x430, x5, (arg1[5]));
+  fiat_25519_scalar_mulx_u32(&mut x429, &mut x430, x5, (*IndexConst(arg1).index(5)));
   let mut x431: u32 = 0;
   let mut x432: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x431, &mut x432, x5, (arg1[4]));
+  fiat_25519_scalar_mulx_u32(&mut x431, &mut x432, x5, (*IndexConst(arg1).index(4)));
   let mut x433: u32 = 0;
   let mut x434: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x433, &mut x434, x5, (arg1[3]));
+  fiat_25519_scalar_mulx_u32(&mut x433, &mut x434, x5, (*IndexConst(arg1).index(3)));
   let mut x435: u32 = 0;
   let mut x436: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x435, &mut x436, x5, (arg1[2]));
+  fiat_25519_scalar_mulx_u32(&mut x435, &mut x436, x5, (*IndexConst(arg1).index(2)));
   let mut x437: u32 = 0;
   let mut x438: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x437, &mut x438, x5, (arg1[1]));
+  fiat_25519_scalar_mulx_u32(&mut x437, &mut x438, x5, (*IndexConst(arg1).index(1)));
   let mut x439: u32 = 0;
   let mut x440: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x439, &mut x440, x5, (arg1[0]));
+  fiat_25519_scalar_mulx_u32(&mut x439, &mut x440, x5, (*IndexConst(arg1).index(0)));
   let mut x441: u32 = 0;
   let mut x442: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x441, &mut x442, 0x0, x440, x437);
@@ -1960,28 +2048,28 @@ pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_f
   let x511: u32 = ((x510 as u32) + (x473 as u32));
   let mut x512: u32 = 0;
   let mut x513: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x512, &mut x513, x6, (arg1[7]));
+  fiat_25519_scalar_mulx_u32(&mut x512, &mut x513, x6, (*IndexConst(arg1).index(7)));
   let mut x514: u32 = 0;
   let mut x515: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x514, &mut x515, x6, (arg1[6]));
+  fiat_25519_scalar_mulx_u32(&mut x514, &mut x515, x6, (*IndexConst(arg1).index(6)));
   let mut x516: u32 = 0;
   let mut x517: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x516, &mut x517, x6, (arg1[5]));
+  fiat_25519_scalar_mulx_u32(&mut x516, &mut x517, x6, (*IndexConst(arg1).index(5)));
   let mut x518: u32 = 0;
   let mut x519: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x518, &mut x519, x6, (arg1[4]));
+  fiat_25519_scalar_mulx_u32(&mut x518, &mut x519, x6, (*IndexConst(arg1).index(4)));
   let mut x520: u32 = 0;
   let mut x521: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x520, &mut x521, x6, (arg1[3]));
+  fiat_25519_scalar_mulx_u32(&mut x520, &mut x521, x6, (*IndexConst(arg1).index(3)));
   let mut x522: u32 = 0;
   let mut x523: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x522, &mut x523, x6, (arg1[2]));
+  fiat_25519_scalar_mulx_u32(&mut x522, &mut x523, x6, (*IndexConst(arg1).index(2)));
   let mut x524: u32 = 0;
   let mut x525: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x524, &mut x525, x6, (arg1[1]));
+  fiat_25519_scalar_mulx_u32(&mut x524, &mut x525, x6, (*IndexConst(arg1).index(1)));
   let mut x526: u32 = 0;
   let mut x527: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x526, &mut x527, x6, (arg1[0]));
+  fiat_25519_scalar_mulx_u32(&mut x526, &mut x527, x6, (*IndexConst(arg1).index(0)));
   let mut x528: u32 = 0;
   let mut x529: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x528, &mut x529, 0x0, x527, x524);
@@ -2089,28 +2177,28 @@ pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_f
   let x598: u32 = ((x597 as u32) + (x560 as u32));
   let mut x599: u32 = 0;
   let mut x600: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x599, &mut x600, x7, (arg1[7]));
+  fiat_25519_scalar_mulx_u32(&mut x599, &mut x600, x7, (*IndexConst(arg1).index(7)));
   let mut x601: u32 = 0;
   let mut x602: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x601, &mut x602, x7, (arg1[6]));
+  fiat_25519_scalar_mulx_u32(&mut x601, &mut x602, x7, (*IndexConst(arg1).index(6)));
   let mut x603: u32 = 0;
   let mut x604: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x603, &mut x604, x7, (arg1[5]));
+  fiat_25519_scalar_mulx_u32(&mut x603, &mut x604, x7, (*IndexConst(arg1).index(5)));
   let mut x605: u32 = 0;
   let mut x606: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x605, &mut x606, x7, (arg1[4]));
+  fiat_25519_scalar_mulx_u32(&mut x605, &mut x606, x7, (*IndexConst(arg1).index(4)));
   let mut x607: u32 = 0;
   let mut x608: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x607, &mut x608, x7, (arg1[3]));
+  fiat_25519_scalar_mulx_u32(&mut x607, &mut x608, x7, (*IndexConst(arg1).index(3)));
   let mut x609: u32 = 0;
   let mut x610: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x609, &mut x610, x7, (arg1[2]));
+  fiat_25519_scalar_mulx_u32(&mut x609, &mut x610, x7, (*IndexConst(arg1).index(2)));
   let mut x611: u32 = 0;
   let mut x612: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x611, &mut x612, x7, (arg1[1]));
+  fiat_25519_scalar_mulx_u32(&mut x611, &mut x612, x7, (*IndexConst(arg1).index(1)));
   let mut x613: u32 = 0;
   let mut x614: u32 = 0;
-  fiat_25519_scalar_mulx_u32(&mut x613, &mut x614, x7, (arg1[0]));
+  fiat_25519_scalar_mulx_u32(&mut x613, &mut x614, x7, (*IndexConst(arg1).index(0)));
   let mut x615: u32 = 0;
   let mut x616: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x615, &mut x616, 0x0, x614, x611);
@@ -2259,14 +2347,14 @@ pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_f
   fiat_25519_scalar_cmovznz_u32(&mut x710, x703, x698, x681);
   let mut x711: u32 = 0;
   fiat_25519_scalar_cmovznz_u32(&mut x711, x703, x700, x683);
-  out1[0] = x704;
-  out1[1] = x705;
-  out1[2] = x706;
-  out1[3] = x707;
-  out1[4] = x708;
-  out1[5] = x709;
-  out1[6] = x710;
-  out1[7] = x711;
+  *IndexConst(&mut out1).index_mut(0) = x704;
+  *IndexConst(&mut out1).index_mut(1) = x705;
+  *IndexConst(&mut out1).index_mut(2) = x706;
+  *IndexConst(&mut out1).index_mut(3) = x707;
+  *IndexConst(&mut out1).index_mut(4) = x708;
+  *IndexConst(&mut out1).index_mut(5) = x709;
+  *IndexConst(&mut out1).index_mut(6) = x710;
+  *IndexConst(&mut out1).index_mut(7) = x711;
 }
 
 /// The function fiat_25519_scalar_add adds two field elements in the Montgomery domain.
@@ -2279,31 +2367,31 @@ pub fn fiat_25519_scalar_square(out1: &mut fiat_25519_scalar_montgomery_domain_f
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_add(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element, arg2: &fiat_25519_scalar_montgomery_domain_field_element) -> () {
+pub const fn fiat_25519_scalar_add(mut out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element, arg2: &fiat_25519_scalar_montgomery_domain_field_element) {
   let mut x1: u32 = 0;
   let mut x2: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x1, &mut x2, 0x0, (arg1[0]), (arg2[0]));
+  fiat_25519_scalar_addcarryx_u32(&mut x1, &mut x2, 0x0, (*IndexConst(arg1).index(0)), (*IndexConst(arg2).index(0)));
   let mut x3: u32 = 0;
   let mut x4: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x3, &mut x4, x2, (arg1[1]), (arg2[1]));
+  fiat_25519_scalar_addcarryx_u32(&mut x3, &mut x4, x2, (*IndexConst(arg1).index(1)), (*IndexConst(arg2).index(1)));
   let mut x5: u32 = 0;
   let mut x6: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x5, &mut x6, x4, (arg1[2]), (arg2[2]));
+  fiat_25519_scalar_addcarryx_u32(&mut x5, &mut x6, x4, (*IndexConst(arg1).index(2)), (*IndexConst(arg2).index(2)));
   let mut x7: u32 = 0;
   let mut x8: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x7, &mut x8, x6, (arg1[3]), (arg2[3]));
+  fiat_25519_scalar_addcarryx_u32(&mut x7, &mut x8, x6, (*IndexConst(arg1).index(3)), (*IndexConst(arg2).index(3)));
   let mut x9: u32 = 0;
   let mut x10: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x9, &mut x10, x8, (arg1[4]), (arg2[4]));
+  fiat_25519_scalar_addcarryx_u32(&mut x9, &mut x10, x8, (*IndexConst(arg1).index(4)), (*IndexConst(arg2).index(4)));
   let mut x11: u32 = 0;
   let mut x12: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x11, &mut x12, x10, (arg1[5]), (arg2[5]));
+  fiat_25519_scalar_addcarryx_u32(&mut x11, &mut x12, x10, (*IndexConst(arg1).index(5)), (*IndexConst(arg2).index(5)));
   let mut x13: u32 = 0;
   let mut x14: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x13, &mut x14, x12, (arg1[6]), (arg2[6]));
+  fiat_25519_scalar_addcarryx_u32(&mut x13, &mut x14, x12, (*IndexConst(arg1).index(6)), (*IndexConst(arg2).index(6)));
   let mut x15: u32 = 0;
   let mut x16: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x15, &mut x16, x14, (arg1[7]), (arg2[7]));
+  fiat_25519_scalar_addcarryx_u32(&mut x15, &mut x16, x14, (*IndexConst(arg1).index(7)), (*IndexConst(arg2).index(7)));
   let mut x17: u32 = 0;
   let mut x18: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_subborrowx_u32(&mut x17, &mut x18, 0x0, x1, 0x5cf5d3ed);
@@ -2347,14 +2435,14 @@ pub fn fiat_25519_scalar_add(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
   fiat_25519_scalar_cmovznz_u32(&mut x41, x34, x29, x13);
   let mut x42: u32 = 0;
   fiat_25519_scalar_cmovznz_u32(&mut x42, x34, x31, x15);
-  out1[0] = x35;
-  out1[1] = x36;
-  out1[2] = x37;
-  out1[3] = x38;
-  out1[4] = x39;
-  out1[5] = x40;
-  out1[6] = x41;
-  out1[7] = x42;
+  *IndexConst(&mut out1).index_mut(0) = x35;
+  *IndexConst(&mut out1).index_mut(1) = x36;
+  *IndexConst(&mut out1).index_mut(2) = x37;
+  *IndexConst(&mut out1).index_mut(3) = x38;
+  *IndexConst(&mut out1).index_mut(4) = x39;
+  *IndexConst(&mut out1).index_mut(5) = x40;
+  *IndexConst(&mut out1).index_mut(6) = x41;
+  *IndexConst(&mut out1).index_mut(7) = x42;
 }
 
 /// The function fiat_25519_scalar_sub subtracts two field elements in the Montgomery domain.
@@ -2367,66 +2455,65 @@ pub fn fiat_25519_scalar_add(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_sub(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element, arg2: &fiat_25519_scalar_montgomery_domain_field_element) -> () {
+pub const fn fiat_25519_scalar_sub(mut out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element, arg2: &fiat_25519_scalar_montgomery_domain_field_element) {
   let mut x1: u32 = 0;
   let mut x2: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x1, &mut x2, 0x0, (arg1[0]), (arg2[0]));
+  fiat_25519_scalar_subborrowx_u32(&mut x1, &mut x2, 0x0, (*IndexConst(arg1).index(0)), (*IndexConst(arg2).index(0)));
   let mut x3: u32 = 0;
   let mut x4: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x3, &mut x4, x2, (arg1[1]), (arg2[1]));
+  fiat_25519_scalar_subborrowx_u32(&mut x3, &mut x4, x2, (*IndexConst(arg1).index(1)), (*IndexConst(arg2).index(1)));
   let mut x5: u32 = 0;
   let mut x6: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x5, &mut x6, x4, (arg1[2]), (arg2[2]));
+  fiat_25519_scalar_subborrowx_u32(&mut x5, &mut x6, x4, (*IndexConst(arg1).index(2)), (*IndexConst(arg2).index(2)));
   let mut x7: u32 = 0;
   let mut x8: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x7, &mut x8, x6, (arg1[3]), (arg2[3]));
+  fiat_25519_scalar_subborrowx_u32(&mut x7, &mut x8, x6, (*IndexConst(arg1).index(3)), (*IndexConst(arg2).index(3)));
   let mut x9: u32 = 0;
   let mut x10: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x9, &mut x10, x8, (arg1[4]), (arg2[4]));
+  fiat_25519_scalar_subborrowx_u32(&mut x9, &mut x10, x8, (*IndexConst(arg1).index(4)), (*IndexConst(arg2).index(4)));
   let mut x11: u32 = 0;
   let mut x12: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x11, &mut x12, x10, (arg1[5]), (arg2[5]));
+  fiat_25519_scalar_subborrowx_u32(&mut x11, &mut x12, x10, (*IndexConst(arg1).index(5)), (*IndexConst(arg2).index(5)));
   let mut x13: u32 = 0;
   let mut x14: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x13, &mut x14, x12, (arg1[6]), (arg2[6]));
+  fiat_25519_scalar_subborrowx_u32(&mut x13, &mut x14, x12, (*IndexConst(arg1).index(6)), (*IndexConst(arg2).index(6)));
   let mut x15: u32 = 0;
   let mut x16: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x15, &mut x16, x14, (arg1[7]), (arg2[7]));
+  fiat_25519_scalar_subborrowx_u32(&mut x15, &mut x16, x14, (*IndexConst(arg1).index(7)), (*IndexConst(arg2).index(7)));
   let mut x17: u32 = 0;
-  let mut x18: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x17, &mut x18, x16, (0x0 as u32), (0x0 as u32));
-  let mut x19: u32 = 0;
-  let mut x20: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x19, &mut x20, 0x0, x1, (x17 & 0x5cf5d3ed));
-  let mut x21: u32 = 0;
-  let mut x22: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x21, &mut x22, x20, x3, (x17 & 0x5812631a));
-  let mut x23: u32 = 0;
-  let mut x24: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x23, &mut x24, x22, x5, (x17 & 0xa2f79cd6));
-  let mut x25: u32 = 0;
-  let mut x26: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x25, &mut x26, x24, x7, (x17 & 0x14def9de));
-  let mut x27: u32 = 0;
-  let mut x28: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x27, &mut x28, x26, x9, (0x0 as u32));
-  let mut x29: u32 = 0;
-  let mut x30: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x29, &mut x30, x28, x11, (0x0 as u32));
-  let mut x31: u32 = 0;
-  let mut x32: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x31, &mut x32, x30, x13, (0x0 as u32));
-  let mut x33: u32 = 0;
-  let mut x34: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x33, &mut x34, x32, x15, (x17 & 0x10000000));
-  out1[0] = x19;
-  out1[1] = x21;
-  out1[2] = x23;
-  out1[3] = x25;
-  out1[4] = x27;
-  out1[5] = x29;
-  out1[6] = x31;
-  out1[7] = x33;
+  fiat_25519_scalar_cmovznz_u32(&mut x17, x16, (0x0 as u32), 0xffffffff);
+  let mut x18: u32 = 0;
+  let mut x19: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x18, &mut x19, 0x0, x1, (x17 & 0x5cf5d3ed));
+  let mut x20: u32 = 0;
+  let mut x21: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x20, &mut x21, x19, x3, (x17 & 0x5812631a));
+  let mut x22: u32 = 0;
+  let mut x23: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x22, &mut x23, x21, x5, (x17 & 0xa2f79cd6));
+  let mut x24: u32 = 0;
+  let mut x25: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x24, &mut x25, x23, x7, (x17 & 0x14def9de));
+  let mut x26: u32 = 0;
+  let mut x27: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x26, &mut x27, x25, x9, (0x0 as u32));
+  let mut x28: u32 = 0;
+  let mut x29: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x28, &mut x29, x27, x11, (0x0 as u32));
+  let mut x30: u32 = 0;
+  let mut x31: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x30, &mut x31, x29, x13, (0x0 as u32));
+  let mut x32: u32 = 0;
+  let mut x33: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x32, &mut x33, x31, x15, (x17 & 0x10000000));
+  *IndexConst(&mut out1).index_mut(0) = x18;
+  *IndexConst(&mut out1).index_mut(1) = x20;
+  *IndexConst(&mut out1).index_mut(2) = x22;
+  *IndexConst(&mut out1).index_mut(3) = x24;
+  *IndexConst(&mut out1).index_mut(4) = x26;
+  *IndexConst(&mut out1).index_mut(5) = x28;
+  *IndexConst(&mut out1).index_mut(6) = x30;
+  *IndexConst(&mut out1).index_mut(7) = x32;
 }
 
 /// The function fiat_25519_scalar_opp negates a field element in the Montgomery domain.
@@ -2438,66 +2525,65 @@ pub fn fiat_25519_scalar_sub(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_opp(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element) -> () {
+pub const fn fiat_25519_scalar_opp(mut out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element) {
   let mut x1: u32 = 0;
   let mut x2: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x1, &mut x2, 0x0, (0x0 as u32), (arg1[0]));
+  fiat_25519_scalar_subborrowx_u32(&mut x1, &mut x2, 0x0, (0x0 as u32), (*IndexConst(arg1).index(0)));
   let mut x3: u32 = 0;
   let mut x4: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x3, &mut x4, x2, (0x0 as u32), (arg1[1]));
+  fiat_25519_scalar_subborrowx_u32(&mut x3, &mut x4, x2, (0x0 as u32), (*IndexConst(arg1).index(1)));
   let mut x5: u32 = 0;
   let mut x6: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x5, &mut x6, x4, (0x0 as u32), (arg1[2]));
+  fiat_25519_scalar_subborrowx_u32(&mut x5, &mut x6, x4, (0x0 as u32), (*IndexConst(arg1).index(2)));
   let mut x7: u32 = 0;
   let mut x8: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x7, &mut x8, x6, (0x0 as u32), (arg1[3]));
+  fiat_25519_scalar_subborrowx_u32(&mut x7, &mut x8, x6, (0x0 as u32), (*IndexConst(arg1).index(3)));
   let mut x9: u32 = 0;
   let mut x10: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x9, &mut x10, x8, (0x0 as u32), (arg1[4]));
+  fiat_25519_scalar_subborrowx_u32(&mut x9, &mut x10, x8, (0x0 as u32), (*IndexConst(arg1).index(4)));
   let mut x11: u32 = 0;
   let mut x12: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x11, &mut x12, x10, (0x0 as u32), (arg1[5]));
+  fiat_25519_scalar_subborrowx_u32(&mut x11, &mut x12, x10, (0x0 as u32), (*IndexConst(arg1).index(5)));
   let mut x13: u32 = 0;
   let mut x14: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x13, &mut x14, x12, (0x0 as u32), (arg1[6]));
+  fiat_25519_scalar_subborrowx_u32(&mut x13, &mut x14, x12, (0x0 as u32), (*IndexConst(arg1).index(6)));
   let mut x15: u32 = 0;
   let mut x16: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x15, &mut x16, x14, (0x0 as u32), (arg1[7]));
+  fiat_25519_scalar_subborrowx_u32(&mut x15, &mut x16, x14, (0x0 as u32), (*IndexConst(arg1).index(7)));
   let mut x17: u32 = 0;
-  let mut x18: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x17, &mut x18, x16, (0x0 as u32), (0x0 as u32));
-  let mut x19: u32 = 0;
-  let mut x20: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x19, &mut x20, 0x0, x1, (x17 & 0x5cf5d3ed));
-  let mut x21: u32 = 0;
-  let mut x22: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x21, &mut x22, x20, x3, (x17 & 0x5812631a));
-  let mut x23: u32 = 0;
-  let mut x24: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x23, &mut x24, x22, x5, (x17 & 0xa2f79cd6));
-  let mut x25: u32 = 0;
-  let mut x26: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x25, &mut x26, x24, x7, (x17 & 0x14def9de));
-  let mut x27: u32 = 0;
-  let mut x28: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x27, &mut x28, x26, x9, (0x0 as u32));
-  let mut x29: u32 = 0;
-  let mut x30: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x29, &mut x30, x28, x11, (0x0 as u32));
-  let mut x31: u32 = 0;
-  let mut x32: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x31, &mut x32, x30, x13, (0x0 as u32));
-  let mut x33: u32 = 0;
-  let mut x34: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x33, &mut x34, x32, x15, (x17 & 0x10000000));
-  out1[0] = x19;
-  out1[1] = x21;
-  out1[2] = x23;
-  out1[3] = x25;
-  out1[4] = x27;
-  out1[5] = x29;
-  out1[6] = x31;
-  out1[7] = x33;
+  fiat_25519_scalar_cmovznz_u32(&mut x17, x16, (0x0 as u32), 0xffffffff);
+  let mut x18: u32 = 0;
+  let mut x19: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x18, &mut x19, 0x0, x1, (x17 & 0x5cf5d3ed));
+  let mut x20: u32 = 0;
+  let mut x21: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x20, &mut x21, x19, x3, (x17 & 0x5812631a));
+  let mut x22: u32 = 0;
+  let mut x23: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x22, &mut x23, x21, x5, (x17 & 0xa2f79cd6));
+  let mut x24: u32 = 0;
+  let mut x25: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x24, &mut x25, x23, x7, (x17 & 0x14def9de));
+  let mut x26: u32 = 0;
+  let mut x27: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x26, &mut x27, x25, x9, (0x0 as u32));
+  let mut x28: u32 = 0;
+  let mut x29: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x28, &mut x29, x27, x11, (0x0 as u32));
+  let mut x30: u32 = 0;
+  let mut x31: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x30, &mut x31, x29, x13, (0x0 as u32));
+  let mut x32: u32 = 0;
+  let mut x33: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x32, &mut x33, x31, x15, (x17 & 0x10000000));
+  *IndexConst(&mut out1).index_mut(0) = x18;
+  *IndexConst(&mut out1).index_mut(1) = x20;
+  *IndexConst(&mut out1).index_mut(2) = x22;
+  *IndexConst(&mut out1).index_mut(3) = x24;
+  *IndexConst(&mut out1).index_mut(4) = x26;
+  *IndexConst(&mut out1).index_mut(5) = x28;
+  *IndexConst(&mut out1).index_mut(6) = x30;
+  *IndexConst(&mut out1).index_mut(7) = x32;
 }
 
 /// The function fiat_25519_scalar_from_montgomery translates a field element out of the Montgomery domain.
@@ -2509,8 +2595,8 @@ pub fn fiat_25519_scalar_opp(out1: &mut fiat_25519_scalar_montgomery_domain_fiel
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element) -> () {
-  let x1: u32 = (arg1[0]);
+pub const fn fiat_25519_scalar_from_montgomery(mut out1: &mut fiat_25519_scalar_non_montgomery_domain_field_element, arg1: &fiat_25519_scalar_montgomery_domain_field_element) {
+  let x1: u32 = (*IndexConst(arg1).index(0));
   let mut x2: u32 = 0;
   let mut x3: u32 = 0;
   fiat_25519_scalar_mulx_u32(&mut x2, &mut x3, x1, 0x12547e1b);
@@ -2552,7 +2638,7 @@ pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgo
   fiat_25519_scalar_addcarryx_u32(&mut x26, &mut x27, x25, (0x0 as u32), x18);
   let mut x28: u32 = 0;
   let mut x29: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x28, &mut x29, 0x0, x22, (arg1[1]));
+  fiat_25519_scalar_addcarryx_u32(&mut x28, &mut x29, 0x0, x22, (*IndexConst(arg1).index(1)));
   let mut x30: u32 = 0;
   let mut x31: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x30, &mut x31, x29, x24, (0x0 as u32));
@@ -2603,7 +2689,7 @@ pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgo
   fiat_25519_scalar_addcarryx_u32(&mut x60, &mut x61, 0x0, x5, x36);
   let mut x62: u32 = 0;
   let mut x63: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x62, &mut x63, 0x0, x54, (arg1[2]));
+  fiat_25519_scalar_addcarryx_u32(&mut x62, &mut x63, 0x0, x54, (*IndexConst(arg1).index(2)));
   let mut x64: u32 = 0;
   let mut x65: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x64, &mut x65, x63, x56, (0x0 as u32));
@@ -2654,7 +2740,7 @@ pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgo
   fiat_25519_scalar_addcarryx_u32(&mut x94, &mut x95, 0x0, ((x61 as u32) + x37), x70);
   let mut x96: u32 = 0;
   let mut x97: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x96, &mut x97, 0x0, x88, (arg1[3]));
+  fiat_25519_scalar_addcarryx_u32(&mut x96, &mut x97, 0x0, x88, (*IndexConst(arg1).index(3)));
   let mut x98: u32 = 0;
   let mut x99: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x98, &mut x99, x97, x90, (0x0 as u32));
@@ -2714,7 +2800,7 @@ pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgo
   fiat_25519_scalar_addcarryx_u32(&mut x134, &mut x135, x133, ((x95 as u32) + x71), x104);
   let mut x136: u32 = 0;
   let mut x137: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x136, &mut x137, 0x0, x122, (arg1[4]));
+  fiat_25519_scalar_addcarryx_u32(&mut x136, &mut x137, 0x0, x122, (*IndexConst(arg1).index(4)));
   let mut x138: u32 = 0;
   let mut x139: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x138, &mut x139, x137, x124, (0x0 as u32));
@@ -2786,7 +2872,7 @@ pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgo
   fiat_25519_scalar_addcarryx_u32(&mut x182, &mut x183, x181, ((x149 as u32) + ((x135 as u32) + x105)), x152);
   let mut x184: u32 = 0;
   let mut x185: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x184, &mut x185, 0x0, x170, (arg1[5]));
+  fiat_25519_scalar_addcarryx_u32(&mut x184, &mut x185, 0x0, x170, (*IndexConst(arg1).index(5)));
   let mut x186: u32 = 0;
   let mut x187: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x186, &mut x187, x185, x172, (0x0 as u32));
@@ -2858,7 +2944,7 @@ pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgo
   fiat_25519_scalar_addcarryx_u32(&mut x230, &mut x231, x229, ((x197 as u32) + ((x183 as u32) + x153)), x200);
   let mut x232: u32 = 0;
   let mut x233: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x232, &mut x233, 0x0, x218, (arg1[6]));
+  fiat_25519_scalar_addcarryx_u32(&mut x232, &mut x233, 0x0, x218, (*IndexConst(arg1).index(6)));
   let mut x234: u32 = 0;
   let mut x235: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x234, &mut x235, x233, x220, (0x0 as u32));
@@ -2930,7 +3016,7 @@ pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgo
   fiat_25519_scalar_addcarryx_u32(&mut x278, &mut x279, x277, ((x245 as u32) + ((x231 as u32) + x201)), x248);
   let mut x280: u32 = 0;
   let mut x281: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x280, &mut x281, 0x0, x266, (arg1[7]));
+  fiat_25519_scalar_addcarryx_u32(&mut x280, &mut x281, 0x0, x266, (*IndexConst(arg1).index(7)));
   let mut x282: u32 = 0;
   let mut x283: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x282, &mut x283, x281, x268, (0x0 as u32));
@@ -3044,14 +3130,14 @@ pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgo
   fiat_25519_scalar_cmovznz_u32(&mut x353, x346, x341, x326);
   let mut x354: u32 = 0;
   fiat_25519_scalar_cmovznz_u32(&mut x354, x346, x343, x328);
-  out1[0] = x347;
-  out1[1] = x348;
-  out1[2] = x349;
-  out1[3] = x350;
-  out1[4] = x351;
-  out1[5] = x352;
-  out1[6] = x353;
-  out1[7] = x354;
+  *IndexConst(&mut out1).index_mut(0) = x347;
+  *IndexConst(&mut out1).index_mut(1) = x348;
+  *IndexConst(&mut out1).index_mut(2) = x349;
+  *IndexConst(&mut out1).index_mut(3) = x350;
+  *IndexConst(&mut out1).index_mut(4) = x351;
+  *IndexConst(&mut out1).index_mut(5) = x352;
+  *IndexConst(&mut out1).index_mut(6) = x353;
+  *IndexConst(&mut out1).index_mut(7) = x354;
 }
 
 /// The function fiat_25519_scalar_to_montgomery translates a field element into the Montgomery domain.
@@ -3063,15 +3149,15 @@ pub fn fiat_25519_scalar_from_montgomery(out1: &mut fiat_25519_scalar_non_montgo
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_to_montgomery(out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_non_montgomery_domain_field_element) -> () {
-  let x1: u32 = (arg1[1]);
-  let x2: u32 = (arg1[2]);
-  let x3: u32 = (arg1[3]);
-  let x4: u32 = (arg1[4]);
-  let x5: u32 = (arg1[5]);
-  let x6: u32 = (arg1[6]);
-  let x7: u32 = (arg1[7]);
-  let x8: u32 = (arg1[0]);
+pub const fn fiat_25519_scalar_to_montgomery(mut out1: &mut fiat_25519_scalar_montgomery_domain_field_element, arg1: &fiat_25519_scalar_non_montgomery_domain_field_element) {
+  let x1: u32 = (*IndexConst(arg1).index(1));
+  let x2: u32 = (*IndexConst(arg1).index(2));
+  let x3: u32 = (*IndexConst(arg1).index(3));
+  let x4: u32 = (*IndexConst(arg1).index(4));
+  let x5: u32 = (*IndexConst(arg1).index(5));
+  let x6: u32 = (*IndexConst(arg1).index(6));
+  let x7: u32 = (*IndexConst(arg1).index(7));
+  let x8: u32 = (*IndexConst(arg1).index(0));
   let mut x9: u32 = 0;
   let mut x10: u32 = 0;
   fiat_25519_scalar_mulx_u32(&mut x9, &mut x10, x8, 0x399411b);
@@ -4052,14 +4138,14 @@ pub fn fiat_25519_scalar_to_montgomery(out1: &mut fiat_25519_scalar_montgomery_d
   fiat_25519_scalar_cmovznz_u32(&mut x658, x651, x646, x631);
   let mut x659: u32 = 0;
   fiat_25519_scalar_cmovznz_u32(&mut x659, x651, x648, x633);
-  out1[0] = x652;
-  out1[1] = x653;
-  out1[2] = x654;
-  out1[3] = x655;
-  out1[4] = x656;
-  out1[5] = x657;
-  out1[6] = x658;
-  out1[7] = x659;
+  *IndexConst(&mut out1).index_mut(0) = x652;
+  *IndexConst(&mut out1).index_mut(1) = x653;
+  *IndexConst(&mut out1).index_mut(2) = x654;
+  *IndexConst(&mut out1).index_mut(3) = x655;
+  *IndexConst(&mut out1).index_mut(4) = x656;
+  *IndexConst(&mut out1).index_mut(5) = x657;
+  *IndexConst(&mut out1).index_mut(6) = x658;
+  *IndexConst(&mut out1).index_mut(7) = x659;
 }
 
 /// The function fiat_25519_scalar_nonzero outputs a single non-zero word if the input is non-zero and zero otherwise.
@@ -4074,8 +4160,8 @@ pub fn fiat_25519_scalar_to_montgomery(out1: &mut fiat_25519_scalar_montgomery_d
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffff]
 #[inline]
-pub fn fiat_25519_scalar_nonzero(out1: &mut u32, arg1: &[u32; 8]) -> () {
-  let x1: u32 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | (arg1[7]))))))));
+pub const fn fiat_25519_scalar_nonzero(out1: &mut u32, arg1: &[u32; 8]) {
+  let x1: u32 = ((*IndexConst(arg1).index(0)) | ((*IndexConst(arg1).index(1)) | ((*IndexConst(arg1).index(2)) | ((*IndexConst(arg1).index(3)) | ((*IndexConst(arg1).index(4)) | ((*IndexConst(arg1).index(5)) | ((*IndexConst(arg1).index(6)) | (*IndexConst(arg1).index(7)))))))));
   *out1 = x1;
 }
 
@@ -4091,31 +4177,31 @@ pub fn fiat_25519_scalar_nonzero(out1: &mut u32, arg1: &[u32; 8]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 #[inline]
-pub fn fiat_25519_scalar_selectznz(out1: &mut [u32; 8], arg1: fiat_25519_scalar_u1, arg2: &[u32; 8], arg3: &[u32; 8]) -> () {
+pub const fn fiat_25519_scalar_selectznz(mut out1: &mut [u32; 8], arg1: fiat_25519_scalar_u1, arg2: &[u32; 8], arg3: &[u32; 8]) {
   let mut x1: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x1, arg1, (arg2[0]), (arg3[0]));
+  fiat_25519_scalar_cmovznz_u32(&mut x1, arg1, (*IndexConst(arg2).index(0)), (*IndexConst(arg3).index(0)));
   let mut x2: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x2, arg1, (arg2[1]), (arg3[1]));
+  fiat_25519_scalar_cmovznz_u32(&mut x2, arg1, (*IndexConst(arg2).index(1)), (*IndexConst(arg3).index(1)));
   let mut x3: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x3, arg1, (arg2[2]), (arg3[2]));
+  fiat_25519_scalar_cmovznz_u32(&mut x3, arg1, (*IndexConst(arg2).index(2)), (*IndexConst(arg3).index(2)));
   let mut x4: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x4, arg1, (arg2[3]), (arg3[3]));
+  fiat_25519_scalar_cmovznz_u32(&mut x4, arg1, (*IndexConst(arg2).index(3)), (*IndexConst(arg3).index(3)));
   let mut x5: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x5, arg1, (arg2[4]), (arg3[4]));
+  fiat_25519_scalar_cmovznz_u32(&mut x5, arg1, (*IndexConst(arg2).index(4)), (*IndexConst(arg3).index(4)));
   let mut x6: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x6, arg1, (arg2[5]), (arg3[5]));
+  fiat_25519_scalar_cmovznz_u32(&mut x6, arg1, (*IndexConst(arg2).index(5)), (*IndexConst(arg3).index(5)));
   let mut x7: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x7, arg1, (arg2[6]), (arg3[6]));
+  fiat_25519_scalar_cmovznz_u32(&mut x7, arg1, (*IndexConst(arg2).index(6)), (*IndexConst(arg3).index(6)));
   let mut x8: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x8, arg1, (arg2[7]), (arg3[7]));
-  out1[0] = x1;
-  out1[1] = x2;
-  out1[2] = x3;
-  out1[3] = x4;
-  out1[4] = x5;
-  out1[5] = x6;
-  out1[6] = x7;
-  out1[7] = x8;
+  fiat_25519_scalar_cmovznz_u32(&mut x8, arg1, (*IndexConst(arg2).index(7)), (*IndexConst(arg3).index(7)));
+  *IndexConst(&mut out1).index_mut(0) = x1;
+  *IndexConst(&mut out1).index_mut(1) = x2;
+  *IndexConst(&mut out1).index_mut(2) = x3;
+  *IndexConst(&mut out1).index_mut(3) = x4;
+  *IndexConst(&mut out1).index_mut(4) = x5;
+  *IndexConst(&mut out1).index_mut(5) = x6;
+  *IndexConst(&mut out1).index_mut(6) = x7;
+  *IndexConst(&mut out1).index_mut(7) = x8;
 }
 
 /// The function fiat_25519_scalar_to_bytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
@@ -4130,15 +4216,15 @@ pub fn fiat_25519_scalar_selectznz(out1: &mut [u32; 8], arg1: fiat_25519_scalar_
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x1f]]
 #[inline]
-pub fn fiat_25519_scalar_to_bytes(out1: &mut [u8; 32], arg1: &[u32; 8]) -> () {
-  let x1: u32 = (arg1[7]);
-  let x2: u32 = (arg1[6]);
-  let x3: u32 = (arg1[5]);
-  let x4: u32 = (arg1[4]);
-  let x5: u32 = (arg1[3]);
-  let x6: u32 = (arg1[2]);
-  let x7: u32 = (arg1[1]);
-  let x8: u32 = (arg1[0]);
+pub const fn fiat_25519_scalar_to_bytes(mut out1: &mut [u8; 32], arg1: &[u32; 8]) {
+  let x1: u32 = (*IndexConst(arg1).index(7));
+  let x2: u32 = (*IndexConst(arg1).index(6));
+  let x3: u32 = (*IndexConst(arg1).index(5));
+  let x4: u32 = (*IndexConst(arg1).index(4));
+  let x5: u32 = (*IndexConst(arg1).index(3));
+  let x6: u32 = (*IndexConst(arg1).index(2));
+  let x7: u32 = (*IndexConst(arg1).index(1));
+  let x8: u32 = (*IndexConst(arg1).index(0));
   let x9: u8 = ((x8 & (0xff as u32)) as u8);
   let x10: u32 = (x8 >> 8);
   let x11: u8 = ((x10 & (0xff as u32)) as u8);
@@ -4187,38 +4273,38 @@ pub fn fiat_25519_scalar_to_bytes(out1: &mut [u8; 32], arg1: &[u32; 8]) -> () {
   let x54: u32 = (x52 >> 8);
   let x55: u8 = ((x54 & (0xff as u32)) as u8);
   let x56: u8 = ((x54 >> 8) as u8);
-  out1[0] = x9;
-  out1[1] = x11;
-  out1[2] = x13;
-  out1[3] = x14;
-  out1[4] = x15;
-  out1[5] = x17;
-  out1[6] = x19;
-  out1[7] = x20;
-  out1[8] = x21;
-  out1[9] = x23;
-  out1[10] = x25;
-  out1[11] = x26;
-  out1[12] = x27;
-  out1[13] = x29;
-  out1[14] = x31;
-  out1[15] = x32;
-  out1[16] = x33;
-  out1[17] = x35;
-  out1[18] = x37;
-  out1[19] = x38;
-  out1[20] = x39;
-  out1[21] = x41;
-  out1[22] = x43;
-  out1[23] = x44;
-  out1[24] = x45;
-  out1[25] = x47;
-  out1[26] = x49;
-  out1[27] = x50;
-  out1[28] = x51;
-  out1[29] = x53;
-  out1[30] = x55;
-  out1[31] = x56;
+  *IndexConst(&mut out1).index_mut(0) = x9;
+  *IndexConst(&mut out1).index_mut(1) = x11;
+  *IndexConst(&mut out1).index_mut(2) = x13;
+  *IndexConst(&mut out1).index_mut(3) = x14;
+  *IndexConst(&mut out1).index_mut(4) = x15;
+  *IndexConst(&mut out1).index_mut(5) = x17;
+  *IndexConst(&mut out1).index_mut(6) = x19;
+  *IndexConst(&mut out1).index_mut(7) = x20;
+  *IndexConst(&mut out1).index_mut(8) = x21;
+  *IndexConst(&mut out1).index_mut(9) = x23;
+  *IndexConst(&mut out1).index_mut(10) = x25;
+  *IndexConst(&mut out1).index_mut(11) = x26;
+  *IndexConst(&mut out1).index_mut(12) = x27;
+  *IndexConst(&mut out1).index_mut(13) = x29;
+  *IndexConst(&mut out1).index_mut(14) = x31;
+  *IndexConst(&mut out1).index_mut(15) = x32;
+  *IndexConst(&mut out1).index_mut(16) = x33;
+  *IndexConst(&mut out1).index_mut(17) = x35;
+  *IndexConst(&mut out1).index_mut(18) = x37;
+  *IndexConst(&mut out1).index_mut(19) = x38;
+  *IndexConst(&mut out1).index_mut(20) = x39;
+  *IndexConst(&mut out1).index_mut(21) = x41;
+  *IndexConst(&mut out1).index_mut(22) = x43;
+  *IndexConst(&mut out1).index_mut(23) = x44;
+  *IndexConst(&mut out1).index_mut(24) = x45;
+  *IndexConst(&mut out1).index_mut(25) = x47;
+  *IndexConst(&mut out1).index_mut(26) = x49;
+  *IndexConst(&mut out1).index_mut(27) = x50;
+  *IndexConst(&mut out1).index_mut(28) = x51;
+  *IndexConst(&mut out1).index_mut(29) = x53;
+  *IndexConst(&mut out1).index_mut(30) = x55;
+  *IndexConst(&mut out1).index_mut(31) = x56;
 }
 
 /// The function fiat_25519_scalar_from_bytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
@@ -4234,39 +4320,39 @@ pub fn fiat_25519_scalar_to_bytes(out1: &mut [u8; 32], arg1: &[u32; 8]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0x1fffffff]]
 #[inline]
-pub fn fiat_25519_scalar_from_bytes(out1: &mut [u32; 8], arg1: &[u8; 32]) -> () {
-  let x1: u32 = (((arg1[31]) as u32) << 24);
-  let x2: u32 = (((arg1[30]) as u32) << 16);
-  let x3: u32 = (((arg1[29]) as u32) << 8);
-  let x4: u8 = (arg1[28]);
-  let x5: u32 = (((arg1[27]) as u32) << 24);
-  let x6: u32 = (((arg1[26]) as u32) << 16);
-  let x7: u32 = (((arg1[25]) as u32) << 8);
-  let x8: u8 = (arg1[24]);
-  let x9: u32 = (((arg1[23]) as u32) << 24);
-  let x10: u32 = (((arg1[22]) as u32) << 16);
-  let x11: u32 = (((arg1[21]) as u32) << 8);
-  let x12: u8 = (arg1[20]);
-  let x13: u32 = (((arg1[19]) as u32) << 24);
-  let x14: u32 = (((arg1[18]) as u32) << 16);
-  let x15: u32 = (((arg1[17]) as u32) << 8);
-  let x16: u8 = (arg1[16]);
-  let x17: u32 = (((arg1[15]) as u32) << 24);
-  let x18: u32 = (((arg1[14]) as u32) << 16);
-  let x19: u32 = (((arg1[13]) as u32) << 8);
-  let x20: u8 = (arg1[12]);
-  let x21: u32 = (((arg1[11]) as u32) << 24);
-  let x22: u32 = (((arg1[10]) as u32) << 16);
-  let x23: u32 = (((arg1[9]) as u32) << 8);
-  let x24: u8 = (arg1[8]);
-  let x25: u32 = (((arg1[7]) as u32) << 24);
-  let x26: u32 = (((arg1[6]) as u32) << 16);
-  let x27: u32 = (((arg1[5]) as u32) << 8);
-  let x28: u8 = (arg1[4]);
-  let x29: u32 = (((arg1[3]) as u32) << 24);
-  let x30: u32 = (((arg1[2]) as u32) << 16);
-  let x31: u32 = (((arg1[1]) as u32) << 8);
-  let x32: u8 = (arg1[0]);
+pub const fn fiat_25519_scalar_from_bytes(mut out1: &mut [u32; 8], arg1: &[u8; 32]) {
+  let x1: u32 = (((*IndexConst(arg1).index(31)) as u32) << 24);
+  let x2: u32 = (((*IndexConst(arg1).index(30)) as u32) << 16);
+  let x3: u32 = (((*IndexConst(arg1).index(29)) as u32) << 8);
+  let x4: u8 = (*IndexConst(arg1).index(28));
+  let x5: u32 = (((*IndexConst(arg1).index(27)) as u32) << 24);
+  let x6: u32 = (((*IndexConst(arg1).index(26)) as u32) << 16);
+  let x7: u32 = (((*IndexConst(arg1).index(25)) as u32) << 8);
+  let x8: u8 = (*IndexConst(arg1).index(24));
+  let x9: u32 = (((*IndexConst(arg1).index(23)) as u32) << 24);
+  let x10: u32 = (((*IndexConst(arg1).index(22)) as u32) << 16);
+  let x11: u32 = (((*IndexConst(arg1).index(21)) as u32) << 8);
+  let x12: u8 = (*IndexConst(arg1).index(20));
+  let x13: u32 = (((*IndexConst(arg1).index(19)) as u32) << 24);
+  let x14: u32 = (((*IndexConst(arg1).index(18)) as u32) << 16);
+  let x15: u32 = (((*IndexConst(arg1).index(17)) as u32) << 8);
+  let x16: u8 = (*IndexConst(arg1).index(16));
+  let x17: u32 = (((*IndexConst(arg1).index(15)) as u32) << 24);
+  let x18: u32 = (((*IndexConst(arg1).index(14)) as u32) << 16);
+  let x19: u32 = (((*IndexConst(arg1).index(13)) as u32) << 8);
+  let x20: u8 = (*IndexConst(arg1).index(12));
+  let x21: u32 = (((*IndexConst(arg1).index(11)) as u32) << 24);
+  let x22: u32 = (((*IndexConst(arg1).index(10)) as u32) << 16);
+  let x23: u32 = (((*IndexConst(arg1).index(9)) as u32) << 8);
+  let x24: u8 = (*IndexConst(arg1).index(8));
+  let x25: u32 = (((*IndexConst(arg1).index(7)) as u32) << 24);
+  let x26: u32 = (((*IndexConst(arg1).index(6)) as u32) << 16);
+  let x27: u32 = (((*IndexConst(arg1).index(5)) as u32) << 8);
+  let x28: u8 = (*IndexConst(arg1).index(4));
+  let x29: u32 = (((*IndexConst(arg1).index(3)) as u32) << 24);
+  let x30: u32 = (((*IndexConst(arg1).index(2)) as u32) << 16);
+  let x31: u32 = (((*IndexConst(arg1).index(1)) as u32) << 8);
+  let x32: u8 = (*IndexConst(arg1).index(0));
   let x33: u32 = (x31 + (x32 as u32));
   let x34: u32 = (x30 + x33);
   let x35: u32 = (x29 + x34);
@@ -4291,14 +4377,14 @@ pub fn fiat_25519_scalar_from_bytes(out1: &mut [u32; 8], arg1: &[u8; 32]) -> () 
   let x54: u32 = (x3 + (x4 as u32));
   let x55: u32 = (x2 + x54);
   let x56: u32 = (x1 + x55);
-  out1[0] = x35;
-  out1[1] = x38;
-  out1[2] = x41;
-  out1[3] = x44;
-  out1[4] = x47;
-  out1[5] = x50;
-  out1[6] = x53;
-  out1[7] = x56;
+  *IndexConst(&mut out1).index_mut(0) = x35;
+  *IndexConst(&mut out1).index_mut(1) = x38;
+  *IndexConst(&mut out1).index_mut(2) = x41;
+  *IndexConst(&mut out1).index_mut(3) = x44;
+  *IndexConst(&mut out1).index_mut(4) = x47;
+  *IndexConst(&mut out1).index_mut(5) = x50;
+  *IndexConst(&mut out1).index_mut(6) = x53;
+  *IndexConst(&mut out1).index_mut(7) = x56;
 }
 
 /// The function fiat_25519_scalar_set_one returns the field element one in the Montgomery domain.
@@ -4308,15 +4394,15 @@ pub fn fiat_25519_scalar_from_bytes(out1: &mut [u32; 8], arg1: &[u8; 32]) -> () 
 ///   0 ≤ eval out1 < m
 ///
 #[inline]
-pub fn fiat_25519_scalar_set_one(out1: &mut fiat_25519_scalar_montgomery_domain_field_element) -> () {
-  out1[0] = 0x8d98951d;
-  out1[1] = 0xd6ec3174;
-  out1[2] = 0x737dcf70;
-  out1[3] = 0xc6ef5bf4;
-  out1[4] = 0xfffffffe;
-  out1[5] = 0xffffffff;
-  out1[6] = 0xffffffff;
-  out1[7] = 0xfffffff;
+pub const fn fiat_25519_scalar_set_one(mut out1: &mut fiat_25519_scalar_montgomery_domain_field_element) {
+  *IndexConst(&mut out1).index_mut(0) = 0x8d98951d;
+  *IndexConst(&mut out1).index_mut(1) = 0xd6ec3174;
+  *IndexConst(&mut out1).index_mut(2) = 0x737dcf70;
+  *IndexConst(&mut out1).index_mut(3) = 0xc6ef5bf4;
+  *IndexConst(&mut out1).index_mut(4) = 0xfffffffe;
+  *IndexConst(&mut out1).index_mut(5) = 0xffffffff;
+  *IndexConst(&mut out1).index_mut(6) = 0xffffffff;
+  *IndexConst(&mut out1).index_mut(7) = 0xfffffff;
 }
 
 /// The function fiat_25519_scalar_msat returns the saturated representation of the prime modulus.
@@ -4328,16 +4414,16 @@ pub fn fiat_25519_scalar_set_one(out1: &mut fiat_25519_scalar_montgomery_domain_
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 #[inline]
-pub fn fiat_25519_scalar_msat(out1: &mut [u32; 9]) -> () {
-  out1[0] = 0x5cf5d3ed;
-  out1[1] = 0x5812631a;
-  out1[2] = 0xa2f79cd6;
-  out1[3] = 0x14def9de;
-  out1[4] = (0x0 as u32);
-  out1[5] = (0x0 as u32);
-  out1[6] = (0x0 as u32);
-  out1[7] = 0x10000000;
-  out1[8] = (0x0 as u32);
+pub const fn fiat_25519_scalar_msat(mut out1: &mut [u32; 9]) {
+  *IndexConst(&mut out1).index_mut(0) = 0x5cf5d3ed;
+  *IndexConst(&mut out1).index_mut(1) = 0x5812631a;
+  *IndexConst(&mut out1).index_mut(2) = 0xa2f79cd6;
+  *IndexConst(&mut out1).index_mut(3) = 0x14def9de;
+  *IndexConst(&mut out1).index_mut(4) = (0x0 as u32);
+  *IndexConst(&mut out1).index_mut(5) = (0x0 as u32);
+  *IndexConst(&mut out1).index_mut(6) = (0x0 as u32);
+  *IndexConst(&mut out1).index_mut(7) = 0x10000000;
+  *IndexConst(&mut out1).index_mut(8) = (0x0 as u32);
 }
 
 /// The function fiat_25519_scalar_divstep computes a divstep.
@@ -4369,95 +4455,95 @@ pub fn fiat_25519_scalar_msat(out1: &mut [u32; 9]) -> () {
 ///   out4: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 ///   out5: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 #[inline]
-pub fn fiat_25519_scalar_divstep(out1: &mut u32, out2: &mut [u32; 9], out3: &mut [u32; 9], out4: &mut [u32; 8], out5: &mut [u32; 8], arg1: u32, arg2: &[u32; 9], arg3: &[u32; 9], arg4: &[u32; 8], arg5: &[u32; 8]) -> () {
+pub const fn fiat_25519_scalar_divstep(out1: &mut u32, mut out2: &mut [u32; 9], mut out3: &mut [u32; 9], mut out4: &mut [u32; 8], mut out5: &mut [u32; 8], arg1: u32, arg2: &[u32; 9], arg3: &[u32; 9], arg4: &[u32; 8], arg5: &[u32; 8]) {
   let mut x1: u32 = 0;
   let mut x2: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x1, &mut x2, 0x0, (!arg1), (0x1 as u32));
-  let x3: fiat_25519_scalar_u1 = (((x1 >> 31) as fiat_25519_scalar_u1) & (((arg3[0]) & (0x1 as u32)) as fiat_25519_scalar_u1));
+  let x3: fiat_25519_scalar_u1 = (((x1 >> 31) as fiat_25519_scalar_u1) & (((*IndexConst(arg3).index(0)) & (0x1 as u32)) as fiat_25519_scalar_u1));
   let mut x4: u32 = 0;
   let mut x5: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x4, &mut x5, 0x0, (!arg1), (0x1 as u32));
   let mut x6: u32 = 0;
   fiat_25519_scalar_cmovznz_u32(&mut x6, x3, arg1, x4);
   let mut x7: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x7, x3, (arg2[0]), (arg3[0]));
+  fiat_25519_scalar_cmovznz_u32(&mut x7, x3, (*IndexConst(arg2).index(0)), (*IndexConst(arg3).index(0)));
   let mut x8: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x8, x3, (arg2[1]), (arg3[1]));
+  fiat_25519_scalar_cmovznz_u32(&mut x8, x3, (*IndexConst(arg2).index(1)), (*IndexConst(arg3).index(1)));
   let mut x9: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x9, x3, (arg2[2]), (arg3[2]));
+  fiat_25519_scalar_cmovznz_u32(&mut x9, x3, (*IndexConst(arg2).index(2)), (*IndexConst(arg3).index(2)));
   let mut x10: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x10, x3, (arg2[3]), (arg3[3]));
+  fiat_25519_scalar_cmovznz_u32(&mut x10, x3, (*IndexConst(arg2).index(3)), (*IndexConst(arg3).index(3)));
   let mut x11: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x11, x3, (arg2[4]), (arg3[4]));
+  fiat_25519_scalar_cmovznz_u32(&mut x11, x3, (*IndexConst(arg2).index(4)), (*IndexConst(arg3).index(4)));
   let mut x12: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x12, x3, (arg2[5]), (arg3[5]));
+  fiat_25519_scalar_cmovznz_u32(&mut x12, x3, (*IndexConst(arg2).index(5)), (*IndexConst(arg3).index(5)));
   let mut x13: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x13, x3, (arg2[6]), (arg3[6]));
+  fiat_25519_scalar_cmovznz_u32(&mut x13, x3, (*IndexConst(arg2).index(6)), (*IndexConst(arg3).index(6)));
   let mut x14: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x14, x3, (arg2[7]), (arg3[7]));
+  fiat_25519_scalar_cmovznz_u32(&mut x14, x3, (*IndexConst(arg2).index(7)), (*IndexConst(arg3).index(7)));
   let mut x15: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x15, x3, (arg2[8]), (arg3[8]));
+  fiat_25519_scalar_cmovznz_u32(&mut x15, x3, (*IndexConst(arg2).index(8)), (*IndexConst(arg3).index(8)));
   let mut x16: u32 = 0;
   let mut x17: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x16, &mut x17, 0x0, (0x1 as u32), (!(arg2[0])));
+  fiat_25519_scalar_addcarryx_u32(&mut x16, &mut x17, 0x0, (0x1 as u32), (!(*IndexConst(arg2).index(0))));
   let mut x18: u32 = 0;
   let mut x19: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x18, &mut x19, x17, (0x0 as u32), (!(arg2[1])));
+  fiat_25519_scalar_addcarryx_u32(&mut x18, &mut x19, x17, (0x0 as u32), (!(*IndexConst(arg2).index(1))));
   let mut x20: u32 = 0;
   let mut x21: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x20, &mut x21, x19, (0x0 as u32), (!(arg2[2])));
+  fiat_25519_scalar_addcarryx_u32(&mut x20, &mut x21, x19, (0x0 as u32), (!(*IndexConst(arg2).index(2))));
   let mut x22: u32 = 0;
   let mut x23: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x22, &mut x23, x21, (0x0 as u32), (!(arg2[3])));
+  fiat_25519_scalar_addcarryx_u32(&mut x22, &mut x23, x21, (0x0 as u32), (!(*IndexConst(arg2).index(3))));
   let mut x24: u32 = 0;
   let mut x25: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x24, &mut x25, x23, (0x0 as u32), (!(arg2[4])));
+  fiat_25519_scalar_addcarryx_u32(&mut x24, &mut x25, x23, (0x0 as u32), (!(*IndexConst(arg2).index(4))));
   let mut x26: u32 = 0;
   let mut x27: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x26, &mut x27, x25, (0x0 as u32), (!(arg2[5])));
+  fiat_25519_scalar_addcarryx_u32(&mut x26, &mut x27, x25, (0x0 as u32), (!(*IndexConst(arg2).index(5))));
   let mut x28: u32 = 0;
   let mut x29: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x28, &mut x29, x27, (0x0 as u32), (!(arg2[6])));
+  fiat_25519_scalar_addcarryx_u32(&mut x28, &mut x29, x27, (0x0 as u32), (!(*IndexConst(arg2).index(6))));
   let mut x30: u32 = 0;
   let mut x31: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x30, &mut x31, x29, (0x0 as u32), (!(arg2[7])));
+  fiat_25519_scalar_addcarryx_u32(&mut x30, &mut x31, x29, (0x0 as u32), (!(*IndexConst(arg2).index(7))));
   let mut x32: u32 = 0;
   let mut x33: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x32, &mut x33, x31, (0x0 as u32), (!(arg2[8])));
+  fiat_25519_scalar_addcarryx_u32(&mut x32, &mut x33, x31, (0x0 as u32), (!(*IndexConst(arg2).index(8))));
   let mut x34: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x34, x3, (arg3[0]), x16);
+  fiat_25519_scalar_cmovznz_u32(&mut x34, x3, (*IndexConst(arg3).index(0)), x16);
   let mut x35: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x35, x3, (arg3[1]), x18);
+  fiat_25519_scalar_cmovznz_u32(&mut x35, x3, (*IndexConst(arg3).index(1)), x18);
   let mut x36: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x36, x3, (arg3[2]), x20);
+  fiat_25519_scalar_cmovznz_u32(&mut x36, x3, (*IndexConst(arg3).index(2)), x20);
   let mut x37: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x37, x3, (arg3[3]), x22);
+  fiat_25519_scalar_cmovznz_u32(&mut x37, x3, (*IndexConst(arg3).index(3)), x22);
   let mut x38: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x38, x3, (arg3[4]), x24);
+  fiat_25519_scalar_cmovznz_u32(&mut x38, x3, (*IndexConst(arg3).index(4)), x24);
   let mut x39: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x39, x3, (arg3[5]), x26);
+  fiat_25519_scalar_cmovznz_u32(&mut x39, x3, (*IndexConst(arg3).index(5)), x26);
   let mut x40: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x40, x3, (arg3[6]), x28);
+  fiat_25519_scalar_cmovznz_u32(&mut x40, x3, (*IndexConst(arg3).index(6)), x28);
   let mut x41: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x41, x3, (arg3[7]), x30);
+  fiat_25519_scalar_cmovznz_u32(&mut x41, x3, (*IndexConst(arg3).index(7)), x30);
   let mut x42: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x42, x3, (arg3[8]), x32);
+  fiat_25519_scalar_cmovznz_u32(&mut x42, x3, (*IndexConst(arg3).index(8)), x32);
   let mut x43: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x43, x3, (arg4[0]), (arg5[0]));
+  fiat_25519_scalar_cmovznz_u32(&mut x43, x3, (*IndexConst(arg4).index(0)), (*IndexConst(arg5).index(0)));
   let mut x44: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x44, x3, (arg4[1]), (arg5[1]));
+  fiat_25519_scalar_cmovznz_u32(&mut x44, x3, (*IndexConst(arg4).index(1)), (*IndexConst(arg5).index(1)));
   let mut x45: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x45, x3, (arg4[2]), (arg5[2]));
+  fiat_25519_scalar_cmovznz_u32(&mut x45, x3, (*IndexConst(arg4).index(2)), (*IndexConst(arg5).index(2)));
   let mut x46: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x46, x3, (arg4[3]), (arg5[3]));
+  fiat_25519_scalar_cmovznz_u32(&mut x46, x3, (*IndexConst(arg4).index(3)), (*IndexConst(arg5).index(3)));
   let mut x47: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x47, x3, (arg4[4]), (arg5[4]));
+  fiat_25519_scalar_cmovznz_u32(&mut x47, x3, (*IndexConst(arg4).index(4)), (*IndexConst(arg5).index(4)));
   let mut x48: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x48, x3, (arg4[5]), (arg5[5]));
+  fiat_25519_scalar_cmovznz_u32(&mut x48, x3, (*IndexConst(arg4).index(5)), (*IndexConst(arg5).index(5)));
   let mut x49: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x49, x3, (arg4[6]), (arg5[6]));
+  fiat_25519_scalar_cmovznz_u32(&mut x49, x3, (*IndexConst(arg4).index(6)), (*IndexConst(arg5).index(6)));
   let mut x50: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x50, x3, (arg4[7]), (arg5[7]));
+  fiat_25519_scalar_cmovznz_u32(&mut x50, x3, (*IndexConst(arg4).index(7)), (*IndexConst(arg5).index(7)));
   let mut x51: u32 = 0;
   let mut x52: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_addcarryx_u32(&mut x51, &mut x52, 0x0, x43, x43);
@@ -4509,14 +4595,14 @@ pub fn fiat_25519_scalar_divstep(out1: &mut u32, out2: &mut [u32; 9], out3: &mut
   let mut x83: u32 = 0;
   let mut x84: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_subborrowx_u32(&mut x83, &mut x84, x82, (x66 as u32), (0x0 as u32));
-  let x85: u32 = (arg4[7]);
-  let x86: u32 = (arg4[6]);
-  let x87: u32 = (arg4[5]);
-  let x88: u32 = (arg4[4]);
-  let x89: u32 = (arg4[3]);
-  let x90: u32 = (arg4[2]);
-  let x91: u32 = (arg4[1]);
-  let x92: u32 = (arg4[0]);
+  let x85: u32 = (*IndexConst(arg4).index(7));
+  let x86: u32 = (*IndexConst(arg4).index(6));
+  let x87: u32 = (*IndexConst(arg4).index(5));
+  let x88: u32 = (*IndexConst(arg4).index(4));
+  let x89: u32 = (*IndexConst(arg4).index(3));
+  let x90: u32 = (*IndexConst(arg4).index(2));
+  let x91: u32 = (*IndexConst(arg4).index(1));
+  let x92: u32 = (*IndexConst(arg4).index(0));
   let mut x93: u32 = 0;
   let mut x94: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_subborrowx_u32(&mut x93, &mut x94, 0x0, (0x0 as u32), x92);
@@ -4542,240 +4628,239 @@ pub fn fiat_25519_scalar_divstep(out1: &mut u32, out2: &mut [u32; 9], out3: &mut
   let mut x108: fiat_25519_scalar_u1 = 0;
   fiat_25519_scalar_subborrowx_u32(&mut x107, &mut x108, x106, (0x0 as u32), x85);
   let mut x109: u32 = 0;
-  let mut x110: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x109, &mut x110, x108, (0x0 as u32), (0x0 as u32));
-  let mut x111: u32 = 0;
-  let mut x112: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x111, &mut x112, 0x0, x93, (x109 & 0x5cf5d3ed));
-  let mut x113: u32 = 0;
-  let mut x114: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x113, &mut x114, x112, x95, (x109 & 0x5812631a));
-  let mut x115: u32 = 0;
-  let mut x116: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x115, &mut x116, x114, x97, (x109 & 0xa2f79cd6));
-  let mut x117: u32 = 0;
-  let mut x118: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x117, &mut x118, x116, x99, (x109 & 0x14def9de));
-  let mut x119: u32 = 0;
-  let mut x120: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x119, &mut x120, x118, x101, (0x0 as u32));
-  let mut x121: u32 = 0;
-  let mut x122: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x121, &mut x122, x120, x103, (0x0 as u32));
-  let mut x123: u32 = 0;
-  let mut x124: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x123, &mut x124, x122, x105, (0x0 as u32));
-  let mut x125: u32 = 0;
-  let mut x126: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x125, &mut x126, x124, x107, (x109 & 0x10000000));
+  fiat_25519_scalar_cmovznz_u32(&mut x109, x108, (0x0 as u32), 0xffffffff);
+  let mut x110: u32 = 0;
+  let mut x111: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x110, &mut x111, 0x0, x93, (x109 & 0x5cf5d3ed));
+  let mut x112: u32 = 0;
+  let mut x113: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x112, &mut x113, x111, x95, (x109 & 0x5812631a));
+  let mut x114: u32 = 0;
+  let mut x115: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x114, &mut x115, x113, x97, (x109 & 0xa2f79cd6));
+  let mut x116: u32 = 0;
+  let mut x117: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x116, &mut x117, x115, x99, (x109 & 0x14def9de));
+  let mut x118: u32 = 0;
+  let mut x119: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x118, &mut x119, x117, x101, (0x0 as u32));
+  let mut x120: u32 = 0;
+  let mut x121: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x120, &mut x121, x119, x103, (0x0 as u32));
+  let mut x122: u32 = 0;
+  let mut x123: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x122, &mut x123, x121, x105, (0x0 as u32));
+  let mut x124: u32 = 0;
+  let mut x125: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x124, &mut x125, x123, x107, (x109 & 0x10000000));
+  let mut x126: u32 = 0;
+  fiat_25519_scalar_cmovznz_u32(&mut x126, x3, (*IndexConst(arg5).index(0)), x110);
   let mut x127: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x127, x3, (arg5[0]), x111);
+  fiat_25519_scalar_cmovznz_u32(&mut x127, x3, (*IndexConst(arg5).index(1)), x112);
   let mut x128: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x128, x3, (arg5[1]), x113);
+  fiat_25519_scalar_cmovznz_u32(&mut x128, x3, (*IndexConst(arg5).index(2)), x114);
   let mut x129: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x129, x3, (arg5[2]), x115);
+  fiat_25519_scalar_cmovznz_u32(&mut x129, x3, (*IndexConst(arg5).index(3)), x116);
   let mut x130: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x130, x3, (arg5[3]), x117);
+  fiat_25519_scalar_cmovznz_u32(&mut x130, x3, (*IndexConst(arg5).index(4)), x118);
   let mut x131: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x131, x3, (arg5[4]), x119);
+  fiat_25519_scalar_cmovznz_u32(&mut x131, x3, (*IndexConst(arg5).index(5)), x120);
   let mut x132: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x132, x3, (arg5[5]), x121);
+  fiat_25519_scalar_cmovznz_u32(&mut x132, x3, (*IndexConst(arg5).index(6)), x122);
   let mut x133: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x133, x3, (arg5[6]), x123);
-  let mut x134: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x134, x3, (arg5[7]), x125);
-  let x135: fiat_25519_scalar_u1 = ((x34 & (0x1 as u32)) as fiat_25519_scalar_u1);
+  fiat_25519_scalar_cmovznz_u32(&mut x133, x3, (*IndexConst(arg5).index(7)), x124);
+  let x134: fiat_25519_scalar_u1 = ((x34 & (0x1 as u32)) as fiat_25519_scalar_u1);
+  let mut x135: u32 = 0;
+  fiat_25519_scalar_cmovznz_u32(&mut x135, x134, (0x0 as u32), x7);
   let mut x136: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x136, x135, (0x0 as u32), x7);
+  fiat_25519_scalar_cmovznz_u32(&mut x136, x134, (0x0 as u32), x8);
   let mut x137: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x137, x135, (0x0 as u32), x8);
+  fiat_25519_scalar_cmovznz_u32(&mut x137, x134, (0x0 as u32), x9);
   let mut x138: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x138, x135, (0x0 as u32), x9);
+  fiat_25519_scalar_cmovznz_u32(&mut x138, x134, (0x0 as u32), x10);
   let mut x139: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x139, x135, (0x0 as u32), x10);
+  fiat_25519_scalar_cmovznz_u32(&mut x139, x134, (0x0 as u32), x11);
   let mut x140: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x140, x135, (0x0 as u32), x11);
+  fiat_25519_scalar_cmovznz_u32(&mut x140, x134, (0x0 as u32), x12);
   let mut x141: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x141, x135, (0x0 as u32), x12);
+  fiat_25519_scalar_cmovznz_u32(&mut x141, x134, (0x0 as u32), x13);
   let mut x142: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x142, x135, (0x0 as u32), x13);
+  fiat_25519_scalar_cmovznz_u32(&mut x142, x134, (0x0 as u32), x14);
   let mut x143: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x143, x135, (0x0 as u32), x14);
+  fiat_25519_scalar_cmovznz_u32(&mut x143, x134, (0x0 as u32), x15);
   let mut x144: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x144, x135, (0x0 as u32), x15);
-  let mut x145: u32 = 0;
-  let mut x146: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x145, &mut x146, 0x0, x34, x136);
-  let mut x147: u32 = 0;
-  let mut x148: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x147, &mut x148, x146, x35, x137);
-  let mut x149: u32 = 0;
-  let mut x150: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x149, &mut x150, x148, x36, x138);
-  let mut x151: u32 = 0;
-  let mut x152: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x151, &mut x152, x150, x37, x139);
-  let mut x153: u32 = 0;
-  let mut x154: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x153, &mut x154, x152, x38, x140);
-  let mut x155: u32 = 0;
-  let mut x156: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x155, &mut x156, x154, x39, x141);
-  let mut x157: u32 = 0;
-  let mut x158: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x157, &mut x158, x156, x40, x142);
-  let mut x159: u32 = 0;
-  let mut x160: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x159, &mut x160, x158, x41, x143);
-  let mut x161: u32 = 0;
-  let mut x162: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x161, &mut x162, x160, x42, x144);
+  let mut x145: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x144, &mut x145, 0x0, x34, x135);
+  let mut x146: u32 = 0;
+  let mut x147: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x146, &mut x147, x145, x35, x136);
+  let mut x148: u32 = 0;
+  let mut x149: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x148, &mut x149, x147, x36, x137);
+  let mut x150: u32 = 0;
+  let mut x151: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x150, &mut x151, x149, x37, x138);
+  let mut x152: u32 = 0;
+  let mut x153: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x152, &mut x153, x151, x38, x139);
+  let mut x154: u32 = 0;
+  let mut x155: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x154, &mut x155, x153, x39, x140);
+  let mut x156: u32 = 0;
+  let mut x157: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x156, &mut x157, x155, x40, x141);
+  let mut x158: u32 = 0;
+  let mut x159: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x158, &mut x159, x157, x41, x142);
+  let mut x160: u32 = 0;
+  let mut x161: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x160, &mut x161, x159, x42, x143);
+  let mut x162: u32 = 0;
+  fiat_25519_scalar_cmovznz_u32(&mut x162, x134, (0x0 as u32), x43);
   let mut x163: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x163, x135, (0x0 as u32), x43);
+  fiat_25519_scalar_cmovznz_u32(&mut x163, x134, (0x0 as u32), x44);
   let mut x164: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x164, x135, (0x0 as u32), x44);
+  fiat_25519_scalar_cmovznz_u32(&mut x164, x134, (0x0 as u32), x45);
   let mut x165: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x165, x135, (0x0 as u32), x45);
+  fiat_25519_scalar_cmovznz_u32(&mut x165, x134, (0x0 as u32), x46);
   let mut x166: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x166, x135, (0x0 as u32), x46);
+  fiat_25519_scalar_cmovznz_u32(&mut x166, x134, (0x0 as u32), x47);
   let mut x167: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x167, x135, (0x0 as u32), x47);
+  fiat_25519_scalar_cmovznz_u32(&mut x167, x134, (0x0 as u32), x48);
   let mut x168: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x168, x135, (0x0 as u32), x48);
+  fiat_25519_scalar_cmovznz_u32(&mut x168, x134, (0x0 as u32), x49);
   let mut x169: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x169, x135, (0x0 as u32), x49);
+  fiat_25519_scalar_cmovznz_u32(&mut x169, x134, (0x0 as u32), x50);
   let mut x170: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x170, x135, (0x0 as u32), x50);
-  let mut x171: u32 = 0;
-  let mut x172: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x171, &mut x172, 0x0, x127, x163);
-  let mut x173: u32 = 0;
-  let mut x174: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x173, &mut x174, x172, x128, x164);
-  let mut x175: u32 = 0;
-  let mut x176: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x175, &mut x176, x174, x129, x165);
-  let mut x177: u32 = 0;
-  let mut x178: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x177, &mut x178, x176, x130, x166);
-  let mut x179: u32 = 0;
-  let mut x180: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x179, &mut x180, x178, x131, x167);
-  let mut x181: u32 = 0;
-  let mut x182: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x181, &mut x182, x180, x132, x168);
-  let mut x183: u32 = 0;
-  let mut x184: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x183, &mut x184, x182, x133, x169);
-  let mut x185: u32 = 0;
-  let mut x186: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x185, &mut x186, x184, x134, x170);
-  let mut x187: u32 = 0;
-  let mut x188: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x187, &mut x188, 0x0, x171, 0x5cf5d3ed);
-  let mut x189: u32 = 0;
-  let mut x190: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x189, &mut x190, x188, x173, 0x5812631a);
-  let mut x191: u32 = 0;
-  let mut x192: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x191, &mut x192, x190, x175, 0xa2f79cd6);
-  let mut x193: u32 = 0;
-  let mut x194: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x193, &mut x194, x192, x177, 0x14def9de);
-  let mut x195: u32 = 0;
-  let mut x196: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x195, &mut x196, x194, x179, (0x0 as u32));
-  let mut x197: u32 = 0;
-  let mut x198: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x197, &mut x198, x196, x181, (0x0 as u32));
-  let mut x199: u32 = 0;
-  let mut x200: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x199, &mut x200, x198, x183, (0x0 as u32));
-  let mut x201: u32 = 0;
-  let mut x202: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x201, &mut x202, x200, x185, 0x10000000);
-  let mut x203: u32 = 0;
-  let mut x204: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_subborrowx_u32(&mut x203, &mut x204, x202, (x186 as u32), (0x0 as u32));
-  let mut x205: u32 = 0;
-  let mut x206: fiat_25519_scalar_u1 = 0;
-  fiat_25519_scalar_addcarryx_u32(&mut x205, &mut x206, 0x0, x6, (0x1 as u32));
-  let x207: u32 = ((x145 >> 1) | ((x147 << 31) & 0xffffffff));
-  let x208: u32 = ((x147 >> 1) | ((x149 << 31) & 0xffffffff));
-  let x209: u32 = ((x149 >> 1) | ((x151 << 31) & 0xffffffff));
-  let x210: u32 = ((x151 >> 1) | ((x153 << 31) & 0xffffffff));
-  let x211: u32 = ((x153 >> 1) | ((x155 << 31) & 0xffffffff));
-  let x212: u32 = ((x155 >> 1) | ((x157 << 31) & 0xffffffff));
-  let x213: u32 = ((x157 >> 1) | ((x159 << 31) & 0xffffffff));
-  let x214: u32 = ((x159 >> 1) | ((x161 << 31) & 0xffffffff));
-  let x215: u32 = ((x161 & 0x80000000) | (x161 >> 1));
+  let mut x171: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x170, &mut x171, 0x0, x126, x162);
+  let mut x172: u32 = 0;
+  let mut x173: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x172, &mut x173, x171, x127, x163);
+  let mut x174: u32 = 0;
+  let mut x175: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x174, &mut x175, x173, x128, x164);
+  let mut x176: u32 = 0;
+  let mut x177: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x176, &mut x177, x175, x129, x165);
+  let mut x178: u32 = 0;
+  let mut x179: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x178, &mut x179, x177, x130, x166);
+  let mut x180: u32 = 0;
+  let mut x181: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x180, &mut x181, x179, x131, x167);
+  let mut x182: u32 = 0;
+  let mut x183: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x182, &mut x183, x181, x132, x168);
+  let mut x184: u32 = 0;
+  let mut x185: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x184, &mut x185, x183, x133, x169);
+  let mut x186: u32 = 0;
+  let mut x187: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_subborrowx_u32(&mut x186, &mut x187, 0x0, x170, 0x5cf5d3ed);
+  let mut x188: u32 = 0;
+  let mut x189: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_subborrowx_u32(&mut x188, &mut x189, x187, x172, 0x5812631a);
+  let mut x190: u32 = 0;
+  let mut x191: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_subborrowx_u32(&mut x190, &mut x191, x189, x174, 0xa2f79cd6);
+  let mut x192: u32 = 0;
+  let mut x193: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_subborrowx_u32(&mut x192, &mut x193, x191, x176, 0x14def9de);
+  let mut x194: u32 = 0;
+  let mut x195: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_subborrowx_u32(&mut x194, &mut x195, x193, x178, (0x0 as u32));
+  let mut x196: u32 = 0;
+  let mut x197: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_subborrowx_u32(&mut x196, &mut x197, x195, x180, (0x0 as u32));
+  let mut x198: u32 = 0;
+  let mut x199: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_subborrowx_u32(&mut x198, &mut x199, x197, x182, (0x0 as u32));
+  let mut x200: u32 = 0;
+  let mut x201: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_subborrowx_u32(&mut x200, &mut x201, x199, x184, 0x10000000);
+  let mut x202: u32 = 0;
+  let mut x203: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_subborrowx_u32(&mut x202, &mut x203, x201, (x185 as u32), (0x0 as u32));
+  let mut x204: u32 = 0;
+  let mut x205: fiat_25519_scalar_u1 = 0;
+  fiat_25519_scalar_addcarryx_u32(&mut x204, &mut x205, 0x0, x6, (0x1 as u32));
+  let x206: u32 = ((x144 >> 1) | ((x146 << 31) & 0xffffffff));
+  let x207: u32 = ((x146 >> 1) | ((x148 << 31) & 0xffffffff));
+  let x208: u32 = ((x148 >> 1) | ((x150 << 31) & 0xffffffff));
+  let x209: u32 = ((x150 >> 1) | ((x152 << 31) & 0xffffffff));
+  let x210: u32 = ((x152 >> 1) | ((x154 << 31) & 0xffffffff));
+  let x211: u32 = ((x154 >> 1) | ((x156 << 31) & 0xffffffff));
+  let x212: u32 = ((x156 >> 1) | ((x158 << 31) & 0xffffffff));
+  let x213: u32 = ((x158 >> 1) | ((x160 << 31) & 0xffffffff));
+  let x214: u32 = ((x160 & 0x80000000) | (x160 >> 1));
+  let mut x215: u32 = 0;
+  fiat_25519_scalar_cmovznz_u32(&mut x215, x84, x67, x51);
   let mut x216: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x216, x84, x67, x51);
+  fiat_25519_scalar_cmovznz_u32(&mut x216, x84, x69, x53);
   let mut x217: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x217, x84, x69, x53);
+  fiat_25519_scalar_cmovznz_u32(&mut x217, x84, x71, x55);
   let mut x218: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x218, x84, x71, x55);
+  fiat_25519_scalar_cmovznz_u32(&mut x218, x84, x73, x57);
   let mut x219: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x219, x84, x73, x57);
+  fiat_25519_scalar_cmovznz_u32(&mut x219, x84, x75, x59);
   let mut x220: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x220, x84, x75, x59);
+  fiat_25519_scalar_cmovznz_u32(&mut x220, x84, x77, x61);
   let mut x221: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x221, x84, x77, x61);
+  fiat_25519_scalar_cmovznz_u32(&mut x221, x84, x79, x63);
   let mut x222: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x222, x84, x79, x63);
+  fiat_25519_scalar_cmovznz_u32(&mut x222, x84, x81, x65);
   let mut x223: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x223, x84, x81, x65);
+  fiat_25519_scalar_cmovznz_u32(&mut x223, x203, x186, x170);
   let mut x224: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x224, x204, x187, x171);
+  fiat_25519_scalar_cmovznz_u32(&mut x224, x203, x188, x172);
   let mut x225: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x225, x204, x189, x173);
+  fiat_25519_scalar_cmovznz_u32(&mut x225, x203, x190, x174);
   let mut x226: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x226, x204, x191, x175);
+  fiat_25519_scalar_cmovznz_u32(&mut x226, x203, x192, x176);
   let mut x227: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x227, x204, x193, x177);
+  fiat_25519_scalar_cmovznz_u32(&mut x227, x203, x194, x178);
   let mut x228: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x228, x204, x195, x179);
+  fiat_25519_scalar_cmovznz_u32(&mut x228, x203, x196, x180);
   let mut x229: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x229, x204, x197, x181);
+  fiat_25519_scalar_cmovznz_u32(&mut x229, x203, x198, x182);
   let mut x230: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x230, x204, x199, x183);
-  let mut x231: u32 = 0;
-  fiat_25519_scalar_cmovznz_u32(&mut x231, x204, x201, x185);
-  *out1 = x205;
-  out2[0] = x7;
-  out2[1] = x8;
-  out2[2] = x9;
-  out2[3] = x10;
-  out2[4] = x11;
-  out2[5] = x12;
-  out2[6] = x13;
-  out2[7] = x14;
-  out2[8] = x15;
-  out3[0] = x207;
-  out3[1] = x208;
-  out3[2] = x209;
-  out3[3] = x210;
-  out3[4] = x211;
-  out3[5] = x212;
-  out3[6] = x213;
-  out3[7] = x214;
-  out3[8] = x215;
-  out4[0] = x216;
-  out4[1] = x217;
-  out4[2] = x218;
-  out4[3] = x219;
-  out4[4] = x220;
-  out4[5] = x221;
-  out4[6] = x222;
-  out4[7] = x223;
-  out5[0] = x224;
-  out5[1] = x225;
-  out5[2] = x226;
-  out5[3] = x227;
-  out5[4] = x228;
-  out5[5] = x229;
-  out5[6] = x230;
-  out5[7] = x231;
+  fiat_25519_scalar_cmovznz_u32(&mut x230, x203, x200, x184);
+  *out1 = x204;
+  *IndexConst(&mut out2).index_mut(0) = x7;
+  *IndexConst(&mut out2).index_mut(1) = x8;
+  *IndexConst(&mut out2).index_mut(2) = x9;
+  *IndexConst(&mut out2).index_mut(3) = x10;
+  *IndexConst(&mut out2).index_mut(4) = x11;
+  *IndexConst(&mut out2).index_mut(5) = x12;
+  *IndexConst(&mut out2).index_mut(6) = x13;
+  *IndexConst(&mut out2).index_mut(7) = x14;
+  *IndexConst(&mut out2).index_mut(8) = x15;
+  *IndexConst(&mut out3).index_mut(0) = x206;
+  *IndexConst(&mut out3).index_mut(1) = x207;
+  *IndexConst(&mut out3).index_mut(2) = x208;
+  *IndexConst(&mut out3).index_mut(3) = x209;
+  *IndexConst(&mut out3).index_mut(4) = x210;
+  *IndexConst(&mut out3).index_mut(5) = x211;
+  *IndexConst(&mut out3).index_mut(6) = x212;
+  *IndexConst(&mut out3).index_mut(7) = x213;
+  *IndexConst(&mut out3).index_mut(8) = x214;
+  *IndexConst(&mut out4).index_mut(0) = x215;
+  *IndexConst(&mut out4).index_mut(1) = x216;
+  *IndexConst(&mut out4).index_mut(2) = x217;
+  *IndexConst(&mut out4).index_mut(3) = x218;
+  *IndexConst(&mut out4).index_mut(4) = x219;
+  *IndexConst(&mut out4).index_mut(5) = x220;
+  *IndexConst(&mut out4).index_mut(6) = x221;
+  *IndexConst(&mut out4).index_mut(7) = x222;
+  *IndexConst(&mut out5).index_mut(0) = x223;
+  *IndexConst(&mut out5).index_mut(1) = x224;
+  *IndexConst(&mut out5).index_mut(2) = x225;
+  *IndexConst(&mut out5).index_mut(3) = x226;
+  *IndexConst(&mut out5).index_mut(4) = x227;
+  *IndexConst(&mut out5).index_mut(5) = x228;
+  *IndexConst(&mut out5).index_mut(6) = x229;
+  *IndexConst(&mut out5).index_mut(7) = x230;
 }
 
 /// The function fiat_25519_scalar_divstep_precomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
@@ -4787,13 +4872,13 @@ pub fn fiat_25519_scalar_divstep(out1: &mut u32, out2: &mut [u32; 9], out3: &mut
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 #[inline]
-pub fn fiat_25519_scalar_divstep_precomp(out1: &mut [u32; 8]) -> () {
-  out1[0] = 0x36a7cb92;
-  out1[1] = 0xd70af844;
-  out1[2] = 0xb0b8b159;
-  out1[3] = 0x5f71c978;
-  out1[4] = 0x74947f1a;
-  out1[5] = 0xe76d8169;
-  out1[6] = 0xf193e4ff;
-  out1[7] = 0x19a2d36;
+pub const fn fiat_25519_scalar_divstep_precomp(mut out1: &mut [u32; 8]) {
+  *IndexConst(&mut out1).index_mut(0) = 0x36a7cb92;
+  *IndexConst(&mut out1).index_mut(1) = 0xd70af844;
+  *IndexConst(&mut out1).index_mut(2) = 0xb0b8b159;
+  *IndexConst(&mut out1).index_mut(3) = 0x5f71c978;
+  *IndexConst(&mut out1).index_mut(4) = 0x74947f1a;
+  *IndexConst(&mut out1).index_mut(5) = 0xe76d8169;
+  *IndexConst(&mut out1).index_mut(6) = 0xf193e4ff;
+  *IndexConst(&mut out1).index_mut(7) = 0x19a2d36;
 }

@@ -1,0 +1,34 @@
+name: Deploy fiat-html (manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-fiat-html:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Copy files from gh-pages
+      run: |
+        git clone https://github.com/mit-plv/fiat-crypto.git --branch gh-pages --single-branch --depth 1 fiat-crypto-gh-pages
+        cp -r fiat-crypto-gh-pages/* fiat-html/
+        rm -rf fiat-crypto-gh-pages
+        git ls-files fiat-html/ | xargs git checkout HEAD --
+    - name: Make version.js
+      run: make -f Makefile.js-html EXTRA_HTML_VERSION_INFO="-manual" fiat-html/version.js
+    - run: find fiat-html
+      if: always()
+    - name: backup .gitignore
+      run: mv .gitignore{,.bak}
+    - name: Deploy js_of_ocaml 🚀 ${{ ( github.ref != 'refs/heads/master' && '(dry run)' ) || '' }}
+      uses: JamesIves/github-pages-deploy-action@v4.7.2
+      with:
+        branch: gh-pages # The branch the action should deploy to.
+        folder: fiat-html # The folder the action should deploy.
+        git-config-email: JasonGross@users.noreply.github.com
+        target-folder: .
+        single-commit: false # keep the history on manual deploy
+        dry-run: ${{ github.ref != 'refs/heads/master' }}
+    - name: restore .gitignore
+      run: mv .gitignore{.bak,}

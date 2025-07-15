@@ -1,9 +1,9 @@
-Require Import Coq.Sorting.Permutation.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
-Require Import Coq.NArith.NArith.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Permutation.
+From Coq Require Import List.
+From Coq Require Import Lia.
+From Coq Require Import NArith.
+From Coq Require Import ZArith.
+From Coq Require Import Morphisms.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.Language.API.
 Require Import Crypto.Language.APINotations.
@@ -25,7 +25,6 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldMap.
 Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ListUtil.Permutation.
-Require Import Crypto.Util.ListUtil.PermutationCompat.
 Require Import Crypto.Util.ListUtil.IndexOf.
 Require Import Crypto.Util.ListUtil.Filter.
 Require Import Crypto.Util.ListUtil.Split.
@@ -65,15 +64,6 @@ Local Open Scope list_scope.
 
 (* TODO: move to global settings *)
 Local Set Keyed Unification.
-
-Local Lemma land_ones_eq_of_bounded v n
-      (H : (0 <= v < 2 ^ (Z.of_N n))%Z)
-  : Z.land v (Z.ones (Z.of_N n)) = v.
-Proof.
-  rewrite Z.land_ones by lia.
-  rewrite Z.mod_small by lia.
-  reflexivity.
-Qed.
 
 Import Map.Interface Map.Separation. (* for coercions *)
 Require Import bedrock2.Array.
@@ -245,7 +235,7 @@ Definition init_symbolic_state_G (m : machine_state)
         let '(initial_reg_idxs, (G, d)) := dag_gensym_n_G vals st in
         (G,
          {| dag_state := d
-            ; symbolic_reg_state := Tuple.from_list_default None 16 (List.map Some initial_reg_idxs)
+            ; symbolic_reg_state := Tuple.from_list_default None _ (List.map Some initial_reg_idxs)
             ; symbolic_flag_state := Tuple.repeat None 6
             ; symbolic_mem_state := []
          |}).
@@ -254,7 +244,7 @@ Lemma init_symbolic_state_eq_G G d m
   : init_symbolic_state d = snd (init_symbolic_state_G m (G, d)).
 Proof.
   cbv [init_symbolic_state init_symbolic_state_G].
-  epose proof (dag_gensym_n_eq_G G d (Tuple.to_list 16 m.(machine_reg_state))) as H.
+  epose proof (dag_gensym_n_eq_G G d (Tuple.to_list _ m.(machine_reg_state))) as H.
   rewrite Tuple.length_to_list in H; rewrite H; clear H.
   eta_expand; cbn [fst snd].
   reflexivity.
@@ -266,7 +256,7 @@ Lemma init_symbolic_state_G_ok m G d G' ss
       (H : init_symbolic_state_G m (G, d) = (G', ss))
       (d' := ss.(dag_state))
       (Hframe : frame m)
-      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list 16 m.(machine_reg_state)))
+      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state)))
   : R frame G' ss m
     /\ (forall reg, Option.is_Some (Symbolic.get_reg ss.(symbolic_reg_state) (reg_index reg)) = true)
     /\ gensym_dag_ok G' d'
@@ -291,11 +281,11 @@ Proof.
          by (eapply dag_gensym_n_G_ok; [ | eta_expand; reflexivity | ]; assumption).
        clear; cbv [reg_index]; break_innermost_match; lia. }
   set (v := dag_gensym_n_G _ _) in *; clearbody v; destruct_head'_prod; cbn [fst snd] in *.
-  eassert (H' : Tuple.to_list 16 m.(machine_reg_state) = _).
+  eassert (H' : Tuple.to_list _ m.(machine_reg_state) = _).
   { repeat match goal with H : _ |- _ => clear H end.
       cbv [Tuple.to_list Tuple.to_list'].
       set_evars; eta_expand; subst_evars; reflexivity. }
-  generalize dependent (Tuple.to_list 16 m.(machine_reg_state)); intros; subst.
+  generalize dependent (Tuple.to_list _ m.(machine_reg_state)); intros; subst.
   repeat match goal with H : context[?x :: _] |- _ => assert_fails is_var x; set x in * end.
   repeat match goal with H : Forall2 _ ?v (_ :: _) |- _ => is_var v; inversion H; clear H; subst end.
   repeat match goal with H : Forall2 _ ?v nil |- _ => is_var v; inversion H; clear H; subst end.
@@ -304,7 +294,7 @@ Proof.
   cbv [R_regs R_reg Tuple.fieldwise Tuple.fieldwise' eval_idx_Z] in *; cbn [fst snd].
   repeat apply conj; intros; inversion_option; subst; try assumption.
   all: change 64%Z with (Z.of_N 64).
-  all: rewrite land_ones_eq_of_bounded; [ reflexivity | ].
+  all: rewrite Z.land_ones_eq_of_bounded; [ reflexivity | ].
   all: assumption.
 Qed.
 
@@ -313,7 +303,7 @@ Lemma init_symbolic_state_ok m G d
       (Hd : gensym_dag_ok G d)
       (ss := init_symbolic_state d)
       (d' := ss.(dag_state))
-      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list 16 m.(machine_reg_state)))
+      (Hbounds : Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state)))
       (Hframe : frame m)
   : exists G',
     R frame G' ss m
@@ -332,12 +322,12 @@ Lemma get_reg_of_R_regs G d r mr reg
   : forall idx', Symbolic.get_reg r (reg_index reg) = Some idx' -> eval_idx_Z G d idx' (Semantics.get_reg mr reg).
 Proof.
   assert (reg_offset reg = 0%N) by now destruct reg.
-  assert (reg_index reg < length (Tuple.to_list _ r))
+  assert (N.to_nat (reg_index reg) < List.length (Tuple.to_list _ r))
     by now rewrite Tuple.length_to_list; destruct reg; cbv [reg_index]; lia.
   cbv [Symbolic.get_reg Semantics.get_reg R_regs] in *.
   rewrite Tuple.fieldwise_to_list_iff in Hreg.
   erewrite @Forall2_forall_iff in Hreg by now rewrite !Tuple.length_to_list.
-  specialize (Hreg (reg_index reg) ltac:(assumption)); rewrite !@Tuple.nth_default_to_list in *.
+  specialize (Hreg (N.to_nat (reg_index reg)) ltac:(assumption)); rewrite !@Tuple.nth_default_to_list in *.
   cbv [index_and_shift_and_bitcount_of_reg] in *.
   generalize dependent (reg_size reg); intros; subst.
   generalize dependent (reg_offset reg); intros; subst.
@@ -464,7 +454,7 @@ Definition R_regs_preserved_v rn (m : Semantics.reg_state)
   := Z.land (Tuple.nth_default 0%Z rn m) (Z.ones 64).
 
 Definition R_regs_preserved G d G' d' (m : Semantics.reg_state) rs rs'
-  := forall rn idx, Symbolic.get_reg rs' rn = Some idx -> exists idx', Symbolic.get_reg rs rn = Some idx' /\ let v := R_regs_preserved_v rn m in eval_idx_Z G d idx' v -> eval_idx_Z G' d' idx v.
+  := forall rn idx, Symbolic.get_reg rs' rn = Some idx -> exists idx', Symbolic.get_reg rs rn = Some idx' /\ let v := R_regs_preserved_v (N.to_nat rn) m in eval_idx_Z G d idx' v -> eval_idx_Z G' d' idx v.
 
 Global Instance R_regs_preserved_Reflexive G d m : Reflexive (R_regs_preserved G d G d m) | 100.
 Proof. intro; cbv [R_regs_preserved]; eauto. Qed.
@@ -476,19 +466,22 @@ Lemma R_regs_subsumed_get_reg_same_eval G d G' d' rs rs' rm
 Proof.
   cbv [R_regs Symbolic.get_reg R_regs_preserved R_regs_preserved_v] in *.
   rewrite @Tuple.fieldwise_to_list_iff, @Forall2_forall_iff_nth_error in *.
-  intro i; specialize (H i); specialize (H_impl i).
+  intro i; specialize (H i); specialize (H_impl (N.of_nat i)).
   rewrite <- !@Tuple.nth_default_to_list in *.
   cbv [nth_default option_eq] in *.
   repeat first [ progress destruct_head'_and
                | progress destruct_head'_ex
+               | progress inversion_option
                | rewrite @Tuple.length_to_list in *
                | progress cbv [R_reg eval_idx_Z] in *
                | progress break_innermost_match
                | progress break_innermost_match_hyps
+               | rewrite !Nat2N.id in *
                | now auto
                | progress intros
                | progress subst
                | match goal with
+                 | [ H : ?x = Some ?a, H' : ?x = Some ?b |- _ ] => rewrite H in H'
                  | [ H : nth_error _ _ = None |- _ ] => apply nth_error_error_length in H
                  | [ H : ?i >= ?n, H' : context[nth_error (Tuple.to_list ?n _) ?i] |- _ ]
                    => rewrite nth_error_length_error in H' by now rewrite Tuple.length_to_list; lia
@@ -501,12 +494,13 @@ Qed.
 
 Lemma R_regs_preserved_set_reg G d G' d' rs rs' ri rm v
       (H : R_regs_preserved G d G' d' rm rs rs')
-      (H_same : (ri < 16)%nat -> exists idx, Symbolic.get_reg rs ri = Some idx /\ let v' := R_regs_preserved_v ri rm in eval_idx_Z G d idx v' -> eval_idx_Z G' d' v v')
+      (H_same : (ri < N.of_nat (List.length widest_registers))%N -> exists idx, Symbolic.get_reg rs ri = Some idx /\ let v' := R_regs_preserved_v (N.to_nat ri) rm in eval_idx_Z G d idx v' -> eval_idx_Z G' d' v v')
   : R_regs_preserved G d G' d' rm rs (Symbolic.set_reg rs' ri v).
 Proof.
   cbv [R_regs_preserved] in *.
   intros rn idx; specialize (H rn).
   rewrite get_reg_set_reg_full; intro.
+  vm_compute (length widest_registers) in *.
   repeat first [ progress break_innermost_match_hyps
                | progress inversion_option
                | progress subst
@@ -527,7 +521,7 @@ Qed.
 
 Lemma R_regs_preserved_fold_left_set_reg_index {T1 T2} G d G' d' rs rs' rm (r_idxs : list (_ * (_ * T1 + _ * T2)))
       (H : R_regs_preserved G d G' d' rm rs rs')
-      (H_same : Forall (fun '(r, v) => let v := match v with inl (v, _) => v | inr (v, _) => v end in exists idx, Symbolic.get_reg rs (reg_index r) = Some idx /\ let v' := R_regs_preserved_v (reg_index r) rm in eval_idx_Z G d idx v' -> eval_idx_Z G' d' v v') r_idxs)
+      (H_same : Forall (fun '(r, v) => let v := match v with inl (v, _) => v | inr (v, _) => v end in exists idx, Symbolic.get_reg rs (reg_index r) = Some idx /\ let v' := R_regs_preserved_v (N.to_nat (reg_index r)) rm in eval_idx_Z G d idx v' -> eval_idx_Z G' d' v v') r_idxs)
   : R_regs_preserved
       G d G' d' rm
       rs
@@ -548,12 +542,12 @@ Qed.
 Lemma Semantics_get_reg_eq_nth_default_of_R_regs G d ss ms r
       (Hsz : reg_size r = 64%N)
       (HR : R_regs G d ss ms)
-  : Semantics.get_reg ms r = Tuple.nth_default 0%Z (reg_index r) (ms : Semantics.reg_state).
+  : Semantics.get_reg ms r = Tuple.nth_default 0%Z (N.to_nat (reg_index r)) (ms : Semantics.reg_state).
 Proof.
   assert (Hro : reg_offset r = 0%N) by now revert Hsz; clear; cbv; destruct r; lia.
   cbv [R_regs R_reg] in HR.
   rewrite Tuple.fieldwise_to_list_iff, Forall2_forall_iff_nth_error in HR.
-  specialize (HR (reg_index r)).
+  specialize (HR (N.to_nat (reg_index r))).
   cbv [Semantics.get_reg index_and_shift_and_bitcount_of_reg].
   rewrite Hro, Hsz; change (Z.of_N 0) with 0%Z; change (Z.of_N 64) with 64%Z.
   rewrite Z.shiftr_0_r, <- Tuple.nth_default_to_list; cbv [nth_default option_eq] in *.
@@ -563,7 +557,7 @@ Qed.
 Lemma Semantics_get_reg_eq_nth_default_of_R frame G ss ms r
       (Hsz : reg_size r = 64%N)
       (HR : R frame G ss ms)
-  : Semantics.get_reg ms r = Tuple.nth_default 0%Z (reg_index r) (ms : Semantics.reg_state).
+  : Semantics.get_reg ms r = Tuple.nth_default 0%Z (N.to_nat (reg_index r)) (ms : Semantics.reg_state).
 Proof.
   destruct ss, ms; eapply Semantics_get_reg_eq_nth_default_of_R_regs; try eassumption; apply HR.
 Qed.
@@ -586,7 +580,7 @@ Lemma Forall2_R_regs_preserved_same_helper G d reg_available idxs m rs
   : Forall (fun '(r, v)
             => let v := match v with inl (v, _) => v | inr (v, _) => v end in
                exists idx, Symbolic.get_reg rs (reg_index r) = Some idx
-                           /\ let v' := R_regs_preserved_v (reg_index r) m in eval_idx_Z G d idx v' -> eval_idx_Z G d v v')
+                           /\ let v' := R_regs_preserved_v (N.to_nat (reg_index r)) m in eval_idx_Z G d idx v' -> eval_idx_Z G d v v')
            (List.combine reg_available idxs).
 Proof.
   cbv [get_asm_reg] in *.
@@ -2944,7 +2938,7 @@ Proof.
                         | [ |- List.map word.unsigned _ = _ ]
                           => saturate_lengths;
                              adjust_Foralls_firstn_skipn;
-                             try rewrite ListUtil.List.firstn_firstn, Min.min_idempotent;
+                             try rewrite ListUtil.List.firstn_firstn, Nat.min_idempotent;
                              try eassumption
                         | _ => idtac
                         end .. ];
@@ -3342,9 +3336,9 @@ Theorem check_equivalence_correct
            /\ R_runtime_output (output_scalars_are_pointers:=output_scalars_are_pointers) frame retvals (type_spec_of_runtime args) stack_size stack_base asm_args_out asm_args_in assembly_callee_saved_registers runtime_callee_saved_registers st')
       asm.
 Proof.
-  cbv beta delta [check_equivalence ErrorT.bind] in H.
+  cbv beta delta [check_equivalence map_symex_asm ErrorT.bind] in H.
   repeat
-    first [ rewrite List.ErrorT.List.bind_list_cps_id, <- List.ErrorT.List.eq_bind_list_lift in H;
+    first [ rewrite List.ErrorT.List.bind_list_cps_id, <- !List.ErrorT.List.eq_bind_list_lift in H;
             cbv beta delta [ErrorT.bind] in H
           | match type of H with
             | (let n := ?v in _) = _
@@ -3369,26 +3363,52 @@ Proof.
                  destruct v eqn:?; [ change (T = rhs) in H | change (F = rhs) in H ];
                  cbv beta in H
             end ]; try discriminate; [].
-  cbv beta delta [map_error ErrorT.map2 id] in *.
-  break_innermost_match_hyps; inversion_ErrorT; subst.
-  rewrite @List.ErrorT.List.lift_Success_Forall2_iff in *.
-  progress rewrite ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in *.
-  Foralls_to_nth_error.
-  intros; inversion_ErrorT; subst.
-  progress reflect_hyps.
-  subst.
-  pose proof empty_gensym_dag_ok.
-  let H := fresh in pose proof Hargs as H; eapply build_input_runtime_ok_nil in H; [ | eassumption .. ].
-  pose proof (word_args_to_Z_args_bounded word_args).
-  repeat first [ assumption
+  progress cbv beta delta [map_error ErrorT.map2 id] in *.
+  repeat first [ match goal with
+                 | [ H : context G[let x := ?y in @?P x] |- _ ] =>
+                     tryif is_var y then
+                       let G' := context G[P y] in
+                       progress change G' in H
+                     else
+                       let h := fresh x in
+                       set (h := y) in *;
+                       let G' := context G[P h] in
+                       progress change G' in H
+                 | [ H : context[let x := ?y in _] |- _ ] => tryif is_var y then fail else let h := fresh x in set (h := y) in *
+                 | [ H : context[List.ErrorT.List.bind_list] |- _ ]
+                   => rewrite List.ErrorT.List.bind_list_cps_id, <- !List.ErrorT.List.eq_bind_list_lift in H;
+                      cbv beta delta [ErrorT.bind] in H
+                 | [ H := Some _ |- _ ] => subst H
+                 | [ H := None |- _ ] => subst H
+                 | [ H := List.map _ _ |- _ ] => subst H
+                 | [ H : context[match List.ErrorT.List.lift ?x with _ => _ end] |- _ ]
+                   => destruct (List.ErrorT.List.lift x) eqn:?
+                 end
+               | progress cbv beta in *
+               | progress inversion_ErrorT
+               | progress subst
+               | progress break_innermost_match_hyps
+               | progress rewrite @List.ErrorT.List.lift_Success_Forall2_iff in *
+               | progress rewrite ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in * ].
+  all: Foralls_to_nth_error.
+  all: intros; inversion_ErrorT; inversion_pair; subst.
+  all: progress reflect_hyps.
+  all: subst.
+  all: pose proof empty_gensym_dag_ok.
+  all: let H := fresh in pose proof Hargs as H; eapply build_input_runtime_ok_nil in H; [ | eassumption .. ].
+  all: pose proof (word_args_to_Z_args_bounded word_args).
+  all: repeat
+         first [ assumption
                | match goal with
                  | [ H : build_inputs _ _ = _ |- _ ] => move H at bottom; eapply build_inputs_ok in H; [ | eassumption .. ]
                  | [ H : symex_PHOAS ?expr ?inputs ?d = Success _, H' : build_input_runtime _ ?ri = Some _ |- _ ]
-                   => move H at bottom; eapply symex_PHOAS_correct with (runtime_inputs:=ri) in H; [ | eassumption .. ]
+                   => move H at bottom; eapply symex_PHOAS_correct with (runtime_inputs:=ri) in H;
+                      [ | try eassumption .. ];
+                      [ | first [ assumption | eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ] .. ]
                  | [ H : symex_asm_func _ _ _ _ _ _ _ = Success _ |- _ ]
                    => move H at bottom; eapply symex_asm_func_correct in H;
-                      [ | try (eassumption + apply surjective_pairing + reflexivity) .. ];
-                      [ | clear H; eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ]
+                      [ | (eassumption + apply surjective_pairing + reflexivity + trivial) .. ];
+                      [ | clear H; first [ assumption | eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ] ]
                  end
                | progress destruct_head'_ex
                | progress destruct_head'_and
@@ -3398,6 +3418,7 @@ Proof.
                | match goal with
                  | [ H : ?x = Some ?a, H' : ?x = Some ?b |- _ ]
                    => rewrite H in H'; inversion_option
+                 | [ H : ?x = Some _, H' : ?x = None |- _ ] => exfalso; clear -H H'; rewrite H in H'; inversion_option
                  | [ H : forall args, Forall2 ?P args ?v -> Forall2 _ _ _, H' : Forall2 ?P _ ?v |- _ ]
                    => specialize (H _ H')
                  | [ Himpl : forall e n, eval ?G1 ?d1 e n -> eval ?G2 ?d2 e n,
@@ -3409,7 +3430,7 @@ Proof.
                       subst
                  | [ H := _ |- _ ] => subst H
                  end ].
-  do 3 eexists; repeat first [ eassumption | apply conj ]; trivial.
+  all: do 3 eexists; repeat first [ eassumption | apply conj ]; trivial.
 Qed.
 
 Theorem generate_assembly_of_hinted_expr_correct

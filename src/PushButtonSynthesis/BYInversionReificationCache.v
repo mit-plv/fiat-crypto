@@ -1,6 +1,6 @@
 (** * Push-Button Synthesis of Bernstein-Yang Inversion: Reification Cache *)
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.derive.Derive.
+From Coq Require Import ZArith.
+From Coq Require Import Derive.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.ZUtil.Pow.
 Require Import Crypto.Arithmetic.Core.
@@ -36,12 +36,14 @@ Module Export WordByWordMontgomeryInversion.
          SuchThat (is_reification_of reified_divstep_gen divstep)
          As reified_divstep_gen_correct.
   Proof. Time cache_reify (). Time Qed.
+  Local Definition reified_divstep_gen_correct_proj1 := proj1 reified_divstep_gen_correct.
+  Local Definition reified_divstep_gen_correct_proj2 := proj2 reified_divstep_gen_correct.
 #[global]
-  Hint Extern 1 (_ = _) => apply_cached_reification divstep (proj1 reified_divstep_gen_correct) : reify_cache_gen.
+  Hint Extern 1 (_ = _) => apply_cached_reification divstep reified_divstep_gen_correct_proj1 : reify_cache_gen.
 #[global]
-  Hint Immediate (proj2 reified_divstep_gen_correct) : wf_gen_cache.
+  Hint Immediate reified_divstep_gen_correct_proj2 : wf_gen_cache.
 #[global]
-  Hint Rewrite (proj1 reified_divstep_gen_correct) : interp_gen_cache.
+  Hint Rewrite reified_divstep_gen_correct_proj1 : interp_gen_cache.
   Local Opaque reified_divstep_gen. (* needed for making [autorewrite] not take a very long time *)
 
   Derive reified_msat_gen
@@ -49,24 +51,28 @@ Module Export WordByWordMontgomeryInversion.
          As reified_msat_gen_correct.
   Proof.
     Time cache_reify ().
-    Time Qed.
-#[global]
-  Hint Extern 1 (_ = _) => apply_cached_reification msat (proj1 reified_msat_gen_correct) : reify_cache_gen.
-#[global]
-  Hint Immediate (proj2 reified_msat_gen_correct) : wf_gen_cache.
-#[global]
-  Hint Rewrite (proj1 reified_msat_gen_correct) : interp_gen_cache.
+  Time Qed.
+  Local Definition reified_msat_gen_correct_proj1 := proj1 reified_msat_gen_correct.
+  Local Definition reified_msat_gen_correct_proj2 := proj2 reified_msat_gen_correct.
+  #[global]
+  Hint Extern 1 (_ = _) => apply_cached_reification msat reified_msat_gen_correct_proj1 : reify_cache_gen.
+  #[global]
+  Hint Immediate reified_msat_gen_correct_proj2 : wf_gen_cache.
+  #[global]
+  Hint Rewrite reified_msat_gen_correct_proj1 : interp_gen_cache.
   Local Opaque reified_msat_gen. (* needed for making [autorewrite] not take a very long time *)
 
   Derive reified_eval_twos_complement_gen
          SuchThat (is_reification_of reified_eval_twos_complement_gen eval_twos_complement)
          As reified_eval_twos_complement_gen_correct.
   Proof. Time cache_reify (). Time Qed.
-#[global]
-  Hint Extern 1 (_ = _) => apply_cached_reification eval_twos_complement (proj1 reified_eval_twos_complement_gen_correct) : reify_cache_gen.
-#[global]
-  Hint Immediate (proj2 reified_eval_twos_complement_gen_correct) : wf_gen_cache.
-#[global]
-  Hint Rewrite (proj1 reified_eval_twos_complement_gen_correct) : interp_gen_cache.
+  Local Definition reified_eval_twos_complement_gen_correct_proj1 := proj1 reified_eval_twos_complement_gen_correct.
+  Local Definition reified_eval_twos_complement_gen_correct_proj2 := proj2 reified_eval_twos_complement_gen_correct.
+  #[global]
+  Hint Extern 1 (_ = _) => apply_cached_reification eval_twos_complement reified_eval_twos_complement_gen_correct_proj1 : reify_cache_gen.
+  #[global]
+  Hint Immediate reified_eval_twos_complement_gen_correct_proj2 : wf_gen_cache.
+  #[global]
+  Hint Rewrite reified_eval_twos_complement_gen_correct_proj1 : interp_gen_cache.
   Local Opaque reified_eval_twos_complement_gen. (* needed for making [autorewrite] not take a very long time *)
 End WordByWordMontgomeryInversion.

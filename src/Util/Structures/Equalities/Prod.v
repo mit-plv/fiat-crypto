@@ -1,6 +1,6 @@
-Require Import Coq.Classes.RelationPairs.
-Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
-Require Import Coq.Structures.Equalities.
+From Coq Require Import RelationPairs.
+From Coq Require Import Morphisms Setoid.
+From Coq Require Import Equalities.
 Require Import Crypto.Util.Structures.Equalities.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.

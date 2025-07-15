@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List.
+From Coq Require Import List.
 Require Import Crypto.Util.PrimitiveProd.
 
 Import Primitive.Notations.

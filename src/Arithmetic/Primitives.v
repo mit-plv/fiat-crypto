@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs. (* For MontgomeryReduction *)
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.

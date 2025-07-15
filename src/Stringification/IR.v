@@ -1,10 +1,10 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.FSets.FMapPositive.
-Require Import Coq.Strings.String.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Bool.Bool.
-Require Import Coq.Strings.HexString.
+From Coq Require Import ZArith.
+From Coq Require Import MSetPositive.
+From Coq Require Import FMapPositive.
+From Coq Require Import String.
+From Coq Require Import Ascii.
+From Coq Require Import Bool.
+From Coq Require Import HexString.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Util.Strings.Decimal.
@@ -786,10 +786,6 @@ Module Compilers.
                    => fun _ => ret v
                  | ident.comment _
                  | ident.comment_no_keep _
-                 | Compilers.ident_Pos_add
-                 | Compilers.ident_Pos_mul
-                 | Compilers.ident_Z_pos
-                 | Compilers.ident_Z_to_pos
                  | ident.Nat_succ
                  | ident.Nat_pred
                  | ident.Nat_max
@@ -797,6 +793,8 @@ Module Compilers.
                  | ident.Nat_add
                  | ident.Nat_sub
                  | ident.Nat_eqb
+                 | ident.Pos_add
+                 | ident.Pos_mul
                  | ident.prod_rect _ _ _
                  | ident.bool_rect _
                  | ident.bool_rect_nodep _
@@ -811,13 +809,13 @@ Module Compilers.
                  | ident.eager_list_rect _ _
                  | ident.list_rect_arrow _ _ _
                  | ident.eager_list_rect_arrow _ _ _
-                 | Compilers.ident_nat_rect_fbb_b _ _ _
-                 | Compilers.ident_nat_rect_fbb_b_b _ _ _ _
-                 | Compilers.ident_list_rect_fbb_b _ _ _ _
-                 | Compilers.ident_list_rect_fbb_b_b _ _ _ _ _
-                 | Compilers.ident_list_rect_fbb_b_b_b _ _ _ _ _ _
-                 | Compilers.ident_list_rect_fbb_b_b_b_b _ _ _ _ _ _ _
-                 | Compilers.ident_list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _
+                 | ident.nat_rect_fbb_b _ _ _
+                 | ident.nat_rect_fbb_b_b _ _ _ _
+                 | ident.list_rect_fbb_b _ _ _ _
+                 | ident.list_rect_fbb_b_b _ _ _ _ _
+                 | ident.list_rect_fbb_b_b_b _ _ _ _ _ _
+                 | ident.list_rect_fbb_b_b_b_b _ _ _ _ _ _ _
+                 | ident.list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _
                  | ident.list_case _ _
                  | ident.List_length _
                  | ident.List_seq
@@ -845,11 +843,13 @@ Module Compilers.
                  | ident.Z_gtb
                  | ident.Z_min
                  | ident.Z_max
-                 | Compilers.ident_Z_abs
+                 | ident.Z_abs
                  | ident.Z_log2
                  | ident.Z_log2_up
                  | ident.Z_of_nat
                  | ident.Z_to_nat
+                 | ident.Z_pos
+                 | ident.Z_to_pos
                  | ident.Z_ltz
                  | ident.Z_zselect
                  | ident.Z_mul_split

@@ -1,6 +1,6 @@
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.Option.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Util.Strings.Show.
@@ -168,7 +168,7 @@ Time Definition balances
                                    (fun n
                                     => let bal := @balance default_tight_upperbound_fraction n s c in
                                        let tub := @tight_upperbounds default_tight_upperbound_fraction n s c in
-                                       let dif := map2 Z.sub bal tub in
+                                       let dif := List.map2 Z.sub bal tub in
                                        ((bw, n),
                                         ("balance:                                        ",
                                          (let show_lvl_Z := PowersOfTwo.show_lvl_Z in show bal),

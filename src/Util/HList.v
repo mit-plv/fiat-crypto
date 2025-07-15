@@ -1,6 +1,6 @@
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Relations.Relation_Definitions.
-Require Import Coq.Lists.List.
+From Coq Require Import Morphisms.
+From Coq Require Import Relation_Definitions.
+From Coq Require Import List.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.IffT.

@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith Coq.QArith.QArith QArith.Qround.
-Require Import Coq.micromega.Lia.
+From Coq Require Import ZArith QArith Qround.
+From Coq Require Import Lia.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Morphisms.

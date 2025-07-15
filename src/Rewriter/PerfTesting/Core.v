@@ -1,7 +1,7 @@
-Require Export Coq.ZArith.ZArith.
-Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
-Require Export Coq.Strings.String.
-Require Import Coq.Lists.List.
+From Coq Require Export ZArith.
+From Coq Require Import QArith_base Qround.
+From Coq Require Export String.
+From Coq Require Import List.
 Require Crypto.ArithmeticCPS.Core.
 Require Crypto.ArithmeticCPS.ModOps.
 Require Crypto.ArithmeticCPS.Saturated.

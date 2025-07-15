@@ -1,9 +1,9 @@
-Require Export Coq.extraction.Extraction.
-Require Export Coq.extraction.ExtrOcamlBasic.
-Require Export Coq.extraction.ExtrOcamlString.
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Strings.String.
+From Coq Require Export Extraction.
+From Coq Require Export ExtrOcamlBasic.
+From Coq Require Export ExtrOcamlString.
+From Coq Require Import List.
+From Coq Require Import Ascii.
+From Coq Require Import String.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.CLI.
 Require Import Crypto.Util.Notations.
@@ -77,7 +77,7 @@ Module Export OCamlPrimitives : OCamlPrimitivesT.
 End OCamlPrimitives.
 
 Extract Inductive int
-        => "Int.t" [ "0" "Pervasives.succ" ]
+    => "Int.t" [ "0" "(fun n -> n+1)" ]
                    "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
 (* We cannot inline these constants due to COQBUG(https://github.com/coq/coq/issues/16169) *)
 Extract (*Inlined*) Constant in_channel => "in_channel".
@@ -228,3 +228,8 @@ Module BaseConversion.
   Definition main : unit
     := main_gen ForExtraction.BaseConversion.PipelineMain.
 End BaseConversion.
+
+Module FiatCrypto.
+  Definition main : unit
+    := main_gen ForExtraction.FiatCrypto.PipelineMain.
+End FiatCrypto.

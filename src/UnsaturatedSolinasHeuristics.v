@@ -1,8 +1,8 @@
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
-Require Import Coq.QArith.Qabs.
+From Coq Require Import List.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
+From Coq Require Import QArith_base Qround.
+From Coq Require Import Qabs.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
@@ -60,7 +60,7 @@ Section encode_distributed.
   Hint Rewrite length_encode_distributed : distr_length.
   Lemma nth_default_encode_distributed_bounded_eq'
         (** We add an extra hypothesis that is too bulky to prove *)
-        (Hadd : forall x y, length x = n -> length y = n -> add weight n x y = map2 Z.add x y)
+        (Hadd : forall x y, length x = n -> length y = n -> add weight n x y = List.map2 Z.add x y)
         minvalues x i d
     : nth_default d (encode_distributed minvalues x) i
       = if Decidable.dec (i < n)%nat
@@ -80,7 +80,7 @@ Section encode_distributed.
   Qed.
   Lemma nth_default_encode_distributed_bounded'
         (** We add an extra hypothesis that is too bulky to prove *)
-        (Hadd : forall x y, length x = n -> length y = n -> add weight n x y = map2 Z.add x y)
+        (Hadd : forall x y, length x = n -> length y = n -> add weight n x y = List.map2 Z.add x y)
         minvalues x i d' d
         (Hmin : (i < length minvalues)%nat)
         (Hn : (i < n)%nat)
@@ -345,7 +345,7 @@ else:
   (*
   Lemma nth_default_balance_bounded' i d' d
         (** We add an extra hypothesis that is too bulky to prove *)
-        (Hadd : forall x y, length x = n -> length y = n -> Positional.add weight n x y = map2 Z.add x y)
+        (Hadd : forall x y, length x = n -> length y = n -> Positional.add weight n x y = List.map2 Z.add x y)
     : (i < n)%nat ->
       coef * nth_default d' tight_upperbounds i <= nth_default d balance i.
   Proof using wprops.

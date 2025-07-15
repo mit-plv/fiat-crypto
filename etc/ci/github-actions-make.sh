@@ -21,8 +21,24 @@ if [ "$1" == "--warnings" ]; then
     shift
 fi
 if [ ! -z "${reportify}" ]; then
-    reportify="COQC=etc/coq-scripts/github/reportify-coq.sh${reportify} ${COQBIN}coqc"
+    reportify="COQC=$(pwd)/etc/coq-scripts/github/reportify-coq.sh${reportify} ${COQBIN}coqc"
 fi
+
+if [ -z "${SED+x}" ]; then
+    # use gsed on macOS
+    if command -v gsed >/dev/null 2>&1; then
+        SED=gsed
+    else
+        SED=sed
+    fi
+fi
+
+if [ -z "${SED_Z}" ]; then
+    SED_Z="${SED} -z"
+fi
+
+export SED
+export SED_Z
 
 make_one_time_file_real=""
 unameOut="$(uname -s)"
@@ -38,13 +54,14 @@ rm -f finished.ok
 python "./etc/coq-scripts/timing/make-one-time-file.py" ${make_one_time_file_real} "time-of-build.log" "time-of-build-pretty.log" || exit $?
 
 git status
+git ls-files --others --exclude-standard
 git diff
 
 cat time-of-build-pretty.log
 if [ ! -f finished.ok ]; then
     # see https://stackoverflow.com/a/15394738/377022 for more alternatives
     if [[ ! " $* " =~ " validate " ]]; then
-        make "$@" ${OUTPUT_SYNC} TIMED=1 TIMING=1 VERBOSE=1 || exit $?
+        make "$@" TIMED=1 TIMING=1 VERBOSE=1 || exit $?
     else
         exit 1
     fi
@@ -53,7 +70,7 @@ fi
 unameOut="$(uname -s)"
 if [[ "${unameOut}" == CYGWIN* ]]; then
     # generated build outputs have a different path, so we fix up the paths
-    git grep --name-only 'D:\\a\\fiat-crypto\\fiat-crypto.src.ExtractionOCaml.' | xargs sed s',D:\\a\\fiat-crypto\\fiat-crypto.src.ExtractionOCaml.\(.*\).exe,src/ExtractionOCaml/\1,g' -i
+    git grep --name-only 'D:\\a\\fiat-crypto\\fiat-crypto.src.ExtractionOCaml.' | xargs ${SED} s',D:\\a\\fiat-crypto\\fiat-crypto.src.ExtractionOCaml.\(.*\).exe,src/ExtractionOCaml/\1,g' -i
 fi
 
 if [ ! -z "$(git diff)" ]; then
@@ -61,7 +78,7 @@ if [ ! -z "$(git diff)" ]; then
     git submodule foreach --recursive git status
     git diff
     diff_msg="$(git diff 2>&1; git submodule foreach --recursive git diff 2>&1; git submodule foreach --recursive git status 2>&1)"
-    diff_msg="$(printf "Non-empty-diff:\n%s\n" "${diff_msg}" | sed -z 's/\n/%0A/g')"
+    diff_msg="$(printf "Non-empty-diff:\n%s\n" "${diff_msg}" | ${SED_Z} 's/\n/%0A/g')"
     if [ "${ALLOW_DIFF}" != "1" ]; then
         printf "::error::%s" "${diff_msg}"
         exit 1

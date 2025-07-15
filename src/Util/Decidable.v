@@ -1,12 +1,12 @@
 (** Typeclass for decidable propositions *)
 
-Require Import Coq.Logic.Eqdep_dec.
-Require Import Coq.Lists.List.
+From Coq Require Import Eqdep_dec.
+From Coq Require Import List.
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.HProp.
-Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith_dec.
-Require Import Coq.NArith.BinNat.
+From Coq Require Import BinInt ZArith_dec.
+From Coq Require Import BinNat.
 
 Local Open Scope type_scope.
 
@@ -136,11 +136,21 @@ Global Instance dec_match_pair {A B} {P : A -> B -> Prop} {x : A * B}
   : Decidable (let '(a, b) := x in P a b) | 1.
 Proof. edestruct (_ : _ * _); assumption. Defined.
 
+Global Instance dec_match_sum {A B} {P : A -> Prop} {Q : B -> Prop}
+       {HP : forall x, Decidable (P x)} {HQ : forall x, Decidable (Q x)}
+       {x : A + B}
+  : Decidable (match x with inl a => P a | inr b => Q b end) | 1.
+Proof. edestruct (_ : _ + _); eauto. Defined.
+
 Global Instance dec_if_bool {b : bool} {A B} {HA : Decidable A} {HB : Decidable B}
   : Decidable (if b then A else B) | 10
   := if b return Decidable (if b then A else B)
      then HA
      else HB.
+
+Global Instance dec_match_unit {P} {HP : Decidable P} {x : unit}
+  : Decidable (match x with tt => P end) | 1.
+Proof. edestruct x. assumption. Defined.
 
 Lemma not_not P {d:Decidable P} : not (not P) <-> P.
 Proof. destruct (dec P); intuition. Qed.

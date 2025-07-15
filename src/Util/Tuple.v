@@ -1,7 +1,8 @@
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Relations.Relation_Definitions.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
+From Coq Require Import Morphisms.
+From Coq Require Import PeanoNat.
+From Coq Require Import Relation_Definitions.
+From Coq Require Import List.
+From Coq Require Import Lia.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -268,7 +269,7 @@ Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
                (Hlength (to_list a ta) (to_list b tb) (length_to_list ta) (length_to_list tb)).
 
 Definition map2 {n A B C} (f:A -> B -> C) (xs:tuple A n) (ys:tuple B n) : tuple C n
-  := on_tuple2 (map2 f) (fun la lb pfa pfb => eq_trans (@map2_length _ _ _ _ la lb) (eq_trans (f_equal2 _ pfa pfb) (Min.min_idempotent _))) xs ys.
+  := on_tuple2 (map2 f) (fun la lb pfa pfb => eq_trans (@map2_length _ _ _ _ la lb) (eq_trans (f_equal2 _ pfa pfb) (Nat.min_idempotent _))) xs ys.
 
 Lemma to_list'_ext {n A} (xs ys:tuple' A n) : to_list' n xs = to_list' n ys -> xs = ys.
 Proof using Type.
@@ -314,7 +315,7 @@ Proof using Type.
 Qed.
 
 Lemma to_list_map2 {A B C n xs ys} (f : A -> B -> C)
-  : ListUtil.map2 f (@to_list A n xs) (@to_list B n ys) = @to_list C n (map2 f xs ys).
+  : List.map2 f (@to_list A n xs) (@to_list B n ys) = @to_list C n (map2 f xs ys).
 Proof using Type.
   tuples_from_lists; unfold map2, on_tuple2.
   repeat (rewrite to_list_from_list || rewrite from_list_to_list).
@@ -387,7 +388,7 @@ Proof using Type.
   destruct lxs as [|x' lxs']; [simpl in *; discriminate|].
   let lys := match goal with lxs : list B |- _ => lxs end in
   destruct lys as [|y' lys']; [simpl in *; discriminate|].
-  change ( f x y ::  ListUtil.map2 f (to_list (S n) (from_list (S n) (x' :: lxs') x1))
+  change ( f x y ::  List.map2 f (to_list (S n) (from_list (S n) (x' :: lxs') x1))
     (to_list (S n) (from_list (S n) (y' :: lys') x0)) = f x y :: to_list (S n) (map2 f (from_list (S n) (x' :: lxs') x1) (from_list (S n) (y' :: lys') x0)) ).
   tuple_maps_to_list_maps.
   reflexivity.
@@ -1179,7 +1180,7 @@ Proof using Type.
   eapply nth_default_to_list'.
 Qed.
 
-Require Import Coq.Lists.SetoidList.
+From Coq Require Import SetoidList.
 
 Global Instance fieldwise'_Proper
   : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ impl) ==> eq ==> eq ==> impl) (@fieldwise' A B n) | 10.

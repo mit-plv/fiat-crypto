@@ -44,16 +44,20 @@ Time Qed.
 
 #[global]
  Hint Extern 1 (_ = _) => apply_cached_reification p256_mul (proj1 reified_p256_mul) : reify_cache_gen.
+Local Definition proj1_reified_p256_mul_correct := (proj1 reified_p256_mul_correct).
+Local Definition proj2_reified_p256_mul_correct := (proj2 reified_p256_mul_correct).
 #[global]
- Hint Immediate (proj2 reified_p256_mul_correct) : wf_gen_cache.
+ Hint Immediate proj2_reified_p256_mul_correct : wf_gen_cache.
 #[global]
- Hint Rewrite (proj1 reified_p256_mul_correct) : interp_gen_cache.
+ Hint Rewrite proj1_reified_p256_mul_correct : interp_gen_cache.
 Local Opaque reified_p256_mul. (* needed for making [autorewrite] not take a very long time *)
 
 #[global]
  Hint Extern 1 (_ = _) => apply_cached_reification p256_sqr (proj1 reified_p256_sqr) : reify_cache_gen.
+Local Definition proj1_reified_p256_sqr_correct := proj1 reified_p256_sqr_correct.
+Local Definition proj2_reified_p256_sqr_correct := proj2 reified_p256_sqr_correct.
 #[global]
- Hint Immediate (proj2 reified_p256_sqr_correct) : wf_gen_cache.
+ Hint Immediate proj2_reified_p256_sqr_correct : wf_gen_cache.
 #[global]
- Hint Rewrite (proj1 reified_p256_sqr_correct) : interp_gen_cache.
+ Hint Rewrite proj1_reified_p256_sqr_correct : interp_gen_cache.
 Local Opaque reified_p256_sqr. (* needed for making [autorewrite] not take a very long time *)

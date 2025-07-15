@@ -1,11 +1,11 @@
-Require Import Coq.Program.Program.
-Require Import Coq.Bool.Bool.
-Require Import Coq.Lists.List.
-Require Import Coq.Structures.Orders.
-Require Import Coq.Structures.OrdersEx.
-Require Import Coq.FSets.FMapInterface.
-Require Import Coq.FSets.FMapFacts.
-Require Import Coq.Classes.RelationPairs.
+From Coq Require Import Program.
+From Coq Require Import Bool.
+From Coq Require Import List.
+From Coq Require Import Orders.
+From Coq Require Import OrdersEx.
+From Coq Require Import FMapInterface.
+From Coq Require Import FMapFacts.
+From Coq Require Import RelationPairs.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.SetoidList.
 Require Import Crypto.Util.ListUtil.SetoidListFlatMap.
@@ -671,7 +671,7 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
       Proof using Type. clear; cbv [In]; setoid_rewrite find_iff; setoid_rewrite remove_full; spec_t. Qed.
       Let elements_iff :
         InA (@eq_key_elt _) (x,e) (elements m) <-> MapsTo x e m.
-      Proof using Type.
+      Proof.
         clear; cbv [MapsTo elements].
         setoid_rewrite M1'.elements_mapsto_iff.
         setoid_rewrite M2'.elements_mapsto_iff.
@@ -717,7 +717,7 @@ Module ProdWSfun_gen (E1 : DecidableTypeOrig) (E2 : DecidableTypeOrig) (M1 : WSf
 
       Variable cmp : elt -> elt -> bool.
       Let equal_iff : Equivb cmp m m' <-> equal cmp m m' = true.
-      Proof using Type.
+      Proof.
         clear; cbv [equal Equivb] in *.
         rewrite Equiv_alt_iff, <- M1'.equal_iff.
         cbv [Equiv_alt M1.Equivb Cmp].

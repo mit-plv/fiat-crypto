@@ -15,19 +15,24 @@ Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 Require Import Crypto.Curves.Montgomery.AffineInstances.
 Require Import Crypto.Curves.Montgomery.XZ BinPos.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+From Coq Require Import Morphisms.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
 
 Module M.
   Section MontgomeryCurve.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {field:@Algebra.Hierarchy.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {Feq_dec:Decidable.DecidableRel Feq}
-            {char_ge_3:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 3}
-            {char_ge_5:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 5}
-            {char_ge_12:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12}
             {char_ge_28:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 28}.
+
+    Lemma Private_char_ge_3:  @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 3.
+    Proof. clear -char_ge_28; eapply Algebra.Hierarchy.char_ge_weaken; eauto; vm_decide. Qed.
+    Context {char_ge_3 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 3}. (* appears in statement *)
+    Local Instance char_ge_5:  @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 5.
+    Proof. clear -char_ge_28; eapply Algebra.Hierarchy.char_ge_weaken; eauto; vm_decide. Qed.
+    Local Instance char_ge_12:  @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12.
+    Proof. clear -char_ge_28; eapply Algebra.Hierarchy.char_ge_weaken; eauto; vm_decide. Qed.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
@@ -40,6 +45,7 @@ Module M.
     Local Notation Madd := (M.add(a:=a)(b_nonzero:=b_nonzero)(char_ge_3:=char_ge_3)).
     Local Notation Mopp := (M.opp(a:=a)(b_nonzero:=b_nonzero)).
     Local Notation Mpoint := (@M.point F Feq Fadd Fmul a b).
+    Local Notation X0 := (M.X0(Fzero:=Fzero)(Feq:=Feq)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(b:=b)).
     Local Notation to_xz := (M.to_xz(Fzero:=Fzero)(Fone:=Fone)(Feq:=Feq)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(b:=b)).
     Local Notation xzladderstep := (M.xzladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
 
@@ -226,10 +232,7 @@ Module M.
       if dec (snd xz = 0) then 0 else fst xz / snd xz.
     Hint Unfold to_x : points_as_coordinates.
 
-    Lemma to_x_to_xz Q : to_x (to_xz Q) = match M.coordinates Q with
-                                          | ∞ => 0
-                                          | (x,y) => x
-                                          end.
+    Lemma to_x_to_xz Q : to_x (to_xz Q) = X0 Q.
     Proof. t. Qed.
 
     Lemma proper_to_x_projective xz x'z'
@@ -257,11 +260,11 @@ Module M.
     Global Instance Proper_ladder_invariant : Proper (Feq ==> MontgomeryCurve.M.eq ==> MontgomeryCurve.M.eq ==> iff) ladder_invariant.
     Proof. t. Qed.
 
-    Local Notation montladder := (M.montladder(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)(Fzero:=Fzero)(Fone:=Fone)(Finv:=Finv)(cswap:=fun b x y => if b then pair y x else pair x y)).
+    Local Notation montladder := (M.montladder(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)(Fzero:=Fzero)(Fone:=Fone)(Finv:=Finv)).
     Local Notation scalarmult := (@ScalarMult.scalarmult_ref Mpoint Madd M.zero Mopp).
 
     Import Crypto.Util.Loops.
-    Import Coq.ZArith.BinInt.
+    Import BinInt.
 
     Lemma to_x_inv00 (HFinv:Finv 0 = 0) x z : to_x (pair x z) = x * Finv z.
     Proof. t_fast; setoid_subst_rel Feq; rewrite ?HFinv in *; fsatz. Qed.
@@ -269,17 +272,11 @@ Module M.
     Lemma Z_shiftr_testbit_1 n i: Logic.eq (n>>i)%Z (Z.div2 (n >> i) + Z.div2 (n >> i) + Z.b2z (Z.testbit n i))%Z.
     Proof. rewrite ?Z.testbit_odd, ?Z.add_diag, <-?Z.div2_odd; reflexivity. Qed.
 
+    Context (HFinv : Finv 0 = 0) (scalarbits : Z) (Hscalarbits : (0 <= scalarbits)%Z).
+
     (* We prove montladder correct by considering the zero and non-zero case
        separately. *)
-
-    Lemma montladder_correct_0
-          (HFinv : Finv 0 = 0)
-          (n : Z)
-          (scalarbits : Z) (point : F)
-          (Hz : point = 0)
-          (Hn : (0 <= n < 2^scalarbits)%Z)
-          (Hscalarbits : (0 <= scalarbits)%Z)
-      : montladder scalarbits (Z.testbit n) point = 0.
+    Lemma montladder_correct_0 n x (Hx : Feq x 0) : montladder scalarbits (Z.testbit n) x = 0.
     Proof.
       cbv beta delta [M.montladder].
       (* [while.by_invariant] expects a goal like [?P (while _ _ _ _)], make it so: *)
@@ -292,7 +289,7 @@ Module M.
                 (fun s => Z.to_nat (Z.succ (snd s)))).
       { split.
         (* invariant holds in the beginning *)
-        { cbn; split; [lia|split;[reflexivity|t]]. }
+        { cbn; split; [lia|split;[reflexivity|try t]]. }
         { (* fuel <= measure *) cbn. rewrite Z.succ_pred. reflexivity. } }
       { intros [ [ [ [ [x2 z2] x3] z3] swap] i] [Hi [Hz2 Hx3z3]].
         destruct (i >=? 0)%Z eqn:Hbranch; (* did the loop continue? *)
@@ -310,18 +307,11 @@ Module M.
         { (* measure decreases *)
           cbv [Let_In]; break_match; cbn; rewrite Z.succ_pred; apply Znat.Z2Nat.inj_lt; lia. } }
         { (* if loop exited, invariant implies postcondition *)
-          break_match; break_match_hyps; setoid_subst_rel Feq; fsatz. } }
+          cbv [M.cswap]; break_match; break_match_hyps; setoid_subst_rel Feq; fsatz. } }
     Qed.
 
-    Lemma montladder_correct_nz
-          (HFinv : Finv 0 = 0)
-          (n : Z) (P : M.point)
-          (scalarbits : Z) (point : F)
-          (Hnz : point <> 0)
-          (Hn : (0 <= n < 2^scalarbits)%Z)
-          (Hscalarbits : (0 <= scalarbits)%Z)
-          (Hpoint : point = to_x (to_xz P))
-      : montladder scalarbits (Z.testbit n) point = to_x (to_xz (scalarmult n P)).
+    Lemma montladder_correct_nz n P (Hnz : X0 P <> 0)
+      : montladder scalarbits (Z.testbit n) (X0 P) = X0 (scalarmult (n mod 2^scalarbits) P).
     Proof.
       pose proof (let (_, h, _, _) := AffineInstances.M.MontgomeryWeierstrassIsomorphism b_nonzero (a:=a) a2m4_nz in h) as commutative_group.
       cbv beta delta [M.montladder].
@@ -329,28 +319,31 @@ Module M.
       lazymatch goal with |- context [while ?t ?b ?l ?i] => pattern (while t b l i) end.
       eapply (while.by_invariant_fuel
                 (fun '(x2, z2, x3, z3, swap, i) =>
-                   (i >= -1)%Z /\
+                   (-1 <= i < scalarbits)%Z /\
                    projective (pair x2 z2) /\
                    projective (pair x3 z3) /\
                    let q := if (swap:bool) then (pair x3 z3) else (pair x2 z2) in
                    let q' := if (swap:bool) then (pair x2 z2) else (pair x3 z3) in
-                   let r := (n >> Z.succ i)%Z in
+                   let r := ((n mod 2^scalarbits) >> Z.succ i)%Z in
                    eq q (to_xz (scalarmult r P)) /\
                    eq q' (to_xz (scalarmult (Z.succ r) P)) /\
-                   ladder_invariant point (scalarmult r P) (scalarmult (Z.succ r) P))
+                   ladder_invariant (X0 P) (scalarmult r P) (scalarmult (Z.succ r) P))
                 (fun s => Z.to_nat (Z.succ (snd s))) (* decreasing measure *) ).
       { split; cbn.
         { (* invariant holds in the beginning *)
-          rewrite ?Z.succ_pred, ?Z.lt_pow_2_shiftr, <-?Z.one_succ by tauto.
-          repeat split; [lia|t..]. }
+          rewrite ?Z.succ_pred, ?Z.lt_pow_2_shiftr, <-?Z.one_succ by (apply Z.mod_pos_bound; lia).
+          repeat split; [lia|lia|t..]. }
         { (* sufficient fuel *) rewrite Z.succ_pred. reflexivity. } }
       { intros [ [ [ [ [x2 z2] x3] z3] swap] i] [Hi [Hx2z2 [Hx3z3 [Hq [Hq' Hladder]]]]].
         destruct (i >=? 0)%Z eqn:Hbranch; (* did the loop continue? *)
           rewrite Z.geb_ge_iff in Hbranch.
         split.
         { (* if loop continued, invariant is preserved *)
+          remember (Z.testbit n i) as bit eqn:Hbit; symmetry in Hbit.
+          erewrite <-(Z.mod_pow2_bits_low _ scalarbits) in Hbit by tauto.
+          set (n mod 2 ^ scalarbits)%Z as n' in *.
           let group _ := ltac:(repeat rewrite ?scalarmult_add_l, ?scalarmult_0_l, ?scalarmult_1_l, ?Hierarchy.left_identity, ?Hierarchy.right_identity, ?Hierarchy.associative, ?(Hierarchy.commutative _ P); reflexivity) in
-          destruct (Z.testbit n i) eqn:Hbit in *;
+          destruct bit in *;
             destruct swap eqn:Hswap in *;
             repeat match goal with
                    | _ => solve [ congruence | assumption | lia ]
@@ -367,8 +360,8 @@ Module M.
                      => let pf := constr:(to_xz_add p xz x'z' _ _ H G HQ HQ' ltac:(auto using ladder_invariant_swap)) in
                         unique pose proof (proj1 pf); destruct (proj2 pf) as [? [? [? ?]]] (* because there is no unique destruct *)
                    | _ => progress rewrite ?Z.succ_pred, ?Z.shiftr_succ, <-?Z.div2_spec, <-?Z.add_1_r in *
-                   | |- context [scalarmult (n>>i) ] => rewrite (Z_shiftr_testbit_1 n i), Hbit; cbn [Z.b2z]
-                   | |- context [scalarmult (n>>i+1) ] => rewrite (Z_shiftr_testbit_1 n i), Hbit; cbn [Z.b2z]
+                   | |- context [scalarmult (n'>>i) ] => rewrite (Z_shiftr_testbit_1 n' i), Hbit; cbn [Z.b2z]
+                   | |- context [scalarmult (n'>>i+1) ] => rewrite (Z_shiftr_testbit_1 n' i), Hbit; cbn [Z.b2z]
                    | |- ?P => match type of P with Prop => split end
                    | H: eq (?f _) (to_xz ?LHS) |- eq (?f _) (to_xz ?RHS)
                      => eapply (transitive_eq (to_xz LHS) ltac:(auto using projective_to_xz) H); f_equiv; group ()
@@ -381,10 +374,11 @@ Module M.
         { (* measure decreases *)
           cbv [Let_In]; break_match; cbn; rewrite Z.succ_pred; apply Znat.Z2Nat.inj_lt; lia. }
         { (* if loop exited, invariant implies postcondition *)
-          destruct_head' @and; autorewrite with cancel_pair in *.
           replace i with ((-(1))%Z) in * by lia; clear Hi Hbranch.
           rewrite Z.succ_m1, Z.shiftr_0_r in *.
+          cbv [M.cswap];
           destruct swap eqn:Hswap; rewrite <-!to_x_inv00 by assumption;
+            etransitivity; try eapply to_x_to_xz; f_equal;
             eauto using projective_to_xz, proper_to_x_projective. } }
     Qed.
 
@@ -392,59 +386,29 @@ Module M.
        additionally showing that the right-hand-side is 0. This comes from there
        being two points such that to_x gives 0: infinity and (0, 0). *)
 
-    Lemma opp_to_x_to_xz_0
-          (P : M.point)
-          (H : 0 = to_x (to_xz P))
-      : 0 = to_x (to_xz (Mopp P)).
+    Lemma X0_opp_0 (P : M.point) (H : X0 P = 0) : X0 (Mopp P) = 0.
     Proof. t. Qed.
 
-    Lemma add_to_x_to_xz_0
-          (P Q : M.point)
-          (HP : 0 = to_x (to_xz P))
-          (HQ : 0 = to_x (to_xz Q))
-      : 0 = to_x (to_xz (Madd P Q)).
-    Proof. t. Qed.
+    Lemma X0_add_0 (P Q : M.point) (HP : X0 P = 0) (HQ : X0 Q = 0) : X0(Madd P Q) = 0.
+    Proof. cbv [X0] in *; t. Qed.
 
-    Lemma scalarmult_to_x_to_xz_0
-          (n : Z) (P : M.point)
-          (H : 0 = to_x (to_xz P))
-      : 0 = to_x (to_xz (scalarmult n P)).
+    Lemma X0_scalarmult_0 (n : Z) (P : M.point) (H : X0 P = 0) : X0 (scalarmult n P) = 0.
     Proof.
-      induction n using Z.peano_rect_strong.
-      { cbn. t. }
-      { (* Induction case from n to Z.succ n. *)
-        unfold scalarmult_ref.
-        rewrite Z.peano_rect_succ by lia.
-        fold (scalarmult n P).
-        apply add_to_x_to_xz_0; trivial. }
-      { (* Induction case from n to Z.pred n. *)
-        unfold scalarmult_ref.
-        rewrite Z.peano_rect_pred by lia.
-        fold (scalarmult n P).
-        apply add_to_x_to_xz_0.
-        { apply opp_to_x_to_xz_0; trivial. }
-        { trivial. } }
+      clear dependent scalarbits.
+      induction n using Z.peano_rect_strong; try t.
+      { unfold scalarmult_ref. rewrite Z.peano_rect_succ by lia. fold (scalarmult n P).
+        auto using X0_add_0. }
+      { unfold scalarmult_ref. rewrite Z.peano_rect_pred by lia. fold (scalarmult n P).
+        auto using X0_add_0, X0_opp_0. }
     Qed.
 
     (* Combine the two cases together. *)
 
-    Lemma montladder_correct
-          (HFinv : Finv 0 = 0)
-          (n : Z) (P : M.point)
-          (scalarbits : Z) (point : F)
-          (Hn : (0 <= n < 2^scalarbits)%Z)
-          (Hscalarbits : (0 <= scalarbits)%Z)
-          (Hpoint : point = to_x (to_xz P))
-      : montladder scalarbits (Z.testbit n) point = to_x (to_xz (scalarmult n P)).
+    Lemma montladder_correct n P :
+      montladder scalarbits (Z.testbit n) (X0 P) = X0 (scalarmult (n mod 2^scalarbits) P).
     Proof.
-      destruct (dec (point = 0)) as [Hz|Hnz].
-      { rewrite (montladder_correct_0 HFinv _ _ _ Hz Hn Hscalarbits).
-        setoid_subst_rel Feq.
-        apply scalarmult_to_x_to_xz_0.
-        trivial. }
-      { apply (montladder_correct_nz HFinv _ _ _ _ Hnz Hn Hscalarbits).
-        trivial. }
+      destruct (dec (X0 P = 0)) as [Hz|?]; auto using montladder_correct_nz .
+      rewrite montladder_correct_0, X0_scalarmult_0 by trivial; reflexivity.
     Qed.
-
   End MontgomeryCurve.
 End M.

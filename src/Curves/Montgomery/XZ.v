@@ -1,5 +1,5 @@
-Require Import Coq.PArith.BinPosDef.
-Require Import Coq.ZArith.BinIntDef.
+From Coq Require Import BinPosDef.
+From Coq Require Import BinIntDef.
 Require Import Crypto.Algebra.Field.
 Require Import Crypto.Util.GlobalSettings Crypto.Util.Notations.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
@@ -37,7 +37,7 @@ Module M.
       end.
 
     Let char_ge_3:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two)).
-    Proof using char_ge_5. eapply Algebra.Hierarchy.char_ge_weaken; eauto; vm_decide. Qed.
+    Proof. clear -char_ge_5. eapply Algebra.Hierarchy.char_ge_weaken; eauto; vm_decide. Qed.
 
     (* From Curve25519 paper by djb, appendix B. Credited to Montgomery *)
     Context {a24:F} {a24_correct:(1+1+1+1)*a24 = a-(1+1)}.
@@ -113,7 +113,7 @@ Module M.
         ((x2, z2), (x3, z3))%core
       end.
 
-    Context {cswap:bool->F->F->F*F}.
+    Definition cswap (b : bool) (x y : F) := if b then pair y x else pair x y.
     Local Notation xor := Coq.Init.Datatypes.xorb.
     Local Open Scope core_scope.
 

@@ -1,4 +1,4 @@
-Require Import Coq.PArith.BinPosDef.
+From Coq Require Import BinPosDef.
 Require Import Crypto.Algebra.Field.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.GlobalSettings.
@@ -7,7 +7,7 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 Require Import Crypto.Spec.CompleteEdwardsCurve  Crypto.Curves.Edwards.AffineProofs.
-Require Import Coq.setoid_ring.Field_theory.
+From Coq Require Import Field_theory.
 Require Import Field_tac.
 Require Import UniquePose.
 
@@ -31,15 +31,9 @@ Module M.
 
     Context {a b: F} {b_nonzero:b <> 0}.
 
-    Program Definition opp (P:@M.point F Feq Fadd Fmul a b) : @M.point F Feq Fadd Fmul a b :=
-      match P return F*F+∞ with
-      | inl (x, y) => inl (x, -y)
-      | ∞ => ∞
-      end.
-    Next Obligation. Proof. destruct_head @M.point; cbv; break_match; trivial; fsatz. Qed.
-
-    Local Notation add := (M.add(b_nonzero:=b_nonzero)).
     Local Notation point := (@M.point F Feq Fadd Fmul a b).
+    Local Notation add := (M.add(b_nonzero:=b_nonzero)(a:=a)).
+    Local Notation opp := (M.opp(b_nonzero:=b_nonzero)(a:=a)).
 
     Local Notation "2" := (1+1).
     Local Notation "3" := (1+2).
@@ -55,8 +49,8 @@ Module M.
     Local Notation Eadd := (@E.add F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv field Feq_dec char_ge_3 ae de).
     Program Definition to_Edwards (P:@point) : Epoint :=
       match M.coordinates P return F*F with
-      | inl (u, v) => if dec (u + 1 <> 0 /\ v <> 0) 
-                      then (u/v , (u-1)/(u+1)) 
+      | inl (u, v) => if dec (u + 1 <> 0 /\ v <> 0)
+                      then (u/v , (u-1)/(u+1))
                       else (0, 0 - 1)
       | ∞ => (0, 1)
       end.
@@ -71,14 +65,14 @@ Module M.
 
     Program Definition of_Edwards (P:Epoint) : point :=
       match E.coordinates P return F*F+∞ with
-      | (x, y) => if dec (x = 0 /\ y = 0 - 1) 
-                  then inl (0, 0) 
+      | (x, y) => if dec (x = 0 /\ y = 0 - 1)
+                  then inl (0, 0)
                   else if dec (x = 0 /\ y = 1)
                        then inr tt
                        else inl ((1+y)/(1-y), (1+y)/(x*(1-y)))
       end.
     Next Obligation.
-    Proof. destruct_head' @Epoint; cbv; break_match; trivial; try fsatz. 
+    Proof. destruct_head' @Epoint; cbv; break_match; trivial; try fsatz.
     assert (f <> 0). {
       unfold not. intros Hf. rewrite -> Hf in y.
       destruct (dec (f0 = 1)).
@@ -90,13 +84,13 @@ Module M.
     Qed.
 
     Lemma no_roots: forall x : F, x^2 + a * x + 1 <> 0.
-    Proof. 
+    Proof.
       unfold not. intros x H.
       destruct square_ae.
       destruct nonsquare_de with (x := (2 * x + a) / (b * x0)).
       field_simplify_eq; try split; fsatz.
     Qed.
-    
+
     Lemma My_zero_then_Mx_zero: forall x y : F, y = 0 -> b * y ^ 2 = x ^ 3 + a * x ^ 2 + x -> x = 0.
     Proof. intros. pose proof (no_roots x). fsatz. Qed.
 
@@ -135,11 +129,11 @@ Module M.
     Ltac t2 :=
       repeat match goal with
           | H: ~ ( _ = _ /\ _ = _) |- _ => apply not_and_decidable in H; [ | exact _ ..]
-          | _ => progress auto 
+          | _ => progress auto
           | H: ?x = 0 |- _ => progress (rewrite H in * )
           | _ => progress fsatz
           | H: _ \/ _ |- _ => destruct H
-          end. 
+          end.
 
     Ltac t3 :=
       repeat match goal with
@@ -158,20 +152,20 @@ Module M.
 
     Ltac t5 :=
       repeat match goal with
-          | H: b * ?x ^ 2 = _ |-  _ => 
+          | H: b * ?x ^ 2 = _ |-  _ =>
               match goal with
               | G: ?x = 0 |- _ => unique pose proof (My_zero_then_Mx_zero _ _ G H)
               | _ => unique pose proof (Mx_not_neg1 _ _ H)
               end
-          | H: context [?a /\ _] |- _ => 
-              match goal with G: a |- _ => 
+          | H: context [?a /\ _] |- _ =>
+              match goal with G: a |- _ =>
                   rewrite not_and_True_l in H; [ | exact _ | exact _ | trivial ]
               end
           | H: ?x = 0 |- _ => rewrite H in *
           | H: 0 <> - 0 |- _ => destruct H; field
           | _ => try auto
           end.
-    
+
     Ltac field_simpl_fsatz := field_simplify_eq; [fsatz | repeat split; try auto].
 
     Ltac t_destruct H := unfold not; intros; destruct H; field_simpl_fsatz.
@@ -201,7 +195,7 @@ Module M.
         (to_Edwards).
     Proof.
       eapply Group.commutative_group_by_isomorphism.
-      { eapply (E.edwards_curve_commutative_group(a:=ae)(d:=de)(nonzero_a:=nonzero_ae)(square_a:=square_ae)(nonsquare_d:=nonsquare_de)). }   
+      { eapply (E.edwards_curve_commutative_group(a:=ae)(d:=de)(nonzero_a:=nonzero_ae)(square_a:=square_ae)(nonsquare_d:=nonsquare_de)). }
       { (* Bijection, not automated due to non-local case analysis *)
         t; split.
         all: try solve [t2]. Optimize Proof. Optimize Heap.
@@ -232,7 +226,7 @@ Module M.
           split.
           - field_simpl_fsatz; fsatz.
           - fsatz.
-        } 
+        }
         Optimize Proof. Optimize Heap.
         {
           rewrite H in * |-.
@@ -259,7 +253,7 @@ Module M.
           pose proof (Pre.denominator_nonzero_y _ nonzero_ae square_ae _ nonsquare_de _ _ Epoint1 _ _ Epoint) as denom_nonzero_y.
           assert (f - f1 <> 0) by fsatz.
           Optimize Proof. Optimize Heap.
-          split; rewrite Hae, Hde in *; 
+          split; rewrite Hae, Hde in *;
           clear Epoint Epoint1 square_ae nonzero_ae nonsquare_de Hae Hde ae de;
           field_simpl_fsatz.
           - t_destruct denom_nonzero_x.
@@ -268,7 +262,7 @@ Module M.
           - t_destruct H0.
         }
         Optimize Proof. Optimize Heap.
-        { 
+        {
           remember (b * ((f0 - f2) / (f - f1)) ^ 2 - a - f1 - f) as u.
           remember ((2 * f1 + f + a) * ((f0 - f2) / (f - f1)) - b * ((f0 - f2) / (f - f1)) ^ 3 - f2) as v.
           assert (uv_Mpoint: b * v ^ 2 = u ^ 3 + a * u ^ 2 + u). {

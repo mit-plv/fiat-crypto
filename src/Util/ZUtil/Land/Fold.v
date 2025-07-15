@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
+From Coq Require Import List.
 Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Local Open Scope bool_scope. Local Open Scope Z_scope.

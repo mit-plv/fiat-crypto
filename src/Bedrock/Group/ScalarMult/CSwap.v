@@ -1,4 +1,4 @@
-Require Import Coq.Program.Tactics.
+From Coq.Program Require Import Tactics.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
 Require Import bedrock2.Semantics.
@@ -37,7 +37,7 @@ Section __.
    *)
   Context (felem_size_in_words_small
     : Z.of_nat felem_size_in_words < 2^width).
-  Hint Resolve @relax_bounds : compiler.
+  Hint Resolve relax_bounds : compiler.
 
 
   Notation all_1s := (word.of_Z (-1) : word).
@@ -502,12 +502,11 @@ Section __.
          Memory := m;
          Locals := l;
          Functions := functions }>
-      cmd.seq (cmd.set var (expr.op bopname.sub (expr.literal (-1)) (expr.var x_var)))
+      cmd.seq (cmd.set var (expr.op1 op1.not (expr.var x_var)))
               k_impl
       <{ pred (nlet_eq [var] v k) }>.
   Proof using field_representaton word_ok.
     repeat (eexists; split; eauto).
-    apply word_not_impl.
   Qed.
   Hint Extern 10 => simple eapply compile_word_not; shelve : compiler.
 

@@ -1,6 +1,6 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.Arith.Arith.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import Lia.
+From Coq Require Import Arith.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.ZUtil.Hints.PullPush.
 
 Module Nat2Z.

@@ -1,8 +1,8 @@
-Require Import Coq.Structures.OrderedTypeEx.
-Require Import Coq.Strings.Ascii Coq.Strings.String.
-Require Import Coq.Arith.Arith.
-Require Import Coq.NArith.NArith.
-Require Import Coq.Structures.OrderedType.
+From Coq Require Import OrderedTypeEx.
+From Coq Require Import Ascii String.
+From Coq Require Import Arith.
+From Coq Require Import NArith.
+From Coq Require Import OrderedType.
 Require Export Crypto.Util.FixCoqMistakes.
 
 (** This is copied verbatim from coq/theories/Structures/OrderedTypeEx.v, and should be removed once we bump the version requirement to 8.12, where we get the benefit of https://github.com/coq/coq/pull/12044 *)
@@ -117,7 +117,7 @@ Module String_as_OT <: UsualOrderedType.
   Proof.
     intro H; inversion H; subst; auto.
     remember (nat_of_ascii a) as x.
-    apply lt_irrefl in H1; inversion H1.
+    apply Nat.lt_irrefl in H1; inversion H1.
   Qed.
 
   Lemma lt_trans : forall x y z : t, lt x y -> lt y z -> lt x z.
@@ -130,7 +130,7 @@ Module String_as_OT <: UsualOrderedType.
       + constructor. eapply IHx; eauto.
       + constructor; assumption.
       + constructor; assumption.
-      + constructor. eapply lt_trans; eassumption.
+      + constructor. eapply Nat.lt_trans; eassumption.
   Qed.
 
   Lemma lt_not_eq : forall x y : t, lt x y -> ~ eq x y.

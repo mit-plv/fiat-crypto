@@ -1,7 +1,7 @@
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.NArith.NArith.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import ZArith.
+From Coq Require Import NArith.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Parse.
 Require Import Crypto.Assembly.Symbolic.
@@ -29,6 +29,17 @@ Import ListNotations.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
 
+
+(** Permit labels to have arbitrary suffixes *)
+Class assembly_labels_fuzzy_suffixes_opt := assembly_labels_fuzzy_suffixes : bool.
+#[global]
+Typeclasses Opaque assembly_labels_fuzzy_suffixes_opt.
+Definition default_assembly_labels_fuzzy_suffixes : assembly_labels_fuzzy_suffixes_opt := true.
+(** Permit labels to have arbitrary prefixes *)
+Class assembly_labels_fuzzy_prefixes_opt := assembly_labels_fuzzy_prefixes : bool.
+#[global]
+Typeclasses Opaque assembly_labels_fuzzy_prefixes_opt.
+Definition default_assembly_labels_fuzzy_prefixes : assembly_labels_fuzzy_prefixes_opt := true.
 (** List of registers used for outputs/inputs *)
 Class assembly_calling_registers_opt := assembly_calling_registers' : option (list REG).
 #[global]
@@ -135,11 +146,13 @@ Definition assembly_stack_size {calling_convention : assembly_callee_saved_regis
      end.
 
 Class assembly_conventions_opt :=
-  { assembly_calling_registers_ :> assembly_calling_registers_opt
-  ; assembly_stack_size_ :> assembly_stack_size_opt
-  ; assembly_output_first_ :> assembly_output_first_opt
-  ; assembly_argument_registers_left_to_right_ :> assembly_argument_registers_left_to_right_opt
-  ; assembly_callee_saved_registers_ :> assembly_callee_saved_registers_opt
+  { #[global] assembly_calling_registers_ :: assembly_calling_registers_opt
+  ; #[global] assembly_stack_size_ :: assembly_stack_size_opt
+  ; #[global] assembly_output_first_ :: assembly_output_first_opt
+  ; #[global] assembly_argument_registers_left_to_right_ :: assembly_argument_registers_left_to_right_opt
+  ; #[global] assembly_callee_saved_registers_ :: assembly_callee_saved_registers_opt
+  ; #[global] assembly_labels_fuzzy_suffixes_ :: assembly_labels_fuzzy_suffixes_opt
+  ; #[global] assembly_labels_fuzzy_prefixes_ :: assembly_labels_fuzzy_prefixes_opt
   }.
 Definition default_assembly_conventions : assembly_conventions_opt
   := {| assembly_calling_registers_ := None
@@ -147,6 +160,8 @@ Definition default_assembly_conventions : assembly_conventions_opt
      ; assembly_output_first_ := true
      ; assembly_argument_registers_left_to_right_ := true
      ; assembly_callee_saved_registers_ := default_assembly_callee_saved_registers
+     ; assembly_labels_fuzzy_suffixes_ := default_assembly_labels_fuzzy_suffixes
+     ; assembly_labels_fuzzy_prefixes_ := default_assembly_labels_fuzzy_prefixes
      |}.
 
 Module Export Options.
@@ -406,18 +421,19 @@ Definition describe_idx_from_state
                    | ExprApp (old _ _, _) => true
                    | _ => false
                    end in
-     match is_old, description_from_state, show_full with
-     | true, Some descr, _
-     | _, Some descr, true
+     match is_old, description_from_state, show_full, dag.lookup st.(dag_state) idx with
+     | true, Some descr, false, _
+     | _, Some descr, _, None
        => [show idx ++ " is " ++ descr ++ "."]
-     | true, None, _
+     | _, Some descr, true, Some e
+       => [show idx ++ " is " ++ descr ++ " (" ++ show_node_lite e ++ ")."]
+     | true, None, _, _
        => [show idx ++ " is a special value no longer present in the symbolic machine state at the end of execution."]
-     | _, _, false => []
-     | _, None, true
-       => [show idx ++ " is " ++ match dag.lookup st.(dag_state) idx with
-                                 | Some e => show_node_lite e
-                                 | None => "not in the dag"
-                                 end]
+     | _, _, false, _ => []
+     | _, None, true, Some e
+       => [show idx ++ " is " ++ show_node_lite e ++ "."]
+     | _, None, true, None
+       => [show idx ++ " is not in the dag."]
      end%string.
 
 Definition iteratively_describe_idxs_after
@@ -1042,27 +1058,12 @@ Proof.
           | ident.Literal base.type.Z v
             => App (const v, nil)
           | ident.Z_add => fun x y => App (addZ, [x; y])
-
-          | ident.Z_modulo
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_mul => fun x y => App (mulZ, [x; y])
-          | ident.Z_pow
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_sub => fun x y => y' <- App (negZ, [y]); App (addZ, [x;y'])
-          | ident.Z_opp
-          | ident.Z_div
-          | ident.Z_log2
-          | ident.Z_log2_up
-          | ident.Z_to_nat
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_shiftr => fun x y => App (shrZ, [x; y])
           | ident.Z_shiftl => fun x y => App (shlZ, [x; y])
           | ident.Z_land => fun x y => App (andZ, [x; y])
           | ident.Z_lor => fun x y => App (orZ, [x; y])
-          | ident.Z_min
-          | ident.Z_max
-          | Compilers.ident_Z_abs
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_mul_split => fun bs x y =>
             vs <- RevealWidth bs; s <- App (const (Z.of_N vs), nil);
             v <- App (mulZ, [x; y]);
@@ -1097,21 +1098,10 @@ Proof.
             a <- App (add s, [x;y';z']);
             c <- App (subborrowZ s, [x;y;z]);
             symex_return (a, c)
-          | ident.Z_ltz
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_zselect => fun c x y => App (Symbolic.selectznz, [c; x; y])
-          | ident.Z_add_modulo
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_truncating_shiftl => fun s x y =>
             s <- RevealConstant s;
             App (shl s, [x; y])
-          | ident.Z_bneg
-          | ident.Z_lnot_modulo
-          | ident.Z_lxor
-          | ident.Z_rshi
-          | ident.Z_cc_m
-          | ident.Z_combine_at_bitwidth
-            => symex_T_error (Unhandled_identifier idc)
 
           | ident.comment _
           | ident.comment_no_keep _
@@ -1120,11 +1110,6 @@ Proof.
             => fun v => symex_return v
           | ident.tt
             => symex_return tt
-          | ident.Literal base.type.bool _ as idc
-          | ident.Literal base.type.string _ as idc
-          | ident.None _ as idc
-          | ident.Some _ as idc
-            => symex_T_error (Unhandled_identifier idc)
           | ident.Literal base.type.zrange v
           | ident.Literal base.type.nat v
             => symex_return v
@@ -1177,6 +1162,29 @@ Proof.
           | ident.Z_of_nat
             => fun n => App (const (Z.of_nat n), nil)
 
+          | ident.Z_modulo
+          | ident.Z_pow
+          | ident.Z_opp
+          | ident.Z_div
+          | ident.Z_log2
+          | ident.Z_log2_up
+          | ident.Z_to_nat
+          | ident.Z_min
+          | ident.Z_max
+          | ident.Z_abs
+          | ident.Z_ltz
+          | ident.Z_add_modulo
+          | ident.Z_bneg
+          | ident.Z_lnot_modulo
+          | ident.Z_lxor
+          | ident.Z_rshi
+          | ident.Z_cc_m
+          | ident.Z_combine_at_bitwidth
+          | ident.Literal base.type.bool _
+          | ident.Literal base.type.string _
+          | ident.Literal base.type.positive _
+          | ident.None _
+          | ident.Some _
           | ident.Z_eqb
           | ident.Z_leb
           | ident.Z_ltb
@@ -1190,18 +1198,18 @@ Proof.
           | ident.nat_rect _
           | ident.eager_nat_rect _
           | ident.nat_rect_arrow _ _
-          | Compilers.ident_nat_rect_fbb_b _ _ _
-          | Compilers.ident_nat_rect_fbb_b_b _ _ _ _
-          | Compilers.ident_list_rect_fbb_b _ _ _ _
-          | Compilers.ident_list_rect_fbb_b_b _ _ _ _ _
-          | Compilers.ident_list_rect_fbb_b_b_b _ _ _ _ _ _
-          | Compilers.ident_list_rect_fbb_b_b_b_b _ _ _ _ _ _ _
-          | Compilers.ident_list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _
           | ident.eager_nat_rect_arrow _ _
           | ident.list_rect _ _
           | ident.eager_list_rect _ _
           | ident.list_rect_arrow _ _ _
           | ident.eager_list_rect_arrow _ _ _
+          | ident.nat_rect_fbb_b _ _ _
+          | ident.nat_rect_fbb_b_b _ _ _ _
+          | ident.list_rect_fbb_b _ _ _ _
+          | ident.list_rect_fbb_b_b _ _ _ _ _
+          | ident.list_rect_fbb_b_b_b _ _ _ _ _ _
+          | ident.list_rect_fbb_b_b_b_b _ _ _ _ _ _ _
+          | ident.list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _
           | ident.list_case _ _
           | ident.List_map _ _
           | ident.List_flat_map _ _
@@ -1211,6 +1219,10 @@ Proof.
           | ident.List_update_nth _
           | ident.option_rect _ _
           | ident.zrange_rect _
+          | ident.Pos_add
+          | ident.Pos_mul
+          | ident.Z_pos
+          | ident.Z_to_pos
           | ident.fancy_add
           | ident.fancy_addc
           | ident.fancy_sub
@@ -1224,11 +1236,6 @@ Proof.
           | ident.fancy_selm
           | ident.fancy_sell
           | ident.fancy_addm
-          | Compilers.ident_Literal Compilers.positive _
-          | Compilers.ident_Pos_add
-          | Compilers.ident_Pos_mul
-          | Compilers.ident_Z_pos
-          | Compilers.ident_Z_to_pos
             => symex_T_error (Unhandled_identifier idc)
           end%symex).
   all: cbn in *.
@@ -1284,10 +1291,10 @@ Definition init_symbolic_state_descr : description := Build_description "init_sy
 
 Definition init_symbolic_state (d : dag) : symbolic_state
   := let _ := init_symbolic_state_descr in
-     let '(initial_reg_idxs, d) := dag_gensym_n 16 d in
+     let '(initial_reg_idxs, d) := dag_gensym_n (List.length widest_registers) d in
      {|
        dag_state := d;
-       symbolic_reg_state := Tuple.from_list_default None 16 (List.map Some initial_reg_idxs);
+       symbolic_reg_state := Tuple.from_list_default None _ (List.map Some initial_reg_idxs);
        symbolic_mem_state := [];
        symbolic_flag_state := Tuple.repeat None 6;
      |}.
@@ -1446,30 +1453,61 @@ Section check_equivalence.
     Local Notation map_err_None v := (ErrorT.map_error (fun e => (None, e)) v).
     Local Notation map_err_Some label v := (ErrorT.map_error (fun e => (Some label, e)) v).
 
-    Definition check_equivalence : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) unit :=
+    Definition map_symex_asm (inputs : list (idx + list idx)) (output_types : type_spec) (d : dag)
+      : ErrorT
+          (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError)
+          (list ((string (* fname *) * Lines (* asm lines *)) * (list (idx + list idx) * symbolic_state))) :=
       let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
-      let d := dag.empty in
-      input_types <- map_err_None (simplify_input_type t arg_bounds);
-      output_types <- map_err_None (simplify_base_type (type.final_codomain t) out_bounds);
-      let '(inputs, d) := build_inputs (descr:=Build_description "build_inputs" true ) input_types d in
-
-      PHOAS_output <- map_err_None (symex_PHOAS expr inputs d);
-      let '(PHOAS_output, d) := PHOAS_output in
-
-      let first_new_idx_after_all_old_idxs : option idx := Some (dag.size d) in
-
-      _ <-- (List.map
+      (ls <-- (List.map
                (fun '((fname, asm) as label)
                 => (asm <- map_err_Some label (strip_ret asm);
                     let stack_size : nat := N.to_nat (assembly_stack_size asm) in
                     symevaled_asm <- map_err_Some label (symex_asm_func (dereference_output_scalars:=false) d assembly_callee_saved_registers output_types stack_size inputs reg_available asm);
-                    let '(asm_output, s) := symevaled_asm in
-
-                    if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm_output PHOAS_output
-                    then Success tt
-                    else Error (Some label, Unable_to_unify asm_output PHOAS_output first_new_idx_after_all_old_idxs s)))
+                    Success (label, symevaled_asm)))
                asm);
-    Success tt.
+      Success ls)%error.
+
+    Definition check_equivalence : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) unit :=
+      let d := dag.empty in
+      input_types <- map_err_None (simplify_input_type t arg_bounds);
+      output_types <- map_err_None (simplify_base_type (type.final_codomain t) out_bounds);
+      let '(inputs, d) := build_inputs (descr:=Build_description "build_inputs" true) input_types d in
+
+      ls <- (
+        if negb debug_symex_asm_first then (
+          PHOAS_output <- map_err_None (symex_PHOAS expr inputs d);
+          let '(PHOAS_output, d) := PHOAS_output in
+
+          let first_new_idx_after_all_old_idxs : option idx := Some (dag.size d) in
+
+          asm_output <- map_symex_asm inputs output_types d;
+
+          let ls := List.map (fun '(lbl, (asm_output, s)) => (lbl, asm_output, PHOAS_output, s, first_new_idx_after_all_old_idxs)) asm_output in
+          Success ls
+        ) else ( (* debug version, do asm first *)
+          asm_output <- map_symex_asm inputs output_types d;
+
+          ls <-- (List.map (fun '(lbl, (asm_output, s)) =>
+              let d := s.(dag_state) in
+              let first_new_idx_after_all_old_idxs : option idx := Some (dag.size d) in
+
+              PHOAS_output <- map_err_None (symex_PHOAS expr inputs d);
+              let '(PHOAS_output, d) := PHOAS_output in
+
+              let s := {| dag_state := d; symbolic_reg_state := s.(symbolic_reg_state); symbolic_flag_state := s.(symbolic_flag_state); symbolic_mem_state := s.(symbolic_mem_state) |} in
+
+              Success (lbl, asm_output, PHOAS_output, s, first_new_idx_after_all_old_idxs))
+            asm_output);
+          Success ls
+      ));
+
+      _ <-- List.map (fun '(lbl, asm_output, PHOAS_output, s, first_new_idx_after_all_old_idxs) =>
+              if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm_output PHOAS_output
+              then Success tt
+              else Error (Some lbl, Unable_to_unify asm_output PHOAS_output first_new_idx_after_all_old_idxs s))
+            ls;
+      Success tt.
+
 
     (** We don't actually generate assembly, we just check equivalence and pass assembly through unchanged *)
     Definition generate_assembly_of_hinted_expr : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) (list (string * Lines))

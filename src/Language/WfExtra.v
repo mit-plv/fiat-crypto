@@ -17,7 +17,7 @@ Module Compilers.
 #[global]
   Hint Opaque expr.interp expr.Interp : interp_extra.
 #[global]
-  Hint Opaque expr.Wf expr.Wf3 : wf_extra interp_extra.
+  Hint Opaque expr.Wf expr.Wf3 expr.Wf4 : wf_extra interp_extra.
 
   Module expr.
     Import Language.Wf.Compilers.expr.
@@ -26,8 +26,8 @@ Module Compilers.
     Global Hint Opaque expr.APP : wf_extra interp_extra.
 #[global]
     Hint Rewrite @expr.Interp_APP : interp_extra.
-    Global Hint Immediate Wf_of_Wf3 : wf_extra.
-    Global Hint Resolve Wf3_of_Wf : wf_extra.
+    Global Hint Immediate Wf_of_Wf3 Wf_of_Wf4 : wf_extra.
+    Global Hint Resolve Wf3_of_Wf Wf4_of_Wf : wf_extra.
 
     Definition Wf_base_Reify_as {t} v
       := @Wf_base_Reify_as base.type.base base.base_interp base.type.base_beq ident ident.buildIdent base.reflect_base_beq t v.

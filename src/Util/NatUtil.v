@@ -1,17 +1,16 @@
-Require Coq.Logic.Eqdep_dec.
-Require Import Coq.NArith.NArith.
-Require Import Coq.Arith.Arith.
-Require Import Coq.Numbers.Natural.Peano.NPeano.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Relations.Relation_Definitions.
-Require Import Coq.micromega.Lia.
+From Coq Require Eqdep_dec.
+From Coq Require Import NArith.
+From Coq Require Import Arith.
+From Coq Require Import Morphisms.
+From Coq Require Import Relation_Definitions.
+From Coq Require Import Lia.
 Import Nat.
 
 Scheme Equality for nat.
 
 Create HintDb natsimplify discriminated.
 
-Global Hint Resolve mod_bound_pos plus_le_compat : arith.
+Global Hint Resolve mod_bound_pos Nat.add_le_mono : arith.
 #[global]
 Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using lia : natsimplify.
 
@@ -31,9 +30,9 @@ Proof. apply Nat.mod_bound_pos; lia. Qed.
 Global Hint Resolve mod_bound_nonneg mod_bound_lt : arith.
 
 Lemma min_def {x y} : min x y = x - (x - y).
-Proof. apply Min.min_case_strong; lia. Qed.
+Proof. apply Nat.min_case_strong; lia. Qed.
 Lemma max_def {x y} : max x y = x + (y - x).
-Proof. apply Max.max_case_strong; lia. Qed.
+Proof. apply Nat.max_case_strong; lia. Qed.
 Ltac coq_lia := lia.
 Ltac handle_min_max_for_lia_gen min max :=
   repeat match goal with
@@ -46,8 +45,8 @@ Ltac handle_min_max_for_lia_case_gen min max :=
   repeat match goal with
          | [ H : context[min _ _] |- _ ] => revert H
          | [ H : context[max _ _] |- _ ] => revert H
-         | [ |- context[min _ _] ] => apply Min.min_case_strong
-         | [ |- context[max _ _] ] => apply Max.max_case_strong
+         | [ |- context[min _ _] ] => apply Nat.min_case_strong
+         | [ |- context[max _ _] ] => apply Nat.max_case_strong
          end;
   intros.
 Ltac handle_min_max_for_lia := handle_min_max_for_lia_gen min max.
@@ -175,7 +174,7 @@ Proof.
     rewrite H1.
     exists 0; auto.
   } {
-    rewrite mult_succ_r in H1.
+    rewrite Nat.mul_succ_r in H1.
     assert (4 <= x) as le4x by (apply Nat.div_str_pos_iff; lia).
     rewrite <- Nat.add_1_r in H.
     replace x with ((x - 4) + 4) in H by lia.
@@ -226,11 +225,11 @@ Proof.
 Qed.
 
 Lemma beq_nat_eq_nat_dec {R} (x y : nat) (a b : R)
-  : (if EqNat.beq_nat x y then a else b) = (if eq_nat_dec x y then a else b).
+  : (if Nat.eqb x y then a else b) = (if eq_nat_dec x y then a else b).
 Proof.
   destruct (eq_nat_dec x y) as [H|H];
-    [ rewrite (proj2 (@beq_nat_true_iff _ _) H); reflexivity
-    | rewrite (proj2 (@beq_nat_false_iff _ _) H); reflexivity ].
+    [ rewrite (proj2 (@Nat.eqb_eq _ _) H); reflexivity
+    | rewrite (proj2 (@Nat.eqb_neq _ _) H); reflexivity ].
 Qed.
 
 Lemma pow_nonzero a k : a <> 0 -> a ^ k <> 0.
@@ -327,7 +326,7 @@ Qed.
 Hint Rewrite eq_nat_dec_n_S : natsimplify.
 
 #[global]
-Hint Rewrite Max.max_0_l Max.max_0_r Max.max_idempotent Min.min_0_l Min.min_0_r Min.min_idempotent : natsimplify.
+Hint Rewrite Nat.max_0_l Nat.max_0_r Nat.max_idempotent Nat.min_0_l Nat.min_0_r Nat.min_idempotent : natsimplify.
 
 (** Helper to get around the lack of function extensionality *)
 Definition le_dec_right_val n m (pf0 : ~n <= m) : { pf | le_dec n m = right pf }.
@@ -405,15 +404,15 @@ Lemma setbit_high : forall x i, (x < 2^i -> setbit x i = x + 2^i)%nat.
 Proof.
   intros x i H; apply bits_inj; intro n.
   rewrite setbit_eqb.
-  destruct (beq_nat i n) eqn:H'; simpl.
-  { apply beq_nat_true in H'; subst.
+  destruct (Nat.eqb i n) eqn:H'; simpl.
+  { apply Nat.eqb_eq in H'; subst.
     symmetry; apply testbit_true.
     rewrite div_minus, div_small by lia.
     reflexivity. }
   { assert (H'' : (((x + 2 ^ i) / 2 ^ n) mod 2) = ((x / 2 ^ n) mod 2)).
     { assert (2^(i-n) <> 0) by auto with arith.
       assert (2^(i-n) <> 0) by lia.
-      destruct (lt_eq_lt_dec i n) as [ [?|?] | ? ]; [ | subst; rewrite <- beq_nat_refl in H'; congruence | ].
+      destruct (lt_eq_lt_dec i n) as [ [?|?] | ? ]; [ | subst; rewrite Nat.eqb_refl in H'; congruence | ].
       { assert (i <= n - 1) by lia.
         assert (2^i <= 2^n) by auto using pow_le_mono_r with arith.
         assert (2^i <= 2^(n - 1)) by auto using pow_le_mono_r with arith.

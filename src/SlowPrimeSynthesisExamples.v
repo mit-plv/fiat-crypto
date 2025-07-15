@@ -1,9 +1,9 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.QArith.QArith.
-Require Import Coq.QArith.Qround.
-Require Import Coq.Strings.String.
-Require Import Coq.derive.Derive.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import QArith.
+From Coq Require Import Qround.
+From Coq Require Import String.
+From Coq Require Import Derive.
+From Coq Require Import List.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Zselect.

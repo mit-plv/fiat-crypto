@@ -5,22 +5,23 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      # Check for updates to GitHub Actions every weekday
       interval: "daily"
+      time: "04:00"
     labels:
       - "dependencies"
   - package-ecosystem: "gitsubmodule"
     directory: "/"
     schedule:
       interval: "daily"
+      time: "08:00"
     labels:
       - "submodules"
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "sp2019latest"
     schedule:
-      # Check for updates to GitHub Actions every weekday
       interval: "daily"
+      time: "04:00"
     labels:
       - "dependencies"
       - "sp2019latest"
@@ -29,6 +30,7 @@ updates:
     target-branch: "sp2019latest"
     schedule:
       interval: "daily"
+      time: "08:00"
     labels:
       - "submodules"
       - "sp2019latest"

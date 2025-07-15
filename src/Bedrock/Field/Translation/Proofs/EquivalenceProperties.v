@@ -1,11 +1,11 @@
-Require Import Coq.Strings.String.
+From Coq Require Import String.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Datatypes.PropSet.
-Require Import Coq.Lists.List. (* after SeparationLogic *)
+From Coq Require Import List. (* after SeparationLogic *)
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.Equivalence.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.UsedVarnames.
@@ -53,7 +53,7 @@ Section OnlyDiffer.
   Proof.
     cbv [equivalent_base rep.equiv rep.Z WeakestPrecondition.dexpr].
     repeat intro; sepsimpl; subst; eexists; sepsimpl; eauto.
-    eauto using expr_only_differ_undef.
+    pose expr_only_differ_undef; eauto.
   Qed.
 
   Section Local.

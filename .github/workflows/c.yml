@@ -3,6 +3,7 @@ name: Test Generated C
 on:
   push:
   pull_request:
+  merge_group:
   schedule:
     - cron: '0 0 1 * *'
 
@@ -16,7 +17,7 @@ jobs:
       cancel-in-progress: true
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
     - name: install gcc
@@ -28,9 +29,9 @@ jobs:
              ninja-build libunwind-dev cmake
         #sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
     - name: GCC Problem Matcher
-      uses: ammaraskar/gcc-problem-matcher@0.2.0
+      uses: ammaraskar/gcc-problem-matcher@0.3.0
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       id: go
     - name: make only-test-c-files CC=gcc
       run: make only-test-c-files CC=gcc EXTERNAL_DEPENDENCIES=1

@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import Morphisms.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Algebra.Hierarchy.
 

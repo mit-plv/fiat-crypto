@@ -1,4 +1,4 @@
-Require Import Coq.Classes.RelationClasses.
+From Coq Require Import RelationClasses.
 
 (** We call Coq's [etransitivity] for compatibility
     because it's more powerful than [etransitivity _] in some cases,

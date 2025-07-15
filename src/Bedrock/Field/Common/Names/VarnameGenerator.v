@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Strings.String.
+From Coq Require Import ZArith.
+From Coq Require Import String.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Strings.String.

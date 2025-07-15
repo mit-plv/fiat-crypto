@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Lists.List. Import ListNotations.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
+From Coq Require Import List. Import ListNotations.
 Require Import Crypto.Algebra.Ring. (* for ring_simplify_subterms *)
 Require Import Crypto.Fancy.Spec. Import Spec.Registers.
 Require Import Crypto.Fancy.Compiler.
@@ -91,7 +91,7 @@ Ltac simplify_with_register_properties :=
   repeat
     match goal with
     | _ => rewrite reg_eqb_refl
-    | _ => rewrite reg_eqb_neq by (assumption || congruence) 
+    | _ => rewrite reg_eqb_neq by (assumption || congruence)
     | H:?y = _ mod ?m |- 0 <= ?y < _ => rewrite H; apply Z.mod_pos_bound; lia
     | _ => assumption
     end.
@@ -101,7 +101,7 @@ Ltac cleanup :=
   cbv [CC.update in_dec list_rec list_rect
                  CC.code_dec];
   cbn [CC.cc_c CC.cc_m CC.cc_z CC.cc_l].
-Ltac step_and_remember := 
+Ltac step_and_remember :=
   rewrite interp_step; cleanup;
   remember_single_result.
 Ltac step_lhs :=
@@ -114,7 +114,7 @@ Ltac step_rhs :=
   match goal with
   | H: ?x = spec ?i ?args _
     |- context [spec ?i ?args ?cc] =>
-    replace (spec i args cc) with x by idtac
+    replace (spec i args cc) with x by first [assumption | symmetry;assumption]
   end;
   match goal with
   | H : ?y = (?x mod ?m)%Z |- context [(?x mod ?m)%Z] =>
@@ -261,8 +261,8 @@ Section ProdEquiv.
   Qed.
 
   Lemma interp_add_chain a b c cont cc ctx:
-    a <> b -> 
-    a <> c -> 
+    a <> b ->
+    a <> c ->
     b <> c ->
     (0 <= ctx a < wordmax)%Z ->
     (0 <= ctx b < wordmax)%Z ->
@@ -317,7 +317,7 @@ Section ProdEquiv.
               |- context [ ?x mod ?y ] =>
               pose proof (Z.mod_pos_bound x y ltac:(lia))
             end; lia).
-      
+
       autorewrite with zsimplify.
 
       rewrite Z.div_add_mod_cond_r' by lia.
@@ -335,9 +335,9 @@ Section ProdEquiv.
       interp reg_eqb wordmax cc_spec e (CC.update [CC.C; CC.M; CC.L; CC.Z] x cc_spec cc) ctx.
 
   Lemma swap_add_chain a b c d cont cc ctx:
-    a <> b -> 
-    a <> c -> 
-    a <> d -> 
+    a <> b ->
+    a <> c ->
+    a <> d ->
     b <> c ->
     b <> d ->
     c <> d ->

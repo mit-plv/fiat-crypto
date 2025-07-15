@@ -1,0 +1,562 @@
+name: CI (Coq, docker, dev)
+
+on:
+  push:
+    branches: [ master , sp2019latest , v8.6 , v8.8 , v8.10 ]
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+  release:
+    types: [published]
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - env: { COQ_VERSION: "master", DOCKER_COQ_VERSION: "dev", DOCKER_OCAML_VERSION: "default", SKIP_VALIDATE: "" , COQCHKEXTRAFLAGS: "-bytecode-compiler yes", EXTRA_GH_REPORTIFY: "--warnings", ALLOW_DIFF: "1", CI: "1" }
+          os: 'ubuntu-latest'
+
+    runs-on: ${{ matrix.os }}
+    env: ${{ matrix.env }}
+    name: docker-${{ matrix.env.COQ_VERSION }}
+
+    outputs:
+      coq_image_name: ${{ steps.set-output-step.outputs.coq_image_name }}
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.env.COQ_VERSION }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: echo host build params
+      run: etc/ci/describe-system-config.sh
+    - name: echo container build params
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
+        custom_script: |
+          eval $(opam env)
+          etc/ci/describe-system-config.sh
+    - name: deps
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
+        custom_script: etc/ci/github-actions-docker-make.sh COQBIN="$(dirname "$(which coqc)")/" -j2 deps
+    - name: all-except-generated-and-js-of-ocaml
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
+        custom_script: etc/ci/github-actions-docker-make.sh ${EXTRA_GH_REPORTIFY} -j2 all-except-generated-and-js-of-ocaml
+    - name: pre-standalone-extracted
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
+        custom_script: etc/ci/github-actions-docker-make.sh ${EXTRA_GH_REPORTIFY} -j2 pre-standalone-extracted
+    - name: upload OCaml files
+      uses: actions/upload-artifact@v4
+      with:
+        name: ExtractionOCaml-${{ matrix.env.COQ_VERSION }}
+        path: src/ExtractionOCaml
+      if: always ()
+    - name: upload js_of_ocaml source files
+      uses: actions/upload-artifact@v4
+      with:
+        name: ExtractionJsOfOCaml-source-${{ matrix.env.COQ_VERSION }}
+        path: src/ExtractionJsOfOCaml
+      if: always ()
+    - name: upload Haskell source files
+      uses: actions/upload-artifact@v4
+      with:
+        name: ExtractionHaskell-source-${{ matrix.env.COQ_VERSION }}
+        path: src/ExtractionHaskell
+      if: always ()
+    - name: install-standalone-unified-ocaml
+      run: make -f Makefile.standalone install-standalone-unified-ocaml BINDIR=dist
+    - name: upload standalone files
+      uses: actions/upload-artifact@v4
+      with:
+        name: standalone-docker-coq-${{ matrix.env.DOCKER_COQ_VERSION }}
+        path: dist/fiat_crypto
+    - run: git config --file .gitmodules --get-regexp path | awk '{ print $2 }' | xargs tar -czvf fiat-crypto-build.tar.gz src
+    - name: Upload built files
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-outputs-docker-coq-${{ matrix.env.DOCKER_COQ_VERSION }}-ocaml-${{ matrix.env.DOCKER_OCAML_VERSION }}
+        path: fiat-crypto-build.tar.gz
+    - run: find . -name "*.timing" | xargs tar -czvf timing-files.tgz
+      if: failure()
+    - name: upload generated timing files
+      uses: actions/upload-artifact@v4
+      with:
+        name: timing-files-${{ matrix.env.COQ_VERSION }}
+        path: timing-files.tgz
+      if: failure()
+    - name: install
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
+        custom_script: |
+          sudo git config --global --add safe.directory "*"
+          sudo make EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 COQBIN="$(dirname "$(which coqc)")/" install install-standalone-ocaml
+    - name: install-without-bedrock2
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
+        custom_script: |
+          sudo git config --global --add safe.directory "*"
+          sudo make EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 COQBIN="$(dirname "$(which coqc)")/" install-without-bedrock2 install-standalone-ocaml
+    - name: install-dev
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
+        custom_script: |
+          sudo git config --global --add safe.directory "*"
+          sudo make EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 COQBIN="$(dirname "$(which coqc)")/" install install-standalone-ocaml
+    - name: Save COQ_IMAGE
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY COQ_IMAGE GITHUB_ENV
+        custom_script: |
+          echo "COQ_IMAGE=${COQ_IMAGE}" | tee -a $GITHUB_ENV
+    - run: docker save "$COQ_IMAGE" -o image.tar
+    - name: Set coq_image_name Output to ${{ runner.os }}-docker-${{ hashFiles('image.tar') }}
+      id: set-output-step
+      run: echo "coq_image_name=${{ runner.os }}-docker-${{ hashFiles('image.tar') }}" >> $GITHUB_OUTPUT
+    - name: Cache Docker image
+      uses: actions/cache@v4
+      with:
+        path: image.tar
+        key: ${{ runner.os }}-docker-${{ hashFiles('image.tar') }}
+    - name: display timing info
+      run: cat time-of-build-pretty.log
+    - name: display per-line timing info
+      run: etc/ci/github-actions-display-per-line-timing.sh
+
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - env: { COQ_VERSION: "master", DOCKER_COQ_VERSION: "dev", DOCKER_OCAML_VERSION: "default", SKIP_VALIDATE: "" , COQCHKEXTRAFLAGS: "-bytecode-compiler yes", EXTRA_GH_REPORTIFY: "--warnings", ALLOW_DIFF: "1", CI: "1" }
+          os: 'ubuntu-latest'
+
+    runs-on: ${{ matrix.os }}
+    env: ${{ matrix.env }}
+    name: validate-docker-${{ matrix.env.COQ_VERSION }}
+
+    concurrency:
+      group: ${{ github.workflow }}-validate-${{ matrix.env.COQ_VERSION }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+
+    needs: build
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Restore cached Docker image ${{ needs.build.outputs.coq_image_name }}
+      uses: actions/cache@v4
+      with:
+        path: image.tar
+        key: ${{ needs.build.outputs.coq_image_name }}
+    - name: Load Docker image
+      run: docker load -i image.tar
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-outputs-docker-coq-${{ matrix.env.DOCKER_COQ_VERSION }}-ocaml-${{ matrix.env.DOCKER_OCAML_VERSION }}
+        path: .
+    - name: Unpack build artifact
+      run: tar --overwrite -xzvf fiat-crypto-build.tar.gz
+    - name: validate
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
+        ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
+        export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
+        custom_script: etc/ci/github-actions-docker-make.sh TIMED=1 validate COQCHKFLAGS="-o ${COQCHKEXTRAFLAGS}"
+      if: env.SKIP_VALIDATE == '' && github.event_name != 'pull_request'
+
+  build-js-of-ocaml:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        coq-version: [ 'master' ]
+        ocaml-compiler: [ '4.11.1' ]
+    concurrency:
+      group: ${{ github.workflow }}-build-js-of-ocaml-${{ matrix.coq-version }}-${{ matrix.ocaml-compiler }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Set up OCaml
+      uses: ocaml/setup-ocaml@v3
+      with:
+        ocaml-compiler: ${{ matrix.ocaml-compiler }}
+    - name: opam install deps
+      run: |
+        eval $(opam env)
+        opam update -y
+        opam install -y js_of_ocaml ocamlfind
+    - name: echo build params
+      run: etc/ci/describe-system-config.sh
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ExtractionJsOfOCaml-source-${{ matrix.coq-version }}
+        path: src/ExtractionJsOfOCaml
+    - name: standalone-js-of-ocaml
+      run: |
+        eval $(opam env)
+        etc/ci/github-actions-make.sh --warnings -f Makefile.standalone -j2 standalone-js-of-ocaml
+    - name: install-standalone-js-of-ocaml
+      run: make -f Makefile.standalone install-standalone-js-of-ocaml
+    - name: upload js_of_ocaml build files
+      uses: actions/upload-artifact@v4
+      with:
+        name: ExtractionJsOfOCaml-${{ matrix.coq-version }}-ocaml-${{ matrix.ocaml-compiler }}
+        path: src/ExtractionJsOfOCaml
+      if: always ()
+    - name: Upload js_of_ocaml outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: fiat-html-js-of-ocaml
+        path: fiat-html
+
+  build-wasm-of-ocaml:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        coq-version: [ 'master' ]
+        ocaml-compiler: [ '4.14.1' ]
+    concurrency:
+      group: ${{ github.workflow }}-build-wasm-of-ocaml-${{ matrix.coq-version }}-${{ matrix.ocaml-compiler }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Set up OCaml
+      uses: ocaml/setup-ocaml@v3
+      with:
+        ocaml-compiler: ${{ matrix.ocaml-compiler }}
+    - name: echo build params
+      run: etc/ci/describe-system-config.sh
+    - run: opam update -y
+    - name: install wasm_of_ocaml
+      run: opam install -y wasm_of_ocaml-compiler ocamlfind
+    - name: echo build params
+      run: etc/ci/describe-system-config.sh
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ExtractionJsOfOCaml-source-${{ matrix.coq-version }}
+        path: src/ExtractionJsOfOCaml
+    - name: standalone-wasm-of-ocaml
+      run: |
+        eval $(opam env)
+        etc/ci/github-actions-make.sh --warnings -f Makefile.standalone -j2 standalone-wasm-of-ocaml
+    - name: install-standalone-wasm-of-ocaml
+      run: make -f Makefile.standalone install-standalone-wasm-of-ocaml
+    - name: upload wasm_of_ocaml build files
+      uses: actions/upload-artifact@v4
+      with:
+        name: ExtractionJsOfOCaml-${{ matrix.coq-version }}-ocaml-${{ matrix.ocaml-compiler }}+wasm
+        path: src/ExtractionJsOfOCaml
+      if: always ()
+    - name: Upload wasm_of_ocaml outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: fiat-html-wasm-of-ocaml
+        path: fiat-html
+
+  deploy-js-wasm-of-ocaml:
+    needs: [build-js-of-ocaml, build-wasm-of-ocaml]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-deploy-js-wasm-of-ocaml-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0 # Fetch all history for all tags and branches, for fiat-html/version.js
+        tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: fiat-html-js-of-ocaml
+        path: fiat-html
+    - run: find fiat-html
+    - run: ls -la fiat-html
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: fiat-html-wasm-of-ocaml
+        path: fiat-html
+    - run: find fiat-html
+    - run: ls -la fiat-html
+    - run: make -f Makefile.js-html fiat-html/version.js
+    - run: find fiat-html
+    - run: ls -la fiat-html
+    - name: backup .gitignore
+      run: mv .gitignore{,.bak}
+    - name: Deploy js_of_ocaml and wasm_of_ocaml 🚀 ${{ ( github.ref != 'refs/heads/master' && '(dry run)' ) || '' }}
+      uses: JamesIves/github-pages-deploy-action@v4.7.2
+      with:
+        branch: gh-pages # The branch the action should deploy to.
+        folder: fiat-html # The folder the action should deploy.
+        git-config-email: JasonGross@users.noreply.github.com
+        target-folder: .
+        single-commit: true # otherwise the repo will get too big
+        dry-run: ${{ github.ref != 'refs/heads/master' }}
+    - name: restore .gitignore
+      run: mv .gitignore{.bak,}
+
+
+  generated-files:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        coq-version: [ 'master' ]
+    concurrency:
+      group: ${{ github.workflow }}-generated-files-${{ matrix.coq-version }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ExtractionOCaml-${{ matrix.coq-version }}
+        path: src/ExtractionOCaml
+    - name: make binaries executable
+      run: git check-ignore src/ExtractionOCaml/* src/ExtractionOCaml/*/* | grep -v '\.' | xargs chmod +x
+    - name: generated-files
+      run: etc/ci/github-actions-make.sh --warnings -f Makefile.examples -j2 generated-files
+      if: github.event_name == 'pull_request'
+    - run: tar -czvf generated-files.tgz fiat-*/
+      if: failure()
+    - name: upload generated files
+      uses: actions/upload-artifact@v4
+      with:
+        name: generated-files-${{ matrix.coq-version }}
+        path: generated-files.tgz
+      if: failure()
+
+  standalone-haskell:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        coq-version: [ 'master' ]
+    concurrency:
+      group: ${{ github.workflow }}-standalone-haskell-${{ matrix.coq-version }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ExtractionHaskell-source-${{ matrix.coq-version }}
+        path: src/ExtractionHaskell
+    - name: standalone-haskell
+      run: etc/ci/github-actions-make.sh -f Makefile.standalone -j1 standalone-haskell GHCFLAGS='+RTS -M9G -RTS'
+    - name: upload Haskell files
+      uses: actions/upload-artifact@v4
+      with:
+        name: ExtractionHaskell-${{ matrix.coq-version }}
+        path: src/ExtractionHaskell
+      if: always ()
+
+
+  test-amd64:
+
+    runs-on: ubuntu-latest
+
+    concurrency:
+      group: ${{ github.workflow }}-test-amd64-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    needs: build
+
+    steps:
+    - name: checkout repo
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ExtractionOCaml-master
+        path: src/ExtractionOCaml
+    - name: make binaries executable
+      run: git check-ignore src/ExtractionOCaml/* src/ExtractionOCaml/*/* | grep -v '\.' | xargs chmod +x
+    - name: only-test-amd64-files
+      run: etc/ci/github-actions-make.sh -f Makefile.examples -j2 only-test-amd64-files SLOWEST_FIRST=1
+      env:
+        ALLOW_DIFF: 1
+
+  test-standalone:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - coq-version: master
+          docker-coq-version: dev
+          docker-ocaml-version: default
+
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download standalone Docker
+      uses: actions/download-artifact@v4
+      with:
+        name: standalone-docker-coq-${{ matrix.docker-coq-version }}
+        path: dist/
+    - name: List files
+      run: find dist
+    - run: chmod +x dist/fiat_crypto
+    - name: Test files (host)
+      run: |
+        echo "::group::file fiat_crypto"
+        file dist/fiat_crypto
+        echo "::endgroup::"
+        echo "::group::ldd fiat_crypto"
+        ldd dist/fiat_crypto
+        echo "::endgroup::"
+        etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
+    - name: Test files (container)
+      uses: coq-community/docker-coq-action@v1
+      with:
+        coq_version: ${{ matrix.docker-coq-version }}
+        ocaml_version: ${{ matrix.docker-ocaml-version }}
+        custom_script: |
+          echo "::group::install dependencies"
+          sudo apt-get update -y
+          sudo apt-get install -y file
+          echo "::endgroup::"
+          echo "::group::file fiat_crypto"
+          file dist/fiat_crypto
+          echo "::endgroup::"
+          echo "::group::ldd fiat_crypto"
+          ldd dist/fiat_crypto
+          echo "::endgroup::"
+          etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
+
+  publish-standalone-dry-run:
+    runs-on: ubuntu-latest
+    needs: build
+#    permissions:
+#      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch all history for all tags and branches
+        tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
+    - name: Download standalone Docker
+      uses: actions/download-artifact@v4
+      with:
+        name: standalone-docker-coq-dev
+        path: dist/
+    - name: List files
+      run: find dist
+    - name: Rename files
+      run: |
+        echo "::group::find arch"
+        arch="$(etc/ci/find-arch.sh dist/fiat_crypto "unknown")"
+        tag="$(git describe --tags HEAD)"
+        fname="Fiat-Cryptography_${tag}_Linux_docker_dev_${arch}"
+        echo "$fname"
+        mv dist/fiat_crypto "dist/$fname"
+        find dist
+#    - name: Upload artifacts to GitHub Release
+#      env:
+#        GITHUB_TOKEN: ${{ github.token }}
+#      # Upload to GitHub Release using the `gh` CLI.
+#      # `dist/` contains the built packages
+#      run: >-
+#        gh release upload
+#        '${{ github.ref_name }}' dist/**
+#        --repo '${{ github.repository }}'
+#      if: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name == 'release' }}
+
+  docker-check-all:
+    runs-on: ubuntu-latest
+    needs: [build, validate, build-js-of-ocaml, build-wasm-of-ocaml, deploy-js-wasm-of-ocaml, generated-files, standalone-haskell, test-amd64, test-standalone, publish-standalone-dry-run]
+    if: always()
+    steps:
+    - run: echo 'build passed'
+      if: ${{ needs.build.result == 'success' }}
+    - run: echo 'validate passed'
+      if: ${{ needs.validate.result == 'success' }}
+    - run: echo 'build-js-of-ocaml passed'
+      if: ${{ needs.build-js-of-ocaml.result == 'success' }}
+    - run: echo 'build-wasm-of-ocaml passed'
+      if: ${{ needs.build-wasm-of-ocaml.result == 'success' }}
+    - run: echo 'deploy-js-wasm-of-ocaml passed'
+      if: ${{ needs.deploy-js-wasm-of-ocaml.result == 'success' }}
+    - run: echo 'generated-files passed'
+      if: ${{ needs.generated-files.result == 'success' }}
+    - run: echo 'standalone-haskell passed'
+      if: ${{ needs.standalone-haskell.result == 'success' }}
+    - run: echo 'test-amd64 passed'
+      if: ${{ needs.test-amd64.result == 'success' }}
+    - run: echo 'test-standalone passed'
+      if: ${{ needs.test-standalone.result == 'success' }}
+    - run: echo 'publish-standalone-dry-run passed'
+      if: ${{ needs.publish-standalone-dry-run.result == 'success' }}
+    - run: echo 'build failed' && false
+      if: ${{ needs.build.result != 'success' }}
+    - run: echo 'validate failed' && false
+      if: ${{ needs.validate.result != 'success' }}
+    - run: echo 'build-js-of-ocaml failed' && false
+      if: ${{ needs.build-js-of-ocaml.result != 'success' }}
+    - run: echo 'build-wasm-of-ocaml failed' && false
+      if: ${{ needs.build-wasm-of-ocaml.result != 'success' }}
+    - run: echo 'deploy-js-wasm-of-ocaml failed' && false
+      if: ${{ needs.deploy-js-wasm-of-ocaml.result != 'success' }}
+    - run: echo 'generated-files failed' && false
+      if: ${{ needs.generated-files.result != 'success' }}
+    - run: echo 'standalone-haskell failed' && false
+      if: ${{ needs.standalone-haskell.result != 'success' }}
+    - run: echo 'test-amd64 failed' && false
+      if: ${{ needs.test-amd64.result != 'success' }}
+    - run: echo 'test-standalone failed' && false
+      if: ${{ needs.test-standalone.result != 'success' }}
+    - run: echo 'publish-standalone-dry-run failed' && false
+      if: ${{ needs.publish-standalone-dry-run.result != 'success' }}

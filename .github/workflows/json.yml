@@ -3,6 +3,7 @@ name: Test Generated JSON
 on:
   push:
   pull_request:
+  merge_group:
   schedule:
     - cron: '0 0 1 * *'
 
@@ -16,7 +17,7 @@ jobs:
       cancel-in-progress: true
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
     - name: make only-test-json-files

@@ -11,7 +11,7 @@ sudo apt-get -q -y -o Acquire::Retries=30 install debootstrap
 sudo debootstrap --variant=minbase "$debian" /chroot http://debian-archive.trafficmanager.net/debian/ || ( cat /tmp/tmp.*/debootstrap/debootstrap.log ; exit 1 )
 sudo mount proc /chroot/proc -t proc
 sudo mount sysfs /chroot/sys -t sysfs
-sudo chroot /chroot apt-get -q -y -o Acquire::Retries=30 install sudo git make time jq python3 python-is-python3 ocaml coq libcoq-core-ocaml-dev libfindlib-ocaml-dev ocaml-findlib cabal-install
+sudo chroot /chroot apt-get -q -y -o Acquire::Retries=30 install sudo git make time jq python3 python-is-python3 ocaml coq libcoq-core-ocaml-dev libfindlib-ocaml-dev ocaml-findlib cabal-install js-of-ocaml
 sudo chroot /chroot groupadd -g "$(id -g)" "$(id -g -n)"
 sudo chroot /chroot useradd  -g "$(id -g)" -u "$(id -u)" "$(id -u -n)"
 printf "%s ALL=(ALL) NOPASSWD: ALL\n" "$(id -u -n)" | sudo tee /chroot/etc/sudoers.d/root

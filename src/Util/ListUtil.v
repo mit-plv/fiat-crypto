@@ -1,11 +1,10 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Lists.SetoidList.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Arith.Peano_dec.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Arith.Arith.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Numbers.Natural.Peano.NPeano.
+From Coq Require Import List.
+From Coq Require Import SetoidList.
+From Coq Require Import Lia.
+From Coq Require Import Peano_dec.
+From Coq Require Import ZArith.
+From Coq Require Import Arith.
+From Coq Require Import Morphisms.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Pointed.
 Require Import Crypto.Util.Prod.
@@ -211,10 +210,10 @@ Module Export List.
   Proof.
    revert start. induction len as [|len IHlen]; simpl; intros.
    - rewrite <- plus_n_O. split;[easy|].
-     intros (H,H'). apply (Lt.lt_irrefl _ (Lt.le_lt_trans _ _ _ H H')).
+     intros (H,H'). apply (Nat.lt_irrefl _ (Nat.le_lt_trans _ _ _ H H')).
    - rewrite IHlen, <- plus_n_Sm; simpl; split.
      * intros [H|H]; subst; intuition auto with arith.
-     * intros (H,H'). destruct (Lt.le_lt_or_eq _ _ H); intuition.
+     * intros (H,H'). destruct (proj1 (Nat.lt_eq_cases _ _) H); intuition.
   Qed.
 
   Section Facts.
@@ -265,7 +264,7 @@ Module Export List.
     Lemma firstn_length_le: forall l:list A, forall n:nat,
           n <= length l -> length (firstn n l) = n.
     Proof using Type. induction l as [|x xs Hrec].
-           - simpl. intros n H. apply le_n_0_eq in H. rewrite <- H. now simpl.
+           - simpl. intros n H. apply Nat.le_0_r in H. rewrite H. now simpl.
            - destruct n as [|n].
              * now simpl.
              * simpl. intro H. apply le_S_n in H. now rewrite (Hrec n H).
@@ -277,7 +276,7 @@ Module Export List.
     Proof using Type. induction n as [|k iHk]; intros l1 l2.
            - now simpl.
            - destruct l1 as [|x xs].
-             * unfold List.firstn at 2, length. now rewrite 2!app_nil_l, <- minus_n_O.
+             * unfold List.firstn at 2, length. now rewrite 2!app_nil_l, Nat.sub_0_r.
              * rewrite <- app_comm_cons. simpl. f_equal. apply iHk.
     Qed.
 
@@ -286,7 +285,7 @@ Module Export List.
         firstn ((length l1) + n) (l1 ++ l2) = l1 ++ firstn n l2.
     Proof using Type. induction n as [| k iHk];intros l1 l2.
            - unfold List.firstn at 2. rewrite <- plus_n_O, app_nil_r.
-             rewrite firstn_app. rewrite <- minus_diag_reverse.
+             rewrite firstn_app. rewrite Nat.sub_diag.
              unfold List.firstn at 2. rewrite app_nil_r. apply firstn_all.
            - destruct l2 as [|x xs].
              * simpl. rewrite app_nil_r. apply firstn_all2. auto with arith.
@@ -338,6 +337,19 @@ Module Export List.
   (** new operations *)
   Definition enumerate {A} (ls : list A) : list (nat * A)
     := combine (seq 0 (length ls)) ls.
+
+  Section map2.
+    Context {A B C}
+      (f : A -> B -> C).
+
+    Fixpoint map2 (la : list A) (lb : list B) : list C :=
+      match la, lb with
+      | nil, _ => nil
+      | _, nil => nil
+      | a :: la', b :: lb'
+        => f a b :: map2 la' lb'
+      end.
+  End map2.
 End List.
 
 #[global]
@@ -371,19 +383,6 @@ Definition list_beq_hetero {A B} (f : A -> B -> bool)
 Definition sum_firstn l n := fold_right Z.add 0%Z (firstn n l).
 
 Definition sum xs := sum_firstn xs (length xs).
-
-Section map2.
-  Context {A B C}
-          (f : A -> B -> C).
-
-  Fixpoint map2 (la : list A) (lb : list B) : list C :=
-    match la, lb with
-    | nil, _ => nil
-    | _, nil => nil
-    | a :: la', b :: lb'
-      => f a b :: map2 la' lb'
-    end.
-End map2.
 
 (* xs[n] := f xs[n] *)
 Fixpoint update_nth {T} n f (xs:list T) {struct n} :=
@@ -1653,7 +1652,7 @@ Lemma firstn_firstn : forall {A} m n (l : list A), (n <= m)%nat ->
   firstn n (firstn m l) = firstn n l.
 Proof.
   intros A m n l H; rewrite firstn_firstn_min.
-  apply Min.min_case_strong; intro; [ reflexivity | ].
+  apply Nat.min_case_strong; intro; [ reflexivity | ].
   assert (n = m) by lia; subst; reflexivity.
 Qed.
 
@@ -2135,7 +2134,7 @@ Qed.
 Global Instance fold_left_Proper_eq {A B} : Proper ((eq ==> eq ==> eq) ==> eq ==> eq ==> eq) (@fold_left A B) | 1.
 Proof. cbv [respectful]; repeat intro; subst; apply fold_left_Proper; repeat intro; eauto. Qed.
 
-Require Import Coq.Lists.SetoidList.
+From Coq Require Import SetoidList.
 Global Instance Proper_nth_default : forall A eq,
   Proper (eq==>eqlistA eq==>Logic.eq==>eq) (nth_default (A:=A)).
 Proof.
@@ -2233,7 +2232,7 @@ Proof.
   intros A d l i; induction n as [|n IHn]; break_match; autorewrite with push_nth_default; auto; try lia.
   + rewrite (firstn_succ d) by lia.
     autorewrite with push_nth_default; repeat (break_match_hyps; break_match; distr_length);
-      rewrite Min.min_l in * by lia; try lia.
+      rewrite Nat.min_l in * by lia; try lia.
     - apply IHn; lia.
     - replace i with n in * by lia.
       rewrite Nat.sub_diag.
@@ -2657,7 +2656,7 @@ Lemma nth_error_rev A n ls : List.nth_error (@List.rev A ls) n = if lt_dec n (le
 Proof.
   destruct lt_dec; [ | rewrite nth_error_length_error; rewrite ?List.rev_length; try reflexivity; lia ].
   revert dependent n; induction ls as [|x xs IHxs]; cbn [length List.rev]; try reflexivity; intros; try lia.
-  { rewrite nth_error_app, List.rev_length, Nat.sub_succ.
+  { rewrite ListUtil.nth_error_app, List.rev_length, Nat.sub_succ.
     destruct lt_dec.
     { rewrite IHxs by lia.
       rewrite <- (Nat.succ_pred_pos (length xs - n)) by lia.
@@ -3331,7 +3330,7 @@ Section find_index.
       specialize (H' _ eq_refl); congruence. }
     { rewrite find_none_iff_nth_error in H.
       intros n a; specialize (H n (n, a)).
-      rewrite nth_error_combine, nth_error_seq in H.
+      rewrite nth_error_combine, ListUtil.nth_error_seq in H.
       edestruct lt_dec; [ | rewrite nth_error_length_error by lia; congruence ].
       edestruct nth_error eqn:?; intros; Option.inversion_option; subst; specialize (H eq_refl); assumption. }
   Qed.
@@ -3344,9 +3343,9 @@ Section find_index.
     edestruct find eqn:H; cbn; [ | split; [ congruence | ] ].
     { rewrite find_some_iff in H.
       destruct H as [n' H].
-      rewrite nth_error_combine, nth_error_seq in H.
+      rewrite nth_error_combine, ListUtil.nth_error_seq in H.
       setoid_rewrite nth_error_combine in H.
-      setoid_rewrite nth_error_seq in H.
+      setoid_rewrite ListUtil.nth_error_seq in H.
       break_innermost_match_hyps; split; intro H'; destruct_head'_and; Option.inversion_option; subst; cbn in *.
       all: repeat apply conj; eauto.
       { let H := match goal with H : forall n, n < _ -> _ |- _ => H end in
@@ -3365,7 +3364,7 @@ Section find_index.
           congruence. } } }
     { rewrite find_none_iff_nth_error in H.
       intros [ [a [H0 H1]] ?]; specialize (H n (n, a)).
-      rewrite nth_error_combine, nth_error_seq, H0 in H.
+      rewrite nth_error_combine, ListUtil.nth_error_seq, H0 in H.
       break_innermost_match_hyps; [ | rewrite nth_error_length_error in H0 by lia; congruence ].
       specialize (H eq_refl); cbn in *.
       congruence. }
@@ -3482,7 +3481,7 @@ Module Reifiable.
       intros H. induction l as [| x' l'].
       - simpl in H. destruct H.
       - simpl in H. destruct H as [H|H].
-        + rewrite H. clear H. simpl. destruct (existsb (eqb x) (nodupb l')) eqn:E. 
+        + rewrite H. clear H. simpl. destruct (existsb (eqb x) (nodupb l')) eqn:E.
           -- rewrite existsb_eqb_true_iff in E. rewrite <- nodupb_in_iff in E.
              apply IHl' in E. apply E.
           -- exists []. exists (nodupb l'). split.

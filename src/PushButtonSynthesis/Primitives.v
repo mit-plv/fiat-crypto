@@ -1,11 +1,11 @@
 (** * Push-Button Synthesis of Primitives *)
-Require Import Coq.Strings.String.
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.Lists.List.
-Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
-Require Import Coq.derive.Derive.
+From Coq Require Import String.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
+From Coq Require Import MSetPositive.
+From Coq Require Import List.
+From Coq Require Import QArith_base Qround.
+From Coq Require Import Derive.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.OptionList.
@@ -61,9 +61,10 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
-
 (**
 <<
+#!/usr/bin/env python
+
 #!/usr/bin/env python
 
 indent = ''
@@ -74,16 +75,20 @@ print((indent + '(' + r'''**
 >>
 *''' + ')\n') % open(__file__, 'r').read())
 
-for (op, opmod) in (('id', '(@id (list Z))'), ('selectznz', 'Positional.select'), ('mulx', 'mulx'), ('addcarryx', 'addcarryx'), ('subborrowx', 'subborrowx'), ('value_barrier', 'Z.value_barrier'), ('cmovznz', 'cmovznz'), ('cmovznz_by_mul', 'cmovz_nz_by_mul')):
-    print((r'''%sDerive reified_%s_gen
-       SuchThat (is_reification_of reified_%s_gen %s)
-       As reified_%s_gen_correct.
+for (op, opmod) in (('id', '(@id (list Z))'), ('selectznz', 'Positional.select'), ('mulx', 'mulx'), ('addcarryx', 'addcarryx'), ('subborrowx', 'subborrowx'), ('value_barrier', 'Z.value_barrier'), ('cmovznz', 'cmovznz'), ('cmovznz_by_mul', 'cmovznz_by_mul')):
+    print((rf'''{indent}Derive reified_{op}_gen
+       SuchThat (is_reification_of reified_{op}_gen {opmod})
+       As reified_{op}_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Global Hint Extern 1 (_ = _) => apply_cached_reification %s (proj1 reified_%s_gen_correct) : reify_cache_gen.
-Hint Immediate (proj2 reified_%s_gen_correct) : wf_gen_cache.
-Hint Rewrite (proj1 reified_%s_gen_correct) : interp_gen_cache.
-Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, op, op, opmod, op, opmod, op, op, op, op)).replace('\n', '\n%s' % indent) + '\n')
-
+Local Definition reified_{op}_gen_correct_proj1 := proj1 reified_{op}_gen_correct.
+Local Definition reified_{op}_gen_correct_proj2 := proj2 reified_{op}_gen_correct.
+#[global]
+Hint Extern 1 (_ = _) => apply_cached_reification {opmod} reified_{op}_gen_correct_proj1 : reify_cache_gen.
+#[global]
+Hint Immediate reified_{op}_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_{op}_gen_correct_proj1 : interp_gen_cache.
+Local Opaque reified_{op}_gen. (* needed for making [autorewrite] not take a very long time *)''').replace('\n', '\n%s' % indent) + '\n')
 >>
 *)
 
@@ -91,88 +96,112 @@ Derive reified_id_gen
        SuchThat (is_reification_of reified_id_gen (@id (list Z)))
        As reified_id_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Global Hint Extern 1 (_ = _) => apply_cached_reification (@id (list Z)) (proj1 reified_id_gen_correct) : reify_cache_gen.
+Local Definition reified_id_gen_correct_proj1 := proj1 reified_id_gen_correct.
+Local Definition reified_id_gen_correct_proj2 := proj2 reified_id_gen_correct.
 #[global]
-Hint Immediate (proj2 reified_id_gen_correct) : wf_gen_cache.
+Hint Extern 1 (_ = _) => apply_cached_reification (@id (list Z)) reified_id_gen_correct_proj1 : reify_cache_gen.
 #[global]
-Hint Rewrite (proj1 reified_id_gen_correct) : interp_gen_cache.
+Hint Immediate reified_id_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_id_gen_correct_proj1 : interp_gen_cache.
 Local Opaque reified_id_gen. (* needed for making [autorewrite] not take a very long time *)
 
 Derive reified_selectznz_gen
        SuchThat (is_reification_of reified_selectznz_gen Positional.select)
        As reified_selectznz_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Global Hint Extern 1 (_ = _) => apply_cached_reification Positional.select (proj1 reified_selectznz_gen_correct) : reify_cache_gen.
+Local Definition reified_selectznz_gen_correct_proj1 := proj1 reified_selectznz_gen_correct.
+Local Definition reified_selectznz_gen_correct_proj2 := proj2 reified_selectznz_gen_correct.
 #[global]
-Hint Immediate (proj2 reified_selectznz_gen_correct) : wf_gen_cache.
+Hint Extern 1 (_ = _) => apply_cached_reification Positional.select reified_selectznz_gen_correct_proj1 : reify_cache_gen.
 #[global]
-Hint Rewrite (proj1 reified_selectznz_gen_correct) : interp_gen_cache.
+Hint Immediate reified_selectznz_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_selectznz_gen_correct_proj1 : interp_gen_cache.
 Local Opaque reified_selectznz_gen. (* needed for making [autorewrite] not take a very long time *)
 
 Derive reified_mulx_gen
        SuchThat (is_reification_of reified_mulx_gen mulx)
        As reified_mulx_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Global Hint Extern 1 (_ = _) => apply_cached_reification mulx (proj1 reified_mulx_gen_correct) : reify_cache_gen.
+Local Definition reified_mulx_gen_correct_proj1 := proj1 reified_mulx_gen_correct.
+Local Definition reified_mulx_gen_correct_proj2 := proj2 reified_mulx_gen_correct.
 #[global]
-Hint Immediate (proj2 reified_mulx_gen_correct) : wf_gen_cache.
+Hint Extern 1 (_ = _) => apply_cached_reification mulx reified_mulx_gen_correct_proj1 : reify_cache_gen.
 #[global]
-Hint Rewrite (proj1 reified_mulx_gen_correct) : interp_gen_cache.
+Hint Immediate reified_mulx_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_mulx_gen_correct_proj1 : interp_gen_cache.
 Local Opaque reified_mulx_gen. (* needed for making [autorewrite] not take a very long time *)
 
 Derive reified_addcarryx_gen
        SuchThat (is_reification_of reified_addcarryx_gen addcarryx)
        As reified_addcarryx_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Global Hint Extern 1 (_ = _) => apply_cached_reification addcarryx (proj1 reified_addcarryx_gen_correct) : reify_cache_gen.
+Local Definition reified_addcarryx_gen_correct_proj1 := proj1 reified_addcarryx_gen_correct.
+Local Definition reified_addcarryx_gen_correct_proj2 := proj2 reified_addcarryx_gen_correct.
 #[global]
-Hint Immediate (proj2 reified_addcarryx_gen_correct) : wf_gen_cache.
+Hint Extern 1 (_ = _) => apply_cached_reification addcarryx reified_addcarryx_gen_correct_proj1 : reify_cache_gen.
 #[global]
-Hint Rewrite (proj1 reified_addcarryx_gen_correct) : interp_gen_cache.
+Hint Immediate reified_addcarryx_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_addcarryx_gen_correct_proj1 : interp_gen_cache.
 Local Opaque reified_addcarryx_gen. (* needed for making [autorewrite] not take a very long time *)
 
 Derive reified_subborrowx_gen
        SuchThat (is_reification_of reified_subborrowx_gen subborrowx)
        As reified_subborrowx_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Global Hint Extern 1 (_ = _) => apply_cached_reification subborrowx (proj1 reified_subborrowx_gen_correct) : reify_cache_gen.
+Local Definition reified_subborrowx_gen_correct_proj1 := proj1 reified_subborrowx_gen_correct.
+Local Definition reified_subborrowx_gen_correct_proj2 := proj2 reified_subborrowx_gen_correct.
 #[global]
-Hint Immediate (proj2 reified_subborrowx_gen_correct) : wf_gen_cache.
+Hint Extern 1 (_ = _) => apply_cached_reification subborrowx reified_subborrowx_gen_correct_proj1 : reify_cache_gen.
 #[global]
-Hint Rewrite (proj1 reified_subborrowx_gen_correct) : interp_gen_cache.
+Hint Immediate reified_subborrowx_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_subborrowx_gen_correct_proj1 : interp_gen_cache.
 Local Opaque reified_subborrowx_gen. (* needed for making [autorewrite] not take a very long time *)
 
 Derive reified_value_barrier_gen
        SuchThat (is_reification_of reified_value_barrier_gen Z.value_barrier)
        As reified_value_barrier_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Global Hint Extern 1 (_ = _) => apply_cached_reification Z.value_barrier (proj1 reified_value_barrier_gen_correct) : reify_cache_gen.
+Local Definition reified_value_barrier_gen_correct_proj1 := proj1 reified_value_barrier_gen_correct.
+Local Definition reified_value_barrier_gen_correct_proj2 := proj2 reified_value_barrier_gen_correct.
 #[global]
-Hint Immediate (proj2 reified_value_barrier_gen_correct) : wf_gen_cache.
+Hint Extern 1 (_ = _) => apply_cached_reification Z.value_barrier reified_value_barrier_gen_correct_proj1 : reify_cache_gen.
 #[global]
-Hint Rewrite (proj1 reified_value_barrier_gen_correct) : interp_gen_cache.
+Hint Immediate reified_value_barrier_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_value_barrier_gen_correct_proj1 : interp_gen_cache.
 Local Opaque reified_value_barrier_gen. (* needed for making [autorewrite] not take a very long time *)
 
 Derive reified_cmovznz_gen
        SuchThat (is_reification_of reified_cmovznz_gen cmovznz)
        As reified_cmovznz_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Global Hint Extern 1 (_ = _) => apply_cached_reification cmovznz (proj1 reified_cmovznz_gen_correct) : reify_cache_gen.
+Local Definition reified_cmovznz_gen_correct_proj1 := proj1 reified_cmovznz_gen_correct.
+Local Definition reified_cmovznz_gen_correct_proj2 := proj2 reified_cmovznz_gen_correct.
 #[global]
-Hint Immediate (proj2 reified_cmovznz_gen_correct) : wf_gen_cache.
+Hint Extern 1 (_ = _) => apply_cached_reification cmovznz reified_cmovznz_gen_correct_proj1 : reify_cache_gen.
 #[global]
-Hint Rewrite (proj1 reified_cmovznz_gen_correct) : interp_gen_cache.
+Hint Immediate reified_cmovznz_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_cmovznz_gen_correct_proj1 : interp_gen_cache.
 Local Opaque reified_cmovznz_gen. (* needed for making [autorewrite] not take a very long time *)
 
 Derive reified_cmovznz_by_mul_gen
        SuchThat (is_reification_of reified_cmovznz_by_mul_gen cmovznz_by_mul)
        As reified_cmovznz_by_mul_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Global Hint Extern 1 (_ = _) => apply_cached_reification cmovznz_by_mul (proj1 reified_cmovznz_by_mul_gen_correct) : reify_cache_gen.
+Local Definition reified_cmovznz_by_mul_gen_correct_proj1 := proj1 reified_cmovznz_by_mul_gen_correct.
+Local Definition reified_cmovznz_by_mul_gen_correct_proj2 := proj2 reified_cmovznz_by_mul_gen_correct.
 #[global]
-Hint Immediate (proj2 reified_cmovznz_by_mul_gen_correct) : wf_gen_cache.
+Hint Extern 1 (_ = _) => apply_cached_reification cmovznz_by_mul reified_cmovznz_by_mul_gen_correct_proj1 : reify_cache_gen.
 #[global]
-Hint Rewrite (proj1 reified_cmovznz_by_mul_gen_correct) : interp_gen_cache.
+Hint Immediate reified_cmovznz_by_mul_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_cmovznz_by_mul_gen_correct_proj1 : interp_gen_cache.
 Local Opaque reified_cmovznz_by_mul_gen. (* needed for making [autorewrite] not take a very long time *)
 
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
@@ -1288,7 +1317,7 @@ Section __.
               | Error err => Error (Pipeline.Assembly_parsing_error fname err)
               | Success v
                 => (vs <- parse_asm_files_lines ls;
-                    Success ((fname, Assembly.Parse.split_code_to_functions v) :: vs))
+                    Success ((fname, Assembly.Parse.split_code_to_global_functions v) :: vs))
               end
          end%error.
 
@@ -1322,17 +1351,18 @@ Section __.
                     end)
                 assembly_data in
          (* combine normal data with corresponding assembly data *)
-         let ls := List.map (fun '(n1, normal_data)
-                             => ((n1, normal_data), List.find (fun '(n2, _) => n1 =? n2)%string assembly_data))
+         let cmp longer_string shorter_string := Assembly.Parse.string_matches_loose assembly_labels_fuzzy_prefixes assembly_labels_fuzzy_suffixes longer_string shorter_string in
+         let ls := List.map (fun '(n, normal_data)
+                             => ((n, normal_data), List.find (fun '(n_asm, _) => cmp n_asm n) assembly_data))
                             normal_data in
          (* split out the normal data that has assembly data from the normal data that doesn't *)
          let '(lsAB, lsB) := List.partition (fun '(_, o) => match o with Some _ => true | None => false end) ls in
          (* get the assembly functions that have no corresponding normal function *)
-         let lsA := List.filter (fun '(n1, _) => negb (List.existsb (fun '(n2, _) => (n1 =? n2)%string) normal_data)) assembly_data in
+         let lsA := List.filter (fun '(n_asm, _) => negb (List.existsb (fun '(n, _) => cmp n_asm n) normal_data)) assembly_data in
          (* flatten out assembly functions and move the file names first *)
-         let lsA := List.flat_map (fun '(function_name, ls) => List.map (fun '(file_name, v) => (file_name, (function_name, v))) ls) lsA in
+         let lsA := List.flat_map (fun '(function_name_asm, ls) => List.map (fun '(file_name, v) => (file_name, (function_name_asm, v))) ls) lsA in
          (* group by files for assembly data *)
-         let lsA := List.groupAllBy (fun '(n1, _) '(n2, _) => (n1 =? n2)%string) lsA in
+         let lsA := List.groupAllBy (fun '(n1_asm, _) '(n2_asm, _) => (n1_asm =? n2_asm)%string) lsA in
          let lsA
            := Option.List.map
                 (fun ls
@@ -1344,7 +1374,7 @@ Section __.
          (Option.List.map
             (fun '((n, normal_data), assembly_data)
              => match assembly_data with
-                | Some (_n (* should be equal to n *), assembly_data) => Some (n, (assembly_data, normal_data))
+                | Some (_n_asm, assembly_data) => Some (n, (assembly_data, normal_data))
                 | None => (* should not happen *) None
                 end)
             lsAB,

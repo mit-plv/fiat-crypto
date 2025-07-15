@@ -1,7 +1,7 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import Lia.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import ZArith.
 Require Import bedrock2.Syntax.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Spec.ModularArithmetic.
@@ -54,6 +54,10 @@ Class word_by_word_Montgomery_ops
       computed_op
         (WordByWordMontgomery.square m width)
         Field.square
+        list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
+    felem_copy_op :
+      computed_op
+        (WordByWordMontgomery.copy m width) Field.felem_copy
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     from_bytes_op :
       computed_op
@@ -165,13 +169,14 @@ Section WordByWordMontgomery.
           (to_mont : string)
           (ops : word_by_word_Montgomery_ops n m)
           mul_func add_func sub_func opp_func square_func
-          from_bytes_func to_bytes_func
+          felem_copy_func from_bytes_func to_bytes_func
           from_mont_func to_mont_func select_znz_func
           (mul_func_eq : mul_func = b2_func mul_op)
           (add_func_eq : add_func = b2_func add_op)
           (sub_func_eq : sub_func = b2_func sub_op)
           (opp_func_eq : opp_func = b2_func opp_op)
           (square_func_eq : square_func = b2_func square_op)
+          (felem_copy_func_eq : felem_copy_func = b2_func felem_copy_op)
           (from_bytes_func_eq : from_bytes_func = b2_func from_bytes_op)
           (to_bytes_func_eq : to_bytes_func = b2_func to_bytes_op)
           (from_mont_func_eq : from_mont_func = b2_func from_mont_op)
@@ -492,6 +497,41 @@ Qed.
       intros. apply Hcorrect; auto. }
   Qed.
 
+  Lemma list_Z_bounded_by_unsigned (xs : list (@Interface.word.rep _ word)) :
+    list_Z_bounded_by
+      (Primitives.saturated_bounds (List.length xs) width)
+      (map Interface.word.unsigned xs).
+  Proof using parameters_sentinel ok.
+    induction xs; cbn; [reflexivity|].
+    eapply list_Z_bounded_by_cons; split; [|assumption].
+    eapply Bool.andb_true_iff; split; eapply Z.leb_le;
+    cbv [Primitives.word_bound]; cbn.
+    { eapply Properties.word.unsigned_range. }
+    { eapply Le.Z.le_sub_1_iff, Properties.word.unsigned_range. }
+  Qed.
+
+  Lemma felem_copy_func_correct :
+    valid_func (res felem_copy_op _) ->
+    forall functions,
+      Interface.map.get functions Field.felem_copy = Some felem_copy_func ->
+      (@spec_of_felem_copy _ _ _ _ _ _ _ field_representation_raw) functions.
+  Proof using M_eq check_args_ok felem_copy_func_eq ok.
+    cbv [spec_of_felem_copy]. rewrite felem_copy_func_eq. intros.
+    pose proof copy_correct
+         _ _ _ ltac:(eassumption) _ (res_eq felem_copy_op)
+      as Hcorrect.
+
+    eapply felem_copy_correct; [ .. | eassumption | eassumption ];
+      repeat handle_side_conditions; [ | ]; intros.
+    { (* output *value* is correct *)
+      unshelve erewrite (proj1 (Hcorrect _ _)); cycle 1.
+      { rewrite map_map, List.map_ext_id; trivial; intros.
+        rewrite ?Word.Interface.word.of_Z_unsigned; trivial. }
+      { rewrite <- H2. exact (list_Z_bounded_by_unsigned x0). } }
+    { (* output *bounds* are correct *)
+      intros. apply Hcorrect; auto. }
+    Qed.
+
   Lemma from_bytes_func_correct :
     valid_func (res from_bytes_op _) ->
     forall functions,
@@ -747,7 +787,7 @@ End WordByWordMontgomery.
 
 (* Prototyping full pipeline: *)
 
-Require Import Coq.Strings.String.
+From Coq Require Import String.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.ValidComputable.Func.
 
@@ -760,15 +800,16 @@ Definition field_parameters_prefixed
     (prefix ++ "add")
     (prefix ++ "carry_add_dontuse")
     (prefix ++ "sub")
+    (prefix ++ "carry_sub_dontuse")
     (prefix ++ "opp")
     (prefix ++ "square")
     (prefix ++ "scmula24")
     (prefix ++ "inv")
     (prefix ++ "from_bytes")
     (prefix ++ "to_bytes")
-    (prefix ++ "felem_copy")
-    (prefix ++ "small_literal")
     (prefix ++ "select_znz")
+    (prefix ++ "felem_copy")
+    (prefix ++ "from_word")
 .
 
 

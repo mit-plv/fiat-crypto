@@ -1,4 +1,4 @@
-Require Import Coq.FSets.FMapPositive.
+From Coq Require Import FMapPositive.
 Require Import Crypto.Util.Bool.Equality.
 Require Import Crypto.Util.Decidable.
 

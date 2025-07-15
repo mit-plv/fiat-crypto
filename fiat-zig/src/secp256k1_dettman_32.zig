@@ -17,9 +17,9 @@ const mode = @import("builtin").mode; // Checked arithmetic is disabled in non-d
 
 inline fn cast(comptime DestType: type, target: anytype) DestType {
     @setEvalBranchQuota(10000);
-    if (@typeInfo(@TypeOf(target)) == .Int) {
-        const dest = @typeInfo(DestType).Int;
-        const source = @typeInfo(@TypeOf(target)).Int;
+    if (@typeInfo(@TypeOf(target)) == .int) {
+        const dest = @typeInfo(DestType).int;
+        const source = @typeInfo(@TypeOf(target)).int;
         if (dest.bits < source.bits) {
             const T = std.meta.Int(source.signedness, dest.bits);
             return @bitCast(@as(T, @truncate(target)));

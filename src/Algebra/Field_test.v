@@ -1,4 +1,4 @@
-Require Import Coq.PArith.BinPosDef.
+From Coq Require Import BinPosDef.
 Require Import Crypto.Util.Decidable Crypto.Util.Notations.
 Require Import Crypto.Algebra.Ring Crypto.Algebra.Field.
 

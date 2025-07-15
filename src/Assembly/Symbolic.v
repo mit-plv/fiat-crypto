@@ -1,17 +1,17 @@
 Require Crypto.Assembly.Parse.
-Require Import Coq.Program.Tactics.
-Require Import Coq.derive.Derive.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.NArith.NArith.
-Require Import Coq.Sorting.Permutation.
-Require Import Coq.Structures.Equalities.
-Require Import Coq.Structures.OrderedType.
-Require Import Coq.Structures.Orders.
-Require Import Coq.FSets.FMapInterface.
-Require Import Coq.FSets.FMapPositive.
-Require Import Coq.FSets.FMapFacts.
+From Coq.Program Require Import Tactics.
+From Coq Require Import Derive.
+From Coq Require Import List.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
+From Coq Require Import NArith.
+From Coq Require Import Permutation.
+From Coq Require Import Equalities.
+From Coq Require Import OrderedType.
+From Coq Require Import Orders.
+From Coq Require Import FMapInterface.
+From Coq Require Import FMapPositive.
+From Coq Require Import FMapFacts.
 Require Crypto.Util.ZRange.
 Require Crypto.Util.Tuple.
 Require Import Util.OptionList.
@@ -24,6 +24,7 @@ Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Land.Fold.
 Require Import Crypto.Util.ZUtil.Ones.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.Signed.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Option.
@@ -46,7 +47,6 @@ Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ListUtil.Permutation.
 Require Import Crypto.Util.ListUtil.Partition.
 Require Import Crypto.Util.ListUtil.Filter.
-Require Import Crypto.Util.ListUtil.PermutationCompat. Import ListUtil.PermutationCompat.Coq.Sorting.Permutation.
 Require Import Crypto.Util.NUtil.Sorting.
 Require Import Crypto.Util.NUtil.Testbit.
 Require Import Crypto.Util.FSets.FMapOption.
@@ -59,7 +59,6 @@ Require Import Crypto.Util.FSets.FMapInterface.
 Require Import Crypto.Util.FSets.FMapFacts.
 Require Import Crypto.Util.FSets.FMapTrieEx.
 Require Import Crypto.Util.MSets.MSetN.
-Require Import Crypto.Util.ListUtil.PermutationCompat.
 Require Import Crypto.Util.Bool.LeCompat.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SetEvars.
@@ -79,7 +78,7 @@ Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.Tactics.WarnIfGoalsRemain.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import coqutil.Z.bitblast.
-Require Import Coq.Strings.String.
+From Coq Require Import String.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.Strings.Show.Enum.
 Require Import Crypto.Assembly.Syntax.
@@ -401,6 +400,10 @@ Module Export Options.
      than every time, because it is (currently) quadratic to compute
      in the number of passes *)
   Class rewriting_passes_opt := rewriting_passes : list rewrite_pass.
+  (** Should we symex the assembly first, even though this may be more inefficient? *)
+  Class debug_symex_asm_first_opt := debug_symex_asm_first : bool.
+  (** How deep should we reveal nodes? *)
+  Class node_reveal_depth_opt := node_reveal_depth : nat.
   Definition default_rewriting_passes
              {rewriting_pipeline : rewriting_pipeline_opt}
              {rewriting_pass_filter : rewriting_pass_filter_opt}
@@ -410,17 +413,25 @@ Module Export Options.
   Class symbolic_options_opt :=
     { asm_rewriting_pipeline : rewriting_pipeline_opt
     ; asm_rewriting_pass_filter : rewriting_pass_filter_opt
+    ; asm_debug_symex_asm_first : debug_symex_asm_first_opt
+    ; asm_node_reveal_depth : node_reveal_depth_opt
     }.
+
+  Definition default_node_reveal_depth := 3%nat.
 
   (* This holds the list of computed options, which are passed around between methods *)
   Class symbolic_options_computed_opt :=
     { asm_rewriting_passes : rewriting_passes_opt
+    ; asm_debug_symex_asm_first_computed : debug_symex_asm_first_opt
+    ; asm_node_reveal_depth_computed : node_reveal_depth_opt
     }.
 
   (* N.B. The default rewriting pass filter should not be changed here, but instead changed in CLI.v where it is derived from a default string *)
   Definition default_symbolic_options : symbolic_options_opt
     := {| asm_rewriting_pipeline := default_rewrite_pass_order
        ; asm_rewriting_pass_filter := fun _ => true
+       ; asm_debug_symex_asm_first := false
+       ; asm_node_reveal_depth := default_node_reveal_depth
        |}.
 End Options.
 Module Export Hints.
@@ -431,6 +442,10 @@ Module Export Hints.
          asm_rewriting_pipeline
          asm_rewriting_pass_filter
          asm_rewriting_passes
+         asm_debug_symex_asm_first
+         asm_debug_symex_asm_first_computed
+         asm_node_reveal_depth
+         asm_node_reveal_depth_computed
   .
   #[global]
    Hint Cut [
@@ -438,6 +453,10 @@ Module Export Hints.
         (asm_rewriting_pipeline
         | asm_rewriting_pass_filter
         | asm_rewriting_passes
+        | asm_debug_symex_asm_first
+        | asm_debug_symex_asm_first_computed
+        | asm_node_reveal_depth
+        | asm_node_reveal_depth_computed
         ) ( _ * )
         (Build_symbolic_options_opt
         | Build_symbolic_options_computed_opt
@@ -587,7 +606,6 @@ Import ListNotations.
 
 Section WithContext.
   Context (ctx : symbol -> option Z).
-  Definition signed s n : Z := (Z.land (Z.shiftl 1 (Z.of_N s-1) + n) (Z.ones (Z.of_N s)) - Z.shiftl 1 (Z.of_N s-1))%Z.
   Definition op_to_Z_binop (o : op) : option _
       := match o with
          | add _ => Some Z.add
@@ -618,12 +636,12 @@ Section WithContext.
     | subborrow s, cons a args' =>
         Some ((- Z.shiftr (a - List.fold_right Z.add 0 args') (Z.of_N s)) mod 2)
     | addoverflow s, args => Some (Z.b2z (negb (Z.eqb
-      (signed s (keep s (List.fold_right Z.add 0 args)))
-                         (List.fold_right Z.add 0%Z (List.map (signed s) args)))))
+      (Z.signed s (keep s (List.fold_right Z.add 0 args)))
+                         (List.fold_right Z.add 0%Z (List.map (Z.signed s) args)))))
     | neg s, [a] => Some (keep s (- a))
     | shl s, [a; b] => Some (keep s (Z.shiftl a b))
     | shr s, [a; b] => Some (keep s (Z.shiftr a b))
-    | sar s, [a; b] => Some (keep s (Z.shiftr (signed s a) b))
+    | sar s, [a; b] => Some (keep s (Z.shiftr (Z.signed s a) b))
     | rcr s, [v1; cf; cnt] => Some (
         let v1c := Z.lor v1 (Z.shiftl cf (Z.of_N s)) in
         let l := Z.lor v1c (Z.shiftl v1 (1+Z.of_N s)) in
@@ -1565,7 +1583,7 @@ Module dag <: Dag.
                       | lia
                       | exfalso; assumption
                       | rewrite Nat2N.id in *
-                      | rewrite nth_error_app
+                      | rewrite ListUtil.nth_error_app
                       | rewrite Nat.sub_diag in *
                       | rewrite nth_error_length_error in * by lia
                       | rewrite @nth_error_nil_error in *
@@ -2595,18 +2613,6 @@ Proof using Type.
   rewrite Z.ones_equiv in * |- ; rewrite Z.shiftr_div_pow2, Z.div_small; cbn; lia.
 Qed.
 
-Lemma signed_small s v (Hv : (0 <= v <= Z.ones (Z.of_N s-1))%Z) : signed s v = v.
-Proof using Type.
-  destruct (N.eq_dec s 0); subst; cbv [signed].
-  { rewrite Z.land_0_r. cbn in *; Lia.lia. }
-  rewrite !Z.land_ones, !Z.shiftl_mul_pow2, ?Z.add_0_r, ?Z.mul_1_l by Lia.lia.
-  rewrite Z.ones_equiv in Hv.
-  rewrite Z.mod_small; try ring.
-  enough (2 ^ Z.of_N s = 2 ^ (Z.of_N s - 1) + 2 ^ (Z.of_N s - 1))%Z; try Lia.lia.
-  replace (Z.of_N s) with (1+(Z.of_N s-1))%Z at 1 by Lia.lia.
-  rewrite Z.pow_add_r; try Lia.lia.
-Qed.
-
 Definition addoverflow_small (d : dag) :=
   fun e => match e with
     ExprApp (addoverflow s, ([_]|[_;_]|[_;_;_]) as args) =>
@@ -2623,7 +2629,7 @@ Proof using Type.
   BreakMatch.break_match_hyps; Option.inversion_option; t;
     epose proof Z.ones_equiv (Z.of_N s -1);
     destruct_head'_and; reflect_hyps; destruct_head'_and.
-  all : rewrite Z.land_ones, !Z.mod_small, !signed_small, !Z.eqb_refl; trivial.
+  all : rewrite Z.land_ones, !Z.mod_small, !Z.signed_small, !Z.eqb_refl; trivial.
   all : try split; try Lia.lia.
   all : replace (Z.of_N s) with (1+(Z.of_N s-1))%Z at 1 by Lia.lia;
   rewrite Z.pow_add_r; try Lia.lia.
@@ -2684,19 +2690,6 @@ Lemma fold_right_filter_identity A B f init F xs
 Proof.
   apply fold_right_filter_identity_gen with (G:=id); cbv [id]; intuition (subst; eauto).
 Qed.
-
-Lemma signed_0 s : signed s 0 = 0%Z.
-Proof using Type.
-  destruct (N.eq_dec s 0); subst; trivial.
-  cbv [signed].
-  rewrite !Z.land_ones, !Z.shiftl_mul_pow2, ?Z.add_0_r, ?Z.mul_1_l by Lia.lia.
-  rewrite Z.mod_small; try ring.
-  split; try (eapply Z.pow_lt_mono_r; Lia.lia).
-  eapply Z.pow_nonneg; Lia.lia.
-Qed.
-#[global]
-Hint Rewrite signed_0 : zsimplify_const zsimplify zsimplify_fast.
-Global Hint Resolve signed_0 : zarith.
 
 Lemma interp_op_drop_identity o id : identity o = Some id ->
   forall G xs, interp_op G o xs = interp_op G o (List.filter (fun v => negb (Z.eqb v id)) xs).
@@ -3824,12 +3817,12 @@ Qed.
 End Rewrite.
 
 Definition simplify {opts : symbolic_options_computed_opt} (dag : dag) (e : node idx) :=
-  Rewrite.expr dag (reveal_node_at_least dag 3 e).
+  Rewrite.expr dag (reveal_node_at_least dag node_reveal_depth e).
 
 Lemma eval_simplify {opts : symbolic_options_computed_opt} G d n v : gensym_dag_ok G d -> eval_node G d n v -> eval G d (simplify d n) v.
 Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.
 
-Definition reg_state := Tuple.tuple (option idx) 16.
+Definition reg_state := Tuple.tuple (option idx) (compute! (List.length widest_registers)).
 Definition flag_state := Tuple.tuple (option idx) 6.
 Definition mem_state := list (idx * idx).
 
@@ -3863,16 +3856,16 @@ Definition reverse_lookup_flag (st : flag_state) (i : idx) : option FLAG
        (List.find (fun v => option_beq N.eqb (Some i) (fst v))
                   (Tuple.to_list _ (Tuple.map2 (@pair _ _) st (CF, PF, AF, ZF, SF, OF)))).
 
-Definition get_reg (st : reg_state) (ri : nat) : option idx
-  := Tuple.nth_default None ri st.
-Definition set_reg (st : reg_state) ri (i : idx) : reg_state
+Definition get_reg (st : reg_state) (ri : N) : option idx
+  := Tuple.nth_default None (N.to_nat ri) st.
+Definition set_reg (st : reg_state) (ri : N) (i : idx) : reg_state
   := Tuple.from_list_default None _ (ListUtil.set_nth
-       ri
+       (N.to_nat ri)
        (Some i)
        (Tuple.to_list _ st)).
 Definition reverse_lookup_widest_reg (st : reg_state) (i : idx) : option REG
   := option_map
-       (fun v => widest_register_of_index (fst v))
+       (fun v => widest_register_of_index (N.of_nat (fst v)))
        (List.find (fun v => option_beq N.eqb (Some i) (snd v))
                   (List.enumerate (Tuple.to_list _ st))).
 
@@ -3906,7 +3899,7 @@ Definition update_mem_with (st : symbolic_state) (f : mem_state -> mem_state) : 
   := {| dag_state := st.(dag_state); symbolic_reg_state := st.(symbolic_reg_state) ; symbolic_flag_state := st.(symbolic_flag_state) ; symbolic_mem_state := f st.(symbolic_mem_state) |}.
 
 Global Instance show_reg_state : Show reg_state := fun st =>
-  show (List.map (fun '(n, v) => (widest_register_of_index n, v)) (ListUtil.List.enumerate (Option.List.map id (Tuple.to_list _ st)))).
+  show (List.combine widest_registers (Option.List.map id (Tuple.to_list _ st))).
 
 Global Instance show_flag_state : Show flag_state :=
   fun '(cfv, pfv, afv, zfv, sfv, ofv) => (
@@ -3953,7 +3946,7 @@ Module error.
   Local Unset Decidable Equality Schemes.
   Variant error :=
   | get_flag (f : FLAG) (s : flag_state)
-  | get_reg (r : nat + REG) (s : reg_state)
+  | get_reg (r : N + REG) (s : reg_state)
   | load (a : idx) (s : symbolic_state)
   | remove (a : idx) (s : symbolic_state)
   | remove_has_duplicates (a : idx) (vs : list idx) (s : symbolic_state)
@@ -3977,7 +3970,7 @@ Module error.
             => ["In flag state " ++ show_flag_state s;
                 "Flag " ++ show f ++ " was read without being set."]
           | get_reg (inl i) s
-            => ["Invalid reg index " ++ show_nat i]
+            => ["Invalid reg index " ++ show i]
           | get_reg (inr r) s
             => ["In reg state " ++ show_reg_state s;
                 "Register " ++ show (r : REG) ++ " read without being set."]
@@ -4042,7 +4035,7 @@ Definition mapM_ {A B} (f: A -> M B) l : M unit := _ <- mapM f l; ret tt.
 
 Definition error_get_reg_of_reg_index ri : symbolic_state -> error
   := error.get_reg (let r := widest_register_of_index ri in
-                    if (reg_index r =? ri)%nat
+                    if (reg_index r =? ri)%N
                     then inr r
                     else inl ri).
 
@@ -4199,7 +4192,7 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
   let s : OperationSize := s in
   let resize_reg r := some_or (fun _ => reg_of_index_and_shift_and_bitcount_opt (reg_index r, 0%N (* offset *), s)) (fun _ => error.unimplemented_instruction instr) in
   match instr.(Syntax.op), instr.(args) with
-  | (mov | movzx), [dst; src] => (* Note: unbundle when switching from N to Z *)
+  | (mov | movzx | movabs | movdqa | movdqu | movq | movd | movups), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- GetOperand src;
     SetOperand dst v
   | xchg, [a; b] => (* Note: unbundle when switching from N to Z *)
@@ -4351,6 +4344,12 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
     v <- Symeval (or s@(shr s@(lo, cnt), shl s@(hi, cnt')));
     _ <- SetOperand dst v;
     HavocFlags
+  | shld, [hi as dst; lo; cnt] =>
+    let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
+    let cnt' := addZ@(Z.of_N s, PreApp negZ [cnt]) in
+    v <- Symeval (or s@(shr s@(lo, cnt'), shl s@(hi, cnt)));
+    _ <- SetOperand dst v;
+    HavocFlags
   | inc, [dst] =>
     v <- Symeval (add s@(dst, PreARG 1%Z));
     o <- Symeval (addoverflow s@(dst, PreARG 1%Z));
@@ -4386,6 +4385,9 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
        rsp' <- Symeval (s:=stack_addr_size) (add stack_addr_size@(rsp', PreARG ((Z.of_N s/8)%Z)));
        _    <- SetOperand rsp rsp';
                SetOperand dst v
+
+  | nop, [] => ret tt
+
   | _, _ => err (error.unimplemented_instruction instr)
  end
   | Some prefix => err (error.unimplemented_prefix instr) end
@@ -4395,6 +4397,8 @@ Definition SymexRawLine {opts : symbolic_options_computed_opt} {descr:descriptio
   match rawline with
   | EMPTY
   | LABEL _
+  | DIRECTIVE _
+  | ASCII_ _ _
     => ret tt
   | INSTR instr
     => SymexNormalInstruction instr

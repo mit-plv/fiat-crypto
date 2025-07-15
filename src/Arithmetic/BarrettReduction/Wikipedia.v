@@ -1,6 +1,6 @@
 (*** Barrett Reduction *)
 (** This file implements Barrett Reduction on [Z].  We follow Wikipedia. *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+From Coq Require Import ZArith Lia.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.ZUtil.Tactics.SimplifyFractionsLe.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.

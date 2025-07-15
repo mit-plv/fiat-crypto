@@ -9,6 +9,7 @@ echo "::group::Cloning BoringSSL"
     set -ex
     rm -rf boringssl
     git clone https://boringssl.googlesource.com/boringssl || exit $?
+    git -C boringssl log -1
 }) || exit $?
 echo "::endgroup::"
 
@@ -39,7 +40,7 @@ echo "::group::Building BoringSSL"
     set -ex
     mkdir build
     cd build
-    cmake -GNinja .. -DCMAKE_CXX_FLAGS="-Wno-error=unused-function ${EXTRA_CFLAGS}" -DCMAKE_C_FLAGS="-Wno-error=unused-function ${EXTRA_CFLAGS}" || exit $?
+    cmake -GNinja .. -DOPENSSL_NO_ASM=1 -DCMAKE_CXX_FLAGS="-Wno-error=unused-function ${EXTRA_CFLAGS}" -DCMAKE_C_FLAGS="-Wno-error=unused-function ${EXTRA_CFLAGS}" || exit $?
     ninja || exit $?
 }) || exit $?
 echo "::endgroup::"

@@ -1,7 +1,7 @@
-Require Import Coq.Bool.Bool.
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.ZArith.Znumtheory.
+From Coq Require Import Bool.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
+From Coq Require Import Znumtheory.
 Require Import Crypto.Util.Loops.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.ZUtil.

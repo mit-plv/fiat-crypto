@@ -1,8 +1,12 @@
 (** * Miscellaneous Well-Foundedness Facts *)
-Require Import Coq.Setoids.Setoid Coq.Program.Program Coq.Program.Wf Coq.Arith.Wf_nat Coq.Classes.Morphisms Coq.Init.Wf.
-Require Import Coq.Lists.SetoidList.
+From Coq Require Import Setoid Program.
+From Coq.Program Require Import Wf.
+From Coq Require Import Wf_nat Morphisms.
+From Coq.Init Require Import Wf.
+From Coq Require Import SetoidList.
+From Coq Require Import PeanoNat.
 Require Export Crypto.Util.FixCoqMistakes.
-Require Coq.Arith.EqNat.
+From Coq Require EqNat.
 
 Local Set Implicit Arguments.
 Local Unset Uniform Inductive Parameters.
@@ -448,8 +452,8 @@ Section wf.
          | S n' => prod_relationA eqA R (@iterated_prod_relationA n')
          end.
 
-    Fixpoint nat_eq_transfer (P : nat -> Type) (n m : nat) : P n -> (P m) + (EqNat.beq_nat n m = false)
-      := match n, m return P n -> (P m) + (EqNat.beq_nat n m = false) with
+    Fixpoint nat_eq_transfer (P : nat -> Type) (n m : nat) : P n -> (P m) + (Nat.eqb n m = false)
+      := match n, m return P n -> (P m) + (Nat.eqb n m = false) with
          | 0, 0 => fun x => inl x
          | S n', S m' => @nat_eq_transfer (fun v => P (S v)) n' m'
          | _, _ => fun _ => inr eq_refl
@@ -462,11 +466,11 @@ Section wf.
          end.
 
     Fixpoint nat_eq_transfer_neq (P : nat -> Type) (n m : nat)
-      : forall v : P n, (if EqNat.beq_nat n m as b return ((P m) + (b = false)) -> Prop
+      : forall v : P n, (if Nat.eqb n m as b return ((P m) + (b = false)) -> Prop
                          then fun _ => True
                          else fun v => v = inr eq_refl)
                           (nat_eq_transfer P n m v)
-      := match n, m return forall v : P n, (if EqNat.beq_nat n m as b return ((P m) + (b = false)) -> Prop
+      := match n, m return forall v : P n, (if Nat.eqb n m as b return ((P m) + (b = false)) -> Prop
                                             then fun _ => True
                                             else fun v => v = inr eq_refl)
                                              (nat_eq_transfer P n m v)
@@ -522,8 +526,8 @@ Section wf.
                             cbv beta in *;
                             generalize dependent (nat_eq_transfer iterated_prod n1' n0');
                             let Heq := fresh in
-                            destruct (EqNat.beq_nat n1' n0') eqn:Heq;
-                            [ apply EqNat.beq_nat_true_iff in Heq; subst; rewrite <- EqNat.beq_nat_refl in H;
+                            destruct (Nat.eqb n1' n0') eqn:Heq;
+                            [ apply Nat.eqb_eq in Heq; subst; rewrite Nat.eqb_refl in H;
                               exfalso; clear -H; congruence
                             | ]
                        | [ |- context[@nat_eq_transfer iterated_prod n0' n1' _] ]

@@ -1,10 +1,10 @@
-Require Import Coq.Lists.SetoidList.
-Require Import Coq.Sorting.Permutation.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
-Require Import Coq.NArith.NArith.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import SetoidList.
+From Coq Require Import Permutation.
+From Coq Require Import List.
+From Coq Require Import Lia.
+From Coq Require Import NArith.
+From Coq Require Import ZArith.
+From Coq Require Import Morphisms.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.Language.API.
 Require Import Crypto.Language.APINotations.
@@ -25,7 +25,6 @@ Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.Partition.
 Require Import Crypto.Util.ListUtil.Permutation.
-Require Import Crypto.Util.ListUtil.PermutationCompat.
 Require Import Crypto.Util.ListUtil.FoldMap.
 Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ListUtil.StdlibCompat.
@@ -1847,7 +1846,7 @@ Qed.
 (* TODO: this is Symbolic.get_reg; move to SymbolicProofs? *)
 Lemma get_reg_set_reg_full s rn rn' v
   : get_reg (set_reg s rn v) rn'
-    = if ((rn <? ((fun n (_ : Tuple.tuple _ n) => n) _ s)) && (rn =? rn'))%nat%bool
+    = if ((rn <? ((fun n (_ : Tuple.tuple _ n) => N.of_nat n) _ s)) && (rn =? rn'))%N%bool
       then Some v
       else get_reg s rn'.
 Proof.
@@ -1863,7 +1862,7 @@ Qed.
 
 (* TODO: this is Symbolic.get_reg; move to SymbolicProofs? *)
 Local Lemma get_reg_set_reg_same s rn v
-      (H : (rn < (fun n (_ : Tuple.tuple _ n) => n) _ s)%nat)
+      (H : (rn < (fun n (_ : Tuple.tuple _ n) => N.of_nat n) _ s)%N)
   : get_reg (set_reg s rn v) rn = Some v.
 Proof.
   rewrite get_reg_set_reg_full; break_innermost_match; reflect_hyps; cbv beta in *; try reflexivity; lia.

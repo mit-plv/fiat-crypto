@@ -1,5 +1,5 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
@@ -53,6 +53,28 @@ Module Compilers.
              | base.type.list A => list (interp A)
              | base.type.option A => option (interp A)
              end%type.
+        Fixpoint bitwidth {t} : interp t -> binterp t
+          := match t with
+            | base.type.type_base base.type.Z => fun r => ZRange.bitwidth r
+            | base.type.type_base _ as t
+            | base.type.unit as t
+              => fun x => x
+            | base.type.prod A B => fun '(a, b) => (@bitwidth A a, @bitwidth B b)
+            | base.type.list A => List.map (@bitwidth A)
+            | base.type.option A => option_map (@bitwidth A)
+            end.
+        Fixpoint of_bitwidth (signed : bool) {t} : binterp t -> interp t
+          := match t with
+             | base.type.type_base base.type.Z => fun r => ZRange.of_bitwidth signed r
+             | base.type.type_base _ as t
+             | base.type.unit as t
+               => fun x => x
+             | base.type.prod A B => fun '(a, b) => (@of_bitwidth signed A a, @of_bitwidth signed B b)
+             | base.type.list A => List.map (@of_bitwidth signed A)
+             | base.type.option A => option_map (@of_bitwidth signed A)
+             end%type.
+        Notation of_bitwidth_unsigned := (@of_bitwidth false).
+        Notation of_bitwidth_signed := (@of_bitwidth true).
         Fixpoint map_ranges (f : zrange -> zrange) {t} : interp t -> interp t
           := match t with
              | base.type.type_base base.type.Z => f
@@ -253,25 +275,6 @@ Module Compilers.
                        end
                | base.type.unit => fun 'tt 'tt => true
                end.
-          Definition option_map_2 {A B C} (f : A -> B -> C) (a : option A) (b : option B) :=
-            match a, b with Datatypes.Some a, Datatypes.Some b => Datatypes.Some (f a b) | _, _ => Datatypes.None end.
-          Fixpoint union {t} : interp t -> interp t -> interp t
-            := match t return interp t -> interp t -> interp t with
-               | base.type.type_base base.type.Z => option_map_2 ZRange.union
-               | base.type.unit | base.type.type_base _ => fun _ _ => None (* NOTE: could pass through x==y *)
-               | base.type.prod A B => fun '(a, b) '(a', b') =>
-                 (@union A a a', @union B b b')
-               | base.type.list A => RingMicromega.map_option2 (fun la lb =>
-                 if Nat.eqb (length la) (length lb)
-                 then Datatypes.Some (List.map (uncurry (@union A)) (List.combine la lb))
-                 else Datatypes.None)
-               | base.type.option A => RingMicromega.map_option2 (fun l r =>
-                 match l, r return option (option (interp A)) with
-                 | Datatypes.Some l, Datatypes.Some r => Datatypes.Some (Datatypes.Some (union l r))
-                 | Datatypes.None, Datatypes.None => Datatypes.Some (Datatypes.None)
-                 | _, _ => Datatypes.None
-                 end)
-               end.
           Fixpoint interp_beq {t1 t2} : interp t1 -> interp t2 -> bool
             := match t1, t2 return interp t1 -> interp t2 -> bool with
                | base.type.type_base _ as t1, base.type.type_base _ as t2 => option_beq_hetero base.interp_beq
@@ -300,6 +303,29 @@ Module Compilers.
           Proof. apply reflect_to_beq; exact _. Qed.
           Lemma interp_beq_lb {t x y} : x = y -> @interp_beq t t x y = true.
           Proof. apply reflect_to_beq; exact _. Qed.
+
+          Fixpoint union {t} : interp t -> interp t -> interp t
+            := match t return interp t -> interp t -> interp t with
+               | base.type.type_base base.type.Z => Option.map2 ZRange.union
+               | base.type.type_base _ as t
+               | base.type.unit as t
+                 => fun x y
+                    => if @interp_beq t t x y
+                       then x
+                       else None
+               | base.type.prod A B => fun '(a, b) '(a', b') =>
+                 (@union A a a', @union B b b')
+               | base.type.list A => fun la lb => Option.bind2 la lb (fun la lb =>
+                 if Nat.eqb (length la) (length lb)
+                 then Datatypes.Some (List.map (uncurry (@union A)) (List.combine la lb))
+                 else Datatypes.None)
+               | base.type.option A => fun oa ob => Option.bind2 oa ob (fun l r =>
+                 match l, r return option (option (interp A)) with
+                 | Datatypes.Some l, Datatypes.Some r => Datatypes.Some (Datatypes.Some (union l r))
+                 | Datatypes.None, Datatypes.None => Datatypes.Some Datatypes.None
+                 | _, _ => Datatypes.None
+                 end)
+               end.
 
           Fixpoint is_bounded_by {t} : interp t -> binterp t -> bool
             := match t with
@@ -402,6 +428,18 @@ Module Compilers.
            | type.base x => @base.is_bounded_by x
            | type.arrow s d => fun _ _ => false
            end.
+      Fixpoint bitwidth (signed : bool) {t} : interp t -> einterp t
+        := match t with
+           | type.base x => @base.bitwidth x
+           | type.arrow s d => fun fr sz => @bitwidth signed d (fr (@of_bitwidth signed s sz))
+           end
+      with of_bitwidth (signed : bool) {t} : einterp t -> interp t
+        := match t with
+           | type.base x => @base.of_bitwidth signed x
+           | type.arrow s d => fun fr sz => @of_bitwidth signed d (fr (@bitwidth signed s sz))
+           end.
+      Notation of_bitwidth_unsigned := (@of_bitwidth false).
+      Notation of_bitwidth_signed := (@of_bitwidth true).
       Module option.
         (** turn a [type] into a [Set] describing the type of optional
             bounds on that base type; bounds on a [Z] may be either a
@@ -532,13 +570,17 @@ Module Compilers.
              | ident.Nat_pred as idc
                => option_map (ident.interp idc)
              | ident.Z_of_nat as idc
-               => option_map (fun n => r[Z.of_nat n~>Z.of_nat n]%zrange)
+             | ident.Z_pos as idc
+               => option_map (fun n => r[ident.interp idc n~>ident.interp idc n]%zrange)
              | ident.Z_to_nat as idc
+             | ident.Z_to_pos as idc
                => fun v => v <- to_literal v; Some (ident.interp idc v)
              | ident.List_length _
                => option_map (@List.length _)
              | ident.value_barrier
                => fun x => x
+             | ident.Pos_mul as idc
+             | ident.Pos_add as idc
              | ident.Nat_max as idc
              | ident.Nat_mul as idc
              | ident.Nat_add as idc
@@ -592,12 +634,6 @@ Module Compilers.
                      | None => None
                      end
              | ident.Z_eqb as idc
-             | ident.Z_leb as idc
-             | ident.Z_ltb as idc
-             | ident.Z_geb as idc
-             | ident.Z_gtb as idc
-             | ident.Z_max as idc
-             | ident.Z_min as idc
              | ident.Z_pow as idc
              | ident.Z_lxor as idc
              | ident.Z_modulo as idc
@@ -677,18 +713,20 @@ Module Compilers.
                          n
                    | None => ZRange.type.base.option.None
                    end
-             | ident.nat_rect_arrow _ _
-             | ident.eager_nat_rect_arrow _ _
-               => fun O_case S_case n v
-                 => match n with
+             | ident.nat_rect_arrow _ _ as idc
+             | ident.eager_nat_rect_arrow _ _ as idc
+             | ident.nat_rect_fbb_b _ _ _ as idc
+             | ident.nat_rect_fbb_b_b _ _ _ _ as idc
+               => fun O_case S_case n
+                  => let t := ((fun t (idc : ident (_ -> _ -> _ -> t)) => t) _ idc) in
+                   match n return type.option.interp t with
                    | Some n
                      => nat_rect
                          _
                          O_case
                          (fun n' rec => S_case (Some n') rec)
                          n
-                         v
-                   | None => ZRange.type.base.option.None
+                   | None => ZRange.type.option.None
                    end
              | ident.list_rect _ _
              | ident.eager_list_rect _ _
@@ -702,18 +740,23 @@ Module Compilers.
                          ls
                    | None => ZRange.type.base.option.None
                    end
-             | ident.list_rect_arrow _ _ _
-             | ident.eager_list_rect_arrow _ _ _
-               => fun N C ls v
-                 => match ls with
+             | ident.list_rect_arrow _ _ _ as idc
+             | ident.eager_list_rect_arrow _ _ _ as idc
+             | ident.list_rect_fbb_b _ _ _ _ as idc
+             | ident.list_rect_fbb_b_b _ _ _ _ _ as idc
+             | ident.list_rect_fbb_b_b_b _ _ _ _ _ _ as idc
+             | ident.list_rect_fbb_b_b_b_b _ _ _ _ _ _ _ as idc
+             | ident.list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _ as idc
+               => fun N C ls
+                 => let t := ((fun t (idc : ident (_ -> _ -> _ -> t)) => t) _ idc) in
+                   match ls return type.option.interp t with
                    | Some ls
                      => list_rect
                          _
                          N
                          (fun x xs rec => C x (Some xs) rec)
                          ls
-                         v
-                   | None => ZRange.type.base.option.None
+                   | None => ZRange.type.option.None
                    end
              | ident.list_case _ _
                => fun N C ls
@@ -756,10 +799,19 @@ Module Compilers.
              | ident.List_app _
                => fun ls1 ls2 => ls1 <- ls1; ls2 <- ls2; Some (List.app ls1 ls2)
              | ident.List_rev _ => option_map (@List.rev _)
+             | ident.Z_leb as idc
+             | ident.Z_ltb as idc
+             | ident.Z_geb as idc
+             | ident.Z_gtb as idc
+               => fun x y => x <- x; y <- y; ZRange.ToConstant.four_corners Bool.eqb (ident.interp idc) x y
              | ident.Z_opp as idc
              | ident.Z_log2 as idc
              | ident.Z_log2_up as idc
                => fun x => x <- x; Some (ZRange.two_corners (ident.interp idc) x)
+             | ident.Z_abs as idc
+               => fun x => x <- x; Some (ZRange.two_corners_and_zero (ident.interp idc) x)
+             | ident.Z_max as idc
+             | ident.Z_min as idc
              | ident.Z_add as idc
              | ident.Z_mul as idc
              | ident.Z_sub as idc
@@ -939,22 +991,6 @@ Module Compilers.
                                 (ZRange.four_corners Z.add x y)
                                 (ZRange.eight_corners (fun x y m => Z.max 0 (x + y - m))
                                                       x y m)))
-
-             | Compilers.ident_Z_abs as idc
-               => fun x => x <- x; Some (ZRange.two_corners_and_zero (ident.interp idc) x)
-
-             | Compilers.ident_Pos_add => fun _ _ => None
-             | Compilers.ident_Pos_mul => fun _ _ => None
-             | Compilers.ident_Z_pos => fun _ => None
-             | Compilers.ident_Z_to_pos => fun _ => None
-
-             | Compilers.ident_nat_rect_fbb_b _ _ _ => fun _ _ _ _ => ZRange.type.base.option.None
-             | Compilers.ident_nat_rect_fbb_b_b _ _ _ _ => fun _ _ _ _ _ => ZRange.type.base.option.None
-             | Compilers.ident_list_rect_fbb_b _ _ _ _ => fun _ _ _ _ => ZRange.type.base.option.None
-             | Compilers.ident_list_rect_fbb_b_b _ _ _ _ _ => fun _ _ _ _ _ => ZRange.type.base.option.None
-             | Compilers.ident_list_rect_fbb_b_b_b _ _ _ _ _ _ => fun _ _ _ _ _ _ => ZRange.type.base.option.None
-             | Compilers.ident_list_rect_fbb_b_b_b_b _ _ _ _ _ _ _ => fun _ _ _ _ _ _ _=> ZRange.type.base.option.None
-             | Compilers.ident_list_rect_fbb_b_b_b_b_b _ _ _ _ _ _ _ _ => fun _ _ _ _ _ _ _ _=> ZRange.type.base.option.None
              end%option.
       End option.
     End ident.

@@ -1,6 +1,6 @@
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import ZArith.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Representation.
 Require Import Crypto.Bedrock.Field.Synthesis.New.ComputedOp.
@@ -15,8 +15,8 @@ Section Field.
   Definition s : Z := 2^130.
   Definition c : list (Z * Z) := [(1, 5)]%Z.
 
-  Existing Instances Defaults32.default_parameters
-           Defaults32.default_parameters_ok.
+  Existing Instances Bitwidth32.BW32
+    Defaults32.default_parameters Defaults32.default_parameters_ok.
   Definition prefix : string := "fe1305_"%string.
 
   (* Define Poly1305 field *)
@@ -103,6 +103,15 @@ Section Field.
                         functions)
          As fe1305_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
+
+  Derive fe1305_carry_sub
+         SuchThat (forall functions,
+                      functions_contain functions fe1305_carry_sub ->
+                      spec_of_BinOp bin_carry_sub
+                        (field_representation:=field_representation n s c)
+                        (functions))
+         As fe1305_carry_sub_correct.
+  Proof. Time derive_bedrock2_func carry_sub_op. Qed.
 End Field.
 
 (* Uncomment below to sanity-check that compilation works *)
@@ -116,6 +125,7 @@ Definition funcs : list (string * func) :=
     fe1305_add;
     fe1305_carry_add;
     fe1305_sub;
+    fe1305_carry_sub;
     fe1305_square;
     fe1305_to_bytes;
     fe1305_from_bytes ].

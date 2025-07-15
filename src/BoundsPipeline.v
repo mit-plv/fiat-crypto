@@ -2,10 +2,10 @@
 (** This file assembles the various compiler stages together into a
     composed pipeline.  It is the final interface for the compiler,
     right before integration with Arithmetic. *)
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.QArith.QArith_base.
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
+From Coq Require Import ZArith.
+From Coq Require Import QArith_base.
+From Coq Require Import List.
+From Coq Require Import String.
 Require Import Crypto.Util.ZUtil.Log2.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
@@ -458,8 +458,8 @@ Module Pipeline.
       := match t return ZRange.type.base.option.interp t -> ZRange.type.option.interp t-> bool * list (nat * nat) * list (zrange * zrange) with
          | base.type.unit
            => fun 'tt 'tt => (false, nil, nil)
-         | base.type.type_base Compilers.positive
          | base.type.type_base base.type.nat
+         | base.type.type_base base.type.positive
          | base.type.type_base base.type.bool
          | base.type.type_base base.type.zrange
          | base.type.type_base base.type.string
@@ -660,12 +660,6 @@ Module Pipeline.
              (E : Expr t)
     : DebugM (Expr t)
     := (E <- DoRewrite E;
-        (* Note that DCE evaluates the expr with two different [var]
-           arguments, and so results in a pipeline that is 2x slower
-           unless we pass through a uniformly concrete [var] type
-           first *)
-        dlet_nd e := ToFlat E in
-        let E := FromFlat e in
         E <- if with_subst01 return DebugM (Expr t)
              then wrap_debug_rewrite ("subst01 for " ++ descr) (Subst01.Subst01 ident.is_comment) E
              else if with_dead_code_elimination return DebugM (Expr t)
@@ -675,8 +669,6 @@ Module Pipeline.
              then wrap_debug_rewrite ("LetBindReturn for " ++ descr) (UnderLets.LetBindReturn (@ident.is_var_like)) E
              else Debug.ret E;
         E <- DoRewrite E; (* after inlining, see if any new rewrite redexes are available *)
-        dlet_nd e := ToFlat E in
-        let E := FromFlat e in
         E <- if with_dead_code_elimination
              then wrap_debug_rewrite ("DCE after " ++ descr) (DeadCodeElimination.EliminateDead ident.is_comment) E
              else Debug.ret E;
@@ -1291,7 +1283,7 @@ Module Pipeline.
     first [ progress destruct_head'_and
           | progress cbv [Classes.base Classes.ident Classes.ident_interp Classes.base_interp Classes.exprInfo] in *
           | progress intros
-          | progress rewrite_strat repeat topdown hints interp
+          | progress rewrite_strat repeat topdown choice (hints interp_extra) (hints interp)
           | solve [ typeclasses eauto with nocore interp_extra wf_extra ]
           | solve [ typeclasses eauto ]
           | break_innermost_match_step
@@ -1329,7 +1321,7 @@ Module Pipeline.
     : Wf (Debug.eval_result (@wrap_debug_rewrite debug_rewriting t descr DoRewrite E)).
   Proof. cbv [wrap_debug_rewrite Let_In] in *; repeat (wf_interp_t; handle_debug_t). Qed.
 
-  Global Hint Resolve @Wf_wrap_debug_rewrite : wf wf_extra.
+  Global Hint Resolve Wf_wrap_debug_rewrite : wf wf_extra.
   Global Hint Opaque wrap_debug_rewrite : wf wf_extra.
 
   Lemma Interp_wrap_debug_rewrite {debug_rewriting : debug_rewriting_opt} {t} descr DoRewrite
@@ -1354,7 +1346,7 @@ Module Pipeline.
     : Wf (Debug.eval_result (@RewriteAndEliminateDeadAndInline_gen debug_rewriting t descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return E)).
   Proof. cbv [RewriteAndEliminateDeadAndInline_gen Let_In] in *; repeat (wf_interp_t; handle_debug_t). Qed.
 
-  Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline_gen : wf wf_extra.
+  Global Hint Resolve Wf_RewriteAndEliminateDeadAndInline_gen : wf wf_extra.
   Global Hint Opaque RewriteAndEliminateDeadAndInline_gen : wf wf_extra.
 
   Lemma Interp_RewriteAndEliminateDeadAndInline_gen {debug_rewriting : debug_rewriting_opt} {t} descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return
@@ -1379,7 +1371,7 @@ Module Pipeline.
     : Wf (Debug.eval_result (@RewriteAndEliminateDeadAndInline debug_rewriting t descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return E)).
   Proof. cbv [RewriteAndEliminateDeadAndInline Let_In]; wf_interp_t. Qed.
 
-  Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline : wf wf_extra.
+  Global Hint Resolve Wf_RewriteAndEliminateDeadAndInline : wf wf_extra.
   Global Hint Opaque RewriteAndEliminateDeadAndInline : wf wf_extra.
 
   Lemma Interp_RewriteAndEliminateDeadAndInline {debug_rewriting : debug_rewriting_opt} {t} descr DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return

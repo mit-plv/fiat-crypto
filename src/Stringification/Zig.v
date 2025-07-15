@@ -1,5 +1,5 @@
-From Coq Require Import ZArith.ZArith MSets.MSetPositive FSets.FMapPositive
-     Strings.String Strings.Ascii Bool.Bool Lists.List Strings.HexString.
+From Coq Require Import ZArith MSetPositive FMapPositive
+     String Ascii Bool List HexString.
 From Crypto.Util Require Import
      ListUtil
      Strings.String Strings.Decimal Strings.Show
@@ -101,9 +101,9 @@ Module Zig.
          "";
          "inline fn cast(comptime DestType: type, target: anytype) DestType {";
          "    @setEvalBranchQuota(10000);";
-         "    if (@typeInfo(@TypeOf(target)) == .Int) {";
-         "        const dest = @typeInfo(DestType).Int;";
-         "        const source = @typeInfo(@TypeOf(target)).Int;";
+         "    if (@typeInfo(@TypeOf(target)) == .int) {";
+         "        const dest = @typeInfo(DestType).int;";
+         "        const source = @typeInfo(@TypeOf(target)).int;";
          "        if (dest.bits < source.bits) {";
          "            const T = std.meta.Int(source.signedness, dest.bits);";
          "            return @bitCast(@as(T, @truncate(target)));";

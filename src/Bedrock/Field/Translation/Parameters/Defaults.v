@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import String.
+From Coq Require Import List.
 Require Import coqutil.Word.Interface.
 Require Import bedrock2.Syntax.
 Require Import Crypto.Bedrock.Field.Common.Types.
@@ -54,6 +54,7 @@ Section Defs.
     | expr.literal _ => true
     | expr.var x => negb (String.eqb x ERROR)
     | expr.load _ a => error_free_expr a
+    | expr.op1 _ x => error_free_expr x
     | expr.op _ x y => (error_free_expr x && error_free_expr y)%bool
     | expr.inlinetable _ _ index => error_free_expr index
     | expr.ite c a b => (error_free_expr c && error_free_expr a && error_free_expr b)%bool

@@ -1,7 +1,7 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Strings.String.
+From Coq Require Import ZArith.
+From Coq Require Import List.
+From Coq Require Import Lia.
+From Coq Require Import String.
 Require Import bedrock2.ProgramLogic.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.

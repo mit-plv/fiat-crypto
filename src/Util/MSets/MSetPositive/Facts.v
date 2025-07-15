@@ -1,9 +1,9 @@
-Require Import Coq.Setoids.Setoid.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Lists.List.
-Require Import Coq.Lists.SetoidList.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.MSets.MSetFacts.
+From Coq Require Import Setoid.
+From Coq Require Import Morphisms.
+From Coq Require Import List.
+From Coq Require Import SetoidList.
+From Coq Require Import MSetPositive.
+From Coq Require Import MSetFacts.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SpecializeBy.

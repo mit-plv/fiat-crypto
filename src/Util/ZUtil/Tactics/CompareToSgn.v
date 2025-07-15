@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 Module Z.
   Ltac compare_to_sgn :=
     repeat match goal with

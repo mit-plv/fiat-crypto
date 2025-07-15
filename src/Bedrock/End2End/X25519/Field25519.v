@@ -1,6 +1,7 @@
-Require Import Coq.Strings.String. Local Open Scope string_scope.
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Spec.Curve25519.
+From Coq Require Import String. Local Open Scope string_scope.
+From Coq Require Import List.
+From Coq Require Import ZArith.
 Require Import coqutil.Word.Bitwidth32.
 Require Import coqutil.Macros.WithBaseName.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
@@ -38,17 +39,8 @@ Section Field.
   Instance translation_parameters_ok : Types.ok.
   Proof using ext_spec_ok. constructor; try exact _; apply prefix_name_gen_unique. Qed.
 
-  (* Define Curve25519 field *)
-  Instance field_parameters : FieldParameters.
-  Proof using Type.
-    let M := (eval vm_compute in (Z.to_pos (UnsaturatedSolinas.m s c))) in
-    (* curve 'A' parameter *)
-    let a := constr:(F.of_Z M 486662) in
-    let prefix := constr:("fe25519_"%string) in
-    eapply
-      (field_parameters_prefixed
-         M ((a - F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
-  Defined.
+  Instance field_parameters : FieldParameters :=
+    field_parameters_prefixed Curve25519.p Curve25519.M.a24 "fe25519_"%string.
 
   (* Call fiat-crypto pipeline on all field operations *)
   Instance fe25519_ops : unsaturated_solinas_ops (ext_spec:=ext_spec) n s c.
@@ -138,6 +130,15 @@ Section Field.
         functions)
     As fe25519_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
+
+  Derive fe25519_carry_sub
+    SuchThat (forall functions,
+      Interface.map.get functions "fe25519_carry_sub" = Some fe25519_carry_sub ->
+      spec_of_BinOp bin_carry_sub
+        (field_representation:=field_representation n s c)
+        functions)
+    As fe25519_carry_sub_correct.
+  Proof. Time derive_bedrock2_func carry_sub_op. Qed.
 
   Derive fe25519_scmula24
     SuchThat (forall functions,

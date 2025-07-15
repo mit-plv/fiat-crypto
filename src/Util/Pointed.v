@@ -1,4 +1,4 @@
-Require Import Coq.Numbers.BinNums.
+From Coq Require Import BinNums.
 
 Local Generalizable All Variables.
 

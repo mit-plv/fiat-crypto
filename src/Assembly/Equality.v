@@ -1,9 +1,9 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.NArith.NArith.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Bool.Bool.
+From Coq Require Import ZArith.
+From Coq Require Import NArith.
+From Coq Require Import String.
+From Coq Require Import List.
+From Coq Require Import Morphisms.
+From Coq Require Import Bool.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Bool.Reflect.
@@ -35,8 +35,8 @@ Bind Scope REG_scope with REG.
 Infix "=?" := REG_beq : REG_scope.
 
 Global Instance REG_beq_spec : reflect_rel (@eq REG) REG_beq | 10
-  := reflect_of_beq internal_REG_dec_bl internal_REG_dec_lb.
-Definition REG_beq_eq x y : (x =? y)%REG = true <-> x = y := conj (@internal_REG_dec_bl _ _) (@internal_REG_dec_lb _ _).
+  := reflect_of_beq REG_dec_bl REG_dec_lb.
+Definition REG_beq_eq x y : (x =? y)%REG = true <-> x = y := conj (@REG_dec_bl _ _) (@REG_dec_lb _ _).
 Lemma REG_beq_neq x y : (x =? y)%REG = false <-> x <> y.
 Proof. rewrite <- REG_beq_eq; destruct (x =? y)%REG; intuition congruence. Qed.
 Global Instance REG_beq_compat : Proper (eq ==> eq ==> eq) REG_beq | 10.
@@ -95,11 +95,25 @@ Bind Scope AccessSize_scope with AccessSize.
 Infix "=?" := AccessSize_beq : AccessSize_scope.
 
 Global Instance AccessSize_beq_spec : reflect_rel (@eq AccessSize) AccessSize_beq | 10
-  := reflect_of_beq internal_AccessSize_dec_bl internal_AccessSize_dec_lb.
-Definition AccessSize_beq_eq x y : (x =? y)%AccessSize = true <-> x = y := conj (@internal_AccessSize_dec_bl _ _) (@internal_AccessSize_dec_lb _ _).
+  := reflect_of_beq AccessSize_dec_bl AccessSize_dec_lb.
+Definition AccessSize_beq_eq x y : (x =? y)%AccessSize = true <-> x = y := conj (@AccessSize_dec_bl _ _) (@AccessSize_dec_lb _ _).
 Lemma AccessSize_beq_neq x y : (x =? y)%AccessSize = false <-> x <> y.
 Proof. rewrite <- AccessSize_beq_eq; destruct (x =? y)%AccessSize; intuition congruence. Qed.
 Global Instance AccessSize_beq_compat : Proper (eq ==> eq ==> eq) AccessSize_beq | 10.
+Proof. repeat intro; subst; reflexivity. Qed.
+
+Declare Scope rip_relative_kind_scope.
+Delimit Scope rip_relative_kind_scope with rip_relative_kind.
+Bind Scope rip_relative_kind_scope with rip_relative_kind.
+
+Infix "=?" := rip_relative_kind_beq : rip_relative_kind_scope.
+
+Global Instance rip_relative_kind_beq_spec : reflect_rel (@eq rip_relative_kind) rip_relative_kind_beq | 10
+  := reflect_of_beq internal_rip_relative_kind_dec_bl internal_rip_relative_kind_dec_lb.
+Definition rip_relative_kind_beq_eq x y : (x =? y)%rip_relative_kind = true <-> x = y := conj (@internal_rip_relative_kind_dec_bl _ _) (@internal_rip_relative_kind_dec_lb _ _).
+Lemma rip_relative_kind_beq_neq x y : (x =? y)%rip_relative_kind = false <-> x <> y.
+Proof. rewrite <- rip_relative_kind_beq_eq; destruct (x =? y)%rip_relative_kind; intuition congruence. Qed.
+Global Instance rip_relative_kind_beq_compat : Proper (eq ==> eq ==> eq) rip_relative_kind_beq | 10.
 Proof. repeat intro; subst; reflexivity. Qed.
 
 Declare Scope MEM_scope.
@@ -111,7 +125,8 @@ Definition MEM_beq (x y : MEM) : bool
       && option_beq String.eqb x.(mem_base_label) y.(mem_base_label)
       && (option_beq REG_beq x.(mem_base_reg) y.(mem_base_reg))
       && (option_beq (prod_beq _ _ Z.eqb REG_beq) x.(mem_scale_reg) y.(mem_scale_reg))
-      && (option_beq Z.eqb x.(mem_offset) y.(mem_offset)))%bool.
+      && (option_beq Z.eqb x.(mem_offset) y.(mem_offset))
+      && (rip_relative_kind_beq x.(rip_relative) y.(rip_relative)))%bool.
 Global Arguments MEM_beq !_ !_ / .
 
 Infix "=?" := MEM_beq : MEM_scope.
@@ -141,8 +156,8 @@ Bind Scope FLAG_scope with FLAG.
 Infix "=?" := FLAG_beq : FLAG_scope.
 
 Global Instance FLAG_beq_spec : reflect_rel (@eq FLAG) FLAG_beq | 10
-  := reflect_of_beq internal_FLAG_dec_bl internal_FLAG_dec_lb.
-Definition FLAG_beq_eq x y : (x =? y)%FLAG = true <-> x = y := conj (@internal_FLAG_dec_bl _ _) (@internal_FLAG_dec_lb _ _).
+  := reflect_of_beq FLAG_dec_bl FLAG_dec_lb.
+Definition FLAG_beq_eq x y : (x =? y)%FLAG = true <-> x = y := conj (@FLAG_dec_bl _ _) (@FLAG_dec_lb _ _).
 Lemma FLAG_beq_neq x y : (x =? y)%FLAG = false <-> x <> y.
 Proof. rewrite <- FLAG_beq_eq; destruct (x =? y)%FLAG; intuition congruence. Qed.
 Global Instance FLAG_beq_compat : Proper (eq ==> eq ==> eq) FLAG_beq | 10.
@@ -155,8 +170,8 @@ Bind Scope OpCode_scope with OpCode.
 Infix "=?" := OpCode_beq : OpCode_scope.
 
 Global Instance OpCode_beq_spec : reflect_rel (@eq OpCode) OpCode_beq | 10
-  := reflect_of_beq internal_OpCode_dec_bl internal_OpCode_dec_lb.
-Definition OpCode_beq_eq x y : (x =? y)%OpCode = true <-> x = y := conj (@internal_OpCode_dec_bl _ _) (@internal_OpCode_dec_lb _ _).
+  := reflect_of_beq OpCode_dec_bl OpCode_dec_lb.
+Definition OpCode_beq_eq x y : (x =? y)%OpCode = true <-> x = y := conj (@OpCode_dec_bl _ _) (@OpCode_dec_lb _ _).
 Lemma OpCode_beq_neq x y : (x =? y)%OpCode = false <-> x <> y.
 Proof. rewrite <- OpCode_beq_eq; destruct (x =? y)%OpCode; intuition congruence. Qed.
 Global Instance OpCode_beq_compat : Proper (eq ==> eq ==> eq) OpCode_beq | 10.
@@ -169,8 +184,8 @@ Bind Scope OpPrefix_scope with OpPrefix.
 Infix "=?" := OpPrefix_beq : OpPrefix_scope.
 
 Global Instance OpPrefix_beq_spec : reflect_rel (@eq OpPrefix) OpPrefix_beq | 10
-  := reflect_of_beq internal_OpPrefix_dec_bl internal_OpPrefix_dec_lb.
-Definition OpPrefix_beq_eq x y : (x =? y)%OpPrefix = true <-> x = y := conj (@internal_OpPrefix_dec_bl _ _) (@internal_OpPrefix_dec_lb _ _).
+  := reflect_of_beq OpPrefix_dec_bl OpPrefix_dec_lb.
+Definition OpPrefix_beq_eq x y : (x =? y)%OpPrefix = true <-> x = y := conj (@OpPrefix_dec_bl _ _) (@OpPrefix_dec_lb _ _).
 Lemma OpPrefix_beq_neq x y : (x =? y)%OpPrefix = false <-> x <> y.
 Proof. rewrite <- OpPrefix_beq_eq; destruct (x =? y)%OpPrefix; intuition congruence. Qed.
 Global Instance OpPrefix_beq_compat : Proper (eq ==> eq ==> eq) OpPrefix_beq | 10.
@@ -257,6 +272,8 @@ Definition RawLine_beq (x y : RawLine) : bool
      | DEFAULT_REL, DEFAULT_REL => true
      | INSTR x, INSTR y => NormalInstruction_beq x y
      | ALIGN x, ALIGN y => String.eqb x y
+     | DIRECTIVE x, DIRECTIVE y => String.eqb x y
+     | ASCII_ z x, ASCII_ z' y => Bool.eqb z z' && String.eqb x y
      | SECTION _, _
      | GLOBAL _, _
      | LABEL _, _
@@ -264,8 +281,10 @@ Definition RawLine_beq (x y : RawLine) : bool
      | INSTR _, _
      | ALIGN _, _
      | DEFAULT_REL, _
+     | DIRECTIVE _, _
+     | ASCII_ _ _, _
        => false
-     end.
+     end%bool.
 Global Arguments RawLine_beq !_ !_ / .
 
 Infix "=?" := RawLine_beq : RawLine_scope.

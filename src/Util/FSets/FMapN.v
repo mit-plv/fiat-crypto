@@ -1,10 +1,10 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.Bool.Bool.
-Require Import Coq.Lists.List.
-Require Import Coq.Structures.OrderedType.
-Require Import Coq.FSets.FMapInterface.
-Require Import Coq.FSets.FMapPositive.
-Require Import Coq.NArith.NArith.
+From Coq Require Import Lia.
+From Coq Require Import Bool.
+From Coq Require Import List.
+From Coq Require Import OrderedType.
+From Coq Require Import FMapInterface.
+From Coq Require Import FMapPositive.
+From Coq Require Import NArith.
 Require Import Crypto.Util.FSets.FMapInterface.
 Require Import Crypto.Util.FSets.FMapIso.
 Require Import Crypto.Util.FSets.FMapOption.

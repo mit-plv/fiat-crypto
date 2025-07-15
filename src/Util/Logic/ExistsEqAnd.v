@@ -1,4 +1,4 @@
-Require Import Coq.Setoids.Setoid.
+From Coq Require Import Setoid.
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Tactics.DestructHead.
 

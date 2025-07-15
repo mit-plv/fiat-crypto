@@ -3,6 +3,7 @@ name: Test Generated Go
 on:
   push:
   pull_request:
+  merge_group:
   schedule:
     - cron: '0 0 1 * *'
 
@@ -16,11 +17,11 @@ jobs:
       cancel-in-progress: true
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
     - name: Set up Go 1.13
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: 1.13
       id: go

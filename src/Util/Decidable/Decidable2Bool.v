@@ -1,7 +1,7 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.QArith.QArith_base.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import QArith_base.
+From Coq Require Import Lia.
+From Coq Require Import List.
 Require Import Crypto.Util.SideConditions.ReductionPackages.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Decidable.
@@ -36,7 +36,7 @@ Lemma dec_nat_eq_to_bool a b
   : (if dec (a = b) then true else false) = Nat.eqb a b.
 Proof.
   destruct (Nat.eqb a b) eqn:H; break_match; try reflexivity.
-  { apply beq_nat_true in H; congruence. }
+  { apply Nat.eqb_eq in H; congruence. }
   { rewrite Nat.eqb_refl in H; congruence. }
 Qed.
 #[global]

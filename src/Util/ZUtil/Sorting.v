@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.Sorting.Mergesort Coq.Structures.Orders.
+From Coq Require Import ZArith Lia.
+From Coq Require Import Mergesort Orders.
 
 Module Z.
   Module Order <: TotalLeBool.

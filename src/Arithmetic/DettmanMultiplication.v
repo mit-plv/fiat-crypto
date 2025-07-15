@@ -1,8 +1,8 @@
 Require Import Crypto.Arithmetic.Core.
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith Lia.
+From Coq Require Import List.
 Require Import Crypto.Arithmetic.ModOps.
-Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
+From Coq Require Import QArith_base Qround.
 Local Open Scope list_scope.
 
 Import Associational Positional.
@@ -29,7 +29,7 @@ Module DettmanMultiplication.
         (s_big : weight (n - 1)%nat <= s)
         (weight_lt_width : forall i: nat, (weight i * 2^register_width) mod weight (i + 1)%nat = 0)
         (wprops : @weight_properties weight)
-        
+
         (weight_0 := weight_0 wprops)
         (weight_positive := weight_positive wprops)
         (weight_multiples := weight_multiples wprops)
@@ -43,7 +43,7 @@ Module DettmanMultiplication.
      *)
     Definition c := Positional.to_associational weight n
                       (Positional.simple_encode weight n c').
-      
+
     Lemma s_positive : s > 0.
     Proof. remember (weight_positive (n - 1)). lia. Qed.
 
@@ -89,7 +89,7 @@ Module DettmanMultiplication.
       intros x y H H1. rewrite Divide.Z.mod_divide_full in H1. destruct H1 as [z H1].
       subst. rewrite Z_div_mult by lia. rewrite Z.mul_comm. apply Z_mod_mult.
     Qed.
-    
+
     Lemma weight_mod_quotient_zero : forall i j : nat,
         (i <= j)%nat ->
         (weight j) mod (weight j / weight i) = 0.
@@ -98,7 +98,7 @@ Module DettmanMultiplication.
       apply Weight.weight_multiples_full; assumption.
     Qed.
 
-    Lemma divisible_implies_nonzero a b : 
+    Lemma divisible_implies_nonzero a b :
       a mod b = 0 ->
       a <> 0 ->
       a / b <> 0.
@@ -115,11 +115,11 @@ Module DettmanMultiplication.
       - apply eval_simple_encode; auto with arith. lia.
       - f_equal. cbv [Associational.eval]. simpl. destruct c'; lia.
     Qed.
-    
+
     Lemma p_nz : s - Associational.eval c <> 0.
-    Proof. rewrite c_correct. auto with arith. Qed.    
+    Proof. rewrite c_correct. auto with arith. Qed.
     Hint Resolve p_nz : arith.
-    
+
     Local Open Scope nat_scope.
 
     Definition reduce' from to before := dedup_weights (reduce_one s from (from / to) c before).
@@ -191,7 +191,7 @@ Module DettmanMultiplication.
       intros H. apply Divide.Z.mod_divide_full. apply Z.divide_mul_l.
       rewrite <- Divide.Z.mod_divide_full. apply Weight.weight_multiples_full; try assumption.
     Qed.
-    
+
     Lemma weight_prod_div_nz (i j : nat) :
       (i <= j)%nat ->
       weight j * 2^register_width / weight i <> 0.
@@ -230,10 +230,10 @@ Module DettmanMultiplication.
       - simpl. autorewrite with push_eval. assumption.
     Qed.
     Hint Rewrite eval_carry_chain : push_eval.
-    
+
     Definition carry_reduce_chain idxs x :=
       fold_right carry_reduce x (rev idxs).
-      
+
     Lemma eval_carry_reduce_chain idxs x :
       ((Associational.eval (carry_reduce_chain idxs x)) mod (s - Associational.eval c) = (Associational.eval x) mod (s - Associational.eval c))%Z.
     Proof.
@@ -358,7 +358,7 @@ Module DettmanMultiplication.
     Hint Rewrite Positional.eval_from_associational Positional.eval_to_associational : push_eval.
 
     Local Open Scope Z_scope.
-      
+
     Lemma eval_reduce_carry_borrow r0 :
       (Positional.eval weight n (reduce_carry_borrow r0)) mod (s - Associational.eval c) =
       (Associational.eval r0) mod (s - Associational.eval c).
@@ -405,7 +405,7 @@ Module dettman_multiplication_mod_ops.
 
     Local Notation limbwidth_num' := (Z.log2 s - last_limb_width).
     Local Notation limbwidth_den' := (n - 1). (* can't use Q here, or else reification doesn't work *)
-    
+
     Context
         (registers_big : limbwidth_num' <= register_width * limbwidth_den') (* stated somewhat awkwardly in terms of Z; i think we might want to avoid Q here too *)
         (weight_big : Z.log2 s <= n * limbwidth_num' / limbwidth_den').
@@ -413,9 +413,9 @@ Module dettman_multiplication_mod_ops.
     (* I don't want these to be automatically unfolded in the proofs below. *)
     Definition limbwidth_num := limbwidth_num'.
     Definition limbwidth_den := limbwidth_den'.
-    
+
     Definition weight := (weight limbwidth_num limbwidth_den).
-    
+
     Definition mulmod := mulmod s c register_width n last_reduction weight.
     Definition squaremod := squaremod s c register_width n last_reduction weight.
 
@@ -448,8 +448,8 @@ Module dettman_multiplication_mod_ops.
     Qed.
 
     Lemma Qopp_distr_mul_r x y : (- (x * y) == x * -y)%Q.
-    Proof. cbv [Qmult Qopp Qeq]. simpl. lia. Qed.      
-      
+    Proof. cbv [Qmult Qopp Qeq]. simpl. lia. Qed.
+
     Lemma s_small : forall i : nat, (weight (i + n) / weight i) mod s = 0.
     Proof.
       intros i. repeat rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
@@ -487,7 +487,7 @@ Module dettman_multiplication_mod_ops.
              ++ apply Qinv_le_0_compat. replace 0%Q with (inject_Z 0) by reflexivity.
                 rewrite <- Zle_Qle. lia.
     Qed.
-      
+
     Lemma s_gt_0 : 0 < s.
       assert (H: s <= 0 \/ 0 < s) by lia. destruct H as [H|H].
       - apply Z.log2_nonpos in H. lia.
@@ -497,7 +497,7 @@ Module dettman_multiplication_mod_ops.
     Lemma s_big : weight (n - 1) <= s.
     Proof.
       rewrite (ModOps.weight_ZQ_correct _ _ limbwidth_good).
-      cbv [limbwidth_num limbwidth_den]. 
+      cbv [limbwidth_num limbwidth_den].
       remember (Z.log2_spec _ s_gt_0) as H eqn:clearMe. clear clearMe.
       destruct H as [H _].
       apply (Z.le_trans _ (2 ^ Z.log2 s)); try apply H.

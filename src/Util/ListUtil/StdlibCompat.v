@@ -1,8 +1,8 @@
 (* Compat file for newer results from the stdlib *)
-Require Import Coq.micromega.Lia.
-Require Import Coq.Arith.Arith.
-Require Import Coq.Sorting.Permutation.
-Require Import Coq.Lists.List.
+From Coq Require Import Lia.
+From Coq Require Import Arith.
+From Coq Require Import Permutation.
+From Coq Require Import List.
 Require Export Crypto.Util.FixCoqMistakes.
 Import ListNotations.
 Local Open Scope bool_scope.

@@ -1,5 +1,5 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ZRange.

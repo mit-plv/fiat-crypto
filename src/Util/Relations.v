@@ -1,9 +1,9 @@
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Logic.
-Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
+From Coq Require Import Morphisms Setoid.
 
 Lemma symmetry_iff {T} {R} {Rsym:@Symmetric T R} x y: R x y <-> R y x.
-  intuition eauto using symmetry.
+  epose symmetry; intuition eauto.
 Qed.
 
 Lemma and_rewrite_l {A B} {RA RB} {Equivalence_RA:Equivalence RA} {Equivalence_RB:Equivalence RB}

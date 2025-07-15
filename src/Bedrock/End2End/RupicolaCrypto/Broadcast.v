@@ -1,10 +1,12 @@
-Require Import Coq.Unicode.Utf8.
+From Coq Require Import Utf8.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
 
-Require Coq.Init.Byte Coq.Strings.String. Import Init.Byte(byte(..)) String.
+From Coq Require Init.Byte String.
+From Coq Require Import Init.Byte(byte(..)).
+Import String.
 Require Import coqutil.Datatypes.List. Import Lists.List List.ListNotations.
-Require Import Coq.ZArith.BinInt. Import Zdiv. Local Open Scope Z_scope.
+From Coq Require Import BinInt. Import Zdiv. Local Open Scope Z_scope.
 Require Import coqutil.Byte coqutil.Word.LittleEndianList.
 
 (* TODO: move into core Bedrock *)

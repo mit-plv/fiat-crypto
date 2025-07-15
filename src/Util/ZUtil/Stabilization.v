@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import ZArith.
+From Coq Require Import Lia.
+From Coq Require Import Morphisms.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.

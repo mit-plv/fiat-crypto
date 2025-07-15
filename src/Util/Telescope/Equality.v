@@ -1,4 +1,4 @@
-Require Import Coq.Classes.RelationClasses Coq.Relations.Relation_Definitions Coq.Classes.Morphisms.
+From Coq Require Import RelationClasses Relation_Definitions Morphisms.
 Require Import Crypto.Util.Telescope.Core.
 Require Import Crypto.Util.Telescope.Instances.
 Require Import Crypto.Util.Equality.

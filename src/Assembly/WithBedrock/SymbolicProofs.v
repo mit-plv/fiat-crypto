@@ -1,13 +1,15 @@
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
+From Coq Require Import List.
+From Coq Require Import Lia.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.
-Require Import Coq.NArith.NArith.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import NArith.
+From Coq Require Import ZArith.
+Require Import Crypto.Util.ZUtil.Testbit.
 Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Util.ErrorT.
 Import Coq.Lists.List. (* [map] is [List.map] not [ErrorT.map] *)
 Require Import Crypto.Util.ListUtil.IndexOf.
 Require Import Crypto.Util.Tactics.WarnIfGoalsRemain.
+Require Import Crypto.Util.ZUtil.Definitions.
 Require Crypto.Util.Option.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Symbolic.
@@ -49,9 +51,6 @@ Section Memory.
   Import Map.Interface Word.Interface BinInt.
   Local Coercion Z.of_nat : nat >-> Z.
   Local Coercion word.unsigned : word.rep >-> Z.
-  Let sepclause_of_map {key value map} (m : @map.rep key value map)
-    : map.rep -> Prop := Logic.eq m.
-  Local Coercion sepclause_of_map : Interface.map.rep >-> Funclass.
 
   Lemma unchecked_store_bytes_of_sep
     m a bs1 bs2 R (Hsep : sep R (bs1$@a) m)
@@ -314,7 +313,7 @@ Qed.
 
 Lemma get_reg_R_regs d s m (HR : R_regs d s m) ri :
   forall i, Symbolic.get_reg s ri = Some i ->
-  exists v, eval d i v /\ Tuple.nth_default 0 ri m = v.
+  exists v, eval d i v /\ Tuple.nth_default 0 (N.to_nat ri) m = v.
 Proof using Type.
   cbv [Symbolic.get_reg]; intros.
   rewrite <-Tuple.nth_default_to_list in H.
@@ -336,7 +335,7 @@ Qed.
 
 Lemma get_reg_R s m (HR : R s m) ri :
   forall i, Symbolic.get_reg s ri = Some i ->
-  exists v, eval s i v /\ Tuple.nth_default 0 ri (m : reg_state) = v.
+  exists v, eval s i v /\ Tuple.nth_default 0 (N.to_nat ri) (m : reg_state) = v.
 Proof using Type.
   destruct s, m; apply get_reg_R_regs, HR.
 Qed.
@@ -1198,7 +1197,6 @@ Proof using Type.
              end; eauto; try Lia.lia; try congruence.
              eexists. split. eauto.
              f_equal. f_equal.
-             change Symbolic.signed with Semantics.signed.
              rewrite ?Z.add_0_r.
              f_equal.
              1:congruence.
@@ -1225,7 +1223,6 @@ Proof using Type.
              end; eauto; try Lia.lia; try congruence.
              eexists. split. eauto.
              f_equal. f_equal.
-             change Symbolic.signed with Semantics.signed.
              rewrite ?Z.add_0_r.
              f_equal.
              1:congruence.
@@ -1244,9 +1241,9 @@ Proof using Type.
              | _ => destruct_one_match
              | _ => progress intuition idtac
              end; rewrite ?Z.add_0_r, ?Z.odd_opp; eauto; try Lia.lia; try congruence.
-             replace (Semantics.signed n 0) with 0; cycle 1.
+             replace (Z.signed n 0) with 0; cycle 1.
              { pose_operation_size_cases. clear -H0; intuition (subst; cbv; trivial). }
-             rewrite Z.add_0_r; cbv [Semantics.signed Symbolic.signed]; congruence. }
+             rewrite Z.add_0_r; cbv [Z.signed]; congruence. }
 
   Unshelve. all : match goal with H : context[Syntax.adc] |- _ => idtac | _ => shelve end.
   { destruct s';
@@ -1259,8 +1256,7 @@ Proof using Type.
              | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn -[Syntax.operation_size] in * ; subst)
              | _ => destruct_one_match
              | _ => progress intuition idtac
-             end; rewrite ?Z.add_assoc, ?Z.add_0_r, ?Z.odd_opp; eauto; try Lia.lia; try congruence.
-             change Symbolic.signed with Semantics.signed. congruence. }
+             end; rewrite ?Z.add_assoc, ?Z.add_0_r, ?Z.odd_opp; eauto; try Lia.lia; try congruence. }
 
   Unshelve. all : match goal with H : context[Syntax.adcx] |- _ => idtac | _ => shelve end.
   { cbn [fold_right] in *; rewrite ?Z.bit0_odd, ?Z.add_0_r, ?Z.add_assoc in *; assumption. }
@@ -1345,6 +1341,18 @@ Proof using Type.
     3: enough (0 <= Z.land v3 (Z.of_N n - 1)) by lia; eapply Z.land_nonneg; right.
     1,2,3:pose_operation_size_cases; intuition (subst; cbn; clear; lia). }
 
+  Unshelve. all : match goal with H : context[Syntax.shld] |- _ => idtac | _ => shelve end; shelve_unifiable.
+  { repeat match goal with H : ?x = Some _, H' : ?x = Some _ |- _ => rewrite H' in *; Option.inversion_option end.
+    progress subst.
+    replace (Z.land (Z.of_N n) (Z.ones (Z.of_N n))) with (Z.of_N n)
+      by (rewrite Z.land_ones, Z.mod_small; try split; try lia; apply Zpow_facts.Zpower2_lt_lin; lia).
+    assert (0 <= Z.of_N n - 1) by (pose_operation_size_cases; intuition (subst; cbn; clear; lia)).
+    rewrite <- !Z.shiftl_opp_r.
+    rewrite !Z.shiftl_lor.
+    rewrite <- !Z.land_lor_distr_l, <- Z.land_assoc, Z.land_diag.
+    rewrite !Z.shiftl_shiftl by (try apply Z.land_nonneg; lia).
+    f_equal; f_equal; f_equal; try lia. }
+
   Unshelve. all : match goal with H : context[Syntax.shlx] |- _ => idtac | _ => shelve end; shelve_unifiable.
   { rewrite <- Z.land_assoc.
     f_equal; f_equal; [].
@@ -1363,12 +1371,12 @@ Lemma SymexLines_R {opts : symbolic_options_computed_opt} s m (HR : R s m) asm :
 Proof using Type.
   revert dependent m; revert dependent s; induction asm; cbn [SymexLines DenoteLines]; intros.
   { inversion H; subst; eauto. }
-  destruct a.
-  rewrite unfold_bind in H; destruct_one_match_hyp; inversion_ErrorT.
+  destruct_head' Line.
+  rewrite unfold_bind in *; destruct_one_match_hyp; inversion_ErrorT.
   cbv [SymexLine SymexRawLine DenoteLine DenoteRawLine ret err Crypto.Util.Option.bind] in *; cbn in *.
-  destruct_one_match_hyp; inversion_ErrorT; subst; eauto; destruct v.
+  destruct_one_match_hyp; inversion_ErrorT; subst; eauto; destruct_head'_prod.
   eapply SymexNornalInstruction_R in E; eauto. destruct E as (m1&Hm1&Rm1&?). rewrite Hm1.
-  eapply IHasm in H; eauto. destruct H as (?&?&?&?). eauto 9.
+  eapply IHasm in H; eauto. destruct H as (?&?&?&?). break_innermost_match; eauto 9.
 Qed.
 End WithCtx1'.
 End WithFrame.

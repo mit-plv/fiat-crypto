@@ -1,5 +1,5 @@
-Require Import ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+Require Import PArith BinInt ZArith.
+From Coq Require Import Lia.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 
 Local Open Scope Z_scope.
@@ -52,7 +52,7 @@ Section __.
     congruence.
   Qed.
 
-  
+
   Lemma F_pow_to_Z a a' c
     : F.to_Z a = a' mod Z.pos M_pos ->
       @F.to_Z M_pos (a ^ c) = (a' ^ c) mod Z.pos M_pos.
@@ -95,7 +95,7 @@ Ltac F_convert_to_Z :=
                  | simple eapply F_var_to_Z]].
 
 (*TODO: doesn't prepare hypotheses.
-  To support working with hypotheses will require a variation on `solve_F_equality_via_Z` 
+  To support working with hypotheses will require a variation on `solve_F_equality_via_Z`
   that goes in the other direction.
   Since Z->F isn't injective, it will require some thinking.
  *)
@@ -113,7 +113,7 @@ Ltac F_lia := F_zify; (lia || fail "F_lia failed; check that all necessary homom
 
 Section Example.
   Context {M_pos : positive}.
-  
+
   Goal forall (x : F M_pos), (x + F.of_Z  _ 4 * x)%F = ( x * F.of_Z  _ 2 + F.of_Z  _ 2 * x + 1 * 1 * x)%F.
   Proof.
     F_lia.

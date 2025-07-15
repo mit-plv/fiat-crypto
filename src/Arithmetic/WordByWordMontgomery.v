@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith Lia.
+From Coq Require Import List.
 Require Import Crypto.Algebra.Ring.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.Freeze.
@@ -94,7 +94,7 @@ Module WordByWordMontgomery.
 
       Lemma a_S3: a' = a  -> a'_S3 = snd A'_S3.
       Proof using Type. intros; cbv [a'_S3 A'_S3 Let_In];  subst; reflexivity. Qed.
-      
+
     End Iteration.
 
     Section loop.
@@ -119,14 +119,12 @@ Module WordByWordMontgomery.
       Definition pre_redc : T (S R_numlimbs)
         := snd (redc_loop A_numlimbs (A, @zero (1 + R_numlimbs)%nat)).
 
-      Locate conditional_sub.
-      Check conditional_sub.
       Definition redc : T R_numlimbs
         := conditional_sub pre_redc N.
 
       Definition pre_redc_from (S': T (S R_numlimbs)) : T (S R_numlimbs)
         := snd (redc_loop A_numlimbs (A, S')).
-      
+
       Definition redc_body_alt: Z * T (S R_numlimbs) -> T (S R_numlimbs)
         := fun '(a, S') => a'_S3 B k S' a.
 
@@ -144,7 +142,7 @@ Module WordByWordMontgomery.
     Lemma redc_loop_alt_from_eq:
       forall {A_numlimbs: nat} (A: T A_numlimbs) (B: T R_numlimbs) (k: Z) (S_old: T (S R_numlimbs)),
         redc_loop_alt_from (length A) A B k S_old = pre_redc_from (length A) A B k S_old.
-      Proof. 
+      Proof.
         intros. generalize dependent S_old. induction A.
         - reflexivity.
         - intros.
@@ -165,7 +163,7 @@ Module WordByWordMontgomery.
       Proof.
         intros. reflexivity.
       Qed.
-      
+
     Theorem redc_alt_eq:
       forall {A_numlimbs: nat} (A: T A_numlimbs) (B: T R_numlimbs) (k : Z),
         redc (length A) A B k = redc_alt (length A) A B k.
@@ -204,12 +202,16 @@ Module WordByWordMontgomery.
     Local Lemma r_big : r > 1.
     Proof using lgr_big. clear -lgr_big; subst r. auto with zarith. Qed.
     Local Notation wprops := (@uwprops lgr lgr_big).
+    Local Definition weight_0_wprops := weight_0 wprops.
+    Local Definition weight_positive_wprops := weight_positive wprops.
+    Local Definition weight_multiples_wprops := weight_multiples wprops.
+    Local Definition weight_divides_wprops := weight_divides wprops.
 
-    Local Hint Immediate (wprops) : core.
-    Local Hint Immediate (weight_0 wprops) : core.
-    Local Hint Immediate (weight_positive wprops) : core.
-    Local Hint Immediate (weight_multiples wprops) : core.
-    Local Hint Immediate (weight_divides wprops) : core.
+    Local Hint Extern 0 weight_properties => simple apply wprops : core.
+    Local Hint Immediate weight_0_wprops : core.
+    Local Hint Immediate weight_positive_wprops : core.
+    Local Hint Immediate weight_multiples_wprops : core.
+    Local Hint Immediate weight_divides_wprops : core.
     Local Hint Immediate r_big : core.
 
     Lemma length_small {n v} : @small n v -> length v = n.
@@ -539,13 +541,33 @@ Module WordByWordMontgomery.
         do 2 f_equal; nia.
       Qed.
 
-      Lemma pre_S3_bound (HS : eval S < eval N + eval B)
-          : 0 <= eval_pre_S3 < eval N + eval B.
-      Proof using small_A small_S small_B B_bounds N_nz N_lt_R small_N lgr_big S_nonneg.
-        clear -HS small_A small_S r_big' partition_Proper small_B B_bounds N_nz N_lt_R small_N lgr_big N_nz B_bounds small_B partition_Proper r_big' small_A small_S S_nonneg.
+      Lemma pre_S3_bound
+        : eval S < eval N + eval B
+          -> eval_pre_S3 < eval N + eval B.
+      Proof using small_A small_S small_B B_bounds N_nz N_lt_R small_N lgr_big.
+        clear -small_A small_S r_big' partition_Proper small_B B_bounds N_nz N_lt_R small_N lgr_big.
+        assert (Hmod : forall a b, 0 < b -> a mod b <= b - 1)
+          by (intros x y; pose proof (Z_mod_lt x y); lia).
+        intro HS.
+        eapply Z.le_lt_trans.
+        { transitivity ((N+B-1 + (r-1)*B + (r-1)*N) / r);
+            [ | set_evars; ring_simplify_subterms; subst_evars; reflexivity ].
+          Z.peel_le; repeat apply Z.add_le_mono; repeat apply Z.mul_le_mono_nonneg; try lia;
+            repeat autounfold with word_by_word_montgomery; rewrite ?Z.mul_split_mod;
+              autorewrite with push_mont_eval;
+              try Z.zero_bounds;
+              auto with lia. }
+        rewrite (Z.mul_comm _ r), <- Z.add_sub_assoc, <- Z.add_opp_r, !Z.div_add_l' by lia.
+        autorewrite with zsimplify.
+        simpl; lia.
+      Qed.
+
+      Lemma pre_S3_nonneg : 0 <= eval_pre_S3.
+      Proof using N_nz B_bounds small_B small_A small_S S_nonneg lgr_big.
+        clear -N_nz B_bounds small_B partition_Proper r_big' small_A small_S S_nonneg.
         repeat autounfold with word_by_word_montgomery; rewrite ?Z.mul_split_mod;
           autorewrite with push_mont_eval; [].
-        Z.div_mod_to_equations; nia.
+        rewrite ?Npos_correct; Z.zero_bounds; lia.
       Qed.
 
       Lemma small_A'
@@ -559,11 +581,22 @@ Module WordByWordMontgomery.
         repeat autounfold with word_by_word_montgomery; t_small.
       Qed.
 
-      Lemma S3_bound (HS : eval S < eval N + eval B) : 0 <= eval S3 < eval N + eval B.
+      Lemma S3_nonneg : 0 <= eval S3.
+      Proof using small_A small_S small_B B_bounds N_nz N_lt_R small_N lgr_big.
+        clear -small_A small_S r_big' partition_Proper small_B B_bounds N_nz N_lt_R small_N lgr_big sub_then_maybe_add.
+        rewrite eval_S3_eq; Z.zero_bounds.
+      Qed.
+
+      Lemma S3_bound
+        : eval S < eval N + eval B
+          -> eval S3 < eval N + eval B.
       Proof using N_nz B_bounds small_B small_A small_S S_nonneg B_bounds N_nz N_lt_R small_N lgr_big.
-        clear -HS N_nz B_bounds small_B small_A small_S S_nonneg B_bounds N_nz N_lt_R small_N lgr_big partition_Proper r_big' sub_then_maybe_add.
-        pose proof pre_S3_bound HS.
-        rewrite eval_S3_eq, Z.mod_small; nia.
+        clear -N_nz B_bounds small_B small_A small_S S_nonneg B_bounds N_nz N_lt_R small_N lgr_big partition_Proper r_big' sub_then_maybe_add.
+        rewrite eval_S3_eq.
+        intro H; pose proof (pre_S3_bound H); pose proof pre_S3_nonneg.
+        subst R.
+        rewrite Z.mod_small by nia.
+        assumption.
       Qed.
 
       Lemma S1_eq : eval S1 = S + a*B.
@@ -583,6 +616,7 @@ Module WordByWordMontgomery.
         { destruct (Z.eq_dec r 1) as [H'|H'].
           { rewrite H'; split; reflexivity. }
           { rewrite !Z_mod_nz_opp_full; rewrite ?Z.mod_mod; Z.rewrite_mod_small; [ split; reflexivity | lia.. ]. } }
+        autorewrite with pull_Zmod.
         replace 0 with (0 mod r) by apply Zmod_0_l.
         pose (Z.to_pos r) as r'.
         replace r with (Z.pos r') by (subst r'; rewrite Z2Pos.id; lia).
@@ -628,7 +662,7 @@ Module WordByWordMontgomery.
       Proof using B_bounds R_numlimbs_nz lgr_big small_A small_B small_S k_correct ri_correct small_N N_lt_R N_nz S_nonneg.
         clear -B_bounds R_numlimbs_nz lgr_big small_A small_B small_S r_big' partition_Proper k_correct ri_correct N_nz N_lt_R small_N sub_then_maybe_add Hbound S_nonneg.
         rewrite eval_S3_eq.
-        pose proof (pre_S3_bound Hbound); pose proof pre_S3_bound.
+        pose proof (pre_S3_bound Hbound); pose proof pre_S3_nonneg.
         rewrite (Z.mod_small _ (r * _)) by (subst R; nia).
         apply pre_S3_mod_N.
       Qed.
@@ -659,7 +693,7 @@ Module WordByWordMontgomery.
         Qed.
         Lemma snd_redc_body_nonneg : 0 <= eval (snd (redc_body A_S)).
         Proof using small_S small_N small_B small_A lgr_big S_bound N_nz N_lt_R B_bounds.
-          destruct A_S; apply S3_bound; try apply S_bound; trivial.
+          destruct A_S; apply S3_nonneg; assumption.
         Qed.
 
         Lemma snd_redc_body_mod_N
@@ -988,11 +1022,12 @@ Module WordByWordMontgomery.
       Qed.
       Lemma sub_bound : 0 <= eval (sub Av Bv) < eval N.
       Proof using small_Bv small_Av R_numlimbs_nz Bv_bound Av_bound small_N r_big' partition_Proper lgr_big N_nz N_lt_R.
+        clear dependent ri; clear dependent k.
         generalize eval_sub; break_innermost_match; Z.ltb_to_lt; lia.
       Qed.
       Lemma opp_bound : 0 <= eval (opp Av) < eval N.
       Proof using small_Av R_numlimbs_nz Av_bound small_N r_big' partition_Proper lgr_big N_nz N_lt_R.
-        clear Bv small_Bv Bv_bound.
+        clear Bv small_Bv Bv_bound k k_correct ri ri_correct.
         generalize eval_opp; break_innermost_match; Z.ltb_to_lt; lia.
       Qed.
     End add_sub.
@@ -1018,12 +1053,16 @@ Module WordByWordMontgomery.
 
     Local Notation wprops := (@uwprops bitwidth bitwidth_big).
     Local Notation small := (@small bitwidth n).
+    Local Definition weight_0_wprops' := weight_0 wprops.
+    Local Definition weight_positive_wprops' := weight_positive wprops.
+    Local Definition weight_multiples_wprops' := weight_multiples wprops.
+    Local Definition weight_divides_wprops' := weight_divides wprops.
 
-    Local Hint Immediate (wprops) : core.
-    Local Hint Immediate (weight_0 wprops) : core.
-    Local Hint Immediate (weight_positive wprops) : core.
-    Local Hint Immediate (weight_multiples wprops) : core.
-    Local Hint Immediate (weight_divides wprops) : core.
+    Local Hint Extern 0 weight_properties => simple apply wprops : core.
+    Local Hint Immediate weight_0_wprops' : core.
+    Local Hint Immediate weight_positive_wprops' : core.
+    Local Hint Immediate weight_multiples_wprops' : core.
+    Local Hint Immediate weight_divides_wprops' : core.
 
     Local Lemma r'_correct_alt : ((r mod m) * (r' mod m)) mod m = 1.
     Proof using r'_correct. pull_Zmod; apply r'_correct. Qed.
@@ -1093,7 +1132,7 @@ Module WordByWordMontgomery.
         | rewrite !m_enc_correct_montgomery; eapply redc_mod_N ];
         t_fin.
     Qed.
-        
+
     Definition onemod : list Z := Partition.partition weight n 1.
 
     Definition onemod_correct : eval onemod = 1 /\ valid onemod.

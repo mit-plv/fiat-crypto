@@ -1,5 +1,6 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Util.ZUtil.Peano.
-Require Import Coq.Classes.Morphisms.
+From Coq Require Import ZArith Lia.
+Require Import Crypto.Util.ZUtil.Peano.
+From Coq Require Import Morphisms.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Group.
 Local Open Scope Z_scope.

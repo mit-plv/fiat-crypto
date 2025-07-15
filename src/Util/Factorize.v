@@ -1,9 +1,9 @@
-Require Import Coq.Bool.Sumbool.
-Require Import Coq.micromega.Lia.
-Require Import Coq.NArith.NArith.
-Require Import Coq.PArith.PArith.
-Require Import Coq.Lists.List.
-Require Import Coq.Init.Wf.
+From Coq Require Import Sumbool.
+From Coq Require Import Lia.
+From Coq Require Import NArith.
+From Coq Require Import PArith.
+From Coq Require Import List.
+From Coq.Program Require Import Wf.
 
 Local Open Scope positive_scope.
 

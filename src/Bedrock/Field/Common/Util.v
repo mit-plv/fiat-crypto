@@ -1,8 +1,8 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Strings.String.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.Classes.RelationClasses.
+From Coq Require Import ZArith.
+From Coq Require Import String.
+From Coq Require Import Lia.
+From Coq Require Import Morphisms.
+From Coq Require Import RelationClasses.
 Require Import bedrock2.Array.
 Require Import bedrock2.Scalars.
 Require Import bedrock2.Syntax.
@@ -22,7 +22,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
-Require Import Coq.Lists.List. (* after SeparationLogic *)
+From Coq Require Import List. (* after SeparationLogic *)
 Import ListNotations.
 
 Import AbstractInterpretation.Compilers.

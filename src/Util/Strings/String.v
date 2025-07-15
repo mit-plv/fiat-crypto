@@ -1,6 +1,7 @@
-Require Import Coq.micromega.Lia.
-Require Import Coq.Strings.String.
-Require Import Coq.Strings.Ascii.
+From Coq Require Import Lia.
+From Coq Require Import PeanoNat.
+From Coq Require Import String.
+From Coq Require Import Ascii.
 Require Import Crypto.Util.Strings.Ascii.
 
 Local Open Scope list_scope.
@@ -130,7 +131,7 @@ Lemma length_substring n1 n2 s
 Proof.
   revert n1 n2; induction s as [|a s IHs]; intros; cbn.
   { destruct n1, n2; cbn; reflexivity. }
-  { destruct n1; [ destruct n2 | ]; cbn; rewrite ?IHs, <- ?Minus.minus_n_O; reflexivity. }
+  { destruct n1; [ destruct n2 | ]; cbn; rewrite ?IHs, ?Nat.sub_0_r; reflexivity. }
 Qed.
 
 Lemma length_append s1 s2 : length (s1 ++ s2) = length s1 + length s2.
@@ -334,11 +335,14 @@ Abort.
 Definition replace (from to s : string) : string
   := concat to (split from s).
 
+Notation Null := (String Ascii.Null "").
+Notation Backspace := (String Ascii.Backspace "").
 Notation NewLine := (String Ascii.NewLine "").
 Notation CR := (String Ascii.CR "").
 Notation LF := (String Ascii.LF "").
 Notation CRLF := (String Ascii.CR (String Ascii.LF "")).
 Notation Tab := (String Ascii.Tab "").
+Notation NewPage := (String Ascii.NewPage "").
 
 (** Given a list of strings, breaks all strings within the list at
     CFLF, CF, and LF.  Useful for normalizing a newline-separated list
@@ -411,3 +415,26 @@ Fixpoint strip_leading_newlines (s : list string) : list string
 
 Definition strip_trailing_newlines (s : list string) : list string
   := List.rev_append (strip_leading_newlines (List.rev_append s nil)) nil.
+
+(** [is_substring s1 s2] returns [true] if [s1] is a substring of [s2] *)
+Definition is_substring (s1 s2 : string) : bool :=
+  if (s1 =? "")%string
+  then true
+  else
+    match split s1 s2 with
+    | nil => false
+    | _ :: nil => false
+    | _ :: _ :: _ => true
+    end.
+
+Lemma is_substring_correct s1 s2 :
+  is_substring s1 s2 = true <-> exists n, substring n (String.length s1) s2 = s1.
+Proof.
+Abort.
+
+Definition strip_trailing_newline (s : string) : string :=
+  if endswith LF s
+  then if endswith CRLF s
+  then substring 0 (String.length s - 2) s
+  else substring 0 (String.length s - 1) s
+  else s.

@@ -1,11 +1,11 @@
 (** * Push-Button Synthesis of Unsaturated Solinas *)
-Require Import Coq.Strings.String.
-Require Import Coq.micromega.Lia.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.Lists.List.
-Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
-Require Import Coq.derive.Derive.
+From Coq Require Import String.
+From Coq Require Import Lia.
+From Coq Require Import ZArith.
+From Coq Require Import MSetPositive.
+From Coq Require Import List.
+From Coq Require Import QArith_base Qround.
+From Coq Require Import Derive.
 Require Crypto.TAPSort.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
@@ -139,7 +139,7 @@ Section __.
   Definition m_enc_min : list Z :=
     let wt := weight (Qnum limbwidth) (Qden limbwidth) in
     let fw := List.map (fun i => wt (S i) / wt i) (seq 0 n) in
-    let m_enc_min := map2 Z.sub tight_upperbounds fw in
+    let m_enc_min := List.map2 Z.sub tight_upperbounds fw in
     if List.forallb (Z.eqb 0) m_enc_min
     then set_nth (n-1) 1 m_enc_min
     else m_enc_min.

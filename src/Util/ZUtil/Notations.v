@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.BinInt.
+From Coq Require Import BinInt.
 Require Import Crypto.Util.Notations.
 
 Infix ">>" := Z.shiftr : Z_scope.
