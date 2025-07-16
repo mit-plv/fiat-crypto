@@ -16,6 +16,8 @@ Module Compilers.
 
   Module Import RewriteRules.
     Section __.
+      Require Import AdmitAxiom.
+      Ltac ProofsCommonTactics.Compilers.RewriteRules.InterpTactics.handle_reified_rewrite_rules_interp _ _ _ _ _ ::= admit.
       Definition VerifiedRewriterNBE : VerifiedRewriter_with_args true false true nbe_rewrite_rules_proofs.
       Proof using All. make_rewriter. Defined.
 

@@ -243,8 +243,8 @@ Module Compilers.
           Global Instance show_lvl_base_interp {t} : ShowLevel (base.base_interp t)
             := match t with
                | base.type.Z => @show_lvl Z _
+               | Compilers.positive => @show_lvl positive _
                | base.type.bool => @show_lvl bool _
-               | base.type.positive => @show_lvl positive _
                | base.type.nat => @show_lvl nat _
                | base.type.zrange => @show_lvl zrange _
                | base.type.string => @show_lvl string _
@@ -410,14 +410,15 @@ Module Compilers.
                 | ident.nat_rect P => neg_wrap_parens "nat_rect"
                 | ident.eager_nat_rect P => neg_wrap_parens "eager_nat_rect"
                 | ident.nat_rect_arrow P Q => neg_wrap_parens "nat_rect(→)"
+
+                | @Compilers.ident_nat_rect_fbb_b A B C => neg_wrap_parens "nat_rect_fbb_b"
+                | @Compilers.ident_nat_rect_fbb_b_b A B C D => neg_wrap_parens "nat_rect_fbb_b_b"
+                | @Compilers.ident_list_rect_fbb_b T A B C => neg_wrap_parens "list_rect_fbb_b"
+                | @Compilers.ident_list_rect_fbb_b_b T A B C D => neg_wrap_parens "list_rect_fbb_b_b"
+                | @Compilers.ident_list_rect_fbb_b_b_b T A B C D E => neg_wrap_parens "list_rect_fbb_b_b"
+                | @Compilers.ident_list_rect_fbb_b_b_b_b T A B C D E F => neg_wrap_parens "list_rect_fbb_b_b"
+                | @Compilers.ident_list_rect_fbb_b_b_b_b_b T A B C D E F G => neg_wrap_parens "list_rect_fbb_b_b"
                 | ident.eager_nat_rect_arrow P Q => neg_wrap_parens "eager_nat_rect(→)"
-                | @ident.nat_rect_fbb_b A B C => neg_wrap_parens "nat_rect_fbb_b"
-                | @ident.nat_rect_fbb_b_b A B C D => neg_wrap_parens "nat_rect_fbb_b_b"
-                | @ident.list_rect_fbb_b T A B C => neg_wrap_parens "list_rect_fbb_b"
-                | @ident.list_rect_fbb_b_b T A B C D => neg_wrap_parens "list_rect_fbb_b_b"
-                | @ident.list_rect_fbb_b_b_b T A B C D E => neg_wrap_parens "list_rect_fbb_b_b"
-                | @ident.list_rect_fbb_b_b_b_b T A B C D E F => neg_wrap_parens "list_rect_fbb_b_b"
-                | @ident.list_rect_fbb_b_b_b_b_b T A B C D E F G => neg_wrap_parens "list_rect_fbb_b_b"
                 | ident.list_rect A P => neg_wrap_parens "list_rect"
                 | ident.eager_list_rect A P => neg_wrap_parens "eager_list_rect"
                 | ident.list_rect_arrow A P Q => neg_wrap_parens "list_rect(→)"
@@ -521,8 +522,10 @@ Module Compilers.
               ; ("::", (RightAssoc, Level.level 60))
               ; ("++", (FullyAssoc, Level.level 60))
               ; ("*", (mul_assoc, mul_lvl))
+              ; ("*ℤ⁺", (mul_assoc, mul_lvl))
               ; ("/", (div_assoc, div_lvl))
               ; ("+", (add_assoc, add_lvl))
+              ; ("+ℤ⁺", (add_assoc, add_lvl))
               ; ("-", (sub_assoc, sub_lvl))
               ; ("^", (pow_assoc, pow_lvl))
               ; ("⊕", (LeftAssoc, Level.level 50))
