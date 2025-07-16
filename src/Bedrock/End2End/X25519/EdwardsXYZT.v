@@ -21,6 +21,7 @@ From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference
 Require Import coqutil.Word.Bitwidth32.
 Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Word.Interface.
+Require Import coqutil.Word.Naive.
 From Coq Require Import Init.Byte.
 From Coq Require Import List.
 From Coq Require Import String.
@@ -76,29 +77,37 @@ Definition add_precomputed := func! (ox, oy, oz, ota, otb, X1, Y1, Z1, Ta1, Tb1,
   fe25519_mul(oz, F, G)
 }.
 
+Definition felem_size := Eval lazy in felem_size_in_bytes.
+
+(* Member access notation for projective points: (x, y, z, ta, tb). *)
+Local Notation "A .x" := (expr.op Syntax.bopname.add A (0)) (in custom bedrock_expr at level 2, left associativity).
+Local Notation "A .y" := (expr.op Syntax.bopname.add A (felem_size)) (in custom bedrock_expr at level 2, left associativity).
+Local Notation "A .z" := (expr.op Syntax.bopname.add A (felem_size + felem_size)) (in custom bedrock_expr at level 2, left associativity).
+Local Notation "A .ta" := (expr.op Syntax.bopname.add A (felem_size + felem_size + felem_size)) (in custom bedrock_expr at level 2, left associativity).
+Local Notation "A .tb" := (expr.op Syntax.bopname.add A (felem_size + felem_size + felem_size + felem_size)) (in custom bedrock_expr at level 2, left associativity).
+
 (* Equivalent of m1double in src/Curves/Edwards/XYZT/Basic.v *)
-(* Note: Ta/Tb are unused, but leaving in place in case we want to switch to a point struct in the future *)
-Definition double := func! (ox, oy, oz, ota, otb, X, Y, Z, Ta, Tb) {
-  stackalloc 40 as trX;
-  fe25519_square(trX, X);
-  stackalloc 40 as trZ;
-  fe25519_square(trZ, Y);
-  stackalloc 40 as t0;
-  fe25519_square(t0, Z);
-  stackalloc 40 as trT;
+Definition double := func! (p_out, p_a) {
+  stackalloc felem_size as trX;
+  fe25519_square(trX, p_a.x);
+  stackalloc felem_size as trZ;
+  fe25519_square(trZ, p_a.y);
+  stackalloc felem_size as t0;
+  fe25519_square(t0, p_a.z);
+  stackalloc felem_size as trT;
   fe25519_carry_add(trT, t0, t0);
-  stackalloc 40 as rY;
-  fe25519_add(rY, X, Y);
+  stackalloc felem_size as rY;
+  fe25519_add(rY, p_a.x, p_a.y);
   fe25519_square(t0, rY);
-  fe25519_carry_add(otb, trZ, trX);
-  stackalloc 40 as cZ;
+  fe25519_carry_add(p_out.tb, trZ, trX);
+  stackalloc felem_size as cZ;
   fe25519_carry_sub(cZ, trZ, trX);
-  fe25519_sub(ota, t0, otb);
-  stackalloc 40 as cT;
+  fe25519_sub(p_out.ta, t0, p_out.tb);
+  stackalloc felem_size as cT;
   fe25519_sub(cT, trT, cZ);
-  fe25519_mul(ox, ota, cT);
-  fe25519_mul(oy, otb, cZ);
-  fe25519_mul(oz, cZ, cT)
+  fe25519_mul(p_out.x, p_out.ta, cT);
+  fe25519_mul(p_out.y, p_out.tb, cZ);
+  fe25519_mul(p_out.z, cZ, cT)
 }.
 
 (* Converting a normal point to a cached point to prepare it for readdition. *)
@@ -148,13 +157,12 @@ Section WithParameters.
   Context {a_eq_minus1:a = F.opp F.one} {twice_d} {k_eq_2d:twice_d = (F.add d d)} {nonzero_d: d<>F.zero}.
 
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
-Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
 Local Notation FElem := (FElem(FieldRepresentation:=frep25519)).
 Local Notation bounded_by := (bounded_by(FieldRepresentation:=frep25519)).
 Local Notation word := (Naive.word 32).
 Local Notation felem := (felem(FieldRepresentation:=frep25519)).
-Local Notation point := (point(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(d:=d)).
+Local Notation point := (point(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(d:=d)).
 Local Notation cached := (cached(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(d:=d)).
 Local Notation coordinates := (coordinates(Feq:=Logic.eq)).
 Local Notation m1double :=
@@ -216,28 +224,32 @@ Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
         bounded_by loose_bounds otb' /\
         m' =* (FElem X1K X1) * (FElem Y1K Y1) * (FElem Z1K Z1) * (FElem Ta1K Ta1) * (FElem Tb1K Tb1) * (FElem half_ypxK half_ypx) * (FElem half_ymxK half_ymx) * (FElem xydK xyd) * (FElem oxK ox') * (FElem oyK oy') * (FElem ozK oz') * (FElem otaK ota') * (FElem otbK otb') * R }.
 
+Definition point_repr_bounds := (Field.bounds * Field.bounds * Field.bounds * Field.bounds * Field.bounds)%type.
+Definition point_repr := (felem * felem * felem * felem * felem)%type.
+Definition feval_point_repr '(x, y, z, ta, tb) := (feval x, feval y, feval z, feval ta, feval tb).
+
+Definition point_repr_bounded_by (bounds : point_repr_bounds) '(x,y,z,ta,tb) : Prop :=
+  let '(bounds_x, bounds_y, bounds_z, bounds_ta, bounds_tb) := bounds in
+  bounded_by bounds_x x /\ bounded_by bounds_y y /\ bounded_by bounds_z z /\ bounded_by bounds_ta ta /\ bounded_by bounds_tb tb.
+
+Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
+Local Notation "c p@ p" := (let '(x,y,z,ta,tb) := c in sep (sep (sep (sep (FElem (p .+ 0) x) (FElem (p .+ 40) y)) (FElem (p .+ 80) z)) (FElem (p .+ 120) ta)) (FElem (p .+ 160) tb)) (at level 10, format "c p@ p").
+
 Global Instance spec_of_double : spec_of "double" :=
   fnspec! "double"
-    (oxK oyK ozK otaK otbK XK YK ZK TaK TbK : word) /
-    (ox oy oz ota otb X Y Z Ta Tb : felem) (p : point) (R : _ -> Prop),
-  { requires t m :=
-      coordinates p = ((feval X), (feval Y), (feval Z), (feval Ta), (feval Tb)) /\
-      bounded_by tight_bounds X /\
-      bounded_by tight_bounds Y /\
-      bounded_by loose_bounds Z /\
-      bounded_by loose_bounds Ta /\
-      bounded_by loose_bounds Tb /\
-      m =* (FElem XK X) * (FElem YK Y) * (FElem ZK Z) * (FElem TaK Ta) * (FElem TbK Tb) * (FElem oxK ox) * (FElem oyK oy) * (FElem ozK oz) * (FElem otaK ota) * (FElem otbK otb) * R;
-    ensures t' m' :=
+    (p_out p_a : word) /
+    (p : point) (a anything: point_repr) (R : _ -> Prop), {
+    requires t m :=
+      m =* anything p@ p_out * a p@ p_a * R /\
+      feval_point_repr a = coordinates p /\
+      point_repr_bounded_by (tight_bounds, tight_bounds, loose_bounds, loose_bounds, loose_bounds) a;
+    ensures t' m' := 
       t = t' /\
-      exists ox' oy' oz' ota' otb',
-        ((feval ox'), (feval oy'), (feval oz'), (feval ota'), (feval otb')) = coordinates (@m1double p) /\
-        bounded_by tight_bounds ox' /\
-        bounded_by tight_bounds oy' /\
-        bounded_by tight_bounds oz' /\
-        bounded_by loose_bounds ota' /\ (* could be tight_bounds if we need it, but I don't think we do *)
-        bounded_by tight_bounds otb' /\
-        m' =* (FElem XK X) * (FElem YK Y) * (FElem ZK Z) * (FElem TaK Ta) * (FElem TbK Tb) * (FElem oxK ox') * (FElem oyK oy') * (FElem ozK oz') * (FElem otaK ota') * (FElem otbK otb') * R }.
+      exists a_double : point_repr,
+      m' =* a_double p@ p_out * a p@ p_a * R /\
+      coordinates (@m1double p) = feval_point_repr a_double /\
+      point_repr_bounded_by (tight_bounds, tight_bounds, tight_bounds, loose_bounds, tight_bounds) a_double
+  }.
 
 Global Instance spec_of_to_cached: spec_of "to_cached" :=
   fnspec! "to_cached"
@@ -309,10 +321,13 @@ Local Arguments word.rep : simpl never.
 Local Arguments word.wrap : simpl never.
 Local Arguments word.unsigned : simpl never.
 Local Arguments word.of_Z : simpl never.
+Local Arguments word.add : simpl never.
+
+Local Arguments feval : simpl never.
 
 Local Ltac cbv_bounds H :=
-  cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_outbounds bin_outbounds] in H;
-  cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_outbounds bin_outbounds].
+  cbv [point_repr_bounded_by un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_outbounds bin_outbounds] in H;
+  cbv [point_repr_bounded_by un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_outbounds bin_outbounds].
 
 Local Ltac solve_bounds :=
   repeat match goal with
@@ -341,6 +356,21 @@ Local Ltac solve_stack :=
 
 Local Ltac single_step :=
   repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_stack.
+
+(* Attempts to find anybytes terms in the goal and rewrites the first corresponding stack hypothesis to byte representation.
+   straightline only supports deallocation for byte representation at the moment. *)
+Ltac solve_deallocation :=
+  lazy [FElem] in *;
+  match goal with
+    H: ?P%sep _ |- ?G =>
+      repeat match G with context[anybytes ?p _ _] =>
+        match P with context[Bignum.Bignum felem_size_in_words p ?v] =>
+          seprewrite_in (Bignum.Bignum_to_bytes felem_size_in_words p) H
+        end
+      end;
+      extract_ex1_and_emp_in H
+  end;
+  repeat straightline.
 
 (* An example that demonstrates why we need to set Strategy in add_precomputed_ok below *)
 Example demo_strategy : forall x,
@@ -374,22 +404,6 @@ Proof.
   (* Now set Strategy precedence... *)
   Strategy -1000 [bin_outbounds bin_add].
   reflexivity. (* ...and completes immediately *)
-Qed.
-
-Lemma to_cached_ok: program_logic_goal_for_function! to_cached.
-Proof.
-  repeat single_step. repeat straightline.
-  
-  exists x1, x3, z, x5; ssplit; try solve_bounds; try solve_mem.
-  
-  destruct p. 
-  cbv [bin_model bin_mul bin_add bin_carry_add bin_sub coordinates proj1_sig] in *.
-  cbv match beta delta [m1_prep cached_coordinates proj1_sig].
-  rewrite H31, H28, H26, H22, H20, H16.
-  simpl. rewrite H6. auto.
-
-    (* Without this, resolution of cbv stalls out Qed. *)
-  Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_model cached_coordinates proj1_sig bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
 Qed.
 
 Lemma add_precomputed_ok : program_logic_goal_for_function! add_precomputed.
@@ -446,53 +460,42 @@ Proof.
   (* Without this, resolution of cbv stalls out Qed. *)
   Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_outbounds bin_outbounds].
 
-  (* Unwrap each call in the program. *)
-  (* Each binop produces 2 memory goals on the inputs, 2 bounds goals on the inputs, and 1 memory goal on the output. *)
-  single_step. (* fe25519_square(trX, X) *)
-  single_step. (* fe25519_square(trZ, Y) *)
-  single_step. (* fe25519_square(t0, Z) *)
-  single_step. (* fe25519_carry_add(trT, t0, t0) *)
-  single_step. (* fe25519_add(rY, X, Y) *)
-  single_step. (* fe25519_square(t0, rY) *)
-  single_step. (* fe25519_carry_add(otb, trZ, trX) *)
-  single_step. (* fe25519_carry_sub(cZ, trZ, trX) *)
-  single_step. (* fe25519_sub(ota, t0, otb) *)
-  single_step. (* fe25519_sub(cT, trT, cZ) *)
-  single_step. (* fe25519_mul(ox, ota, cT) *)
-  single_step. (* fe25519_mul(oy, otb, cZ) *)
-  single_step. (* fe25519_mul(oz, cZ, cT) *)
+  straightline.
+  destruct a0 as ((((fx, fy), fz), fta), ftb).
+  destruct p as (((((x, y), z), ta), tb), HP).
+  destruct anything as ((((ax, ay), az), ata), atb).
+  lazy beta match delta [point_repr_bounded_by feval_point_repr coordinates proj1_sig] in *.
+  repeat straightline.
+  inversion H13.
+  repeat single_step.
 
   (* Solve the postconditions *)
   repeat straightline.
-  (* Rewrites the FElems for the stack (in H87) to be about bytes instead *)
-    cbv [FElem] in *.
-    (* Prevent output from being rewritten by seprewrite_in *)
-    remember (Bignum.Bignum felem_size_in_words ozK _) as Pz in H87.
-    remember (Bignum.Bignum felem_size_in_words oyK _) as Py in H87.
-    remember (Bignum.Bignum felem_size_in_words oxK _) as Px in H87.
-    remember (Bignum.Bignum felem_size_in_words otaK _) as Pta in H87.
-    remember (Bignum.Bignum felem_size_in_words otbK _) as Ptb in H87.
-    do 7 (seprewrite_in @Bignum.Bignum_to_bytes H87).
-    subst Pz Py Px Pta Ptb.
-    extract_ex1_and_emp_in H87.
 
-  (* Solve stack/memory stuff *)
-  repeat straightline.
+  solve_deallocation.
 
-  (* Post-conditions *)
-  exists x9,x10,x11,x7,x5; ssplit. 2,3,4,5,6:solve_bounds.
-  { (* Correctness: result matches Gallina *)
-    cbv [bin_model bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_model un_square] in *.
-    cbv match beta delta [m1double coordinates proj1_sig].
-    destruct p. cbv [coordinates proj1_sig] in H12.
-    rewrite H12.
-    rewrite F.pow_2_r in *.
-    congruence.
-  }
-  (* Safety: memory is what it should be *)
-  ecancel_assumption.
+  eexists (_, _, _, _, _); ssplit; try ecancel_assumption; try solve_bounds.
+  lazy [bin_model bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_model un_square] in *.
+  lazy match zeta beta delta [m1double coordinates proj1_sig].
+  rewrite F.pow_2_r in *.
+  congruence.
 Qed.
 
+Lemma to_cached_ok: program_logic_goal_for_function! to_cached.
+Proof.
+  repeat single_step. repeat straightline.
+  
+  exists x1, x3, z, x5; ssplit; try solve_bounds; try solve_mem.
+  
+  destruct p. 
+  cbv [bin_model bin_mul bin_add bin_carry_add bin_sub coordinates proj1_sig] in *.
+  cbv match beta delta [m1_prep cached_coordinates proj1_sig].
+  rewrite H31, H28, H26, H22, H20, H16.
+  simpl. rewrite H6. auto.
+
+    (* Without this, resolution of cbv stalls out Qed. *)
+  Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_model cached_coordinates proj1_sig bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
+Qed.
 
 Lemma readd_ok : program_logic_goal_for_function! readd.
 Proof.
