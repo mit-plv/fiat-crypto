@@ -37,6 +37,7 @@ Require Import Crypto.Bedrock.End2End.X25519.Field25519.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Spec.Curve25519.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Curves.Edwards.XYZT.Basic.
 Require Import Curves.Edwards.XYZT.Precomputed.
 Require Import Curves.Edwards.XYZT.Readdition.
@@ -183,6 +184,12 @@ Local Notation m1_readd :=
            (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
            (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
            (a_eq_minus1:=a_eq_minus1)(twice_d:=twice_d)(k_eq_2d:=k_eq_2d)(nonzero_d:=nonzero_d)).
+Local Notation m1add_precomputed_coordinates :=
+  (m1add_precomputed_coordinates(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+           (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
+           (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
+           (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
+           (a_eq_minus1:=a_eq_minus1)).
 
 Instance spec_of_fe25519_half : spec_of "fe25519_half" :=
   fnspec! "fe25519_half"
@@ -202,8 +209,10 @@ Instance spec_of_fe25519_half : spec_of "fe25519_half" :=
 Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
   fnspec! "add_precomputed"
     (oxK oyK ozK otaK otbK X1K Y1K Z1K Ta1K Tb1K half_ypxK half_ymxK xydK : word) /
-    (ox oy oz ota otb X1 Y1 Z1 Ta1 Tb1 half_ypx half_ymx xyd : felem) (R : _ -> Prop),
+    (ox oy oz ota otb X1 Y1 Z1 Ta1 Tb1 half_ypx half_ymx xyd : felem) (p : point) (c: precomputed_point) (R : _ -> Prop),
   { requires t m :=
+      coordinates p = ((feval X1), (feval Y1), (feval Z1), (feval Ta1), (feval Tb1)) /\
+      precomputed_coordinates c = ((feval half_ypx), (feval half_ymx), (feval xyd)) /\
       bounded_by tight_bounds X1 /\
       bounded_by tight_bounds Y1 /\
       bounded_by tight_bounds Z1 /\
@@ -216,7 +225,8 @@ Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
     ensures t' m' :=
       t = t' /\
       exists ox' oy' oz' ota' otb',
-        ((feval ox'), (feval oy'), (feval oz'), (feval ota'), (feval otb')) = (@m1add_precomputed_coordinates (F M_pos) (F.add) (F.sub) (F.mul) ((feval X1), (feval Y1), (feval Z1), (feval Ta1), (feval Tb1)) ((feval half_ypx), (feval half_ymx), (feval xyd))) /\
+        ((feval ox'), (feval oy'), (feval oz'), (feval ota'), (feval otb')) = 
+            coordinates (m1add_precomputed_coordinates p c) /\
         bounded_by loose_bounds ox' /\
         bounded_by loose_bounds oy' /\
         bounded_by loose_bounds oz' /\
@@ -432,14 +442,14 @@ Proof.
   (* Rewrites the FElems for the stack (in H93) to be about bytes instead *)
     cbv [FElem] in *.
     (* Prevent output from being rewritten by seprewrite_in *)
-    remember (Bignum.Bignum felem_size_in_words ozK _) as Pz in H93.
-    remember (Bignum.Bignum felem_size_in_words oyK _) as Py in H93.
-    remember (Bignum.Bignum felem_size_in_words oxK _) as Px in H93.
-    remember (Bignum.Bignum felem_size_in_words otbK _) as Ptb in H93.
-    remember (Bignum.Bignum felem_size_in_words otaK _) as Pta in H93.
-    do 8 (seprewrite_in @Bignum.Bignum_to_bytes H93).
+    remember (Bignum.Bignum felem_size_in_words ozK _) as Pz in H95.
+    remember (Bignum.Bignum felem_size_in_words oyK _) as Py in H95.
+    remember (Bignum.Bignum felem_size_in_words oxK _) as Px in H95.
+    remember (Bignum.Bignum felem_size_in_words otbK _) as Ptb in H95.
+    remember (Bignum.Bignum felem_size_in_words otaK _) as Pta in H95.
+    do 8 (seprewrite_in @Bignum.Bignum_to_bytes H95).
     subst Pz Py Px Ptb Pta.
-    extract_ex1_and_emp_in H93.
+    extract_ex1_and_emp_in H95.
 
   (* Solve stack/memory stuff *)
   repeat straightline.
@@ -447,8 +457,10 @@ Proof.
   (* Post-conditions *)
   exists x9,x10,x11,x5,x8; ssplit. 2,3,4,5,6:solve_bounds.
   { (* Correctness: result matches Gallina *)
-    cbv [bin_model bin_mul bin_add bin_carry_add bin_sub] in *.
-    cbv match beta delta [m1add_precomputed_coordinates].
+    destruct p, c.
+    lazy [bin_model bin_mul bin_add bin_carry_add bin_sub coordinates proj1_sig precomputed_coordinates] in *.
+    lazy match beta delta [m1add_precomputed_coordinates coordinates proj1_sig].
+    destruct_head' prod.
     congruence.
   }
   (* Safety: memory is what it should be *)
