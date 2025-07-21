@@ -681,7 +681,6 @@ void internal_fiat_p521_carry_mul(br_word_t out0, br_word_t in0, br_word_t in1) 
   _br_store(out0+56, x543);
   _br_store(out0+64, x544);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1048,7 +1047,6 @@ void internal_fiat_p521_carry_square(br_word_t out0, br_word_t in0) {
   _br_store(out0+56, x334);
   _br_store(out0+64, x335);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1117,7 +1115,6 @@ void internal_fiat_p521_carry(br_word_t out0, br_word_t in0) {
   _br_store(out0+56, x36);
   _br_store(out0+64, x37);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1186,7 +1183,6 @@ void internal_fiat_p521_add(br_word_t out0, br_word_t in0, br_word_t in1) {
   _br_store(out0+56, x34);
   _br_store(out0+64, x35);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1255,7 +1251,6 @@ void internal_fiat_p521_sub(br_word_t out0, br_word_t in0, br_word_t in1) {
   _br_store(out0+56, x34);
   _br_store(out0+64, x35);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1313,7 +1308,6 @@ void internal_fiat_p521_opp(br_word_t out0, br_word_t in0) {
   _br_store(out0+56, x25);
   _br_store(out0+64, x26);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1402,7 +1396,6 @@ void internal_fiat_p521_selectznz(br_word_t out0, br_word_t in0, br_word_t in1, 
   _br_store(out0+56, x52);
   _br_store(out0+64, x53);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1820,7 +1813,6 @@ void internal_fiat_p521_to_bytes(br_word_t out0, br_word_t in0) {
   _br_store1(out0+64, x328);
   _br_store1(out0+65, x329);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -2067,7 +2059,6 @@ void internal_fiat_p521_from_bytes(br_word_t out0, br_word_t in0) {
   _br_store(out0+56, x214);
   _br_store(out0+64, x215);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -2125,7 +2116,6 @@ void internal_fiat_p521_relax(br_word_t out0, br_word_t in0) {
   _br_store(out0+56, x25);
   _br_store(out0+64, x26);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */

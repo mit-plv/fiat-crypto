@@ -3302,7 +3302,6 @@ void internal_fiat_p384_mul(br_word_t out0, br_word_t in0, br_word_t in1) {
   _br_store(out0+40, x3156);
   _br_store(out0+44, x3157);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -6482,7 +6481,6 @@ void internal_fiat_p384_square(br_word_t out0, br_word_t in0) {
   _br_store(out0+40, x3144);
   _br_store(out0+44, x3145);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -6636,7 +6634,6 @@ void internal_fiat_p384_add(br_word_t out0, br_word_t in0, br_word_t in1) {
   _br_store(out0+40, x116);
   _br_store(out0+44, x117);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -6752,7 +6749,6 @@ void internal_fiat_p384_sub(br_word_t out0, br_word_t in0, br_word_t in1) {
   _br_store(out0+40, x78);
   _br_store(out0+44, x79);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -6854,7 +6850,6 @@ void internal_fiat_p384_opp(br_word_t out0, br_word_t in0) {
   _br_store(out0+40, x66);
   _br_store(out0+44, x67);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -7775,7 +7770,6 @@ void internal_fiat_p384_from_montgomery(br_word_t out0, br_word_t in0) {
   _br_store(out0+40, x885);
   _br_store(out0+44, x886);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -8956,7 +8950,6 @@ void internal_fiat_p384_to_montgomery(br_word_t out0, br_word_t in0) {
   _br_store(out0+40, x1145);
   _br_store(out0+44, x1146);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -9101,7 +9094,6 @@ void internal_fiat_p384_selectznz(br_word_t out0, br_word_t in0, br_word_t in1, 
   _br_store(out0+40, x70);
   _br_store(out0+44, x71);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -9315,7 +9307,6 @@ void internal_fiat_p384_to_bytes(br_word_t out0, br_word_t in0) {
   _br_store1(out0+46, x142);
   _br_store1(out0+47, x143);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -9493,7 +9484,6 @@ void internal_fiat_p384_from_bytes(br_word_t out0, br_word_t in0) {
   _br_store(out0+40, x142);
   _br_store(out0+44, x143);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -9537,7 +9527,6 @@ void internal_fiat_p384_set_one(br_word_t out0) {
   _br_store(out0+40, x10);
   _br_store(out0+44, x11);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -9583,7 +9572,6 @@ void internal_fiat_p384_msat(br_word_t out0) {
   _br_store(out0+44, x11);
   _br_store(out0+48, x12);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -10547,7 +10535,6 @@ void internal_fiat_p384_divstep_precomp(br_word_t out0) {
   _br_store(out0+40, x10);
   _br_store(out0+44, x11);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */

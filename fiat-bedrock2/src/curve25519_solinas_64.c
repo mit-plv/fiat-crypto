@@ -336,7 +336,6 @@ void internal_fiat_curve25519_solinas_mul(br_word_t out0, br_word_t in0, br_word
   _br_store(out0+16, x208);
   _br_store(out0+24, x209);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -528,7 +527,6 @@ void internal_fiat_curve25519_solinas_square(br_word_t out0, br_word_t in0) {
   _br_store(out0+16, x164);
   _br_store(out0+24, x165);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
