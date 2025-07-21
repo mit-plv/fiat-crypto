@@ -9,11 +9,17 @@ git clone https://github.com/crate-crypto/Ed448-Goldilocks.git --branch=master E
 
 pushd Ed448-Goldilocks >/dev/null || exit $?
 
-cat >> Cargo.toml <<EOF
+if grep -q "^\[patch\.crates-io\]" Cargo.toml; then
+    # Add to existing [patch.crates-io] section
+    sed -i '/^\[patch\.crates-io\]/a fiat-crypto = { path = "../fiat-rust" }' Cargo.toml
+else
+    # Create new [patch.crates-io] section
+    cat >> Cargo.toml <<EOF
 
 [patch.crates-io]
 fiat-crypto = { path = "../fiat-rust" }
 EOF
+fi
 
 cargo test --features="fiat_u64_backend" --no-default-features || exit $?
 
