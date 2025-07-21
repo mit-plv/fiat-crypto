@@ -318,7 +318,6 @@ void internal_fiat_poly1305_carry_mul(br_word_t out0, br_word_t in0, br_word_t i
   _br_store(out0+12, x184);
   _br_store(out0+16, x185);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -474,7 +473,6 @@ void internal_fiat_poly1305_carry_square(br_word_t out0, br_word_t in0) {
   _br_store(out0+12, x127);
   _br_store(out0+16, x128);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -523,7 +521,6 @@ void internal_fiat_poly1305_carry(br_word_t out0, br_word_t in0) {
   _br_store(out0+12, x20);
   _br_store(out0+16, x21);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -572,7 +569,6 @@ void internal_fiat_poly1305_add(br_word_t out0, br_word_t in0, br_word_t in1) {
   _br_store(out0+12, x18);
   _br_store(out0+16, x19);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -621,7 +617,6 @@ void internal_fiat_poly1305_sub(br_word_t out0, br_word_t in0, br_word_t in1) {
   _br_store(out0+12, x18);
   _br_store(out0+16, x19);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -663,7 +658,6 @@ void internal_fiat_poly1305_opp(br_word_t out0, br_word_t in0) {
   _br_store(out0+12, x13);
   _br_store(out0+16, x14);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -724,7 +718,6 @@ void internal_fiat_poly1305_selectznz(br_word_t out0, br_word_t in0, br_word_t i
   _br_store(out0+12, x28);
   _br_store(out0+16, x29);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -882,7 +875,6 @@ void internal_fiat_poly1305_to_bytes(br_word_t out0, br_word_t in0) {
   _br_store1(out0+15, x117);
   _br_store1(out0+16, x118);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -969,7 +961,6 @@ void internal_fiat_poly1305_from_bytes(br_word_t out0, br_word_t in0) {
   _br_store(out0+12, x58);
   _br_store(out0+16, x59);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1011,7 +1002,6 @@ void internal_fiat_poly1305_relax(br_word_t out0, br_word_t in0) {
   _br_store(out0+12, x13);
   _br_store(out0+16, x14);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */

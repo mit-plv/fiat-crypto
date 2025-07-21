@@ -1664,7 +1664,6 @@ void internal_fiat_sm2_scalar_mul(br_word_t out0, br_word_t in0, br_word_t in1) 
   _br_store(out0+24, x1522);
   _br_store(out0+28, x1523);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -3210,7 +3209,6 @@ void internal_fiat_sm2_scalar_square(br_word_t out0, br_word_t in0) {
   _br_store(out0+24, x1514);
   _br_store(out0+28, x1515);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -3322,7 +3320,6 @@ void internal_fiat_sm2_scalar_add(br_word_t out0, br_word_t in0, br_word_t in1) 
   _br_store(out0+24, x78);
   _br_store(out0+28, x79);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -3408,7 +3405,6 @@ void internal_fiat_sm2_scalar_sub(br_word_t out0, br_word_t in0, br_word_t in1) 
   _br_store(out0+24, x52);
   _br_store(out0+28, x53);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -3484,7 +3480,6 @@ void internal_fiat_sm2_scalar_opp(br_word_t out0, br_word_t in0) {
   _br_store(out0+24, x44);
   _br_store(out0+28, x45);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -3993,7 +3988,6 @@ void internal_fiat_sm2_scalar_from_montgomery(br_word_t out0, br_word_t in0) {
   _br_store(out0+24, x477);
   _br_store(out0+28, x478);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -4792,7 +4786,6 @@ void internal_fiat_sm2_scalar_to_montgomery(br_word_t out0, br_word_t in0) {
   _br_store(out0+24, x767);
   _br_store(out0+28, x768);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -4905,7 +4898,6 @@ void internal_fiat_sm2_scalar_selectznz(br_word_t out0, br_word_t in0, br_word_t
   _br_store(out0+24, x46);
   _br_store(out0+28, x47);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -5055,7 +5047,6 @@ void internal_fiat_sm2_scalar_to_bytes(br_word_t out0, br_word_t in0) {
   _br_store1(out0+30, x94);
   _br_store1(out0+31, x95);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -5181,7 +5172,6 @@ void internal_fiat_sm2_scalar_from_bytes(br_word_t out0, br_word_t in0) {
   _br_store(out0+24, x94);
   _br_store(out0+28, x95);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -5217,7 +5207,6 @@ void internal_fiat_sm2_scalar_set_one(br_word_t out0) {
   _br_store(out0+24, x6);
   _br_store(out0+28, x7);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -5255,7 +5244,6 @@ void internal_fiat_sm2_scalar_msat(br_word_t out0) {
   _br_store(out0+28, x7);
   _br_store(out0+32, x8);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -5933,7 +5921,6 @@ void internal_fiat_sm2_scalar_divstep_precomp(br_word_t out0) {
   _br_store(out0+24, x6);
   _br_store(out0+28, x7);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
