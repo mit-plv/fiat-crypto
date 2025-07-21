@@ -345,6 +345,11 @@ jobs:
   generated-files:
     needs: build
     runs-on: ubuntu-latest
+    # Required permissions for creating PRs and pushing branches
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -356,6 +361,10 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+        # fetch-depth: 0 is required to checkout a new branch from the PR's head.
+        # persist-credentials: true is needed to push to the new branch.
+        fetch-depth: 0
+        persist-credentials: true
     - name: Download a Build Artifact
       uses: actions/download-artifact@v4
       with:
@@ -364,6 +373,7 @@ jobs:
     - name: make binaries executable
       run: git check-ignore src/ExtractionOCaml/* src/ExtractionOCaml/*/* | grep -v '\.' | xargs chmod +x
     - name: generated-files
+      id: generate
       run: etc/ci/github-actions-make.sh --warnings -f Makefile.examples -j2 generated-files
       if: github.event_name == 'pull_request'
     - run: tar -czvf generated-files.tgz fiat-*/
@@ -374,6 +384,72 @@ jobs:
         name: generated-files-${{ matrix.coq-version }}
         path: generated-files.tgz
       if: failure()
+    - name: Commit files and create PR or comment
+      if: failure() && github.event_name == 'pull_request'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        SOURCE_BRANCH: ${{ github.head_ref }}
+        BASE_REPO: ${{ github.repository }}
+        HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+      run: |
+        set -euo pipefail # Exit immediately on error
+
+        echo "File generation failed. Committing updated files to a new branch."
+
+        # Configure Git to commit as the github-actions bot
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        # Create a unique, descriptive branch name using slashes for organization
+        NEW_BRANCH="fix/pr${PR_NUMBER}/generated-files"
+        git checkout -b "$NEW_BRANCH"
+
+        # Add only the relevant generated files to the index
+        echo "Adding generated files from 'fiat-*/' directory."
+        git add fiat-*/
+
+        # Crucial check: if no files were changed, the failure was for another reason.
+        # In this case, we exit cleanly to avoid creating an empty commit.
+        if git diff --staged --quiet; then
+          echo "No file changes to commit. The failure was likely not due to outdated generated files."
+          exit 0
+        fi
+
+        git commit -m "chore(generated): Update generated files for #${PR_NUMBER}"
+        git push --set-upstream origin "$NEW_BRANCH"
+
+        # Conditional logic: create a PR for internal branches, or comment for forks.
+        if [[ "$HEAD_REPO" == "$BASE_REPO" ]]; then
+          echo "PR is from a branch on the main repository. Creating a fixup PR."
+
+          # Create a new PR targeting the original PR's branch
+          NEW_PR_URL=$(gh pr create \
+            --title "chore: Update generated files for #${PR_NUMBER}" \
+            --body "This PR was automatically created to update the generated files for #${PR_NUMBER}. It will be automerged." \
+            --base "$SOURCE_BRANCH" \
+            --head "$NEW_BRANCH")
+
+          # Enable automerge, so it merges as soon as checks pass.
+          gh pr merge --auto --squash --delete-branch "$NEW_PR_URL"
+
+          echo "Successfully created and set PR ${NEW_PR_URL} to automerge."
+
+        else
+          echo "PR is from a fork. Commenting on original PR with instructions."
+
+          # For forks, the contributor must create the PR. We provide a convenient link that
+          # pre-fills the PR form on their fork, targeting their own branch.
+          COMPARE_URL="https://github.com/${HEAD_REPO}/compare/${SOURCE_BRANCH}...${BASE_REPO}:${NEW_BRANCH}?expand=1"
+
+          COMMENT_BODY="❌ **Generated files are out of date.**
+
+          You can review the updates in branch \`${NEW_BRANCH}\` and [open a pull request](${COMPARE_URL}) to merge them into your branch."
+
+          gh pr comment "$PR_NUMBER" --body "$COMMENT_BODY"
+
+          echo "Successfully commented on PR #${PR_NUMBER} with instructions."
+        fi
 
   standalone-haskell:
     needs: build
