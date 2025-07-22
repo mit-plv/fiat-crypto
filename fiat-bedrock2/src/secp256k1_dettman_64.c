@@ -333,7 +333,6 @@ void internal_fiat_secp256k1_dettman_mul(br_word_t out0, br_word_t in0, br_word_
   _br_store(out0+24, x199);
   _br_store(out0+32, x200);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -500,7 +499,6 @@ void internal_fiat_secp256k1_dettman_square(br_word_t out0, br_word_t in0) {
   _br_store(out0+24, x138);
   _br_store(out0+32, x139);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */

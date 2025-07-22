@@ -457,7 +457,6 @@ void internal_fiat_p256_mul(br_word_t out0, br_word_t in0, br_word_t in1) {
   _br_store(out0+16, x319);
   _br_store(out0+24, x320);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -800,7 +799,6 @@ void internal_fiat_p256_square(br_word_t out0, br_word_t in0) {
   _br_store(out0+16, x315);
   _br_store(out0+24, x316);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -867,7 +865,6 @@ void internal_fiat_p256_add(br_word_t out0, br_word_t in0, br_word_t in1) {
   _br_store(out0+16, x37);
   _br_store(out0+24, x38);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -920,7 +917,6 @@ void internal_fiat_p256_sub(br_word_t out0, br_word_t in0, br_word_t in1) {
   _br_store(out0+16, x23);
   _br_store(out0+24, x24);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -967,7 +963,6 @@ void internal_fiat_p256_opp(br_word_t out0, br_word_t in0) {
   _br_store(out0+16, x19);
   _br_store(out0+24, x20);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1077,7 +1072,6 @@ void internal_fiat_p256_from_montgomery(br_word_t out0, br_word_t in0) {
   _br_store(out0+16, x82);
   _br_store(out0+24, x83);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1267,7 +1261,6 @@ void internal_fiat_p256_to_montgomery(br_word_t out0, br_word_t in0) {
   _br_store(out0+16, x162);
   _br_store(out0+24, x163);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1348,7 +1341,6 @@ void internal_fiat_p256_selectznz(br_word_t out0, br_word_t in0, br_word_t in1, 
   _br_store(out0+16, x22);
   _br_store(out0+24, x23);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1498,7 +1490,6 @@ void internal_fiat_p256_to_bytes(br_word_t out0, br_word_t in0) {
   _br_store1(out0+30, x94);
   _br_store1(out0+31, x95);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1620,7 +1611,6 @@ void internal_fiat_p256_from_bytes(br_word_t out0, br_word_t in0) {
   _br_store(out0+16, x94);
   _br_store(out0+24, x95);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1648,7 +1638,6 @@ void internal_fiat_p256_set_one(br_word_t out0) {
   _br_store(out0+16, x2);
   _br_store(out0+24, x3);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1678,7 +1667,6 @@ void internal_fiat_p256_msat(br_word_t out0) {
   _br_store(out0+24, x3);
   _br_store(out0+32, x4);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -2043,7 +2031,6 @@ void internal_fiat_p256_divstep_precomp(br_word_t out0) {
   _br_store(out0+16, x2);
   _br_store(out0+24, x3);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */

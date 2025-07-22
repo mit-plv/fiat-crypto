@@ -806,7 +806,6 @@ void internal_fiat_25519_carry_mul(br_word_t out0, br_word_t in0, br_word_t in1)
   _br_store(out0+32, x667);
   _br_store(out0+36, x668);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1287,7 +1286,6 @@ void internal_fiat_25519_carry_square(br_word_t out0, br_word_t in0) {
   _br_store(out0+32, x447);
   _br_store(out0+36, x448);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1361,7 +1359,6 @@ void internal_fiat_25519_carry(br_word_t out0, br_word_t in0) {
   _br_store(out0+32, x40);
   _br_store(out0+36, x41);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1435,7 +1432,6 @@ void internal_fiat_25519_add(br_word_t out0, br_word_t in0, br_word_t in1) {
   _br_store(out0+32, x38);
   _br_store(out0+36, x39);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1509,7 +1505,6 @@ void internal_fiat_25519_sub(br_word_t out0, br_word_t in0, br_word_t in1) {
   _br_store(out0+32, x38);
   _br_store(out0+36, x39);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1571,7 +1566,6 @@ void internal_fiat_25519_opp(br_word_t out0, br_word_t in0) {
   _br_store(out0+32, x28);
   _br_store(out0+36, x29);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1667,7 +1661,6 @@ void internal_fiat_25519_selectznz(br_word_t out0, br_word_t in0, br_word_t in1,
   _br_store(out0+32, x58);
   _br_store(out0+36, x59);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -1970,7 +1963,6 @@ void internal_fiat_25519_to_bytes(br_word_t out0, br_word_t in0) {
   _br_store1(out0+30, x247);
   _br_store1(out0+31, x248);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -2122,7 +2114,6 @@ void internal_fiat_25519_from_bytes(br_word_t out0, br_word_t in0) {
   _br_store(out0+32, x118);
   _br_store(out0+36, x119);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -2184,7 +2175,6 @@ void internal_fiat_25519_relax(br_word_t out0, br_word_t in0) {
   _br_store(out0+32, x28);
   _br_store(out0+36, x29);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
@@ -2311,7 +2301,6 @@ void internal_fiat_25519_carry_scmul_121666(br_word_t out0, br_word_t in0) {
   _br_store(out0+32, x93);
   _br_store(out0+36, x94);
   /*skip*/
-  return;
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
