@@ -171,7 +171,7 @@ Module Import point.
     let p := proj1_sig p in
     to_bytes (fst (fst p)) ++ to_bytes (snd (fst p)) ++ to_bytes (snd p).
   Lemma length_point (x : point) : length x = 96%nat.
-  Proof. cbv [to_bytes]. rewrite ?length_app, ?length_coord; reflexivity. Qed.
+  Proof. cbv [to_bytes]. rewrite ?app_length, ?length_coord; reflexivity. Qed.
 
   Definition iszero (P : point) :=
     if Decidable.dec (Jacobian.iszero P) then true else false.

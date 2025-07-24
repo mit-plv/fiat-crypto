@@ -1,3 +1,4 @@
+Require Import coqutil.Datatypes.List Coq.Lists.List.
 Require Import Bedrock.P256.Specs.
 
 Import Specs.NotationsCustomEntry Specs.coord Specs.point.
@@ -76,7 +77,7 @@ Definition p256_coord_halve := func!(y, x) {
 Local Ltac length_tac :=
   repeat rewrite
     ?length_coord, ?length_point,
-    ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil,
+    ?app_length, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil,
     ?Nat.min_l
     by (trivial; lia); trivial; lia.
 
@@ -218,7 +219,7 @@ Proof.
   destruct P as (((x1 & y1) & z1) & p1),  Q as (((x2 & y2) & z2) & p2);
     cbv [proj1_sig proj2_sig fst snd point.to_bytes] in * |-.
   repeat seprewrite_in_by Array.sep_eq_of_list_word_at_app H25
-     ltac:(rewrite ?length_app, ?length_coord; trivial; try Lia.lia).
+     ltac:(rewrite ?app_length, ?length_coord; trivial; try Lia.lia).
 
   repeat straightline.
   repeat seprewrite_in_by Array.array1_iff_eq_of_list_word_at H25 ltac:(Lia.lia).
@@ -226,9 +227,9 @@ Proof.
   rewrite <-(firstn_skipn 32 out) in H25.
   rewrite <-(firstn_skipn 32 (skipn _ out)) in H25.
   rewrite ?skipn_skipn in H25.
-rewrite ?length_app, ?length_coord in *.
+rewrite ?app_length, ?length_coord in *.
   repeat seprewrite_in_by Array.sep_eq_of_list_word_at_app H25 (* WHY does first rewrite take 0.1s? *)
-    ltac:(repeat rewrite ?length_app, ?length_firstn, ?length_skipn, ?Nat.min_l; try Lia.lia; trivial).
+    ltac:(repeat rewrite ?app_length, ?length_firstn, ?length_skipn, ?Nat.min_l; try Lia.lia; trivial).
 
   progress change (Z.of_nat 32) with 32 in *.
 
@@ -256,9 +257,9 @@ rewrite ?length_app, ?length_coord in *.
   { 
     cbv [proj1_sig proj2_sig fst snd point.to_bytes].
     repeat seprewrite_in_by Array.list_word_at_app_of_adjacent_eq H93 ltac:(rewrite ?length_coord; listZnWords).
-    (* other direction: repeat seprewrite_by Array.sep_eq_of_list_word_at_app ltac:(rewrite ?length_coord, ?length_app; trivial; try Lia.lia). *)
+    (* other direction: repeat seprewrite_by Array.sep_eq_of_list_word_at_app ltac:(rewrite ?length_coord, ?app_length; trivial; try Lia.lia). *)
     ecancel_assumption. }
-  { rewrite ?length_app, ?length_point, ?length_coord; trivial. }
+  { rewrite ?app_length, ?length_point, ?length_coord; trivial. }
 
   case (Properties.word.eqb_spec x3 $0); subst x3; rewrite word.lor_0_iff; [right|left]; split; trivial.
   { case H121 as [Hx Hy].
@@ -418,7 +419,7 @@ Import Curves.Weierstrass.AffineProofs.
     
     straightline_call; repeat straightline.
     { split. { ecancel_assumption. } 
-      rewrite ?length_map, ?length_combine, ?repeat_length.
+      rewrite ?map_length, ?length_combine, ?repeat_length.
       rewrite H18, length_point. clear; ZnWords.ZnWords. }
 
     straightline_call; repeat straightline; ssplit (* memcpy *).
@@ -471,7 +472,7 @@ Proof.
   destruct P as (((x1 & y1) & z1) & p1);
     cbv [proj1_sig proj2_sig fst snd point.to_bytes] in * |-.
   progress repeat seprewrite_in_by Array.sep_eq_of_list_word_at_app H18
-     ltac:(rewrite ?length_app, ?length_coord; trivial; try Lia.lia).
+     ltac:(rewrite ?app_length, ?length_coord; trivial; try Lia.lia).
 
   repeat straightline.
   repeat seprewrite_in_by Array.array1_iff_eq_of_list_word_at H18 ltac:(Lia.lia).
@@ -479,9 +480,9 @@ Proof.
   rewrite <-(firstn_skipn 32 out) in H18.
   rewrite <-(firstn_skipn 32 (skipn _ out)) in H18.
   rewrite !skipn_skipn in H18.
-rewrite ?length_app, ?length_coord in *.
+rewrite ?app_length, ?length_coord in *.
   progress repeat seprewrite_in_by Array.sep_eq_of_list_word_at_app H18 
-    ltac:(repeat rewrite ?length_app, ?length_firstn, ?length_skipn, ?Nat.min_l; try Lia.lia; trivial).
+    ltac:(repeat rewrite ?app_length, ?length_firstn, ?length_skipn, ?Nat.min_l; try Lia.lia; trivial).
 
   progress change (Z.of_nat 32) with 32 in *.
 

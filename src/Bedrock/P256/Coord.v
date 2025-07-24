@@ -1,3 +1,4 @@
+Require Import coqutil.Datatypes.List Coq.Lists.List.
 Require Import Bedrock.P256.Specs.
 Require Import Bedrock.P256.Platform.
 
@@ -117,7 +118,7 @@ Compute String.concat LF (List.map (fun f => "static inline "++ c_func f) coord6
 Local Ltac length_tac :=
   repeat rewrite
     ?length_coord, ?length_point,
-    ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil,
+    ?app_length, ?firstn_length, ?length_skipn, ?length_le_split, ?length_nil,
     ?Nat.min_l
     by (trivial; lia); trivial; lia.
 
@@ -189,10 +190,10 @@ Proof.
 
   cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar] in H14.
   change (Memory.bytes_per access_size.word) with 8%nat in H14.
-  do 3 seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  do 3 seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
   revert H14;
   eassert ((_ ++ _) = _) as ->; [|intros;ecancel_assumption].
-  eapply le_combine_inj; rewrite ?length_app, ?length_le_combine, ?length_le_split; trivial.
+  eapply le_combine_inj; rewrite ?app_length, ?length_le_combine, ?length_le_split; trivial.
   rewrite !le_combine_app, !le_combine_split, ?length_le_split; change (2^(8%nat*8)) with (2^64).
   rewrite ?Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
   subst y3; rewrite word.unsigned_sru_nowrap, Z.shiftr_div_pow2  by ZnWords.ZnWords.
@@ -254,11 +255,11 @@ Proof.
 
   cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar] in H23.
   change (Memory.bytes_per access_size.word) with 8%nat in H23.
-  repeat seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) H23 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  repeat seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) H23 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
   rewrite <-?app_assoc in H23.
   revert H23;
   eassert ((_ ++ _) = _) as ->; [|intros;ecancel_assumption].
-  eapply le_combine_inj; rewrite ?length_app, ?length_le_combine, ?length_le_split; trivial.
+  eapply le_combine_inj; rewrite ?app_length, ?length_le_combine, ?length_le_split; trivial.
   rewrite !le_combine_app, !le_combine_split, ?length_le_split; change (2^(8%nat*8)) with (2^64).
   pose proof F.to_Z_range ((x - y)) eq_refl.
   rewrite ?Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
@@ -330,10 +331,10 @@ Proof.
   rename H18 into H23.
   cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar] in H23.
   change (Memory.bytes_per access_size.word) with 8%nat in H23.
-  repeat seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) H23 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  repeat seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) H23 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
   rewrite <-?app_assoc in H23.
   revert H23; eassert ((_ ++ _) = _)%list as ->; [|intros;ecancel_assumption].
-  eapply le_combine_inj; rewrite ?length_app, ?length_le_combine, ?length_le_split; trivial.
+  eapply le_combine_inj; rewrite ?app_length, ?length_le_combine, ?length_le_split; trivial.
   rewrite !le_combine_app, !le_combine_split, ?length_le_split; change (2^(8%nat*8)) with (2^64).
   pose proof F.to_Z_range ((x + y)) eq_refl.
   rewrite ?Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
@@ -378,7 +379,7 @@ Proof.
   clear Hm; rename H3 into Hm.
   cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar] in Hm.
   progress change (Memory.bytes_per access_size.word) with 8%nat in Hm.
-  repeat seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) Hm ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  repeat seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) Hm ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
 
   revert Hm; eassert ((_ ++ _) = _)%list as ->; [|intros;ecancel_assumption].
   eapply le_combine_inj. { length_tac. } 

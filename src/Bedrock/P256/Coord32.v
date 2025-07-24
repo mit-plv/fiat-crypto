@@ -1,3 +1,4 @@
+Require Import coqutil.Datatypes.List Coq.Lists.List.
 Require Import Bedrock.P256.Specs.
 Require Import Bedrock.P256.Platform.
 Import bedrock2.NotationsCustomEntry Specs.NotationsCustomEntry.
@@ -136,7 +137,7 @@ Import Specs.NotationsCustomEntry Specs.coord Specs.point.
 Local Ltac length_tac :=
   repeat rewrite
     ?length_coord, ?length_point,
-    ?length_app, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil,
+    ?app_length, ?length_firstn, ?length_skipn, ?length_le_split, ?length_nil,
     ?Nat.min_l
     by (trivial; lia); trivial; lia.
 
@@ -219,11 +220,11 @@ Proof.
   repeat seprewrite_in_by ptsto_bytes.ptsto_bytes_iff_eq_of_list_word_at H14 ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords.ZnWords).
   rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in H14.
   change (Memory.bytes_per access_size.word) with 4%nat in H14.
-  repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
   rewrite <-?app_assoc in H14.
   revert H14;
   eassert ((_ ++ _) = _) as ->; [|intros;ecancel_assumption].
-  eapply le_combine_inj; rewrite ?length_app, ?length_le_combine, ?length_le_split; trivial.
+  eapply le_combine_inj; rewrite ?app_length, ?length_le_combine, ?length_le_split; trivial.
   rewrite !le_combine_app, !le_combine_split, ?length_le_split; change (2^(8%nat*8)) with (2^64).
   rewrite ?Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
   subst y7; rewrite word.unsigned_sru_nowrap, Z.shiftr_div_pow2  by ZnWords.ZnWords.
@@ -277,7 +278,7 @@ Proof.
   repeat seprewrite_in_by ptsto_bytes.ptsto_bytes_iff_eq_of_list_word_at Hm ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords.ZnWords).
   rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in Hm.
   change (Memory.bytes_per access_size.word) with 4%nat in Hm.
-  repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) Hm ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) Hm ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
   rewrite <-?app_assoc in Hm.
   simpl Nat.add in Hm.
 
