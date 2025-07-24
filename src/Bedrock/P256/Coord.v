@@ -138,8 +138,8 @@ Proof.
   simpl Z.mul in *; simpl Z.add in *.
   subst l0 l1 l2 l3.
 
-  repeat (seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm length_tac).
-  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm length_tac.
+  repeat (seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm length_tac).
+  repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac.
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac.
   rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by length_tac.
   simpl Z.of_nat in *.
@@ -178,8 +178,8 @@ Proof.
   subst l l0 l1 l2.
 
   let domem Hm :=
-  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm length_tac;
-  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm length_tac;
+  repeat seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm length_tac;
+  repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac;
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac;
   rewrite ?le_combine_split in Hm by lia 
   in domem H2; domem H3.
@@ -187,12 +187,9 @@ Proof.
   simpl Z.of_nat in *; simpl Z.mul in *; simpl Z.add in *; simpl Nat.add in *.
   progress repeat (straightline || straightline_call); try ZnWords.ZnWords.
 
-  cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar Scalars.littleendian] in H14.
-  repeat seprewrite_in_by ptsto_bytes.ptsto_bytes_iff_eq_of_list_word_at H14 ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords.ZnWords).
-  rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in H14.
+  cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar] in H14.
   change (Memory.bytes_per access_size.word) with 8%nat in H14.
-  repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
-  rewrite <-?app_assoc in H14.
+  do 3 seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
   revert H14;
   eassert ((_ ++ _) = _) as ->; [|intros;ecancel_assumption].
   eapply le_combine_inj; rewrite ?length_app, ?length_le_combine, ?length_le_split; trivial.
@@ -246,8 +243,8 @@ Proof.
   rewrite ?length_le_split in *.
 
   let domem Hm :=
-  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm length_tac;
-  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm length_tac;
+  repeat seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm length_tac;
+  repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac;
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac;
   rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by lia 
   in domem H8; domem H9; domem H10.
@@ -255,11 +252,9 @@ Proof.
   simpl Z.of_nat in *; simpl Z.mul in *; simpl Z.add in *; simpl Nat.add in *.
   repeat (straightline || straightline_call); try ZnWords.ZnWords.
 
-  cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar Scalars.littleendian] in H23.
-  repeat seprewrite_in_by ptsto_bytes.ptsto_bytes_iff_eq_of_list_word_at H23 ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords.ZnWords).
-  rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in H23.
+  cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar] in H23.
   change (Memory.bytes_per access_size.word) with 8%nat in H23.
-  repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) H23 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  repeat seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) H23 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
   rewrite <-?app_assoc in H23.
   revert H23;
   eassert ((_ ++ _) = _) as ->; [|intros;ecancel_assumption].
@@ -323,8 +318,8 @@ Proof.
   rewrite ?length_le_split in *.
 
   let domem Hm :=
-  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm length_tac;
-  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm length_tac;
+  repeat seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm length_tac;
+  repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac;
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac;
   rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by lia 
   in domem H8; domem H9; domem H10.
@@ -333,11 +328,9 @@ Proof.
   repeat (straightline || straightline_call); try ZnWords.ZnWords.
 
   rename H18 into H23.
-  cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar Scalars.littleendian] in H23.
-  repeat seprewrite_in_by ptsto_bytes.ptsto_bytes_iff_eq_of_list_word_at H23 ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords.ZnWords).
-  rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in H23.
+  cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar] in H23.
   change (Memory.bytes_per access_size.word) with 8%nat in H23.
-  repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) H23 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  repeat seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) H23 ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
   rewrite <-?app_assoc in H23.
   revert H23; eassert ((_ ++ _) = _)%list as ->; [|intros;ecancel_assumption].
   eapply le_combine_inj; rewrite ?length_app, ?length_le_combine, ?length_le_split; trivial.
@@ -373,8 +366,8 @@ Proof.
   rename H into Hm.
    
   rewrite <-(firstn_skipn 8 out), <-(firstn_skipn 8 out[_:]), <-(firstn_skipn 8 out[_:][_:]), ?skipn_skipn, ?firstn_skipn in Hm.
-  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm length_tac.
-  repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm length_tac.
+  repeat seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm length_tac.
+  repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac.
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac.
   simpl Z.of_nat in *.
 
@@ -383,11 +376,9 @@ Proof.
   (* postcondition *)
 
   clear Hm; rename H3 into Hm.
-  cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar Scalars.littleendian] in Hm.
-  repeat seprewrite_in_by ptsto_bytes.ptsto_bytes_iff_eq_of_list_word_at Hm ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords.ZnWords).
-  rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in Hm.
-  change (Memory.bytes_per access_size.word) with 8%nat in Hm.
-  repeat seprewrite_in_by (@ptsto_bytes.list_word_at_app_of_adjacent_eq) Hm ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar] in Hm.
+  progress change (Memory.bytes_per access_size.word) with 8%nat in Hm.
+  repeat seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) Hm ltac:(rewrite ?length_app, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
 
   revert Hm; eassert ((_ ++ _) = _)%list as ->; [|intros;ecancel_assumption].
   eapply le_combine_inj. { length_tac. } 

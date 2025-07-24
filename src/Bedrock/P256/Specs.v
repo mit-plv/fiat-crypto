@@ -1,3 +1,4 @@
+Require Import coqutil.Datatypes.List Coq.Lists.List.
 From bedrock2 Require Import Syntax NotationsCustomEntry.
 
 From coqutil Require Import LittleEndianList.

@@ -55,7 +55,7 @@ Proof.
 
   rename H0 into Hm.
   cbv [point.to_bytes] in *.
-  repeat seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?app_length, ?length_coord; trivial; try lia).
+  repeat seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?app_length, ?length_coord; trivial; try lia).
   simpl Z.of_nat in *.
 
   straightline_call; [eexists; ecancel_assumption|]; repeat straightline.
@@ -96,15 +96,15 @@ Proof.
   { cbn. repeat straightline. eexists; split; [|reflexivity].
     cbv [coord.to_bytes] in Hm.
     rewrite <-(firstn_skipn 8 (le_split _ _)), List.firstn_le_split, skipn_le_split, ?Z.shiftr_shiftr in Hm by lia.
-    seprewrite_in_by (@ptsto_bytes.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_le_split; trivial; lia).
-    seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split; lia).
+    seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_le_split; trivial; lia).
+    seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split; lia).
     seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split; lia).
     rewrite le_combine_split in Hm.
     repeat straightline. }
 
   straightline_call; [eexists; ecancel_assumption|]; repeat straightline.
   
-  seprewrite_in_by ptsto_bytes.array1_iff_eq_of_list_word_at Hm0 ltac:(Lia.lia).
+  seprewrite_in_by Array.array1_iff_eq_of_list_word_at Hm0 ltac:(Lia.lia).
 
   straightline_call; ssplit; [ ecancel_assumption | trivial | exact eq_refl | ].
   repeat straightline.
@@ -142,11 +142,11 @@ Proof.
   repeat straightline.
 
   (* stackdealloc *)
-  progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H12 length_tac.
+  progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) H12 length_tac.
   progress repeat match type of H12 with context [Array.array ptsto _ _ (le_split 32 ?x)] =>
     unique pose proof (length_le_split 32 x) end.
   progress repeat straightline.
-  progress repeat seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H12 length_tac.
+  progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H12 length_tac.
 
   (* postcondition *)
   use_sep_assumption.
@@ -217,17 +217,17 @@ Proof.
   straightline; repeat straightline_cleanup.
   destruct P as (((x1 & y1) & z1) & p1),  Q as (((x2 & y2) & z2) & p2);
     cbv [proj1_sig proj2_sig fst snd point.to_bytes] in * |-.
-  repeat seprewrite_in_by ptsto_bytes.sep_eq_of_list_word_at_app H25
+  repeat seprewrite_in_by Array.sep_eq_of_list_word_at_app H25
      ltac:(rewrite ?length_app, ?length_coord; trivial; try Lia.lia).
 
   repeat straightline.
-  repeat seprewrite_in_by ptsto_bytes.array1_iff_eq_of_list_word_at H25 ltac:(Lia.lia).
+  repeat seprewrite_in_by Array.array1_iff_eq_of_list_word_at H25 ltac:(Lia.lia).
 
   rewrite <-(firstn_skipn 32 out) in H25.
   rewrite <-(firstn_skipn 32 (skipn _ out)) in H25.
   rewrite ?skipn_skipn in H25.
 rewrite ?length_app, ?length_coord in *.
-  repeat seprewrite_in_by ptsto_bytes.sep_eq_of_list_word_at_app H25 (* WHY does first rewrite take 0.1s? *)
+  repeat seprewrite_in_by Array.sep_eq_of_list_word_at_app H25 (* WHY does first rewrite take 0.1s? *)
     ltac:(repeat rewrite ?length_app, ?length_firstn, ?length_skipn, ?Nat.min_l; try Lia.lia; trivial).
 
   progress change (Z.of_nat 32) with 32 in *.
@@ -245,18 +245,18 @@ rewrite ?length_app, ?length_coord in *.
     | repeat straightline ]).
 
   (* stackdealloc *)
-  progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H93 ltac:(rewrite ?length_coord; Lia.lia).
+  progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) H93 ltac:(rewrite ?length_coord; Lia.lia).
   progress repeat match type of H93 with context [Array.array ptsto _ _ (coord.to_bytes ?x)] =>
     unique pose proof (length_coord x) end.
   repeat straightline.
-  progress repeat seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H93 ltac:(rewrite ?length_coord; Lia.lia).
+  progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H93 ltac:(rewrite ?length_coord; Lia.lia).
 
   (* postcondition *)
   eexists; ssplit.
   { 
     cbv [proj1_sig proj2_sig fst snd point.to_bytes].
-    repeat seprewrite_in_by ptsto_bytes.list_word_at_app_of_adjacent_eq H93 ltac:(rewrite ?length_coord; listZnWords).
-    (* other direction: repeat seprewrite_by ptsto_bytes.sep_eq_of_list_word_at_app ltac:(rewrite ?length_coord, ?length_app; trivial; try Lia.lia). *)
+    repeat seprewrite_in_by Array.list_word_at_app_of_adjacent_eq H93 ltac:(rewrite ?length_coord; listZnWords).
+    (* other direction: repeat seprewrite_by Array.sep_eq_of_list_word_at_app ltac:(rewrite ?length_coord, ?length_app; trivial; try Lia.lia). *)
     ecancel_assumption. }
   { rewrite ?length_app, ?length_point, ?length_coord; trivial. }
 
@@ -311,14 +311,14 @@ Proof.
   straightline_call; repeat straightline. (*iszero*)
   { letexists. ecancel_assumption. }
   (* stackalloc *)
-  seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H9 ltac:(lia).
+  seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H9 ltac:(lia).
   straightline_call; ssplit. (*add*)
   { ecancel_assumption. }
   { rewrite length_point; lia. }
   repeat straightline.
   straightline_call; repeat straightline (* br_declassify *).
   (* stackalloc *)
-  seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H17 ltac:(lia).
+  seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H17 ltac:(lia).
   straightline_call; ssplit. (* memset *)
   { ecancel_assumption. }
   { ZnWords.ZnWords. }
@@ -347,12 +347,12 @@ Proof.
     { clear; ZnWords.ZnWords. }
     repeat straightline.
     (* stackdealloc *)
-    progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H42 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
+    progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) H42 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
     progress repeat match type of H42 with context [Array.array ptsto _ _ (point.to_bytes ?x)] =>
     unique pose proof (length_point x) end.
     assert (Datatypes.length x6 = 96%nat) by ZnWords.ZnWords.
     repeat straightline.
-    progress repeat seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H42 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
+    progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H42 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
 
     rewrite <-word.unsigned_of_Z_0, !word.unsigned_inj_iff in H27 by exact _.
     rewrite !word.lor_0_iff, !word.broadcast_0_iff in H27.
@@ -428,11 +428,11 @@ Import Curves.Weierstrass.AffineProofs.
     { clear; ZnWords.ZnWords. }
     repeat straightline.
     (* stackdealloc *)
-    progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H31 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
+    progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) H31 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
     progress repeat match type of H31 with context [Array.array ptsto _ _ (point.to_bytes ?x)] =>
     unique pose proof (length_point x) end.
     repeat straightline.
-    progress repeat seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H31 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
+    progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H31 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
 
     eexists; ssplit. { ecancel_assumption. }
     rewrite <-HE, <-Jacobian.double_minus_3_eq_double.
@@ -470,17 +470,17 @@ Proof.
   straightline; repeat straightline_cleanup.
   destruct P as (((x1 & y1) & z1) & p1);
     cbv [proj1_sig proj2_sig fst snd point.to_bytes] in * |-.
-  progress repeat seprewrite_in_by ptsto_bytes.sep_eq_of_list_word_at_app H18
+  progress repeat seprewrite_in_by Array.sep_eq_of_list_word_at_app H18
      ltac:(rewrite ?length_app, ?length_coord; trivial; try Lia.lia).
 
   repeat straightline.
-  repeat seprewrite_in_by ptsto_bytes.array1_iff_eq_of_list_word_at H18 ltac:(Lia.lia).
+  repeat seprewrite_in_by Array.array1_iff_eq_of_list_word_at H18 ltac:(Lia.lia).
 
   rewrite <-(firstn_skipn 32 out) in H18.
   rewrite <-(firstn_skipn 32 (skipn _ out)) in H18.
   rewrite !skipn_skipn in H18.
 rewrite ?length_app, ?length_coord in *.
-  progress repeat seprewrite_in_by ptsto_bytes.sep_eq_of_list_word_at_app H18 
+  progress repeat seprewrite_in_by Array.sep_eq_of_list_word_at_app H18 
     ltac:(repeat rewrite ?length_app, ?length_firstn, ?length_skipn, ?Nat.min_l; try Lia.lia; trivial).
 
   progress change (Z.of_nat 32) with 32 in *.
@@ -499,7 +499,7 @@ rewrite ?length_app, ?length_coord in *.
     | repeat straightline ]).
 
   (* stackalloc *)
-  repeat seprewrite_in_by ptsto_bytes.array1_iff_eq_of_list_word_at H42 ltac:(Lia.lia).
+  repeat seprewrite_in_by Array.array1_iff_eq_of_list_word_at H42 ltac:(Lia.lia).
 
   progress repeat (straightline_call; ssplit;
     [ solve [repeat match goal with
@@ -513,11 +513,11 @@ rewrite ?length_app, ?length_coord in *.
     | repeat straightline ]).
 
   (* stackdealloc *)
-  progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H50 ltac:(rewrite ?length_coord; Lia.lia).
+  progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) H50 ltac:(rewrite ?length_coord; Lia.lia).
   progress repeat match type of H50 with context [Array.array ptsto _ _ (coord.to_bytes ?x)] =>
     unique pose proof (length_coord x) end.
   repeat straightline.
-  progress repeat seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H50 ltac:(rewrite ?length_coord; Lia.lia).
+  progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H50 ltac:(rewrite ?length_coord; Lia.lia).
 
   progress repeat (straightline_call; ssplit;
     [ solve [repeat match goal with
@@ -531,16 +531,16 @@ rewrite ?length_app, ?length_coord in *.
     | repeat straightline ]).
 
   (* stackdealloc *)
-  progress repeat seprewrite_in_by (symmetry! @ptsto_bytes.array1_iff_eq_of_list_word_at) H69 ltac:(rewrite ?length_coord; Lia.lia).
+  progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) H69 ltac:(rewrite ?length_coord; Lia.lia).
   progress repeat match type of H69 with context [Array.array ptsto _ _ (coord.to_bytes ?x)] =>
     unique pose proof (length_coord x) end.
   repeat straightline.
-  progress repeat seprewrite_in_by (@ptsto_bytes.array1_iff_eq_of_list_word_at) H69 ltac:(rewrite ?length_coord; Lia.lia).
+  progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H69 ltac:(rewrite ?length_coord; Lia.lia).
 
   (* postcondition *)
 
   cbv [proj1_sig proj2_sig fst snd point.to_bytes Jacobian.double_minus_3 Jacobian.double_minus3_impl Jacobian.Fsquare Jacobian.Ftriple Jacobian.Fhalve ].
-  progress repeat seprewrite_in_by ptsto_bytes.list_word_at_app_of_adjacent_eq H69 ltac:(rewrite ?length_coord; listZnWords).
+  progress repeat seprewrite_in_by Array.list_word_at_app_of_adjacent_eq H69 ltac:(rewrite ?length_coord; listZnWords).
   rewrite ?F.pow_3_r, ?F.pow_2_r in H69.
   ecancel_assumption.
 Qed.
