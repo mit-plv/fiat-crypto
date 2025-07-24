@@ -87,7 +87,7 @@ Compute String.concat LF (List.map c_func jacobian).
 Definition asm := &[, p256_coord_sqr; p256_coord_mul
  ].
 
-Definition funcs := Eval cbv [List.app] in (jacobian ++ asm ++ platform ++ libc)%list.
+Definition funcs := Eval cbv [List.app] in (jacobian ++ coord64 ++ asm ++ platform ++ libc)%list.
 
 Ltac pose_correctness lem :=
   let funcs := match goal with |- _ (map.of_list ?funcs) => funcs end in
