@@ -5,7 +5,7 @@ Import Specs.NotationsCustomEntry Specs.coord Specs.point.
 
 Import bedrock2.Syntax bedrock2.NotationsCustomEntry
 LittleEndianList
-ZArith.BinInt
+Zdiv ZArith BinInt
 BinInt BinNat Init.Byte
 PrimeFieldTheorems ModInv
 micromega.Lia
@@ -163,7 +163,7 @@ Proof.
   set (x*coord.R)%F as xR; set (F.inv (1 + 1)) as i2.
 
   (* NOTE: back-and-forth rewrite between Z.modulo and Z.odd *)
-  rewrite word.unsigned_of_Z; cbv [word.wrap]; rewrite Zdiv.Zmod_mod, Zdiv.Zodd_mod, Zdiv.Z.mod_mod_divide by (apply Divide.Z.divide_pow_le with (n:=1); lia).
+  rewrite word.unsigned_of_Z; cbv [word.wrap]; rewrite Zmod_mod, Zdiv.Zodd_mod, Z.mod_mod_divide by (apply Divide.Z.divide_pow_le with (n:=1); lia).
   symmetry; rewrite <-(F.of_Z_to_Z xR) at 1; rewrite (Z.div_mod xR 2) at 1 by lia.
   rewrite Div.Z.div_sub_mod_exact, Zdiv.Zmod_odd by lia.
 
