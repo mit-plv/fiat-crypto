@@ -49,45 +49,6 @@ Local Existing Instance field_parameters.
 Local Instance frep256k1 : Field.FieldRepresentation := field_representation Field256k1.m.
 Local Existing Instance frep256k1_ok.
 
-Definition secp256k1_laddermul (scalarbitsz : Z) :=
-  func! (oX, oY, k, X, Y) {
-    i = coq:(1);
-    swap = (load1(k+i>>coq:(3))>>(i&coq:(7)))&coq:(1);
-    stackalloc 32 as X0;
-    stackalloc 32 as Y0;
-    stackalloc 32 as X1;
-    stackalloc 32 as Y1;
-    stackalloc 32 as Z;
-    stackalloc 32 as oZ;
-    secp256k1_tplu(X1, Y1, X0, Y0, Z, X, Y);
-    i = coq:(2);
-    while (i < coq:(scalarbitsz)) {
-      b = (load1(k+i>>coq:(3))>>(i&coq:(7)))&coq:(1);
-      swap = swap ^ b;
-      felem_cswap(swap, X0, X1);
-      felem_cswap(swap, Y0, Y1);
-      secp256k1_zdau(X1, Y1, X0, Y0, Z);
-      swap = b;
-      i = i+coq:(1)
-    };
-    felem_cswap(swap, X0, X1);
-    felem_cswap(swap, Y0, Y1);
-    stackalloc 32 as tX;
-    stackalloc 32 as tY;
-    secp256k1_make_co_z(tX, tY, X, Y, Z);
-    secp256k1_opp(tY, tY);
-    secp256k1_zaddu(oX, oY, X1, Y1, oZ, X0, Y0, tX, tY, Z);
-    i = coq:(0);
-    swap = (load1(k+i>>coq:(3))>>(i&coq:(7)))&coq:(1);
-    felem_cswap(swap, oX, X1);
-    felem_cswap(swap, oY, Y1);
-    secp256k1_inv(Z, oZ);
-    secp256k1_mul(oY, oY, Z);
-    secp256k1_mul(Z, Z, Z);
-    secp256k1_mul(oX, oX, Z);
-    secp256k1_mul(oY, oY, Z)
-}.
-
 Section WithParameters.
   Context {two_lt_M: 2 < M_pos}.
   Context {char_ge_3 : (@Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos BinNat.N.two))}.
@@ -98,6 +59,45 @@ Section WithParameters.
   Context {zero_a : id a = F.zero}
           {seven_b : id b = F.of_Z _ 7}.
   Context {scalarbitsz : Z} {scalarbitsz_small : word.wrap scalarbitsz = scalarbitsz}.
+
+  Definition secp256k1_laddermul :=
+    func! (oX, oY, k, X, Y) {
+      i = coq:(1);
+      swap = (load1(k+i>>coq:(3))>>(i&coq:(7)))&coq:(1);
+      stackalloc 32 as X0;
+      stackalloc 32 as Y0;
+      stackalloc 32 as X1;
+      stackalloc 32 as Y1;
+      stackalloc 32 as Z;
+      stackalloc 32 as oZ;
+      secp256k1_tplu(X1, Y1, X0, Y0, Z, X, Y);
+      i = coq:(2);
+      while (i < coq:(scalarbitsz)) {
+        b = (load1(k+i>>coq:(3))>>(i&coq:(7)))&coq:(1);
+        swap = swap ^ b;
+        felem_cswap(swap, X0, X1);
+        felem_cswap(swap, Y0, Y1);
+        secp256k1_zdau(X1, Y1, X0, Y0, Z);
+        swap = b;
+        i = i+coq:(1)
+      };
+      felem_cswap(swap, X0, X1);
+      felem_cswap(swap, Y0, Y1);
+      stackalloc 32 as tX;
+      stackalloc 32 as tY;
+      secp256k1_make_co_z(tX, tY, X, Y, Z);
+      secp256k1_opp(tY, tY);
+      secp256k1_zaddu(oX, oY, X1, Y1, oZ, X0, Y0, tX, tY, Z);
+      i = coq:(0);
+      swap = (load1(k+i>>coq:(3))>>(i&coq:(7)))&coq:(1);
+      felem_cswap(swap, oX, X1);
+      felem_cswap(swap, oY, Y1);
+      secp256k1_inv(Z, oZ);
+      secp256k1_mul(oY, oY, Z);
+      secp256k1_mul(Z, Z, Z);
+      secp256k1_mul(oX, oX, Z);
+      secp256k1_mul(oY, oY, Z)
+  }.
 
   Add Ring Private_ring : (F.ring_theory M_pos) (morphism (F.ring_morph M_pos), constants [F.is_constant]).
 
@@ -558,7 +558,7 @@ Section WithParameters.
     eexists; ssplit; eauto.
   Qed.
 
-  Lemma spec_of_laddermul_ok : program_logic_goal_for_function! (secp256k1_laddermul scalarbitsz).
+  Lemma spec_of_laddermul_ok : program_logic_goal_for_function! secp256k1_laddermul.
   Proof.
     Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
 
@@ -946,7 +946,7 @@ End WithParameters.
 Require Import bedrock2.ToCString.
 Require Import coqutil.Macros.WithBaseName.
 Definition funcs :=
-  let secp256k1_laddermul := (secp256k1_laddermul 256%Z) in
+  let secp256k1_laddermul := (@secp256k1_laddermul 256%Z) in
   List.app
   [ secp256k1_opp;
     secp256k1_mul;
