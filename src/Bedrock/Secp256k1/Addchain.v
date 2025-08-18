@@ -110,7 +110,7 @@ Definition secp256k1_shift x y (n: nat) :=
                                   i = i + $1
                                 })).
 
-Definition secp256k1_inv :=
+Definition secp256k1_inv := Eval cbv in
   func! (z, x) {
     stackalloc 32 as t0;
     stackalloc 32 as t1;

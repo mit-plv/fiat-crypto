@@ -625,7 +625,10 @@ Section FElems.
     Require Import Crypto.Spec.Curve25519. *)
     Lemma fe_inv_correct :
       Z.pos M_pos = 2^255-19 ->
-      program_logic_goal_for_function! fe25519_inv.
+      (forall functions : map.rep,
+        map.get functions "fe25519_inv" = Some fe25519_inv ->
+        spec_of_UnOp un_square functions -> spec_of_BinOp bin_mul functions ->
+        spec_of_exp_large functions).
     Proof using ext_spec_ok field_representation_ok locals_ok mem_ok word_ok.
       intros Hm HmPrime ? ** ? **.
       eapply Proper_call; [|eapply fe25519_inv_correct_exp; eauto 1; exact I].
