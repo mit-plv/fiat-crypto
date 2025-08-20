@@ -27,6 +27,8 @@
 //   balance = [0x1ffffffe, 0xffffffe, 0x1ffffffe, 0xffffffe, 0x1ffffffe, 0xffffffe, 0xffffffe, 0x1ffffffe, 0xffffffe, 0x1ffffffe, 0xffffffe, 0x1ffffffe, 0xffffffe, 0xffffffe, 0x1ffffffe, 0xffffffe, 0x1ffffffe, 0xffffffe, 0xffffffe]
 package p521
 
+import "math/bits"
+
 type uint1 uint64 // We use uint64 instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927
 type int1 int64 // We use uint64 instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927
 
@@ -1292,288 +1294,288 @@ func ToBytes(out1 *[66]uint8, arg1 *TightFieldElement) {
 	var x38 uint1
 	subborrowxU27(&x37, &x38, x36, arg1[18], 0x7ffffff)
 	var x39 uint32
-	cmovznzU32(&x39, x38, uint32(0x0), 0xffffffff)
-	var x40 uint32
-	var x41 uint1
-	addcarryxU28(&x40, &x41, 0x0, x1, (x39 & 0xfffffff))
-	var x42 uint32
-	var x43 uint1
-	addcarryxU27(&x42, &x43, x41, x3, (x39 & 0x7ffffff))
-	var x44 uint32
-	var x45 uint1
-	addcarryxU28(&x44, &x45, x43, x5, (x39 & 0xfffffff))
-	var x46 uint32
-	var x47 uint1
-	addcarryxU27(&x46, &x47, x45, x7, (x39 & 0x7ffffff))
-	var x48 uint32
-	var x49 uint1
-	addcarryxU28(&x48, &x49, x47, x9, (x39 & 0xfffffff))
-	var x50 uint32
-	var x51 uint1
-	addcarryxU27(&x50, &x51, x49, x11, (x39 & 0x7ffffff))
-	var x52 uint32
-	var x53 uint1
-	addcarryxU27(&x52, &x53, x51, x13, (x39 & 0x7ffffff))
-	var x54 uint32
-	var x55 uint1
-	addcarryxU28(&x54, &x55, x53, x15, (x39 & 0xfffffff))
-	var x56 uint32
-	var x57 uint1
-	addcarryxU27(&x56, &x57, x55, x17, (x39 & 0x7ffffff))
-	var x58 uint32
-	var x59 uint1
-	addcarryxU28(&x58, &x59, x57, x19, (x39 & 0xfffffff))
-	var x60 uint32
-	var x61 uint1
-	addcarryxU27(&x60, &x61, x59, x21, (x39 & 0x7ffffff))
-	var x62 uint32
-	var x63 uint1
-	addcarryxU28(&x62, &x63, x61, x23, (x39 & 0xfffffff))
-	var x64 uint32
-	var x65 uint1
-	addcarryxU27(&x64, &x65, x63, x25, (x39 & 0x7ffffff))
-	var x66 uint32
-	var x67 uint1
-	addcarryxU27(&x66, &x67, x65, x27, (x39 & 0x7ffffff))
-	var x68 uint32
-	var x69 uint1
-	addcarryxU28(&x68, &x69, x67, x29, (x39 & 0xfffffff))
-	var x70 uint32
-	var x71 uint1
-	addcarryxU27(&x70, &x71, x69, x31, (x39 & 0x7ffffff))
-	var x72 uint32
-	var x73 uint1
-	addcarryxU28(&x72, &x73, x71, x33, (x39 & 0xfffffff))
-	var x74 uint32
-	var x75 uint1
-	addcarryxU27(&x74, &x75, x73, x35, (x39 & 0x7ffffff))
-	var x76 uint32
-	var x77 uint1
-	addcarryxU27(&x76, &x77, x75, x37, (x39 & 0x7ffffff))
-	x78 := (uint64(x76) << 6)
-	x79 := (x74 << 3)
-	x80 := (uint64(x72) << 7)
-	x81 := (x70 << 4)
-	x82 := (x66 << 5)
-	x83 := (x64 << 2)
-	x84 := (uint64(x62) << 6)
-	x85 := (x60 << 3)
-	x86 := (uint64(x58) << 7)
-	x87 := (x56 << 4)
-	x88 := (x52 << 5)
-	x89 := (x50 << 2)
-	x90 := (uint64(x48) << 6)
-	x91 := (x46 << 3)
-	x92 := (uint64(x44) << 7)
-	x93 := (x42 << 4)
-	x94 := (uint8(x40) & 0xff)
-	x95 := (x40 >> 8)
-	x96 := (uint8(x95) & 0xff)
-	x97 := (x95 >> 8)
-	x98 := (uint8(x97) & 0xff)
-	x99 := uint8((x97 >> 8))
-	x100 := (x93 + uint32(x99))
-	x101 := (uint8(x100) & 0xff)
-	x102 := (x100 >> 8)
-	x103 := (uint8(x102) & 0xff)
-	x104 := (x102 >> 8)
-	x105 := (uint8(x104) & 0xff)
-	x106 := uint8((x104 >> 8))
-	x107 := (x92 + uint64(x106))
-	x108 := (uint8(x107) & 0xff)
-	x109 := uint32((x107 >> 8))
-	x110 := (uint8(x109) & 0xff)
-	x111 := (x109 >> 8)
-	x112 := (uint8(x111) & 0xff)
-	x113 := (x111 >> 8)
-	x114 := (uint8(x113) & 0xff)
-	x115 := uint8((x113 >> 8))
-	x116 := (x91 + uint32(x115))
-	x117 := (uint8(x116) & 0xff)
-	x118 := (x116 >> 8)
-	x119 := (uint8(x118) & 0xff)
-	x120 := (x118 >> 8)
-	x121 := (uint8(x120) & 0xff)
-	x122 := uint8((x120 >> 8))
-	x123 := (x90 + uint64(x122))
-	x124 := (uint8(x123) & 0xff)
-	x125 := uint32((x123 >> 8))
-	x126 := (uint8(x125) & 0xff)
-	x127 := (x125 >> 8)
-	x128 := (uint8(x127) & 0xff)
-	x129 := (x127 >> 8)
-	x130 := (uint8(x129) & 0xff)
-	x131 := uint8((x129 >> 8))
-	x132 := (x89 + uint32(x131))
-	x133 := (uint8(x132) & 0xff)
-	x134 := (x132 >> 8)
-	x135 := (uint8(x134) & 0xff)
-	x136 := (x134 >> 8)
-	x137 := (uint8(x136) & 0xff)
-	x138 := uint8((x136 >> 8))
-	x139 := (x88 + uint32(x138))
-	x140 := (uint8(x139) & 0xff)
-	x141 := (x139 >> 8)
-	x142 := (uint8(x141) & 0xff)
-	x143 := (x141 >> 8)
-	x144 := (uint8(x143) & 0xff)
-	x145 := uint8((x143 >> 8))
-	x146 := (uint8(x54) & 0xff)
-	x147 := (x54 >> 8)
-	x148 := (uint8(x147) & 0xff)
-	x149 := (x147 >> 8)
-	x150 := (uint8(x149) & 0xff)
-	x151 := uint8((x149 >> 8))
-	x152 := (x87 + uint32(x151))
-	x153 := (uint8(x152) & 0xff)
-	x154 := (x152 >> 8)
-	x155 := (uint8(x154) & 0xff)
-	x156 := (x154 >> 8)
-	x157 := (uint8(x156) & 0xff)
-	x158 := uint8((x156 >> 8))
-	x159 := (x86 + uint64(x158))
-	x160 := (uint8(x159) & 0xff)
-	x161 := uint32((x159 >> 8))
-	x162 := (uint8(x161) & 0xff)
-	x163 := (x161 >> 8)
-	x164 := (uint8(x163) & 0xff)
-	x165 := (x163 >> 8)
-	x166 := (uint8(x165) & 0xff)
-	x167 := uint8((x165 >> 8))
-	x168 := (x85 + uint32(x167))
-	x169 := (uint8(x168) & 0xff)
-	x170 := (x168 >> 8)
-	x171 := (uint8(x170) & 0xff)
-	x172 := (x170 >> 8)
-	x173 := (uint8(x172) & 0xff)
-	x174 := uint8((x172 >> 8))
-	x175 := (x84 + uint64(x174))
-	x176 := (uint8(x175) & 0xff)
-	x177 := uint32((x175 >> 8))
-	x178 := (uint8(x177) & 0xff)
-	x179 := (x177 >> 8)
-	x180 := (uint8(x179) & 0xff)
-	x181 := (x179 >> 8)
-	x182 := (uint8(x181) & 0xff)
-	x183 := uint8((x181 >> 8))
-	x184 := (x83 + uint32(x183))
-	x185 := (uint8(x184) & 0xff)
-	x186 := (x184 >> 8)
-	x187 := (uint8(x186) & 0xff)
-	x188 := (x186 >> 8)
-	x189 := (uint8(x188) & 0xff)
-	x190 := uint8((x188 >> 8))
-	x191 := (x82 + uint32(x190))
-	x192 := (uint8(x191) & 0xff)
-	x193 := (x191 >> 8)
-	x194 := (uint8(x193) & 0xff)
-	x195 := (x193 >> 8)
-	x196 := (uint8(x195) & 0xff)
-	x197 := uint8((x195 >> 8))
-	x198 := (uint8(x68) & 0xff)
-	x199 := (x68 >> 8)
-	x200 := (uint8(x199) & 0xff)
-	x201 := (x199 >> 8)
-	x202 := (uint8(x201) & 0xff)
-	x203 := uint8((x201 >> 8))
-	x204 := (x81 + uint32(x203))
-	x205 := (uint8(x204) & 0xff)
-	x206 := (x204 >> 8)
-	x207 := (uint8(x206) & 0xff)
-	x208 := (x206 >> 8)
-	x209 := (uint8(x208) & 0xff)
-	x210 := uint8((x208 >> 8))
-	x211 := (x80 + uint64(x210))
-	x212 := (uint8(x211) & 0xff)
-	x213 := uint32((x211 >> 8))
-	x214 := (uint8(x213) & 0xff)
-	x215 := (x213 >> 8)
-	x216 := (uint8(x215) & 0xff)
-	x217 := (x215 >> 8)
-	x218 := (uint8(x217) & 0xff)
-	x219 := uint8((x217 >> 8))
-	x220 := (x79 + uint32(x219))
-	x221 := (uint8(x220) & 0xff)
-	x222 := (x220 >> 8)
-	x223 := (uint8(x222) & 0xff)
-	x224 := (x222 >> 8)
-	x225 := (uint8(x224) & 0xff)
-	x226 := uint8((x224 >> 8))
-	x227 := (x78 + uint64(x226))
-	x228 := (uint8(x227) & 0xff)
-	x229 := uint32((x227 >> 8))
-	x230 := (uint8(x229) & 0xff)
-	x231 := (x229 >> 8)
-	x232 := (uint8(x231) & 0xff)
-	x233 := (x231 >> 8)
-	x234 := (uint8(x233) & 0xff)
-	x235 := uint1((x233 >> 8))
-	out1[0] = x94
-	out1[1] = x96
-	out1[2] = x98
-	out1[3] = x101
-	out1[4] = x103
-	out1[5] = x105
-	out1[6] = x108
-	out1[7] = x110
-	out1[8] = x112
-	out1[9] = x114
-	out1[10] = x117
-	out1[11] = x119
-	out1[12] = x121
-	out1[13] = x124
-	out1[14] = x126
-	out1[15] = x128
-	out1[16] = x130
-	out1[17] = x133
-	out1[18] = x135
-	out1[19] = x137
-	out1[20] = x140
-	out1[21] = x142
-	out1[22] = x144
-	out1[23] = x145
-	out1[24] = x146
-	out1[25] = x148
-	out1[26] = x150
-	out1[27] = x153
-	out1[28] = x155
-	out1[29] = x157
-	out1[30] = x160
-	out1[31] = x162
-	out1[32] = x164
-	out1[33] = x166
-	out1[34] = x169
-	out1[35] = x171
-	out1[36] = x173
-	out1[37] = x176
-	out1[38] = x178
-	out1[39] = x180
-	out1[40] = x182
-	out1[41] = x185
-	out1[42] = x187
-	out1[43] = x189
-	out1[44] = x192
-	out1[45] = x194
-	out1[46] = x196
-	out1[47] = x197
-	out1[48] = x198
-	out1[49] = x200
-	out1[50] = x202
-	out1[51] = x205
-	out1[52] = x207
-	out1[53] = x209
-	out1[54] = x212
-	out1[55] = x214
-	out1[56] = x216
-	out1[57] = x218
-	out1[58] = x221
-	out1[59] = x223
-	out1[60] = x225
-	out1[61] = x228
-	out1[62] = x230
-	out1[63] = x232
-	out1[64] = x234
-	out1[65] = uint8(x235)
+	x39, _ = bits.Sub32(uint32(0x0), uint32(0x0), uint32(x38))
+	var x41 uint32
+	var x42 uint1
+	addcarryxU28(&x41, &x42, 0x0, x1, (x39 & 0xfffffff))
+	var x43 uint32
+	var x44 uint1
+	addcarryxU27(&x43, &x44, x42, x3, (x39 & 0x7ffffff))
+	var x45 uint32
+	var x46 uint1
+	addcarryxU28(&x45, &x46, x44, x5, (x39 & 0xfffffff))
+	var x47 uint32
+	var x48 uint1
+	addcarryxU27(&x47, &x48, x46, x7, (x39 & 0x7ffffff))
+	var x49 uint32
+	var x50 uint1
+	addcarryxU28(&x49, &x50, x48, x9, (x39 & 0xfffffff))
+	var x51 uint32
+	var x52 uint1
+	addcarryxU27(&x51, &x52, x50, x11, (x39 & 0x7ffffff))
+	var x53 uint32
+	var x54 uint1
+	addcarryxU27(&x53, &x54, x52, x13, (x39 & 0x7ffffff))
+	var x55 uint32
+	var x56 uint1
+	addcarryxU28(&x55, &x56, x54, x15, (x39 & 0xfffffff))
+	var x57 uint32
+	var x58 uint1
+	addcarryxU27(&x57, &x58, x56, x17, (x39 & 0x7ffffff))
+	var x59 uint32
+	var x60 uint1
+	addcarryxU28(&x59, &x60, x58, x19, (x39 & 0xfffffff))
+	var x61 uint32
+	var x62 uint1
+	addcarryxU27(&x61, &x62, x60, x21, (x39 & 0x7ffffff))
+	var x63 uint32
+	var x64 uint1
+	addcarryxU28(&x63, &x64, x62, x23, (x39 & 0xfffffff))
+	var x65 uint32
+	var x66 uint1
+	addcarryxU27(&x65, &x66, x64, x25, (x39 & 0x7ffffff))
+	var x67 uint32
+	var x68 uint1
+	addcarryxU27(&x67, &x68, x66, x27, (x39 & 0x7ffffff))
+	var x69 uint32
+	var x70 uint1
+	addcarryxU28(&x69, &x70, x68, x29, (x39 & 0xfffffff))
+	var x71 uint32
+	var x72 uint1
+	addcarryxU27(&x71, &x72, x70, x31, (x39 & 0x7ffffff))
+	var x73 uint32
+	var x74 uint1
+	addcarryxU28(&x73, &x74, x72, x33, (x39 & 0xfffffff))
+	var x75 uint32
+	var x76 uint1
+	addcarryxU27(&x75, &x76, x74, x35, (x39 & 0x7ffffff))
+	var x77 uint32
+	var x78 uint1
+	addcarryxU27(&x77, &x78, x76, x37, (x39 & 0x7ffffff))
+	x79 := (uint64(x77) << 6)
+	x80 := (x75 << 3)
+	x81 := (uint64(x73) << 7)
+	x82 := (x71 << 4)
+	x83 := (x67 << 5)
+	x84 := (x65 << 2)
+	x85 := (uint64(x63) << 6)
+	x86 := (x61 << 3)
+	x87 := (uint64(x59) << 7)
+	x88 := (x57 << 4)
+	x89 := (x53 << 5)
+	x90 := (x51 << 2)
+	x91 := (uint64(x49) << 6)
+	x92 := (x47 << 3)
+	x93 := (uint64(x45) << 7)
+	x94 := (x43 << 4)
+	x95 := (uint8(x41) & 0xff)
+	x96 := (x41 >> 8)
+	x97 := (uint8(x96) & 0xff)
+	x98 := (x96 >> 8)
+	x99 := (uint8(x98) & 0xff)
+	x100 := uint8((x98 >> 8))
+	x101 := (x94 + uint32(x100))
+	x102 := (uint8(x101) & 0xff)
+	x103 := (x101 >> 8)
+	x104 := (uint8(x103) & 0xff)
+	x105 := (x103 >> 8)
+	x106 := (uint8(x105) & 0xff)
+	x107 := uint8((x105 >> 8))
+	x108 := (x93 + uint64(x107))
+	x109 := (uint8(x108) & 0xff)
+	x110 := uint32((x108 >> 8))
+	x111 := (uint8(x110) & 0xff)
+	x112 := (x110 >> 8)
+	x113 := (uint8(x112) & 0xff)
+	x114 := (x112 >> 8)
+	x115 := (uint8(x114) & 0xff)
+	x116 := uint8((x114 >> 8))
+	x117 := (x92 + uint32(x116))
+	x118 := (uint8(x117) & 0xff)
+	x119 := (x117 >> 8)
+	x120 := (uint8(x119) & 0xff)
+	x121 := (x119 >> 8)
+	x122 := (uint8(x121) & 0xff)
+	x123 := uint8((x121 >> 8))
+	x124 := (x91 + uint64(x123))
+	x125 := (uint8(x124) & 0xff)
+	x126 := uint32((x124 >> 8))
+	x127 := (uint8(x126) & 0xff)
+	x128 := (x126 >> 8)
+	x129 := (uint8(x128) & 0xff)
+	x130 := (x128 >> 8)
+	x131 := (uint8(x130) & 0xff)
+	x132 := uint8((x130 >> 8))
+	x133 := (x90 + uint32(x132))
+	x134 := (uint8(x133) & 0xff)
+	x135 := (x133 >> 8)
+	x136 := (uint8(x135) & 0xff)
+	x137 := (x135 >> 8)
+	x138 := (uint8(x137) & 0xff)
+	x139 := uint8((x137 >> 8))
+	x140 := (x89 + uint32(x139))
+	x141 := (uint8(x140) & 0xff)
+	x142 := (x140 >> 8)
+	x143 := (uint8(x142) & 0xff)
+	x144 := (x142 >> 8)
+	x145 := (uint8(x144) & 0xff)
+	x146 := uint8((x144 >> 8))
+	x147 := (uint8(x55) & 0xff)
+	x148 := (x55 >> 8)
+	x149 := (uint8(x148) & 0xff)
+	x150 := (x148 >> 8)
+	x151 := (uint8(x150) & 0xff)
+	x152 := uint8((x150 >> 8))
+	x153 := (x88 + uint32(x152))
+	x154 := (uint8(x153) & 0xff)
+	x155 := (x153 >> 8)
+	x156 := (uint8(x155) & 0xff)
+	x157 := (x155 >> 8)
+	x158 := (uint8(x157) & 0xff)
+	x159 := uint8((x157 >> 8))
+	x160 := (x87 + uint64(x159))
+	x161 := (uint8(x160) & 0xff)
+	x162 := uint32((x160 >> 8))
+	x163 := (uint8(x162) & 0xff)
+	x164 := (x162 >> 8)
+	x165 := (uint8(x164) & 0xff)
+	x166 := (x164 >> 8)
+	x167 := (uint8(x166) & 0xff)
+	x168 := uint8((x166 >> 8))
+	x169 := (x86 + uint32(x168))
+	x170 := (uint8(x169) & 0xff)
+	x171 := (x169 >> 8)
+	x172 := (uint8(x171) & 0xff)
+	x173 := (x171 >> 8)
+	x174 := (uint8(x173) & 0xff)
+	x175 := uint8((x173 >> 8))
+	x176 := (x85 + uint64(x175))
+	x177 := (uint8(x176) & 0xff)
+	x178 := uint32((x176 >> 8))
+	x179 := (uint8(x178) & 0xff)
+	x180 := (x178 >> 8)
+	x181 := (uint8(x180) & 0xff)
+	x182 := (x180 >> 8)
+	x183 := (uint8(x182) & 0xff)
+	x184 := uint8((x182 >> 8))
+	x185 := (x84 + uint32(x184))
+	x186 := (uint8(x185) & 0xff)
+	x187 := (x185 >> 8)
+	x188 := (uint8(x187) & 0xff)
+	x189 := (x187 >> 8)
+	x190 := (uint8(x189) & 0xff)
+	x191 := uint8((x189 >> 8))
+	x192 := (x83 + uint32(x191))
+	x193 := (uint8(x192) & 0xff)
+	x194 := (x192 >> 8)
+	x195 := (uint8(x194) & 0xff)
+	x196 := (x194 >> 8)
+	x197 := (uint8(x196) & 0xff)
+	x198 := uint8((x196 >> 8))
+	x199 := (uint8(x69) & 0xff)
+	x200 := (x69 >> 8)
+	x201 := (uint8(x200) & 0xff)
+	x202 := (x200 >> 8)
+	x203 := (uint8(x202) & 0xff)
+	x204 := uint8((x202 >> 8))
+	x205 := (x82 + uint32(x204))
+	x206 := (uint8(x205) & 0xff)
+	x207 := (x205 >> 8)
+	x208 := (uint8(x207) & 0xff)
+	x209 := (x207 >> 8)
+	x210 := (uint8(x209) & 0xff)
+	x211 := uint8((x209 >> 8))
+	x212 := (x81 + uint64(x211))
+	x213 := (uint8(x212) & 0xff)
+	x214 := uint32((x212 >> 8))
+	x215 := (uint8(x214) & 0xff)
+	x216 := (x214 >> 8)
+	x217 := (uint8(x216) & 0xff)
+	x218 := (x216 >> 8)
+	x219 := (uint8(x218) & 0xff)
+	x220 := uint8((x218 >> 8))
+	x221 := (x80 + uint32(x220))
+	x222 := (uint8(x221) & 0xff)
+	x223 := (x221 >> 8)
+	x224 := (uint8(x223) & 0xff)
+	x225 := (x223 >> 8)
+	x226 := (uint8(x225) & 0xff)
+	x227 := uint8((x225 >> 8))
+	x228 := (x79 + uint64(x227))
+	x229 := (uint8(x228) & 0xff)
+	x230 := uint32((x228 >> 8))
+	x231 := (uint8(x230) & 0xff)
+	x232 := (x230 >> 8)
+	x233 := (uint8(x232) & 0xff)
+	x234 := (x232 >> 8)
+	x235 := (uint8(x234) & 0xff)
+	x236 := uint1((x234 >> 8))
+	out1[0] = x95
+	out1[1] = x97
+	out1[2] = x99
+	out1[3] = x102
+	out1[4] = x104
+	out1[5] = x106
+	out1[6] = x109
+	out1[7] = x111
+	out1[8] = x113
+	out1[9] = x115
+	out1[10] = x118
+	out1[11] = x120
+	out1[12] = x122
+	out1[13] = x125
+	out1[14] = x127
+	out1[15] = x129
+	out1[16] = x131
+	out1[17] = x134
+	out1[18] = x136
+	out1[19] = x138
+	out1[20] = x141
+	out1[21] = x143
+	out1[22] = x145
+	out1[23] = x146
+	out1[24] = x147
+	out1[25] = x149
+	out1[26] = x151
+	out1[27] = x154
+	out1[28] = x156
+	out1[29] = x158
+	out1[30] = x161
+	out1[31] = x163
+	out1[32] = x165
+	out1[33] = x167
+	out1[34] = x170
+	out1[35] = x172
+	out1[36] = x174
+	out1[37] = x177
+	out1[38] = x179
+	out1[39] = x181
+	out1[40] = x183
+	out1[41] = x186
+	out1[42] = x188
+	out1[43] = x190
+	out1[44] = x193
+	out1[45] = x195
+	out1[46] = x197
+	out1[47] = x198
+	out1[48] = x199
+	out1[49] = x201
+	out1[50] = x203
+	out1[51] = x206
+	out1[52] = x208
+	out1[53] = x210
+	out1[54] = x213
+	out1[55] = x215
+	out1[56] = x217
+	out1[57] = x219
+	out1[58] = x222
+	out1[59] = x224
+	out1[60] = x226
+	out1[61] = x229
+	out1[62] = x231
+	out1[63] = x233
+	out1[64] = x235
+	out1[65] = uint8(x236)
 }
 
 // FromBytes deserializes a field element from bytes in little-endian order.
