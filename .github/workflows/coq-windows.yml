@@ -27,7 +27,6 @@ jobs:
     env:
       NJOBS: "2"
       COQ_VERSION: "8.18.0" # minimal major version required for bedrock2 components
-      COQEXTRAFLAGS: "-async-proofs-j 1"
       COQCHKEXTRAFLAGS: ""
       OPAMYES: "true"
       OPAMCONFIRMLEVEL: "unsafe-yes"
