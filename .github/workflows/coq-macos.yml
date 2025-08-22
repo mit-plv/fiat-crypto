@@ -32,7 +32,7 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "8.18.0" # pick a version not tested on other platforms
+      COQ_VERSION: "8.20.0"
       COQCHKEXTRAFLAGS: ""
       SKIP_BEDROCK2: "0"
       OPAMYES: "true"
