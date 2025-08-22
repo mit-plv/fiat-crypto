@@ -90,6 +90,13 @@ Local Hint Resolve
       eq_firstn_nat_rect
       eq_skipn_nat_rect
       eq_update_nth_nat_rect
+      unfold1_nat_rect_fbb_b
+      unfold1_nat_rect_fbb_b_b
+      unfold1_list_rect_fbb_b
+      unfold1_list_rect_fbb_b_b
+      unfold1_list_rect_fbb_b_b_b
+      unfold1_list_rect_fbb_b_b_b_b
+      unfold1_list_rect_fbb_b_b_b_b_b
   : core.
 
 (* to catch [prod_rect] and not just [prod_rect_nodep] *)
