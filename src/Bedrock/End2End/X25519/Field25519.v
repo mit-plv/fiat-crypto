@@ -41,6 +41,8 @@ Section Field.
 
   Instance field_parameters : FieldParameters :=
     field_parameters_prefixed Curve25519.p Curve25519.M.a24 "fe25519_"%string.
+  
+  #[export] Instance frep25519 : FieldRepresentation := field_representation n s c.
 
   (* Call fiat-crypto pipeline on all field operations *)
   Instance fe25519_ops : unsaturated_solinas_ops (ext_spec:=ext_spec) n s c.
@@ -149,7 +151,7 @@ Section Field.
     As fe25519_scmula24_correct.
   Proof. Time derive_bedrock2_func scmula24_op. Qed.
 
-  #[export] Instance frep25519_ok : FieldRepresentation_ok(field_representation:=field_representation n s c).
+  #[export] Instance frep25519_ok : FieldRepresentation_ok(field_representation:=frep25519).
   Proof.
     apply Crypto.Bedrock.Field.Synthesis.New.Signature.field_representation_ok.
     apply UnsaturatedSolinas.relax_valid.
