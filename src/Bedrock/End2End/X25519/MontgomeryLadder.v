@@ -4,6 +4,7 @@ From Coq Require Import ZArith.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Spec.MontgomeryCurve.
 Require Import Crypto.Spec.Curve25519.
+Require Import Crypto.Bedrock.Specs.Field.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Syntax.
 Require Import bedrock2Examples.memmove.
@@ -100,12 +101,9 @@ Proof.
   straightline_call; ssplit; try ecancel_assumption; repeat straightline; try listZnWords; [].
   straightline_call; ssplit; try ecancel_assumption; repeat straightline; try listZnWords; [].
 
-  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a0) H17. { transitivity 40%nat; trivial. }
-
   straightline_call; ssplit.
   { eexists. ecancel_assumption. }
-  { cbv [Field.FElem].
-    use_sep_assumption. cancel. cancel_seps_at_indices 0%nat 0%nat; cbn [seps]; eapply RelationClasses.reflexivity. }
+  { ecancel_assumption_impl. }
   { unfold Field.bytes_in_bounds, frep25519, field_representation, Signature.field_representation, Representation.frep.
     match goal with |- ?P ?x ?z => let y := eval cbv in x in change (P y z) end; cbn.
     repeat (destruct p as [|? p]; try (cbn [length] in *;discriminate); []).
@@ -119,14 +117,12 @@ Proof.
     eapply byte.unsigned_range. }
   repeat straightline.
 
-  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H24. { transitivity 40%nat; trivial. }
+   seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H24. { transitivity 40%nat; trivial. }
 
   straightline_call; ssplit.
-  { unfold FElem, Field.FElem in *; extract_ex1_and_emp_in_goal; ssplit.
-       { use_sep_assumption. cancel; repeat ecancel_step.
-       cancel_seps_at_indices 0%nat 0%nat; trivial. cbn; reflexivity. }
-    all : eauto.
-    { instantiate (1:=None). exact I. } }
+  { unfold FElem in *; extract_ex1_and_emp_in_goal; ssplit; try ecancel_assumption_impl. 
+    all: eauto.
+    instantiate (1:=None). exact I. }
   { reflexivity. }
   { rewrite ?length_le_split. vm_compute. inversion 1. }
   repeat straightline.
@@ -151,15 +147,12 @@ Proof.
   repeat straightline.
 
   cbv [Field.FElem] in *.
-  seprewrite_in @Bignum.Bignum_to_bytes H34.
-  seprewrite_in @Bignum.Bignum_to_bytes H34.
-  extract_ex1_and_emp_in H34.
+  repeat seprewrite_in @Bignum.Bignum_to_bytes H32; extract_ex1_and_emp_in H32.
   pose proof length_le_split 32 (Curve25519.clamp (le_combine s)).
-
-  repeat straightline; intuition eauto.
+  repeat straightline.
   cbv [x25519_spec].
   use_sep_assumption; cancel.
-  rewrite H38, le_combine_split.
+  rewrite H36, le_combine_split.
   do 7 Morphisms.f_equiv.
   pose proof clamp_range (le_combine s).
   change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255.
@@ -173,9 +166,8 @@ Proof.
   straightline_call; ssplit; try ecancel_assumption; repeat straightline; try listZnWords; [].
   straightline_call; ssplit; try ecancel_assumption; repeat straightline; try listZnWords; [].
 
-  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a0) H14. { transitivity 40%nat; trivial. }
   straightline_call; ssplit.
-  { cbv [Field.FElem]. cbn. cbv [n]. ecancel_assumption. }
+  { cbv [Field.FElem]. cbn. cbv [n]. ecancel_assumption_impl. }
   repeat straightline.
 
   seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H21. { transitivity 40%nat; trivial. }
@@ -189,7 +181,7 @@ Proof.
   { reflexivity. }
   { rewrite length_le_split. vm_compute. inversion 1. }
   repeat straightline.
-  unfold FElem in H28. extract_ex1_and_emp_in H28.
+  unfold FElem in H26. extract_ex1_and_emp_in H26.
   straightline_call; ssplit.
   { ecancel_assumption. }
   { transitivity 32%nat; auto. }
@@ -199,15 +191,15 @@ Proof.
   repeat straightline.
 
   cbv [Field.FElem] in *.
-  seprewrite_in @Bignum.Bignum_to_bytes H31.
-  seprewrite_in @Bignum.Bignum_to_bytes H31.
-  extract_ex1_and_emp_in H31.
+  seprewrite_in @Bignum.Bignum_to_bytes H29.
+  seprewrite_in @Bignum.Bignum_to_bytes H29.
+  extract_ex1_and_emp_in H29.
   pose proof length_le_split 32 (Curve25519.clamp (le_combine s)).
 
   repeat straightline; intuition eauto.
   cbv [x25519_spec].
   use_sep_assumption; cancel.
-  rewrite H35, le_combine_split.
+  rewrite H33, le_combine_split.
   do 7 Morphisms.f_equiv.
   pose proof clamp_range (le_combine s).
   change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255.

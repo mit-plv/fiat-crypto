@@ -68,6 +68,16 @@ Section Compile.
     }
   Qed.
 
+  Lemma FElem'_to_bytes
+    : forall bounds px x,
+      Lift1Prop.impl1 (FElem bounds px x) (Placeholder px).
+  Proof.
+    intros. cbv [FElem]. intros m [f F].
+    extract_ex1_and_emp_in F.
+    apply FElem_to_bytes in F.
+    assumption.
+  Qed.
+
   #[refine]
    Instance felem_alloc : Allocable (FElem None) :=
     {|
@@ -97,7 +107,6 @@ Section Compile.
     end; eauto;
     sepsimpl; repeat straightline'; subst; eauto.
 
-
   Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_BinOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
   Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_UnOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
 
@@ -105,13 +114,12 @@ Section Compile.
         {tr m l functions} x y:
     let v := bin_model x y in
     forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
-           Rx Ry Rout out x_ptr x_var y_ptr y_var out_ptr out_var
-           bound_out,
+           Rx Ry Rout x_ptr x_var y_ptr y_var out_ptr out_var,
 
       (_: spec_of name) functions ->
 
       map.get l out_var = Some out_ptr ->
-      (FElem bound_out out_ptr out * Rout)%sep m ->
+      (Placeholder out_ptr * Rout)%sep m ->
 
       (FElem (Some bin_xbounds) x_ptr x * Rx)%sep m ->
       (FElem (Some bin_ybounds) y_ptr y * Ry)%sep m ->
@@ -153,12 +161,12 @@ Section Compile.
   Lemma compile_unop {name} (op: UnOp name) {tr m l functions} x:
     let v := un_model x in
     forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
-           Rin Rout out x_ptr x_var out_ptr out_var out_bounds,
+           Rin Rout x_ptr x_var out_ptr out_var,
 
       (_: spec_of name) functions ->
 
       map.get l out_var = Some out_ptr ->
-      (FElem out_bounds out_ptr out * Rout)%sep m ->
+      (Placeholder out_ptr * Rout)%sep m ->
 
       (FElem (Some un_xbounds) x_ptr x * Rin)%sep m ->
       map.get l x_var = Some x_ptr ->
@@ -234,13 +242,13 @@ Section Compile.
   Lemma compile_felem_copy {tr m l functions} x :
     let v := x in
     forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
-           R x_ptr x_var out out_ptr out_var x_bound out_bound,
+           R x_ptr x_var out_ptr out_var x_bound,
 
       spec_of_felem_copy functions ->
 
       map.get l out_var = Some out_ptr ->
 
-      (FElem x_bound x_ptr x * FElem out_bound out_ptr out * R)%sep m ->
+      (FElem x_bound x_ptr x * Placeholder out_ptr * R)%sep m ->
       map.get l x_var = Some x_ptr ->
 
       (let v := v in
@@ -275,12 +283,12 @@ Section Compile.
   Lemma compile_from_word {tr m l functions} x:
     let v := F.of_Z _ x in
     forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
-           R (wx : word) out out_ptr out_var out_bounds,
+           R (wx : word) out_ptr out_var,
 
       spec_of_from_word functions ->
 
       map.get l out_var = Some out_ptr ->
-      (FElem out_bounds out_ptr out * R)%sep m ->
+      (Placeholder out_ptr * R)%sep m ->
 
       word.unsigned wx = x ->
 
@@ -430,6 +438,7 @@ is_var v; simple eapply compile_felem_copy; shelve : compiler.
 
 #[export] Hint Immediate relax_bounds_FElem : ecancel_impl.
 #[export] Hint Immediate drop_bounds_FElem : ecancel_impl.
+#[export] Hint Extern 1 (Lift1Prop.impl1 (FElem _ ?x _) (Placeholder ?x)) =>(eapply FElem'_to_bytes) : ecancel_impl.
 
 
 #[export] Hint Extern 1 (spec_of _) => (simple refine (@spec_of_BinOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.

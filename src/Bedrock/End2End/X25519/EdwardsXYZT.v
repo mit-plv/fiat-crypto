@@ -29,10 +29,6 @@ From Coq Require Import ZArith.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
-Require Import Crypto.Bedrock.Group.AdditionChains.
-Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
-Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
-Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 Require Import Crypto.Bedrock.End2End.X25519.Field25519.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Spec.Curve25519.
@@ -51,7 +47,7 @@ Import ProgramLogic.Coercions.
 Import WeakestPrecondition.
 
 Local Existing Instance field_parameters.
-Local Instance frep25519 : Field.FieldRepresentation := field_representation n Field25519.s c.
+Local Existing Instance frep25519.
 Local Existing Instance frep25519_ok.
 
 (* Size of a field element in bytes. This is the same as computing eval in felem_size_bytes, but we want a notation instead of definition. *)
@@ -233,6 +229,16 @@ Definition cached_repr (P : cached) := { p | let '(half_ymx, half_ypx,z,td) := p
 Local Notation "c 'p4@' p" := (let '(half_ymx, half_ypx,z,td) := proj1_sig c in sep (sep (sep (FElem (p .+ 0) half_ymx) (FElem (p .+ felem_size) half_ypx))
                               (FElem (p .+ (felem_size + felem_size)) z)) (FElem (p .+ (felem_size + felem_size + felem_size)) td)) (at level 10, format "c 'p4@' p").
 
+Local Notation Placeholder5 p := ((Placeholder (p .+ 0)) *
+                              (Placeholder (p .+ felem_size)) *
+                              (Placeholder (p .+ (felem_size + felem_size))) *
+                              (Placeholder (p .+ (felem_size + felem_size + felem_size))) *
+                              (Placeholder (p .+ (felem_size + felem_size + felem_size + felem_size))))%sep.
+Local Notation Placeholder4 p := ((Placeholder (p .+ 0)) *
+                              (Placeholder (p .+ felem_size)) *
+                              (Placeholder (p .+ (felem_size + felem_size))) *
+                              (Placeholder (p .+ (felem_size + felem_size + felem_size))))%sep.
+
 Instance spec_of_fe25519_half : spec_of "fe25519_half" :=
   fnspec! "fe25519_half"
     (result_location input_location: word) / (old_result input: felem)
@@ -252,9 +258,9 @@ Instance spec_of_fe25519_half : spec_of "fe25519_half" :=
 
 Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
   fnspec! "add_precomputed"
-    (p_out p_a p_b: word) / (a any: point) (b: precomputed_point) (a_repr: projective_repr a) (b_repr: precomputed_repr b) (anything: projective_repr any) (R: _ -> Prop), {
+    (p_out p_a p_b: word) / (a: point) (b: precomputed_point) (a_repr: projective_repr a) (b_repr: precomputed_repr b) (R: _ -> Prop), {
       requires t m :=
-        m =* anything p5@ p_out * a_repr p5@ p_a * b_repr p3@ p_b * R; 
+        m =* Placeholder5 p_out * a_repr p5@ p_a * b_repr p3@ p_b * R; 
       ensures t' m' :=
         t = t' /\
         exists a_plus_b : projective_repr (m1add_precomputed_coordinates a b),
@@ -264,9 +270,9 @@ Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
 Global Instance spec_of_double : spec_of "double" :=
   fnspec! "double"
     (p_out p_a: word) /
-    (a any: point) (a_repr: projective_repr a) (anything: projective_repr any) (R: _ -> Prop), {
+    (a: point) (a_repr: projective_repr a) (R: _ -> Prop), {
       requires t m :=
-        m =* anything p5@ p_out * a_repr p5@ p_a * R;
+        m =* Placeholder5 p_out * a_repr p5@ p_a * R;
       ensures t' m' := 
         t = t' /\
         exists a_double: projective_repr (m1double a),
@@ -276,9 +282,9 @@ Global Instance spec_of_double : spec_of "double" :=
 Global Instance spec_of_to_cached: spec_of "to_cached" :=
   fnspec! "to_cached"
     (p_out p_a p_d: word) /
-    (a: point) (any: cached) (a_repr: projective_repr a) (anything: cached_repr any) (d1: felem) (R: _ -> Prop), {
+    (a: point) (a_repr: projective_repr a) (d1: felem) (R: _ -> Prop), {
       requires t m :=
-        m =* anything p4@ p_out * a_repr p5@ p_a * FElem p_d d1 * R /\
+        m =* Placeholder4 p_out * a_repr p5@ p_a * FElem p_d d1 * R /\
         d = feval d1 /\
         bounded_by tight_bounds d1;
       ensures t' m' :=
@@ -290,9 +296,9 @@ Global Instance spec_of_to_cached: spec_of "to_cached" :=
 Global Instance spec_of_readd : spec_of "readd" :=
   fnspec! "readd"
     (p_out p_a p_c: word) /
-    (a any: point) (c: cached) (a_repr: projective_repr a) (anything: projective_repr any) (c_repr: cached_repr c) (R : _ -> Prop), {
+    (a: point) (c: cached) (a_repr: projective_repr a) (c_repr: cached_repr c) (R : _ -> Prop), {
       requires t m :=
-        m =* anything p5@ p_out * a_repr p5@ p_a * c_repr p4@ p_c * R;
+        m =* Placeholder5 p_out * a_repr p5@ p_a * c_repr p4@ p_c * R;
       ensures t' m' :=
         t = t' /\
         exists a_plus_c: projective_repr (m1_readd a c),
@@ -344,7 +350,7 @@ Local Ltac solve_bounds :=
 Local Ltac solve_mem :=
   repeat match goal with
   | |- exists _ : _ -> Prop, _%sep _ => eexists
-  | |- _%sep _ => ecancel_assumption
+  | |- _%sep _ => ecancel_assumption_impl
   | |- context[?a + ?b] => match isZcst a with 
         | false => fail
         | true => match (isZcst b) with
