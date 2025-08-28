@@ -30,6 +30,8 @@ Section Field.
          M ((a + F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
   Defined.
 
+  #[export] Instance frep256k1 : Field.FieldRepresentation := field_representation m.
+
   Definition to_mont_string := (prefix ++ "to_mont")%string.
   Definition from_mont_string := (prefix ++ "from_mont")%string.
 
@@ -114,7 +116,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions secp256k1_opp ->
                       spec_of_UnOp un_opp
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep256k1)
                         functions)
          As secp256k1_opp_correct.
   Proof. Time derive_bedrock2_func opp_op. Qed.
@@ -123,7 +125,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions secp256k1_mul ->
                       spec_of_BinOp bin_mul
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep256k1)
                         functions)
          As secp256k1_mul_correct.
   Proof. Time derive_bedrock2_func mul_op. Qed.
@@ -132,7 +134,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions secp256k1_square ->
                       spec_of_UnOp un_square
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep256k1)
                         functions)
          As secp256k1_square_correct.
   Proof. Time derive_bedrock2_func square_op. Qed.
@@ -141,7 +143,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions secp256k1_add ->
                       spec_of_BinOp bin_add
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep256k1)
                         functions)
          As secp256k1_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
@@ -150,7 +152,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions secp256k1_sub ->
                       spec_of_BinOp bin_sub
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep256k1)
                         functions)
          As secp256k1_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
@@ -159,7 +161,7 @@ Section Field.
            SuchThat (forall functions,
                       functions_contain functions secp256k1_select_znz ->
                       spec_of_selectznz
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep256k1)
                         functions)
          As secp256k1_select_znz_correct.
   Proof. Time derive_bedrock2_func select_znz_op. Qed.
@@ -168,7 +170,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions secp256k1_from_mont ->
                       spec_of_UnOp un_from_mont
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep256k1)
                         functions)
          As secp256k1_from_mont_correct.
   Proof. Time derive_bedrock2_func from_mont_op. Unshelve. 1,2: auto. Qed.
@@ -177,12 +179,12 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions secp256k1_to_mont ->
                       spec_of_UnOp un_to_mont
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep256k1)
                         functions)
          As secp256k1_to_mont_correct.
   Proof. Time derive_bedrock2_func to_mont_op. Unshelve. 1,2: auto. Qed.
 
-  #[export] Instance frep256k1_ok : FieldRepresentation_ok(field_representation:=field_representation m).
+  #[export] Instance frep256k1_ok : FieldRepresentation_ok(field_representation:=frep256k1).
   Proof.
     apply Crypto.Bedrock.Field.Synthesis.New.Signature.field_representation_ok.
     auto.
