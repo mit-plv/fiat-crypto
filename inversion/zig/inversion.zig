@@ -79,7 +79,7 @@ fn fieldElement(comptime Field: type) type {
         }
 
         pub fn eql(a: Self, b: Self) bool {
-            return crypto.utils.timingSafeEql(Field.Limbs, a.limbs, b.limbs);
+            return crypto.timing_safe.eql(Field.Limbs, a.limbs, b.limbs);
         }
     };
 }
