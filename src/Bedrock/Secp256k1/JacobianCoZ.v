@@ -44,7 +44,7 @@ Import WeakestPrecondition.
 Import BasicC64Semantics.
 
 Local Existing Instance field_parameters.
-Local Instance frep256k1 : Field.FieldRepresentation := field_representation Field256k1.m.
+Local Existing Instance frep256k1.
 Local Existing Instance frep256k1_ok.
 
 Definition secp256k1_jopp :=
@@ -493,7 +493,7 @@ Section WithParameters.
   Local Ltac solve_mem :=
     repeat match goal with
       | |- exists _ : _ -> Prop, _%sep _ => eexists
-      | |- _%sep _ => ecancel_assumption
+      | |- _%sep _ => ecancel_assumption_impl
       end.
 
   Local Ltac cbv_bounds H :=
@@ -637,19 +637,8 @@ Section WithParameters.
 
     do 9 single_step.
     single_step.
-    seprewrite_in (Bignum.Bignum_of_bytes 4 a4) H72; [ trivial |  ];
-    multimatch goal with
-    | |- _ ?m1 =>
-        multimatch goal with
-        | H:_ ?m2
-          |- _ =>
-            syntactic_unify._syntactic_unify_deltavar m1 m2;
-            refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
-        end
-    end; cancel; repeat ecancel_step; cancel_seps_at_indices 0%nat 0%nat;
-    [ reflexivity |  ]; (solve [ ecancel ]).
-    do 11 single_step.
-    do 4 single_step.
+
+    repeat single_step.
 
     repeat straightline.
     cbv [FElem] in *.

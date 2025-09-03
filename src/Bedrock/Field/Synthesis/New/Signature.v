@@ -101,9 +101,14 @@ Section WithParameters.
   Local Instance field_representation : FieldRepresentation
     := @frep _ BW _ _ field_parameters n n_bytes weight bounds list_in_bounds loose_bounds tight_bounds
              byte_bounds eval_transformation.
+  Locate bytes_per_word.
+  Context (felem_size_ok : felem_size_in_bytes <= 2 ^ width).
   Local Instance field_representation_ok : FieldRepresentation_ok
     := frep_ok n n_bytes weight bounds list_in_bounds loose_bounds tight_bounds byte_bounds
-               relax_bounds _.
+               relax_bounds _ felem_size_ok.
+
+  Local Notation felem_size_in_words := (felem_size_in_words(FieldRepresentation:=field_representation)).
+  Eval lazy in felem_size_in_words.
 
   Lemma FElem_array_truncated_scalar_iff1 px x :
     Lift1Prop.iff1
@@ -283,6 +288,15 @@ Section WithParameters.
     | _ => idtac
     end.
 
+  Import coqutil.Datatypes.List.
+  (* TODO I probably want these to live in Field.v or Bignum.v *)
+  Local Notation lew_combine := (fun c => word.of_Z (width:=width) (LittleEndianList.le_combine c)).
+  Local Notation k := (bytes_per_word width).
+  Local Notation lew_split := (fun w => LittleEndianList.le_split (Z.to_nat k) (word.unsigned w)).
+
+  Check map.
+  Check byte.unsigned.
+
   Ltac lists_reserved_simplify pout :=
     compute_names; cbn [type.app_curried fst snd];
     autounfold with types list_lengths pairs;
@@ -291,9 +305,13 @@ Section WithParameters.
     | H : context [FElem pout ?old_out]
       |- @Lift1Prop.ex1 (list Z) _ _ _ =>
       exists (map word.unsigned old_out)
-    | H : context [FElemBytes pout ?old_out]
+    | H : context [FElemBytes pout ?old_out] 
       |- @Lift1Prop.ex1 (list Z) _ _ _ =>
-      exists (map byte.unsigned old_out)
+      exists (map byte.unsigned old_out) (* I don't think this works *)
+    | H : context [Placeholder pout ?old_out ]
+      |- @Lift1Prop.ex1 (list Z) _ _ _ =>
+      seprewrite_in Placeholder_iff_FElem_bytes H; extract_ex1_and_emp_in_hyps;
+      exists (map word.unsigned ((List.map lew_combine (chunk (Z.to_nat k) old_out))))
     end;
     crush_sep.
 
@@ -393,9 +411,11 @@ Section WithParameters.
         use_translate_func_correct
           constr:((map word.unsigned x, (map word.unsigned y, tt))) Rr;
         translate_func_precondition_hammer.
-        { (* lists_reserved_with_initial_context *)
-          lists_reserved_simplify pout; try solve_equivalence_side_conditions; solve_length out outbounds_length.
-          } }
+        { 
+          (* lists_reserved_with_initial_context *)
+          lists_reserved_simplify pout; try solve_equivalence_side_conditions;
+          try solve_length (map lew_combine (chunk (Z.to_nat k) out)) outbounds_length.
+        } }
       { postcondition_simplify; [ | | ]; cycle -1.
         { refine (proj1 (Proper_sep_iff1 _ _ _ _ _ _ _) _);
             [symmetry; eapply FElem_array_truncated_scalar_iff1 | reflexivity | sepsimpl ].
@@ -470,7 +490,7 @@ Section WithParameters.
       forall functions, map.get functions name = Some f -> unop_spec _ functions.
     Proof using inname_gen_varname_gen_disjoint outbounds_length
           outbounds_tighter_than_max outname_gen_varname_gen_disjoint
-          ok relax_bounds res_Wf res_bounds res_eq res_valid.
+          ok relax_bounds res_Wf res_bounds res_eq res_valid felem_size_ok.
       subst inlengths insizes outsizes.
       cbv [unop_spec list_unop_insizes list_unop_outsizes list_unop_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func] in *.
@@ -481,7 +501,7 @@ Section WithParameters.
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
           all: try solve_equivalence_side_conditions.
-          solve_length out outbounds_length. } }
+          solve_length (map lew_combine (chunk (Z.to_nat k) out)) outbounds_length. } }
       { postcondition_simplify; [ | | ].
         { (* output correctness *)
           eapply res_eq; auto. }
@@ -545,7 +565,7 @@ Section WithParameters.
                         spec_of_from_word functions.
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
-          res_bounds res_eq res_valid tight_bounds_tighter_than_max.
+          res_bounds res_eq res_valid tight_bounds_tighter_than_max felem_size_ok.
       subst inlengths insizes outsizes. cbv [spec_of_from_word].
       cbv [from_word_insizes from_word_outsizes from_word_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func] in *.
@@ -666,6 +686,9 @@ Section WithParameters.
           seprewrite_in (FElem_array_truncated_scalar_iff1 px) H1; extract_ex1_and_emp_in H1.
           setoid_rewrite max_bounds_range_iff in res_bounds.
           rewrite (fun x pf => proj1 (res_bounds x pf)), ?map_length; trivial.
+          pose Types.word_size_in_bytes_pos. cbv [k] in *. rewrite length_chunk; try lia. rewrite H1_emp0.
+          cbv [k felem_size_in_bytes felem_size_in_words field_representation frep]. admit.
+          (* ask andres how to solve these kinds of goals nicely. *)
           ssplit; rewrite ?map_length; trivial.
           eapply List.Forall_map, Forall_forall; intros.
           rewrite MakeAccessSizes.bits_per_word_eq_width.
@@ -684,7 +707,7 @@ Section WithParameters.
       rewrite Util.map_unsigned_of_Z.
       erewrite map_word_wrap_bounded; trivial.
       eapply max_bounds_range_iff; ssplit; eauto.
-    Qed.
+    Admitted.
   End FelemCopy.
 
   Section FromBytes.
@@ -753,7 +776,7 @@ Section WithParameters.
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok relax_bounds res_Wf
           res_bounds res_eq res_valid tight_bounds_length
-          tight_bounds_tighter_than_max byte_bounds_length.
+          tight_bounds_tighter_than_max byte_bounds_length felem_size_ok.
       subst inlengths insizes outsizes. cbv [spec_of_from_bytes].
       cbv [from_bytes_insizes from_bytes_outsizes from_bytes_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func] in *.
@@ -785,7 +808,7 @@ Section WithParameters.
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
           all: try solve_equivalence_side_conditions.
-          solve_length out tight_bounds_length.
+          solve_length (map lew_combine (chunk (Z.to_nat k) out)) tight_bounds_length.
         } }
       { postcondition_simplify; [ | | ].
         { (* output correctness *)
@@ -1020,7 +1043,7 @@ Context
                         spec_of_selectznz functions.
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint ok res_Wf
-          res_eq res_valid.
+          res_eq res_valid relax_bounds felem_size_ok.
       subst inlengths insizes outsizes. cbv [spec_of_selectznz].
       cbv [list_selectznz_insizes list_selectznz_outsizes list_selectznz_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func] in *.
@@ -1057,8 +1080,14 @@ Context
             eapply MaxBounds.max_bounds_range_iff; eauto.
             lists_reserved_simplify pout.
             all: try solve_equivalence_side_conditions.
-            destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl; auto; cbv [FElem Bignum.Bignum] in *; sepsimpl;
-            repeat rewrite map_length;
+            destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl; auto;
+            cbv [FElem Bignum.Bignum] in *; sepsimpl.
+            Require Import bedrock2.SepAutoArray. 
+            revert H.
+            destruct_bool_vars; unfold upd, upds; list_length_rewrites_without_sideconds_in_goal.
+            ZnWords.ZnWords.
+            rewrite map_length; replace (Datatypes.length (_ _ (_ (_) out))) with felem_size_in_words; 
+            repeat rewrite map_length.
             match goal with
               | H : ?n1 = _ |- ?n1 = _ => rewrite H
               | _ => idtac

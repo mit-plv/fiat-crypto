@@ -7,7 +7,7 @@ From Coq Require Field_theory.
 
 Section Field.
   Context {T eq zero one opp add mul sub inv div} `{@field T eq zero one opp add sub mul inv div}.
-  Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
+Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
   Local Notation "0" := zero. Local Notation "1" := one.
   Local Infix "+" := add. Local Infix "*" := mul.
 
