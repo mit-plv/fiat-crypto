@@ -46,7 +46,7 @@ Import ProgramLogic.Coercions.
 Import WeakestPrecondition.
 
 Local Existing Instance field_parameters.
-Local Instance frep256k1 : Field.FieldRepresentation := field_representation Field256k1.m.
+Local Existing Instance frep256k1.
 Local Existing Instance frep256k1_ok.
 
 Section WithParameters.
@@ -137,7 +137,7 @@ Section WithParameters.
   Local Ltac solve_mem :=
     repeat match goal with
       | |- exists _ : _ -> Prop, _%sep _ => eexists
-      | |- _%sep _ => ecancel_assumption
+      | |- _%sep _ => ecancel_assumption_impl
       end.
 
   Local Ltac cbv_bounds H :=
@@ -463,7 +463,7 @@ Section WithParameters.
     straightline_call; ssplit.
     destruct (xorb _ _); simpl; auto.
     rewrite <- Bignum_as_array. unfold FElem in Hmem.
-    ecancel_assumption. repeat straightline.
+    ecancel_assumption_impl. repeat straightline.
     eexists. split. repeat straightline.
     eexists; split. apply map.get_put_same.
     repeat straightline. eexists; split.
@@ -476,7 +476,7 @@ Section WithParameters.
     cbv [dlet.dlet] in H26.
     straightline_call; ssplit.
     destruct (xorb _ _); auto.
-    rewrite <- Bignum_as_array. ecancel_assumption.
+    rewrite <- Bignum_as_array. ecancel_assumption_impl.
     repeat straightline.
     cbv [dlet.dlet] in H27.
     assert (Hlen: forall ptr v m R, (FElem ptr v * R)%sep m -> Datatypes.length v = felem_size_in_words).
@@ -497,7 +497,7 @@ Section WithParameters.
     eexists; split.
     repeat (repeat straightline; eexists; split; [unfold l; repeat rewrite map.get_put_diff by congruence; rewrite Hloc' by congruence; eassumption|]).
     repeat straightline. straightline_call; ssplit.
-    8: unfold Field.FElem; ecancel_assumption_impl.
+    8: unfold FElem; ecancel_assumption_impl.
     instantiate (1 := if xorb (snd (fst iter_res)) (Z.testbit k vi) then R0' else R1').
     destruct (xorb _ _); [exact Hproj0|exact Hproj1].
     instantiate (1 := if xorb (snd (fst iter_res)) (Z.testbit k vi) then R1' else R0').
@@ -535,7 +535,7 @@ Section WithParameters.
     1-5: solve_bounds.
     rewrite (surjective_pairing (proj1_sig _)).
     rewrite proj1_sig_zdau_co_z_points.
-    unfold JacobianCoZ.frep256k1 in H28, H29.
+    unfold frep256k1 in H28, H29.
     unfold frep256k1. rewrite <- H28, <- H29.
     rewrite <- (surjective_pairing (Jacobian.zdau _ _ _)).
     split; repeat f_equal; apply zdau_eq; rewrite proj1_sig_cswap_co_z_points; reflexivity.
@@ -574,7 +574,7 @@ Section WithParameters.
     cbn [proj1_sig]. rewrite H15. eexists. reflexivity.
     1-2: solve_bounds.
     repeat match goal with
-    | H: context [Array.array ptsto _ ?a _] |- context [Field.FElem ?a _] =>
+    | H: context [Array.array ptsto _ ?a _] |- context [FElem ?a _] =>
         seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H; [trivial|]
     end.
     multimatch goal with
@@ -586,13 +586,12 @@ Section WithParameters.
             refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
         end
     end.
+    cbv [FElem].
     cancel. cancel_seps_at_indices 0%nat 4%nat; [reflexivity|].
     cancel_seps_at_indices 0%nat 3%nat; [reflexivity|].
     cancel_seps_at_indices 0%nat 2%nat; [reflexivity|].
     cancel_seps_at_indices 0%nat 1%nat; [reflexivity|].
     cancel_seps_at_indices 0%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 3%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 3%nat 0%nat; [reflexivity|].
     ecancel.
 
     repeat straightline.
@@ -614,7 +613,7 @@ Section WithParameters.
     eexists; ssplit; [unfold loc'0; repeat rewrite map.get_put_diff by congruence; rewrite H46|]; repeat straightline. congruence.
 
     single_step. rewrite Core.word.b2w_if; destruct vswap; auto.
-    rewrite <- Bignum_as_array. unfold FElem in H56. ecancel_assumption.
+    rewrite <- Bignum_as_array. unfold FElem in H56. ecancel_assumption_impl.
     repeat straightline. red in H64.
     assert (Hlen: forall ptr v m R, (FElem ptr v * R)%sep m -> Datatypes.length v = felem_size_in_words).
     { unfold FElem. rewrite Bignum_as_array.
@@ -634,7 +633,7 @@ Section WithParameters.
     eexists; ssplit; [unfold loc'0; repeat rewrite map.get_put_diff by congruence; rewrite H46|]; repeat straightline. congruence.
 
     single_step. rewrite Core.word.b2w_if; destruct vswap; auto.
-    rewrite <- Bignum_as_array. ecancel_assumption.
+    rewrite <- Bignum_as_array. ecancel_assumption_impl.
     repeat straightline. red in H65.
     rewrite cswap_low_combine_eq in H65 by (repeat erewrite Hlen by ecancel_assumption; reflexivity).
     rewrite cswap_combine_eq in H65.
@@ -673,7 +672,7 @@ Section WithParameters.
     rewrite H15. reflexivity.
     1-3:solve_bounds.
     repeat match goal with
-    | H: context [Array.array ptsto _ ?a _] |- context [Field.FElem ?a _] =>
+    | H: context [Array.array ptsto _ ?a _] |- context [FElem ?a _] =>
         seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H; [trivial|]
     end.
     multimatch goal with
@@ -698,8 +697,6 @@ Section WithParameters.
     eexists; ssplit. apply map.get_put_same. repeat straightline.
     eexists; ssplit; [apply map.get_put_same|]; repeat straightline.
     single_step.
-    2-3: ecancel_assumption_impl.
-    solve_bounds.
     repeat straightline.
     eexists; split. unfold l9, l8, loc'0.
     repeat (repeat straightline; eexists; ssplit; [repeat (rewrite map.get_put_diff by congruence); rewrite H46; repeat straightline; congruence|]).
@@ -726,12 +723,12 @@ Section WithParameters.
     instantiate (1:=Jacobian.opp (snd (Jacobian.make_co_z (if vswap then R1' else R0') (Jacobian.of_affine P) HPaff))).
     unfold Jacobian.opp.
     cbv [proj1_sig]. cbv [proj1_sig] in H75. rewrite H75.
-    unfold JacobianCoZ.frep256k1. unfold frep256k1 in H79.
+    unfold frep256k1. unfold frep256k1 in H79.
     rewrite H79. reflexivity.
     1-2: destruct vswap; solve_bounds.
     1-3: solve_bounds.
     repeat match goal with
-    | H: context [Array.array ptsto _ ?a _] |- context [Field.FElem ?a _] =>
+    | H: context [Array.array ptsto _ ?a _] |- context [FElem ?a _] =>
         seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H; [trivial|]
     end.
     multimatch goal with
@@ -742,15 +739,14 @@ Section WithParameters.
             syntactic_unify._syntactic_unify_deltavar m1 m2;
             refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
         end
-    end.
-    cancel. cancel_seps_at_indices 9%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 9%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 7%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 5%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 0%nat 0%nat; [reflexivity|].
+    end. fold FElem in *. 
+    cancel. cancel_seps_at_indices 8%nat 0%nat; [reflexivity|].
+    cancel_seps_at_indices 8%nat 0%nat; [reflexivity|].
+    cancel_seps_at_indices 6%nat 0%nat; [reflexivity|].
     cancel_seps_at_indices 4%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 3%nat 0%nat; [reflexivity|].
     cancel_seps_at_indices 0%nat 0%nat; [reflexivity|].
+    cancel_seps_at_indices 3%nat 0%nat; [reflexivity|].
+    cancel_seps_at_indices 2%nat 0%nat; [reflexivity|].
     ecancel.
     instantiate (1:=Hzaddu_ob) in H73.
     repeat first [match goal with | |- cmd _ bedrock_func_body:($_ = load1(coq:(expr.var "k") + coq:(expr.var "i") >> coq:(expr.literal 3)) >> (coq:(expr.var "i") & coq:(expr.literal 7)) & coq:(expr.literal 1)) _ _ _ _ => idtac end |straightline].
@@ -773,7 +769,7 @@ Section WithParameters.
     single_step.
     rewrite Core.word.b2w_if; destruct (Z.testbit k 0); auto.
     rewrite <- Bignum_as_array.
-    unfold Field.FElem in H89. ecancel_assumption_impl.
+    unfold FElem in H89. ecancel_assumption_impl.
     repeat straightline. red in H90.
     rewrite <- Bignum_as_array in H90.
     rewrite cswap_low_combine_eq in H90 by (repeat erewrite Hlen by ecancel_assumption_impl; reflexivity).
@@ -797,7 +793,7 @@ Section WithParameters.
     single_step.
     destruct (Z.testbit k 0); cbv; auto.
     rewrite <- Bignum_as_array.
-    unfold Field.FElem in H90. ecancel_assumption_impl.
+    unfold FElem in H90. ecancel_assumption_impl.
     repeat straightline. red in H91.
     rewrite <- Bignum_as_array in H91.
     rewrite cswap_low_combine_eq in H91 by (repeat erewrite Hlen by ecancel_assumption_impl; reflexivity).
@@ -817,7 +813,7 @@ Section WithParameters.
     rewrite H46 by congruence. reflexivity.
     repeat straightline.
     single_step.
-    3: unfold Field.FElem; ecancel_assumption_impl.
+    3: { fold FElem in H91. ecancel_assumption_impl. }
     reflexivity. solve_bounds.
     repeat straightline.
     eexists; ssplit. repeat straightline. eexists; ssplit.
@@ -831,24 +827,19 @@ Section WithParameters.
     rewrite H46 by congruence. reflexivity.
     repeat straightline.
     single_step.
-    3-5: unfold FElem; ecancel_assumption_impl.
     destruct (Z.testbit k 0); solve_bounds.
-    solve_bounds.
     repeat straightline.
     eexists; ssplit. repeat straightline.
     repeat (eexists; ssplit; [unfold loc'1, l10, l9, l8, loc'0; repeat (rewrite map.get_put_diff by congruence); rewrite H46 by congruence; reflexivity|]; repeat straightline).
     cbv [bin_model bin_mul] in H95.
 
     single_step.
-    3-5: unfold FElem in *; ecancel_assumption_impl.
-    1-2: solve_bounds.
     repeat straightline.
     eexists; ssplit. repeat straightline.
     repeat (eexists; ssplit; [unfold loc'1, l10, l9, l8, loc'0; repeat (rewrite map.get_put_diff by congruence); rewrite H46 by congruence; reflexivity|]; repeat straightline).
     cbv [bin_model bin_mul] in H98.
 
     single_step.
-    2-3: unfold FElem in *; ecancel_assumption_impl.
     destruct (Z.testbit k 0); solve_bounds.
     repeat straightline.
     eexists; ssplit. repeat straightline.
@@ -856,14 +847,10 @@ Section WithParameters.
     cbv [bin_model bin_mul] in H101.
 
     single_step.
-    3-5: unfold FElem in *; ecancel_assumption_impl.
-    1-2: solve_bounds.
     repeat straightline.
     cbv [bin_model bin_mul] in H104.
 
-    cbv [FElem] in *.
-    replace JacobianCoZ.frep256k1 with frep256k1 in * by reflexivity.
-    replace Addchain.frep256k1 with frep256k1 in * by reflexivity.
+    cbv [FElem Field.FElem] in *.
     repeat match goal with
     | |- context [anybytes ?a _ _] =>
         match goal with

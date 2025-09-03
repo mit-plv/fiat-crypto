@@ -1,4 +1,5 @@
 Require Import bedrock2.Array.
+Require Import bedrock2.bottom_up_simpl.
 Require Import bedrock2.FE310CSemantics.
 Require Import bedrock2.Loops.
 Require Import bedrock2.Map.Separation.
@@ -29,10 +30,6 @@ From Coq Require Import ZArith.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
-Require Import Crypto.Bedrock.Group.AdditionChains.
-Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
-Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
-Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 Require Import Crypto.Bedrock.End2End.X25519.Field25519.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Spec.Curve25519.
@@ -51,7 +48,7 @@ Import ProgramLogic.Coercions.
 Import WeakestPrecondition.
 
 Local Existing Instance field_parameters.
-Local Instance frep25519 : Field.FieldRepresentation := field_representation n Field25519.s c.
+Local Existing Instance frep25519.
 Local Existing Instance frep25519_ok.
 
 (* Size of a field element in bytes. This is the same as computing eval in felem_size_bytes, but we want a notation instead of definition. *)
@@ -248,25 +245,24 @@ Instance spec_of_fe25519_half : spec_of "fe25519_half" :=
         feval result = F.div (feval input) (F.add F.one F.one) /\
         m' =* (FElem result_location result)  * R}.
 
-(* TODO: Use anybytes or similar for output pointer preconditions once the field operation preconditions are suffiently weakened. *)
-
 Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
   fnspec! "add_precomputed"
-    (p_out p_a p_b: word) / (a any: point) (b: precomputed_point) (a_repr: projective_repr a) (b_repr: precomputed_repr b) (anything: projective_repr any) (R: _ -> Prop), {
+    (p_out p_a p_b: word) / (a: point) (b: precomputed_point) (a_repr: projective_repr a) (b_repr: precomputed_repr b) (out : list byte) (R: _ -> Prop), {
       requires t m :=
-        m =* anything p5@ p_out * a_repr p5@ p_a * b_repr p3@ p_b * R; 
+        m =* out $@ p_out * a_repr p5@ p_a * b_repr p3@ p_b * R/\
+        Datatypes.length out = Z.to_nat (5 * felem_size); 
       ensures t' m' :=
         t = t' /\
         exists a_plus_b : projective_repr (m1add_precomputed_coordinates a b),
           m' =* a_plus_b p5@ p_out * a_repr p5@ p_a * b_repr p3@ p_b * R
     }.
-
+(*
 Global Instance spec_of_double : spec_of "double" :=
   fnspec! "double"
     (p_out p_a: word) /
-    (a any: point) (a_repr: projective_repr a) (anything: projective_repr any) (R: _ -> Prop), {
+    (a: point) (a_repr: projective_repr a) (R: _ -> Prop), {
       requires t m :=
-        m =* anything p5@ p_out * a_repr p5@ p_a * R;
+        m =* Placeholder5 p_out * a_repr p5@ p_a * R;
       ensures t' m' := 
         t = t' /\
         exists a_double: projective_repr (m1double a),
@@ -276,9 +272,9 @@ Global Instance spec_of_double : spec_of "double" :=
 Global Instance spec_of_to_cached: spec_of "to_cached" :=
   fnspec! "to_cached"
     (p_out p_a p_d: word) /
-    (a: point) (any: cached) (a_repr: projective_repr a) (anything: cached_repr any) (d1: felem) (R: _ -> Prop), {
+    (a: point) (a_repr: projective_repr a) (d1: felem) (R: _ -> Prop), {
       requires t m :=
-        m =* anything p4@ p_out * a_repr p5@ p_a * FElem p_d d1 * R /\
+        m =* Placeholder4 p_out * a_repr p5@ p_a * FElem p_d d1 * R /\
         d = feval d1 /\
         bounded_by tight_bounds d1;
       ensures t' m' :=
@@ -290,15 +286,15 @@ Global Instance spec_of_to_cached: spec_of "to_cached" :=
 Global Instance spec_of_readd : spec_of "readd" :=
   fnspec! "readd"
     (p_out p_a p_c: word) /
-    (a any: point) (c: cached) (a_repr: projective_repr a) (anything: projective_repr any) (c_repr: cached_repr c) (R : _ -> Prop), {
+    (a: point) (c: cached) (a_repr: projective_repr a) (c_repr: cached_repr c) (R : _ -> Prop), {
       requires t m :=
-        m =* anything p5@ p_out * a_repr p5@ p_a * c_repr p4@ p_c * R;
+        m =* Placeholder5 p_out * a_repr p5@ p_a * c_repr p4@ p_c * R;
       ensures t' m' :=
         t = t' /\
         exists a_plus_c: projective_repr (m1_readd a c),
           m' =* a_plus_c p5@ p_out * a_repr p5@ p_a * c_repr p4@ p_c * R
     }.
-
+*)
 Local Instance spec_of_fe25519_square : spec_of "fe25519_square" := Field.spec_of_UnOp un_square.
 Local Instance spec_of_fe25519_mul : spec_of "fe25519_mul" := Field.spec_of_BinOp bin_mul.
 Local Instance spec_of_fe25519_add : spec_of "fe25519_add" := Field.spec_of_BinOp bin_add.
@@ -341,11 +337,32 @@ Local Ltac solve_bounds :=
   | H: bounded_by _ ?x |- bounded_by _ ?x => cbv_bounds H
   end.
 
+ Ltac skipn_firstn_length := 
+    replace (felem_size_in_bytes (FieldRepresentation:=frep25519)) with 40 in *; [ | lazy; reflexivity ]; (* get rid of felem_size_in_byte, if any *)
+    rewrite ?List.length_firstn, ?List.length_skipn; lia. (* listZnWords will probably work*)
+
+Ltac split_stack_at_n_in stack p n H := rewrite <- (firstn_skipn n stack) in H;
+  rewrite (map.of_list_word_at_app_n _ _ _ n) in H; try skipn_firstn_length;
+  let D := fresh in unshelve(epose (sep_eq_putmany _ _ (map.adjacent_arrays_disjoint_n p (firstn n stack) (skipn n stack) n _ _)) as D); try skipn_firstn_length;
+  seprewrite_in D H; rewrite ?skipn_skipn in H; bottom_up_simpl_in_hyp H; clear D.
+
+  (* For the conversion steps below, I could add a strategy to ecancel_assumption_impl. *)
 Local Ltac solve_mem :=
   repeat match goal with
   | |- exists _ : _ -> Prop, _%sep _ => eexists
-  | |- _%sep _ => ecancel_assumption
-  | |- context[?a + ?b] => match isZcst a with 
+  | |- _%sep _ => ecancel_assumption_impl
+  (*| H: ?P%sep ?m |- ?G%sep ?m =>  (* Convert from array1 to placeholder *)
+    match P with context[array ptsto (word.of_Z 1) ?p ?stack] =>
+    match G with context[Placeholder ?p _] =>
+    match goal with L: Datatypes.length stack = _ |- _ =>
+      seprewrite_in (iff1_sym (Placeholder_iff_array1 p _ L)) H
+    end end end *)
+  (*| H: ?P%sep ?m |- ?G%sep ?m =>  (* Solve Placeholder goals when a fixed size list is given *)
+    match P with context[map.of_list_word_at ?p ?stack] =>
+    match G with context[Placeholder ?p _] =>
+      solve [ cbv [Placeholder]; extract_ex1_and_emp_in_goal; bottom_up_simpl_in_goal_nop_ok; split; [ecancel_assumption | skipn_firstn_length] ]
+    end end*)
+  | |- context[?a + ?b] => match isZcst a with  (* todo can I get rid of these now that I know bottom up simpl*)
         | false => fail
         | true => match (isZcst b) with
             | false => fail
@@ -362,19 +379,17 @@ Local Ltac solve_mem :=
       end
   end.
 
-Local Ltac solve_stack :=
-  (* Rewrites the `stack$@a` term in H to use a Bignum instead *)
-  cbv [FElem];
-  match goal with
-  | H: _%sep ?m |- (Bignum.Bignum felem_size_in_words ?a _ * _)%sep ?m =>
-       seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a) H
-  end;
-  [> transitivity 40%nat; trivial | ];
-  (* proves the memory matches up *)
-  use_sep_assumption; cancel; cancel_seps_at_indices 0%nat 0%nat; cbn; [> trivial | eapply RelationClasses.reflexivity].
+Ltac unfold_felem_size_in_bytes := 
+  let s := eval lazy in felem_size_in_bytes in change felem_size_in_bytes with s in *.
+
+(* array1 to Placeholder *)
+Hint Extern 1 (Lift1Prop.impl1 (array ptsto (word.of_Z 1) ?p ?stack) (Placeholder ?p _)) => (
+    unshelve(erewrite <- (Placeholder_iff_array1 p _ _)); [ (unfold_felem_size_in_bytes; ZnWords) | apply impl1_refl]) : ecancel_impl.
+Hint Extern 1 (Lift1Prop.impl1 (map.of_list_word_at ?p ?stack) (Placeholder ?p _)) => (
+  cbv [Placeholder]; extract_ex1_and_emp_in_goal; bottom_up_simpl_in_goal_nop_ok; split; [ecancel_assumption | skipn_firstn_length]) : ecancel_impl.
 
 Local Ltac single_step :=
-  repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_stack.
+  repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds.
 
 (* Attempts to find anybytes terms in the goal and rewrites the first corresponding stack hypothesis to byte representation.
    straightline only supports deallocation for byte representation at the moment. *)
@@ -391,38 +406,43 @@ Ltac solve_deallocation :=
   end;
   repeat straightline.
 
-(* An example that demonstrates why we need to set Strategy in add_precomputed_ok below *)
-Example demo_strategy : forall x,
-  (@Field.bounded_by field_parameters (Zpos (xO (xO (xO (xO (xO xH))))))
-        BW32 (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
-        (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
-           (Naive.word (Zpos (xO (xO (xO (xO (xO xH))))))) Naive.word32_ok
-           byte) frep25519
-        (@loose_bounds field_parameters (Zpos (xO (xO (xO (xO (xO xH))))))
-           BW32 (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
-           (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
-              (Naive.word (Zpos (xO (xO (xO (xO (xO xH))))))) Naive.word32_ok
-              byte) frep25519) x =
-          @Field.bounded_by field_parameters (Zpos (xO (xO (xO (xO (xO xH))))))
-        BW32 (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
-        (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
-           (Naive.word (Zpos (xO (xO (xO (xO (xO xH))))))) Naive.word32_ok
-           byte) frep25519
-        (@bin_outbounds (Zpos (xO (xO (xO (xO (xO xH)))))) BW32
-           (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
-           (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
-              (Naive.word (Zpos (xO (xO (xO (xO (xO xH))))))) Naive.word32_ok
-              byte) field_parameters frep25519 (@add field_parameters)
-           (@bin_add (Zpos (xO (xO (xO (xO (xO xH)))))) BW32
-              (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
-              (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
-                 (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
-                 Naive.word32_ok byte) field_parameters frep25519)) x).
+Lemma add_precomputed_ok : program_logic_goal_for_function! add_precomputed.
 Proof.
-  (* reflexivity. *) (* Does not complete within 1 minute. *)
-  (* Now set Strategy precedence... *)
-  Strategy -1000 [bin_outbounds bin_add].
-  reflexivity. (* ...and completes immediately *)
+  (* Without this, resolution of cbv stalls out Qed. *)
+  Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
+
+  do 4 straightline.
+
+  (* Split the output into 5 points. *)
+  split_stack_at_n_in out p_out 40%nat H12.
+  split_stack_at_n_in (skipn 40 out) (p_out.+40) 40%nat H12.
+  split_stack_at_n_in (skipn 80 out) (p_out.+80) 40%nat H12. 
+  split_stack_at_n_in (skipn 120 out) (p_out.+120) 40%nat H12. 
+
+  repeat straightline.
+  destruct_points.
+
+  repeat single_step.
+
+  use_sep_assumption_impl. cancel.
+  cancel_seps_at_indices_by_implication 7%nat 0%nat.
+  (* todo resolve these and then add the corresponding hint, maybe a lemma to Field.v*)
+   cbv [Placeholder]. let m H := fresh in intros m H. extract_ex1_and_emp_in_goal. bottom_up_simpl_in_goal_nop_ok; split; [ecancel_assumption | skipn_firstn_length].
+
+  repeat straightline.
+  solve_deallocation.
+
+  lazy beta match zeta delta [m1add_precomputed_coordinates projective_repr precomputed_coordinates coordinates proj1_sig].
+  unshelve eexists.
+  eexists (_, _, _, _, _).
+  2: {
+    bottom_up_simpl_in_hyp H86.
+    bottom_up_simpl_in_goal.
+    replace (p_out.+0) with p_out; [|ZnWords]. (* bottom_up_simpl didn't do this for me. *)
+    ecancel_assumption.
+  }
+  ssplit; try solve_bounds.
+  lazy [bin_model bin_add bin_mul bin_sub] in *. congruence.
 Qed.
 
 Lemma to_cached_ok: program_logic_goal_for_function! to_cached.
@@ -442,26 +462,6 @@ Proof.
   lazy match zeta beta delta [bin_model bin_mul bin_add bin_carry_add bin_sub cached_coordinates coordinates proj1_sig m1_prep] in *.
   ssplit; try solve_bounds.
   congruence.
-Qed.
-
-Lemma add_precomputed_ok : program_logic_goal_for_function! add_precomputed.
-Proof.
-  (* Without this, resolution of cbv stalls out Qed. *)
-  Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
-
-  repeat straightline.
-  destruct_points.
-
-  repeat single_step.
-  repeat straightline.
-  solve_deallocation.
-
-  lazy beta match zeta delta [m1add_precomputed_coordinates projective_repr precomputed_coordinates coordinates proj1_sig].
-  unshelve eexists.
-  eexists (_, _, _, _, _).
-  2: solve_mem.
-  ssplit; try solve_bounds.
-  lazy [bin_model bin_add bin_mul bin_sub] in *. congruence.
 Qed.
 
 Lemma double_ok : program_logic_goal_for_function! double.

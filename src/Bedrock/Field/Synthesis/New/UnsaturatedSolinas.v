@@ -2,6 +2,7 @@ From Coq Require Import String.
 From Coq Require Import List.
 From Coq Require Import ZArith.
 Require Import bedrock2.Syntax.
+Require Import coqutil.Map.Interface.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Arithmetic.ModularArithmeticTheorems.
@@ -111,6 +112,7 @@ Section UnsaturatedSolinas.
           (loose_bounds_tighter_than:
              list_Z_tighter_than (loose_bounds n s c)
                                  (@MaxBounds.max_bounds width n)).
+  Local Open Scope Z_scope.
 
   Context (ops : unsaturated_solinas_ops n s c)
           mul_func add_func carry_add_func sub_func carry_sub_func opp_func square_func
@@ -143,6 +145,7 @@ Section UnsaturatedSolinas.
          (UnsaturatedSolinasHeuristics.tight_bounds n s c)
          (prime_bytes_bounds_value)
          list_Z_bounded_by (fun x => x).
+  Context (felem_size_ok : felem_size_in_bytes <= 2 ^ width).
 
   Local Ltac specialize_correctness_hyp Hcorrect :=
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
@@ -321,7 +324,7 @@ Section UnsaturatedSolinas.
     forall functions, Interface.map.get functions mul = Some mul_func ->
                       spec_of_BinOp bin_mul functions.
   Proof using M_eq check_args_ok mul_func_eq ok
-        tight_bounds_tighter_than.
+        tight_bounds_tighter_than felem_size_ok.
     cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq. intros.
     pose proof carry_mul_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq mul_op)
@@ -342,7 +345,7 @@ Section UnsaturatedSolinas.
     forall functions, Interface.map.get functions square = Some square_func ->
                       spec_of_UnOp un_square functions.
   Proof using M_eq check_args_ok ok square_func_eq
-        tight_bounds_tighter_than.
+        tight_bounds_tighter_than felem_size_ok.
     cbv [spec_of_UnOp un_square]. rewrite square_func_eq. intros.
     pose proof carry_square_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq square_op)
@@ -362,7 +365,7 @@ Section UnsaturatedSolinas.
     forall functions, Interface.map.get functions Field.add = Some add_func ->
                       spec_of_BinOp bin_add functions.
   Proof using M_eq check_args_ok add_func_eq ok
-        tight_bounds_tighter_than loose_bounds_tighter_than.
+        tight_bounds_tighter_than loose_bounds_tighter_than felem_size_ok.
     cbv [spec_of_BinOp bin_add]. rewrite add_func_eq. intros.
     pose proof add_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq add_op)
@@ -383,7 +386,7 @@ Section UnsaturatedSolinas.
     forall functions, Interface.map.get functions Field.carry_add = Some carry_add_func ->
                       spec_of_BinOp bin_carry_add functions.
   Proof using M_eq check_args_ok carry_add_func_eq ok
-        tight_bounds_tighter_than.
+        tight_bounds_tighter_than felem_size_ok.
     cbv [spec_of_BinOp bin_carry_add]. rewrite carry_add_func_eq. intros.
     pose proof carry_add_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq carry_add_op)
@@ -404,7 +407,7 @@ Section UnsaturatedSolinas.
     forall functions, Interface.map.get functions Field.sub = Some sub_func ->
                       spec_of_BinOp bin_sub functions.
   Proof using M_eq check_args_ok sub_func_eq ok
-        tight_bounds_tighter_than loose_bounds_tighter_than.
+        tight_bounds_tighter_than loose_bounds_tighter_than felem_size_ok.
     cbv [spec_of_BinOp bin_sub]. rewrite sub_func_eq. intros.
     pose proof sub_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq sub_op)
@@ -425,7 +428,7 @@ Section UnsaturatedSolinas.
     forall functions, Interface.map.get functions Field.carry_sub = Some carry_sub_func ->
                       spec_of_BinOp bin_carry_sub functions.
   Proof using M_eq check_args_ok carry_sub_func_eq ok
-        tight_bounds_tighter_than.
+        tight_bounds_tighter_than felem_size_ok.
     cbv [spec_of_BinOp bin_carry_sub]. rewrite carry_sub_func_eq. intros.
     pose proof carry_sub_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq carry_sub_op)
@@ -445,7 +448,7 @@ Section UnsaturatedSolinas.
     valid_func (res opp_op _) ->
     forall functions, Interface.map.get functions Field.opp = Some opp_func ->
                       spec_of_UnOp un_opp functions.
-  Proof using M_eq check_args_ok loose_bounds_tighter_than opp_func_eq ok.
+  Proof using M_eq check_args_ok loose_bounds_tighter_than opp_func_eq ok felem_size_ok.
     cbv [spec_of_UnOp un_opp]. rewrite opp_func_eq. intros.
     pose proof opp_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq opp_op)
@@ -466,7 +469,7 @@ Section UnsaturatedSolinas.
     forall functions, Interface.map.get functions scmula24 = Some scmula24_func ->
                       spec_of_UnOp un_scmula24 functions.
   Proof using M_eq check_args_ok ok scmula24_func_eq
-        tight_bounds_tighter_than.
+        tight_bounds_tighter_than felem_size_ok.
     cbv [spec_of_UnOp un_scmula24]. rewrite scmula24_func_eq. intros.
     pose proof carry_scmul_const_correct
          _ _ _ _ _ (ltac:(eassumption)) (F.to_Z a24) _
@@ -501,11 +504,8 @@ Section UnsaturatedSolinas.
     forall functions, Interface.map.get functions felem_copy = Some felem_copy_func ->
                       spec_of_felem_copy functions.
   Proof using M_eq check_args_ok ok felem_copy_func_eq
-        tight_bounds_tighter_than parameters_sentinel ok
-to_bytes_func_eq to_bytes_func sub_func_eq sub_func square_func_eq
-square_func scmula24_func_eq scmula24_func opp_func_eq opp_func mul_func_eq
-mul_func loose_bounds_tighter_than from_word_func_eq from_word_func
-from_bytes_func_eq from_bytes_func add_func_eq.
+        tight_bounds_tighter_than loose_bounds_tighter_than
+        parameters_sentinel felem_size_ok.
     cbv [spec_of_felem_copy]. rewrite felem_copy_func_eq. intros.
     pose proof copy_correct _ _ _ _ _ ltac:(eassumption) _ (res_eq felem_copy_op)
       as Hcorrect.
@@ -526,7 +526,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
     forall functions, Interface.map.get functions from_word = Some from_word_func ->
                       spec_of_from_word functions.
   Proof using M_eq check_args_ok from_word_func_eq ok
-        tight_bounds_tighter_than.
+        tight_bounds_tighter_than felem_size_ok.
     cbv [spec_of_from_word]. rewrite from_word_func_eq. intros.
     epose proof encode_word_correct _ _ _ _ _ ltac:(eassumption) _ (res_eq from_word_op)
       as Hcorrect.
@@ -568,7 +568,7 @@ from_bytes_func_eq from_bytes_func add_func_eq.
       Interface.map.get functions Field.from_bytes = Some from_bytes_func ->
       spec_of_from_bytes functions.
   Proof using M_eq check_args_ok from_bytes_func_eq ok
-        tight_bounds_tighter_than.
+        tight_bounds_tighter_than felem_size_ok.
     cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq. intros.
     pose proof UnsaturatedSolinas.from_bytes_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq from_bytes_op) (eq_refl true)
@@ -694,6 +694,7 @@ Ltac derive_bedrock2_func op :=
     abstract vm_cast_no_check (eq_refl true)
   | |- _ = m _ _ => vm_compute; reflexivity
   | |- _ = default_varname_gen => vm_compute; reflexivity
+  | |- (felem_size_in_bytes <= 2 ^ _)%Z =>  apply felem_size_ok 
   end.
 
 (*

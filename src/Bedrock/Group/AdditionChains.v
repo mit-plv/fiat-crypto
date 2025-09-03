@@ -1,3 +1,4 @@
+(* Solve those later
 Require Crypto.Spec.Curve25519.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
@@ -417,6 +418,16 @@ Section FElems.
           As exp_6_body_correct.
         Proof.
           compile.
+
+          cbv [FElem] in H2.
+          sepsimpl.
+          
+          seprewrite_in 
+
+          use_sep_assumption.
+          cancel.
+          cancel_seps_at_indices 0%nat 0%nat.
+          
         Qed.
       End Exp_by_squaring.
 
@@ -667,4 +678,5 @@ Section Extraction.
        felem_copy := "felem_copy";
        from_word := "from_word" |}.
 End Extraction.
+*)
 *)
