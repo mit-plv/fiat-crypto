@@ -1,3 +1,8 @@
+# make
+/o/
+/.coqdep.mk
+/src/_CoqProject
+
 # vim
 [._]*.s[a-v][a-z]
 [._]*.sw[a-p]

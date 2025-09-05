@@ -1,0 +1,28 @@
+COQFLAGS :=
+O:=.
+
+include rupicola/bedrock2/deps/coqutil/globalsettings.mk
+include rupicola/bedrock2/deps/coqutil/src/coqutil/BUILD.mk
+include rupicola/bedrock2/deps/coqutil/test/BUILD.mk
+include rupicola/bedrock2/bedrock2/src/bedrock2/BUILD.mk
+include rupicola/bedrock2/bedrock2/src/bedrock2Examples/BUILD.mk
+include rupicola/bedrock2/deps/riscv-coq/src/riscv/BUILD.mk
+include rupicola/bedrock2/compiler/src/compiler/BUILD.mk
+include rupicola/bedrock2/compiler/src/compilerExamples/BUILD.mk
+include rupicola/src/Rupicola/BUILD.mk
+include coqprime.BUILD.mk
+include rewriter.BUILD.mk
+include src/BUILD.mk
+
+VFILES := $(COQPRIME_VFILES) $(REWRITER_VFILES) $(COQUTIL_VFILES) $(COQUTIL_TEST_VFILES) $(BEDROCK_VFILES) $(BEDROCK_EXAMPLES_VFILES) $(RISCV_VFILES) $(BEDROCK_COMPILER_VFILES) $(BEDROCK_COMPILER_EXAMPLES_VFILES) $(RUPICOLA_VFILES) $(FIATCRYPTO_VFILES)
+COQDEPFLAGS := -w +default $(COQPRIME_COQDEPFLAGS) $(REWRITER_COQDEPFLAGS) $(COQUTIL_COQDEPFLAGS) $(BEDROCK_COQDEPFLAGS) $(BEDROCK_EXAMPLES_COQDEPFLAGS) $(RISCV_COQDEPFLAGS) $(BEDROCK_COMPILER_COQDEPFLAGS) $(BEDROCK_COMPILER_EXAMPLES_COQDEPFLAGS) $(RUPICOLA_COQDEPFLAGS) $(FIATCRYPTO_COQDEPFLAGS)
+include rupicola/bedrock2/deps/coqutil/vfiles_rules.mk
+
+.PHONY: all
+all: $(filter-out $(O)/$(FIATCRYPTO_DIR)/PerfTesting/% $(O)/$(FIATCRYPTO_DIR)/Rewriter/PerfTesting/% $(O)/$(FIATCRYPTO_DIR)/Extraction%,$(VOFILES)) \
+	$(COQUTIL_DIR)/_CoqProject $(COQUTIL_TEST_DIR)/_CoqProject $(BEDROCK_EXAMPLES_DIR)/_CoqProject $(RISCV_DIR)/_CoqProject $(BEDROCK_COMPILER_DIR)/_CoqProject $(BEDROCK_COMPILER_EXAMPLES_DIR)/_CoqProject $(RUPICOLA_DIR)/_CoqProject $(FIATCRYPTO_DIR)/_CoqProject
+.PHONY: check
+check: all
+.PHONY: clean
+clean: vfiles_clean
+	rm -f $(COQUTIL_DIR)/_CoqProject $(COQUTIL_TEST_DIR)/_CoqProject $(BEDROCK_EXAMPLES_DIR)/_CoqProject $(RISCV_DIR)/_CoqProject $(BEDROCK_COMPILER_DIR)/_CoqProject $(BEDROCK_COMPILER_EXAMPLES_DIR)/_CoqProject $(RUPICOLA_DIR)/_CoqProject $(FIATCRYPTO_DIR)/_CoqProject
