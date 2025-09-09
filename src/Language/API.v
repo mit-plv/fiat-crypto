@@ -29,9 +29,9 @@ Compute API.type. (* to figure out what goes into a type *)
     Export Coercions.
 
     (** [type] is the type of reified type-codes for expressions *)
-    Notation type := (type base.type).
+    #[global] Notation type := (type base.type).
     (** [Expr : type -> Type] is the type family of specialized PHOAS expressions *)
-    Notation Expr := (@expr.Expr base.type ident).
+    #[global] Notation Expr := (@expr.Expr base.type ident).
     (** [expr : forall {var : type -> Type}, type -> Type] is the [var]-specific PHOAS expression type *)
     Notation expr := (@expr base.type ident).
 
