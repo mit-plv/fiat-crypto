@@ -214,6 +214,8 @@ Section WordByWordMontgomery.
          bytelist
          list_in_bounds eval_trans.
 
+  Context (felem_size_ok : (felem_size_in_bytes <= 2 ^ width)%Z).
+
   Local Ltac specialize_correctness_hyp Hcorrect :=
     cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
                field_representation Signature.field_representation
@@ -339,8 +341,7 @@ Qed.
     valid_func (res mul_op _) ->
     forall functions, Interface.map.get functions Field.mul = Some mul_func ->
                       spec_of_BinOp bin_mul functions.
-  Proof using M_eq check_args_ok mul_func_eq ok.
-        (* tight_bounds_tighter_than. *)
+  Proof using M_eq check_args_ok mul_func_eq ok felem_size_ok.
     cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq. intros.
     pose proof mul_correct
          m width _ ltac:(eassumption) _ (res_eq mul_op)
@@ -372,7 +373,7 @@ Qed.
     valid_func (res square_op _) ->
     forall functions, Interface.map.get functions Field.square = Some square_func ->
                       spec_of_UnOp un_square functions.
-  Proof using M_eq check_args_ok ok square_func_eq.
+  Proof using M_eq check_args_ok ok square_func_eq felem_size_ok.
     cbv [spec_of_UnOp un_square]. rewrite square_func_eq. intros.
     pose proof square_correct
          _ _ _ ltac:(eassumption) _ (res_eq square_op)
@@ -405,7 +406,7 @@ Qed.
     valid_func (res add_op _) ->
     forall functions, Interface.map.get functions Field.add = Some add_func ->
                       spec_of_BinOp bin_add functions.
-  Proof using M_eq check_args_ok add_func_eq ok.
+  Proof using M_eq check_args_ok add_func_eq ok felem_size_ok.
     cbv [spec_of_BinOp bin_add]. rewrite add_func_eq. intros.
     pose proof add_correct
          _ _ _ ltac:(eassumption) _ (res_eq add_op)
@@ -437,7 +438,7 @@ Qed.
     valid_func (res sub_op _) ->
     forall functions, Interface.map.get functions Field.sub = Some sub_func ->
                       spec_of_BinOp bin_sub functions.
-  Proof using M_eq check_args_ok sub_func_eq ok.
+  Proof using M_eq check_args_ok sub_func_eq ok felem_size_ok.
     cbv [spec_of_BinOp bin_sub]. rewrite sub_func_eq. intros.
     pose proof sub_correct
          _ _ _ ltac:(eassumption) _ (res_eq sub_op)
@@ -468,7 +469,7 @@ Qed.
     valid_func (res opp_op _) ->
     forall functions, Interface.map.get functions Field.opp = Some opp_func ->
                       spec_of_UnOp un_opp functions.
-  Proof using M_eq check_args_ok opp_func_eq ok.
+  Proof using M_eq check_args_ok opp_func_eq ok felem_size_ok.
     cbv [spec_of_UnOp un_opp]. rewrite opp_func_eq. intros.
     pose proof opp_correct
          _ _ _ ltac:(eassumption) _ (res_eq opp_op)
@@ -515,7 +516,7 @@ Qed.
     forall functions,
       Interface.map.get functions Field.felem_copy = Some felem_copy_func ->
       (@spec_of_felem_copy _ _ _ _ _ _ _ field_representation_raw) functions.
-  Proof using M_eq check_args_ok felem_copy_func_eq ok.
+  Proof using M_eq check_args_ok felem_copy_func_eq ok felem_size_ok.
     cbv [spec_of_felem_copy]. rewrite felem_copy_func_eq. intros.
     pose proof copy_correct
          _ _ _ ltac:(eassumption) _ (res_eq felem_copy_op)
@@ -537,7 +538,7 @@ Qed.
     forall functions,
       Interface.map.get functions Field.from_bytes = Some from_bytes_func ->
       (@spec_of_from_bytes _ _ _ _ _ _ _ field_representation_raw) functions.
-  Proof using M_eq check_args_ok from_bytes_func_eq ok.
+  Proof using M_eq check_args_ok from_bytes_func_eq ok felem_size_ok.
     cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq. intros.
     pose proof from_bytes_correct
          _ _ _ ltac:(eassumption) _ (res_eq from_bytes_op)
@@ -668,7 +669,7 @@ Qed.
   forall functions,
     Interface.map.get functions from_mont = Some from_mont_func ->
     (@spec_of_UnOp _ _ _ _ _ _ _ _ from_mont) un_from_mont functions.
-    Proof using M_eq check_args_ok ok from_mont_func_eq.
+    Proof using M_eq check_args_ok ok from_mont_func_eq felem_size_ok.
     clear field_parameters_ok.
     cbv [spec_of_UnOp un_from_mont]. rewrite from_mont_func_eq. intros.
     pose proof from_montgomery_correct
@@ -710,7 +711,7 @@ Qed.
   forall functions,
     Interface.map.get functions to_mont = Some to_mont_func ->
     (@spec_of_UnOp _ _ _ _ _ _ _ _ to_mont) un_to_mont functions.
-    Proof using M_eq check_args_ok ok to_mont_func_eq.
+    Proof using M_eq check_args_ok ok to_mont_func_eq felem_size_ok.
     cbv [spec_of_UnOp un_to_mont]. rewrite to_mont_func_eq. intros ? ? GetF.
     pose proof to_montgomery_correct
         _ _ _ ltac:(eassumption) _ (res_eq to_mont_op)
@@ -765,7 +766,7 @@ Qed.
   valid_func (res select_znz_op _) ->
   forall functions, Interface.map.get functions select_znz = Some select_znz_func ->
                     spec_of_selectznz functions.
-Proof using M_eq check_args_ok select_znz_func_eq ok.
+Proof using M_eq check_args_ok select_znz_func_eq ok felem_size_ok.
   cbv [spec_of_selectznz]. rewrite select_znz_func_eq. intros ? ? GetF * HH.
   rename x into x', y into y'.
   pose proof selectznz_correct
@@ -775,7 +776,7 @@ Proof using M_eq check_args_ok select_znz_func_eq ok.
     [ .. | eassumption | eassumption ];
     handle_side_conditions. intros x y c H0 H1 H2.
     unfold COperationSpecifications.WordByWordMontgomery.selectznz_correct in Hcorrect.
-    edestruct (bit_range_eq 1 (fun n => 1%Z) _ H2) as [Hbit | Hbit].
+    edestruct (@bit_range_eq 1 (Interface.word.unsigned c) H2) as [Hbit | Hbit].
     - specialize (Hcorrect (Interface.word.unsigned c) (map Interface.word.unsigned x) (map Interface.word.unsigned y) H2 ltac:(eauto) ltac:(eauto)).
       destruct Hcorrect as [H4 H5]. rewrite Hbit in H4. simpl in H4. rewrite Hbit. simpl. auto.
     - specialize (Hcorrect (Interface.word.unsigned c) (map Interface.word.unsigned x) (map Interface.word.unsigned y) H2 ltac:(eauto) ltac:(eauto)).

@@ -25,7 +25,6 @@ Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Field.Synthesis.New.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
 Require Import Crypto.Bedrock.Secp256k1.Field256k1.
@@ -44,7 +43,7 @@ Import WeakestPrecondition.
 Import BasicC64Semantics.
 
 Local Existing Instance field_parameters.
-Local Instance frep256k1 : Field.FieldRepresentation := field_representation Field256k1.m.
+Local Existing Instance frep256k1.
 Local Existing Instance frep256k1_ok.
 
 Definition secp256k1_jopp :=
@@ -493,7 +492,7 @@ Section WithParameters.
   Local Ltac solve_mem :=
     repeat match goal with
       | |- exists _ : _ -> Prop, _%sep _ => eexists
-      | |- _%sep _ => ecancel_assumption
+      | |- _%sep _ => ecancel_assumption_impl
       end.
 
   Local Ltac cbv_bounds H :=
@@ -634,22 +633,7 @@ Section WithParameters.
   Lemma secp256k1_dblu_ok: program_logic_goal_for_function! secp256k1_dblu.
   Proof.
     Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
-
-    do 9 single_step.
-    single_step.
-    seprewrite_in (Bignum.Bignum_of_bytes 4 a4) H72; [ trivial |  ];
-    multimatch goal with
-    | |- _ ?m1 =>
-        multimatch goal with
-        | H:_ ?m2
-          |- _ =>
-            syntactic_unify._syntactic_unify_deltavar m1 m2;
-            refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
-        end
-    end; cancel; repeat ecancel_step; cancel_seps_at_indices 0%nat 0%nat;
-    [ reflexivity |  ]; (solve [ ecancel ]).
-    do 11 single_step.
-    do 4 single_step.
+    repeat single_step.
 
     repeat straightline.
     cbv [FElem] in *.

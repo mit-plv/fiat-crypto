@@ -49,6 +49,23 @@ Section Field.
   Instance p224_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m machine_wordsize) m.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
+  Instance frep224 : FieldRepresentation := field_representation m.
+  Instance frep224_raw : FieldRepresentation := field_representation_raw m.
+  Instance frep224_ok : FieldRepresentation_ok (field_representation:=frep224).
+  Proof.
+    apply Crypto.Bedrock.Field.Synthesis.New.Signature.field_representation_ok.
+    intros. assumption.
+    let c := eval lazy in felem_size_in_bytes in change felem_size_in_bytes with c.
+    Lia.lia.
+  Defined.
+  Instance frep224_raw_ok : FieldRepresentation_ok (field_representation:=frep224_raw).
+  Proof.
+    apply Crypto.Bedrock.Field.Synthesis.New.Signature.field_representation_ok.
+    intros. assumption.
+    let c := eval lazy in felem_size_in_bytes in change felem_size_in_bytes with c.
+    Lia.lia.
+  Defined.
+
 
   (**** Translate each field operation into bedrock2 and apply bedrock2 backend
         field pipeline proofs to prove the bedrock2 functions are correct. ****)
@@ -88,6 +105,7 @@ Section Field.
           eapply Func.valid_func_bool_iff;
           abstract vm_cast_no_check (eq_refl true)
         | |- (_ = _)%Z => vm_compute; reflexivity
+        | |- (felem_size_in_bytes <= 2 ^ _)%Z => apply felem_size_ok
         end.
 
   Local Notation functions_contain functions f :=
@@ -97,7 +115,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions p224_from_bytes ->
                       spec_of_from_bytes
-                        (field_representation:=field_representation_raw m)
+                        (field_representation:=frep224_raw)
                         functions)
          As p224_from_bytes_correct.
   Proof. Time derive_bedrock2_func from_bytes_op. Qed.
@@ -106,7 +124,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions p224_to_bytes ->
                       spec_of_to_bytes
-                        (field_representation:=field_representation_raw m)
+                        (field_representation:=frep224_raw)
                         functions)
          As p224_to_bytes_correct.
   Proof. Time derive_bedrock2_func to_bytes_op. Qed.
@@ -115,7 +133,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions p224_mul ->
                       spec_of_BinOp bin_mul
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep224)
                         functions)
          As p224_mul_correct.
   Proof. Time derive_bedrock2_func mul_op. Qed.
@@ -124,7 +142,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions p224_square ->
                       spec_of_UnOp un_square
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep224)
                         functions)
          As p224_square_correct.
   Proof. Time derive_bedrock2_func square_op. Qed.
@@ -133,7 +151,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions p224_add ->
                       spec_of_BinOp bin_add
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep224)
                         functions)
          As p224_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
@@ -142,7 +160,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions p224_sub ->
                       spec_of_BinOp bin_sub
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep224)
                         functions)
          As p224_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
@@ -152,13 +170,14 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions p224_from_mont ->
                       spec_of_UnOp un_from_mont
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep224)
                         functions)
          As p224_from_mont_correct.
   Proof.
     epair.
     eapply (from_mont_func_correct _ _ _ from_mont_string to_mont_string).
         - vm_compute; reflexivity.
+        - apply felem_size_ok.
         - eapply Func.valid_func_bool_iff. abstract vm_cast_no_check (eq_refl true).
           Unshelve.
             + auto.
@@ -169,13 +188,14 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions p224_to_mont ->
                       spec_of_UnOp un_to_mont
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep224)
                         functions)
          As to_from_mont_correct.
   Proof.
     epair.
     eapply (to_mont_func_correct _ _ _ from_mont_string to_mont_string).
         - vm_compute; reflexivity.
+        - apply felem_size_ok.
         - eapply Func.valid_func_bool_iff. abstract vm_cast_no_check (eq_refl true).
           Unshelve. all: auto.
      Qed.
@@ -184,13 +204,14 @@ Section Field.
            SuchThat (forall functions,
                       functions_contain functions p224_select_znz ->
                       spec_of_selectznz
-                        (field_representation:=field_representation m)
+                        (field_representation:=frep224)
                         functions)
          As select_znz_correct.
   Proof.
     epair.
     eapply select_znz_func_correct. 1,2:auto.
         - vm_compute; reflexivity.
+        - apply felem_size_ok.
         - eapply Func.valid_func_bool_iff. abstract vm_cast_no_check (eq_refl true).
      Qed.
 End Field.

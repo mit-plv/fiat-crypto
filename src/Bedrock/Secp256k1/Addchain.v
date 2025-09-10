@@ -16,7 +16,6 @@ Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Properties.
 Require Import coqutil.Map.OfListWord.
 From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference_to_string ident_of_string.
-Require Import coqutil.Word.Bitwidth64.
 Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
@@ -26,7 +25,6 @@ Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.ZArith.Znumtheory.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Field.Synthesis.New.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
 Require Import Crypto.Bedrock.Secp256k1.Field256k1.
@@ -87,7 +85,7 @@ add	z	z	t0
 *)
 
 Local Existing Instance field_parameters.
-Local Instance frep256k1 : Field.FieldRepresentation := field_representation Field256k1.m.
+Local Existing Instance frep256k1.
 Local Existing Instance frep256k1_ok.
 
 (* TODO: This could probably be automated *)
@@ -164,7 +162,7 @@ Section WithParameters.
   Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
-  Local Notation word := (Naive.word 64).
+  Local Notation word := (BasicC64Semantics.word).
   Local Notation felem := (felem(FieldRepresentation:=frep256k1)).
 
   Local Instance spec_of_secp256k1_square : spec_of "secp256k1_square" := Field.spec_of_UnOp un_square.
@@ -172,11 +170,11 @@ Section WithParameters.
 
   Global Instance spec_of_inv : spec_of "secp256k1_inv" :=
     fnspec! "secp256k1_inv"
-      (zK xK : word) / (z x : felem) (vx : F M_pos) (R : _ -> Prop),
+      (zK xK : word) / z (x : felem) (vx : F M_pos) (R : _ -> Prop),
     { requires t m :=
         vx = feval x /\
         bounded_by loose_bounds x /\
-        m =* (FElem zK z) * (FElem xK x) * R;
+        m =* Placeholder zK z * (FElem xK x) * R;
       ensures t' m' :=
         t = t' /\
         exists z',
@@ -193,7 +191,7 @@ Section WithParameters.
   Local Ltac solve_mem :=
     repeat match goal with
       | |- exists _ : _ -> Prop, _%sep _ => eexists
-      | |- _%sep _ => ecancel_assumption
+      | |- _%sep _ => ecancel_assumption_impl
       end.
 
   Local Ltac cbv_bounds H :=
@@ -363,7 +361,7 @@ Section WithParameters.
     | |- context [anybytes ?a _ _] =>
         match goal with
         | H: _ ?a' |- context [map.split ?a' _ _] =>
-            seprewrite_in (@Bignum.Bignum_to_bytes _ _ _ _ _ _ felem_size_in_words a) H
+            seprewrite_in (Bignum.Bignum_to_bytes felem_size_in_words a) H
         end
     end.
     extract_ex1_and_emp_in H194.
