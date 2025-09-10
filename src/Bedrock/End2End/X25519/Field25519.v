@@ -42,9 +42,18 @@ Section Field.
   Instance field_parameters : FieldParameters :=
     field_parameters_prefixed Curve25519.p Curve25519.M.a24 "fe25519_"%string.
 
+  #[export] Instance frep25519 : FieldRepresentation := field_representation n s c.
+
   (* Call fiat-crypto pipeline on all field operations *)
   Instance fe25519_ops : unsaturated_solinas_ops (ext_spec:=ext_spec) n s c.
   Proof using Type. Time constructor; make_computed_op. Defined.
+
+  #[export] Instance frep25519_ok : FieldRepresentation_ok(field_representation:=frep25519).
+  Proof.
+    apply Crypto.Bedrock.Field.Synthesis.New.Signature.field_representation_ok.
+    apply UnsaturatedSolinas.relax_valid.
+    change felem_size_in_bytes with 40%Z. Lia.lia.
+  Qed.
 
   (**** Translate each field operation into bedrock2 and apply bedrock2 backend
         field pipeline proofs to prove the bedrock2 functions are correct. ****)
@@ -54,7 +63,7 @@ Section Field.
       Interface.map.get functions "fe25519_from_bytes" = Some fe25519_from_bytes ->
       spec_of_from_bytes
         (ext_spec:=ext_spec)
-        (field_representation:=field_representation n s c)
+        (field_representation:=frep25519)
         functions)
     As fe25519_from_bytes_correct.
   Proof. Time derive_bedrock2_func from_bytes_op. Qed.
@@ -63,7 +72,7 @@ Section Field.
     SuchThat (forall functions,
       Interface.map.get functions "fe25519_to_bytes" = Some fe25519_to_bytes ->
       spec_of_to_bytes
-        (field_representation:=field_representation n s c)
+        (field_representation:=frep25519)
         functions)
     As fe25519_to_bytes_correct.
   Proof. Time derive_bedrock2_func to_bytes_op. Qed.
@@ -72,7 +81,7 @@ Section Field.
     SuchThat (forall functions,
       Interface.map.get functions "fe25519_copy" = Some fe25519_copy ->
       spec_of_felem_copy
-        (field_representation:=field_representation n s c)
+        (field_representation:=frep25519)
         functions)
     As fe25519_copy_correct.
   Proof. Time derive_bedrock2_func felem_copy_op. Qed.
@@ -81,7 +90,7 @@ Section Field.
     SuchThat (forall functions,
       Interface.map.get functions "fe25519_from_word" = Some fe25519_from_word ->
       spec_of_from_word
-        (field_representation:=field_representation n s c)
+        (field_representation:=frep25519)
         functions)
     As fe25519_from_word_correct.
   Proof. Time derive_bedrock2_func from_word_op. Qed.
@@ -90,7 +99,7 @@ Section Field.
     SuchThat (forall functions,
       Interface.map.get functions "fe25519_mul" = Some fe25519_mul ->
       spec_of_BinOp bin_mul
-        (field_representation:=field_representation n s c)
+        (field_representation:=frep25519)
         functions)
     As fe25519_mul_correct.
   Proof. Time derive_bedrock2_func mul_op. Qed.
@@ -99,7 +108,7 @@ Section Field.
     SuchThat (forall functions,
       Interface.map.get functions "fe25519_square" = Some fe25519_square ->
       spec_of_UnOp un_square
-        (field_representation:=field_representation n s c)
+        (field_representation:=frep25519)
         functions)
     As fe25519_square_correct.
   Proof. Time derive_bedrock2_func square_op. Qed.
@@ -108,7 +117,7 @@ Section Field.
     SuchThat (forall functions,
       Interface.map.get functions "fe25519_add" = Some fe25519_add ->
       spec_of_BinOp bin_add
-        (field_representation:=field_representation n s c)
+        (field_representation:=frep25519)
         functions)
     As fe25519_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
@@ -117,7 +126,7 @@ Section Field.
     SuchThat (forall functions,
       Interface.map.get functions "fe25519_carry_add" = Some fe25519_carry_add ->
       spec_of_BinOp bin_carry_add
-        (field_representation:=field_representation n s c)
+        (field_representation:=frep25519)
         functions)
     As fe25519_carry_add_correct.
   Proof. Time derive_bedrock2_func carry_add_op. Qed.
@@ -126,7 +135,7 @@ Section Field.
     SuchThat (forall functions,
       Interface.map.get functions "fe25519_sub" = Some fe25519_sub ->
       spec_of_BinOp bin_sub
-        (field_representation:=field_representation n s c)
+        (field_representation:=frep25519)
         functions)
     As fe25519_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
@@ -135,7 +144,7 @@ Section Field.
     SuchThat (forall functions,
       Interface.map.get functions "fe25519_carry_sub" = Some fe25519_carry_sub ->
       spec_of_BinOp bin_carry_sub
-        (field_representation:=field_representation n s c)
+        (field_representation:=frep25519)
         functions)
     As fe25519_carry_sub_correct.
   Proof. Time derive_bedrock2_func carry_sub_op. Qed.
@@ -144,14 +153,8 @@ Section Field.
     SuchThat (forall functions,
       Interface.map.get functions "fe25519_scmula24" = Some fe25519_scmula24 ->
       spec_of_UnOp un_scmula24
-        (field_representation:=field_representation n s c)
+        (field_representation:=frep25519)
         functions)
     As fe25519_scmula24_correct.
   Proof. Time derive_bedrock2_func scmula24_op. Qed.
-
-  #[export] Instance frep25519_ok : FieldRepresentation_ok(field_representation:=field_representation n s c).
-  Proof.
-    apply Crypto.Bedrock.Field.Synthesis.New.Signature.field_representation_ok.
-    apply UnsaturatedSolinas.relax_valid.
-  Qed.
 End Field.

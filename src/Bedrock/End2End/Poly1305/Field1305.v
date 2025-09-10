@@ -1,6 +1,7 @@
 From Coq Require Import String.
 From Coq Require Import List.
 From Coq Require Import ZArith.
+Require Import Lia.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Representation.
 Require Import Crypto.Bedrock.Field.Synthesis.New.ComputedOp.
@@ -31,6 +32,16 @@ Section Field.
          M ((a - F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
   Defined.
 
+  #[export] Instance frep1305 : FieldRepresentation := field_representation n s c.
+
+  #[export] Instance frep1305_ok : FieldRepresentation_ok(field_representation:=frep1305).
+  Proof.
+    apply Crypto.Bedrock.Field.Synthesis.New.Signature.field_representation_ok.
+    apply UnsaturatedSolinas.relax_valid.
+    change felem_size_in_bytes with 20%Z.
+    lia.
+  Qed.
+
   (* Call fiat-crypto pipeline on all field operations *)
   Instance fe1305_ops : unsaturated_solinas_ops n s c.
   Proof using Type. Time constructor; make_computed_op. Defined.
@@ -45,7 +56,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions fe1305_from_bytes ->
                       spec_of_from_bytes
-                        (field_representation:=field_representation n s c)
+                        (field_representation:=frep1305)
                         functions)
          As fe1305_from_bytes_correct.
   Proof. Time derive_bedrock2_func from_bytes_op. Qed.
@@ -54,7 +65,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions fe1305_to_bytes ->
                       spec_of_to_bytes
-                        (field_representation:=field_representation n s c)
+                        (field_representation:=frep1305)
                         functions)
          As fe1305_to_bytes_correct.
   Proof. Time derive_bedrock2_func to_bytes_op. Qed.
@@ -63,7 +74,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions fe1305_mul ->
                       spec_of_BinOp bin_mul
-                        (field_representation:=field_representation n s c)
+                        (field_representation:=frep1305)
                         functions)
          As fe1305_mul_correct.
   Proof. Time derive_bedrock2_func mul_op. Qed.
@@ -72,7 +83,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions fe1305_square ->
                       spec_of_UnOp un_square
-                        (field_representation:=field_representation n s c)
+                        (field_representation:=frep1305)
                         functions)
          As fe1305_square_correct.
   Proof. Time derive_bedrock2_func square_op. Qed.
@@ -81,7 +92,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions fe1305_add ->
                       spec_of_BinOp bin_add
-                        (field_representation:=field_representation n s c)
+                        (field_representation:=frep1305)
                         functions)
          As fe1305_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
@@ -90,7 +101,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions fe1305_carry_add ->
                       spec_of_BinOp bin_carry_add
-                        (field_representation:=field_representation n s c)
+                        (field_representation:=frep1305)
                         (functions))
          As fe1305_carry_add_correct.
   Proof. Time derive_bedrock2_func carry_add_op. Qed.
@@ -99,7 +110,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions fe1305_sub ->
                       spec_of_BinOp bin_sub
-                        (field_representation:=field_representation n s c)
+                        (field_representation:=frep1305)
                         functions)
          As fe1305_sub_correct.
   Proof. Time derive_bedrock2_func sub_op. Qed.
@@ -108,7 +119,7 @@ Section Field.
          SuchThat (forall functions,
                       functions_contain functions fe1305_carry_sub ->
                       spec_of_BinOp bin_carry_sub
-                        (field_representation:=field_representation n s c)
+                        (field_representation:=frep1305)
                         (functions))
          As fe1305_carry_sub_correct.
   Proof. Time derive_bedrock2_func carry_sub_op. Qed.
