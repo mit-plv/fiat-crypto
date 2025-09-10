@@ -3,6 +3,7 @@ From Coq Require Import List.
 From Coq Require Import Lia.
 Require Import coqutil.Datatypes.List.
 Require Import bedrock2.Array.
+Require Import bedrock2.ArrayCasts.
 Require Import bedrock2.Scalars.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
@@ -21,9 +22,8 @@ Section Bignum.
   Import bedrock2.Memory.
   Context  {width} {word : Interface.word width} {mem : map.map word Init.Byte.byte}.
 
-  Local Notation k := (bytes_per_word width).
   Definition Bignum (n : nat) (px : word) (x : list word) : mem -> Prop :=
-    sep (emp (length x = n)) (array scalar (word.of_Z k) px x).
+    sep (emp (length x = n)) (array scalar (word.of_Z (bytes_per_word width)) px x).
 
   Definition EncodedBignum
              (n_bytes : nat) (px : word) (x : list Byte.byte)
@@ -34,76 +34,61 @@ Section Bignum.
     Context {word_ok : @word.ok width word} {map_ok : @map.ok word Init.Byte.byte mem}
       {BW : coqutil.Word.Bitwidth.Bitwidth width}.
 
-    Local Notation lew_combine := (fun c => word.of_Z (LittleEndianList.le_combine c)).
-    Local Notation lew_split := (fun w => LittleEndianList.le_split (Z.to_nat k) (word.unsigned w)).
-
     Lemma Bignum_of_bytes n :
       forall addr bs,
         length bs = (n * Z.to_nat (bytes_per_word width))%nat ->
         Lift1Prop.iff1
           (array ptsto (word.of_Z 1) addr bs)
-          (Bignum n addr (map lew_combine (chunk (Z.to_nat k) bs))).
+          (Bignum n addr (bs2ws (Z.to_nat (bytes_per_word width)) bs)).
     Proof.
-      cbv [Bignum].
-      induction n; intros.
-      { destruct bs; cbn [length] in *; try lia; [ ].
-        repeat intro. intuition sepsimpl; eauto. }
-      { rewrite <-(firstn_skipn (Z.to_nat k) bs).
-        rewrite array_append.
-        rewrite Scalars.scalar_of_bytes with (l:=List.firstn _ _);
-          lazymatch goal with
-          | [ |- _ <= width ] => destruct Bitwidth.width_cases; lia
-          | _ => idtac
-          end.
-        2:{
-          rewrite firstn_length, Nat.min_l by lia.
-          destruct Bitwidth.width_cases; subst width; trivial. }
-        rewrite chunk_app_chunk; cycle 1.
-        { destruct Bitwidth.width_cases; subst width; cbv; inversion 1. }
-        { rewrite firstn_length; lia. }
-        cbn [length array map]; progress (cancel; cbv [seps]).
-        unshelve erewrite (_ : forall n m, (S n = S m <-> n = m)).
-        { clear; intros; split; congruence. }
-        rewrite <-IHn by (rewrite skipn_length; lia); clear IHn.
-        Morphisms.f_equiv. f_equal. f_equal.
-        rewrite word.unsigned_of_Z_1, Z.mul_1_l, firstn_length, H.
-        destruct Bitwidth.width_cases; subst width; cbn; lia. }
-    Qed.
+      pose Types.word_size_in_bytes_pos.
 
-    (* TODO: move to coqutil.List.Datatypes *)
-    Lemma chunk_flat_map_exact {A B} k (Hk : k <> O)
-      (f : A -> list B) (Hf : forall a : A, length (f a) = k) xs
-      : chunk k (flat_map f xs) = map f xs.
-    Proof.
-      induction xs; trivial; cbn [flat_map map].
-      rewrite ?chunk_app_chunk, IHxs; trivial.
+      cbv [Bignum].
+      intros. rewrite words_of_bytes.
+      2: { rewrite H. apply Nat.Div0.mod_mul. }
+      unfold bytes_per in *.
+      replace (Z.of_nat (BinIntDef.Z.to_nat (bytes_per_word width))) with (bytes_per_word width) in *; try lia.
+      change BinIntDef.Z.to_nat with Z.to_nat in *.
+      split; intros.
+      {
+        extract_ex1_and_emp_in_goal. split.
+        - assumption.
+        - rewrite bs2ws_length; try lia.
+          + rewrite H. apply Nat.div_mul. lia.
+          + rewrite H. apply Nat.Div0.mod_mul.
+      }
+      {
+        extract_ex1_and_emp_in H0.
+        assumption.
+      }
     Qed.
 
     Lemma Bignum_to_bytes n :
       forall addr x,
         Lift1Prop.iff1
           (Bignum n addr x)
-          (sep (emp (length (flat_map lew_split x) = (n * Z.to_nat k)%nat))
-          (array ptsto (word.of_Z 1) addr (flat_map lew_split x))).
+          (sep (emp (length (ws2bs (Z.to_nat (bytes_per_word width)) x) = (n * Z.to_nat (bytes_per_word width))%nat))
+          (array ptsto (word.of_Z 1) addr (ws2bs (Z.to_nat (bytes_per_word width)) x))).
     Proof.
       intros.
-      assert (length (flat_map lew_split x) = (length x * Z.to_nat k)%nat).
-      { erewrite flat_map_const_length, Nat.mul_comm;
-        auto using LittleEndianList.length_le_split. }
-      rewrite Bignum_of_bytes by eassumption; cbv [Bignum].
-      rewrite chunk_flat_map_exact, map_map; cycle 1.
-      { destruct Bitwidth.width_cases; subst width; inversion 1. }
-      { intros; apply LittleEndianList.length_le_split. }
-      erewrite List.map_ext with (g:=fun x=>x), map_id; try cancel; cbv [seps].
-      { rewrite sep_emp_emp. setoid_rewrite H.
-        cbv [Lift1Prop.iff1 emp]; intuition (
-          destruct Bitwidth.width_cases; subst width; subst; cbn in *; try nia). }
-      intros.
-      (* note: this mess could be cleaned up now that we use LittleEndianList *)
-      destruct Bitwidth.width_cases; subst width; simpl k; simpl length(*+arguments*);
-        rewrite ?LittleEndianList.le_combine_split; try exact eq_refl;
-        rewrite Z.mod_small, word.of_Z_unsigned;
-        trivial; eapply word.unsigned_range.
+      cbv [Bignum]. rewrite <- bytes_of_words.
+
+      assert (length (ws2bs (Z.to_nat (bytes_per_word width)) x) = ((length x) * Z.to_nat (bytes_per_word width))%nat).
+      { rewrite ws2bs_length. lia. }
+
+      pose Types.word_size_in_bytes_pos.
+      unfold bytes_per in *.
+      replace (Z.of_nat (BinIntDef.Z.to_nat (bytes_per_word width))) with (bytes_per_word width) in *; try lia.
+      change BinIntDef.Z.to_nat with Z.to_nat in *.
+      split.
+      { intros. extract_ex1_and_emp_in_hyps. extract_ex1_and_emp_in_goal. split.
+        {assumption. }
+        {lia. }
+      }
+      { intros. extract_ex1_and_emp_in_goal. extract_ex1_and_emp_in_hyps. split.
+        {assumption. }
+        { nia. }
+      }
     Qed.
   End Proofs.
 End Bignum.

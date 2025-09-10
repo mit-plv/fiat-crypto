@@ -1,4 +1,5 @@
 Require Import bedrock2.Array.
+Require Import bedrock2.bottom_up_simpl.
 Require Import bedrock2.FE310CSemantics.
 Require Import bedrock2.Loops.
 Require Import bedrock2.Map.Separation.
@@ -7,6 +8,7 @@ Require Import bedrock2.NotationsCustomEntry.
 Require Import bedrock2.ProgramLogic.
 Require Import bedrock2.Scalars.
 Require Import bedrock2.Semantics.
+Require Import bedrock2.SepAutoArray.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.WeakestPrecondition.
 Require Import bedrock2.WeakestPreconditionProperties.
@@ -27,12 +29,7 @@ From Coq Require Import List.
 From Coq Require Import String.
 From Coq Require Import ZArith.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Field.Interface.Compilation2.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
-Require Import Crypto.Bedrock.Group.AdditionChains.
-Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
-Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
-Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 Require Import Crypto.Bedrock.End2End.X25519.Field25519.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Spec.Curve25519.
@@ -51,7 +48,7 @@ Import ProgramLogic.Coercions.
 Import WeakestPrecondition.
 
 Local Existing Instance field_parameters.
-Local Instance frep25519 : Field.FieldRepresentation := field_representation n Field25519.s c.
+Local Existing Instance frep25519.
 Local Existing Instance frep25519_ok.
 
 (* Size of a field element in bytes. This is the same as computing eval in felem_size_bytes, but we want a notation instead of definition. *)
@@ -60,19 +57,19 @@ Local Notation felem_size := 40.
 (* Notations help treat curve points like C structs. To avoid notation clashes, projective coordinates are capitalized. *)
 
 (* Member access notation for projective points: (X, Y, Z, Ta, Tb). *)
-Local Notation "A .X" := (expr.op Syntax.bopname.add A (0)) (in custom bedrock_expr at level 2, left associativity, only parsing).
+Local Notation "A .X" := (A) (in custom bedrock_expr at level 2, left associativity, only parsing).
 Local Notation "A .Y" := (expr.op Syntax.bopname.add A (felem_size)) (in custom bedrock_expr at level 2, left associativity, only parsing).
 Local Notation "A .Z" := (expr.op Syntax.bopname.add A (felem_size + felem_size)) (in custom bedrock_expr at level 2, left associativity, only parsing).
 Local Notation "A .Ta" := (expr.op Syntax.bopname.add A (felem_size + felem_size + felem_size)) (in custom bedrock_expr at level 2, left associativity, only parsing).
 Local Notation "A .Tb" := (expr.op Syntax.bopname.add A (felem_size + felem_size + felem_size + felem_size)) (in custom bedrock_expr at level 2, left associativity, only parsing).
 
 (* Member access notation for precomputed points: (half_ypx, half_ymx, xyd). *)
-Local Notation "A .half_ypx" := (expr.op Syntax.bopname.add A (0)) (in custom bedrock_expr at level 2, left associativity, only parsing).
+Local Notation "A .half_ypx" := (A) (in custom bedrock_expr at level 2, left associativity, only parsing).
 Local Notation "A .half_ymx" := (expr.op Syntax.bopname.add A (felem_size)) (in custom bedrock_expr at level 2, left associativity, only parsing).
 Local Notation "A .xyd" := (expr.op Syntax.bopname.add A (felem_size + felem_size)) (in custom bedrock_expr at level 2, left associativity, only parsing).
 
 (* Member access notation for cached points: (half_YmX, half_YpX, Z, Td). *)
-Local Notation "A .half_YmX" := (expr.op Syntax.bopname.add A (0)) (in custom bedrock_expr at level 2, left associativity, only parsing).
+Local Notation "A .half_YmX" := (A) (in custom bedrock_expr at level 2, left associativity, only parsing).
 Local Notation "A .half_YpX" := (expr.op Syntax.bopname.add A (felem_size)) (in custom bedrock_expr at level 2, left associativity, only parsing).
 Local Notation "A .Z" := (expr.op Syntax.bopname.add A (felem_size + felem_size)) (in custom bedrock_expr at level 2, left associativity, only parsing).
 Local Notation "A .Td" := (expr.op Syntax.bopname.add A (felem_size + felem_size + felem_size)) (in custom bedrock_expr at level 2, left associativity, only parsing).
@@ -177,6 +174,7 @@ Section WithParameters.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
 
 Local Notation FElem := (FElem(FieldRepresentation:=frep25519)).
+Local Notation felem_size_in_bytes := (felem_size_in_bytes(FieldRepresentation:=frep25519)).
 Local Notation bounded_by := (bounded_by(FieldRepresentation:=frep25519)).
 Local Notation word := (Naive.word 32).
 Local Notation felem := (felem(FieldRepresentation:=frep25519)).
@@ -216,7 +214,7 @@ Definition projective_repr P := { p | let '(x,y,z,ta,tb) := p in
                             coordinates P = (feval x, feval y, feval z, feval ta, feval tb) /\
                             bounded_by tight_bounds x /\ bounded_by tight_bounds y /\ bounded_by tight_bounds z /\
                               bounded_by loose_bounds ta /\ bounded_by loose_bounds tb }.
-Local Notation "c 'p5@' p" := (let '(x,y,z,ta,tb) := proj1_sig c in sep (sep (sep (sep (FElem (p .+ 0) x) (FElem (p .+ felem_size) y)) 
+Local Notation "c 'p5@' p" := (let '(x,y,z,ta,tb) := proj1_sig c in sep (sep (sep (sep (FElem (p) x) (FElem (p .+ felem_size) y))
                               (FElem (p .+ (felem_size + felem_size)) z)) (FElem (p .+ (felem_size + felem_size + felem_size)) ta))
                               (FElem (p .+ (felem_size + felem_size + felem_size + felem_size)) tb)) (at level 10, format "c 'p5@' p").
 
@@ -224,13 +222,13 @@ Local Notation "c 'p5@' p" := (let '(x,y,z,ta,tb) := proj1_sig c in sep (sep (se
 Definition precomputed_repr (P : precomputed_point) := { p | let '(half_ymx, half_ypx, xyd) := p in
                             precomputed_coordinates P = (feval half_ymx, feval half_ypx, feval xyd) /\
                             bounded_by loose_bounds half_ymx /\ bounded_by loose_bounds half_ypx /\ bounded_by loose_bounds xyd }.
-Local Notation "c 'p3@' p" := (let '(half_ymx, half_ypx, xyd) := proj1_sig c in sep (sep (FElem (p .+ 0) half_ymx) (FElem (p .+ felem_size) half_ypx))
+Local Notation "c 'p3@' p" := (let '(half_ymx, half_ypx, xyd) := proj1_sig c in sep (sep (FElem (p) half_ymx) (FElem (p .+ felem_size) half_ypx))
                               (FElem (p .+ (felem_size + felem_size)) xyd)) (at level 10, format "c 'p3@' p").
 
 Definition cached_repr (P : cached) := { p | let '(half_ymx, half_ypx,z,td) := p in
                             cached_coordinates P = (feval half_ymx, feval half_ypx, feval z, feval td) /\
                             bounded_by loose_bounds half_ymx /\ bounded_by loose_bounds half_ypx /\bounded_by loose_bounds z /\ bounded_by loose_bounds td }.
-Local Notation "c 'p4@' p" := (let '(half_ymx, half_ypx,z,td) := proj1_sig c in sep (sep (sep (FElem (p .+ 0) half_ymx) (FElem (p .+ felem_size) half_ypx))
+Local Notation "c 'p4@' p" := (let '(half_ymx, half_ypx,z,td) := proj1_sig c in sep (sep (sep (FElem (p) half_ymx) (FElem (p .+ felem_size) half_ypx))
                               (FElem (p .+ (felem_size + felem_size)) z)) (FElem (p .+ (felem_size + felem_size + felem_size)) td)) (at level 10, format "c 'p4@' p").
 
 Instance spec_of_fe25519_half : spec_of "fe25519_half" :=
@@ -248,25 +246,24 @@ Instance spec_of_fe25519_half : spec_of "fe25519_half" :=
         feval result = F.div (feval input) (F.add F.one F.one) /\
         m' =* (FElem result_location result)  * R}.
 
-(* TODO: Use anybytes or similar for output pointer preconditions once the field operation preconditions are suffiently weakened. *)
-
 Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=
   fnspec! "add_precomputed"
-    (p_out p_a p_b: word) / (a any: point) (b: precomputed_point) (a_repr: projective_repr a) (b_repr: precomputed_repr b) (anything: projective_repr any) (R: _ -> Prop), {
+    (p_out p_a p_b: word) / (a: point) (b: precomputed_point) (a_repr: projective_repr a) (b_repr: precomputed_repr b) (out : list byte) (R: _ -> Prop), {
       requires t m :=
-        m =* anything p5@ p_out * a_repr p5@ p_a * b_repr p3@ p_b * R; 
+        m =* out $@ p_out * a_repr p5@ p_a * b_repr p3@ p_b * R/\
+        Datatypes.length out = Z.to_nat (5 * felem_size);
       ensures t' m' :=
         t = t' /\
         exists a_plus_b : projective_repr (m1add_precomputed_coordinates a b),
           m' =* a_plus_b p5@ p_out * a_repr p5@ p_a * b_repr p3@ p_b * R
     }.
-
 Global Instance spec_of_double : spec_of "double" :=
   fnspec! "double"
     (p_out p_a: word) /
-    (a any: point) (a_repr: projective_repr a) (anything: projective_repr any) (R: _ -> Prop), {
+    (a: point) (a_repr: projective_repr a) (out : list byte) (R: _ -> Prop), {
       requires t m :=
-        m =* anything p5@ p_out * a_repr p5@ p_a * R;
+        m =* out $@ p_out * a_repr p5@ p_a * R /\
+        Datatypes.length out = Z.to_nat (5 * felem_size);
       ensures t' m' := 
         t = t' /\
         exists a_double: projective_repr (m1double a),
@@ -276,9 +273,10 @@ Global Instance spec_of_double : spec_of "double" :=
 Global Instance spec_of_to_cached: spec_of "to_cached" :=
   fnspec! "to_cached"
     (p_out p_a p_d: word) /
-    (a: point) (any: cached) (a_repr: projective_repr a) (anything: cached_repr any) (d1: felem) (R: _ -> Prop), {
+    (a: point) (a_repr: projective_repr a) (d1: felem) (out : list byte) (R: _ -> Prop), {
       requires t m :=
-        m =* anything p4@ p_out * a_repr p5@ p_a * FElem p_d d1 * R /\
+        m =* out $@ p_out * a_repr p5@ p_a * FElem p_d d1 * R /\
+        Datatypes.length out = Z.to_nat (4 * felem_size) /\
         d = feval d1 /\
         bounded_by tight_bounds d1;
       ensures t' m' :=
@@ -290,14 +288,15 @@ Global Instance spec_of_to_cached: spec_of "to_cached" :=
 Global Instance spec_of_readd : spec_of "readd" :=
   fnspec! "readd"
     (p_out p_a p_c: word) /
-    (a any: point) (c: cached) (a_repr: projective_repr a) (anything: projective_repr any) (c_repr: cached_repr c) (R : _ -> Prop), {
+    (a: point) (c: cached) (a_repr: projective_repr a) (c_repr: cached_repr c) (out : list byte) (R : _ -> Prop), {
       requires t m :=
-        m =* anything p5@ p_out * a_repr p5@ p_a * c_repr p4@ p_c * R;
+        m =* out $@ p_out * a_repr p5@ p_a * c_repr p4@ p_c * R /\
+        Datatypes.length out = Z.to_nat (5 * felem_size);
       ensures t' m' :=
         t = t' /\
         exists a_plus_c: projective_repr (m1_readd a c),
           m' =* a_plus_c p5@ p_out * a_repr p5@ p_a * c_repr p4@ p_c * R
-    }.
+  }.
 
 Local Instance spec_of_fe25519_square : spec_of "fe25519_square" := Field.spec_of_UnOp un_square.
 Local Instance spec_of_fe25519_mul : spec_of "fe25519_mul" := Field.spec_of_BinOp bin_mul.
@@ -341,40 +340,28 @@ Local Ltac solve_bounds :=
   | H: bounded_by _ ?x |- bounded_by _ ?x => cbv_bounds H
   end.
 
+ Ltac skipn_firstn_length :=
+    change felem_size_in_bytes with 40 in *; listZnWords.
+
+Ltac split_stack_at_n_in stack p n H := rewrite <- (firstn_skipn n stack) in H;
+  rewrite (map.of_list_word_at_app_n _ _ _ n) in H; try skipn_firstn_length;
+  let D := fresh in unshelve(epose (sep_eq_putmany _ _ (map.adjacent_arrays_disjoint_n p (firstn n stack) (skipn n stack) n _ _)) as D); try skipn_firstn_length;
+  seprewrite_in D H; rewrite ?skipn_skipn in H; bottom_up_simpl_in_hyp H; clear D.
+
 Local Ltac solve_mem :=
-  repeat match goal with
-  | |- exists _ : _ -> Prop, _%sep _ => eexists
-  | |- _%sep _ => ecancel_assumption
-  | |- context[?a + ?b] => match isZcst a with 
-        | false => fail
-        | true => match (isZcst b) with
-            | false => fail
-            | true => let c := eval cbv in (a + b) in change (a + b) with c (* Simplify addition of constants. *)
-          end
-      end
-  | H: ?P%sep _ |- _ => match P with context[?a + ?b] => match isZcst a with 
-          | false => fail
-          | true => match (isZcst b) with
-              | false => fail
-              | true => let c := eval cbv in (a + b) in change (a + b) with c in H
-          end
-        end 
-      end
+  try match goal with  | |- exists _ : _ -> Prop, _%sep _ => eexists end;
+  match goal with  | H : _ %sep ?m |- _ %sep ?m => bottom_up_simpl_in_goal_nop_ok end;
+  match goal with
+  | |- _%sep _ => ecancel_assumption_impl
+  | H: ?P%sep ?m |- ?G%sep ?m =>  (* Solve Placeholder goals when a fixed size list is given *)
+    match P with context[map.of_list_word_at ?p ?stack] =>
+    match G with context[Placeholder ?p _] =>
+      solve [ cbv [Placeholder]; extract_ex1_and_emp_in_goal; bottom_up_simpl_in_goal_nop_ok; split; [ecancel_assumption | skipn_firstn_length] ]
+    end end
   end.
 
-Local Ltac solve_stack :=
-  (* Rewrites the `stack$@a` term in H to use a Bignum instead *)
-  cbv [FElem];
-  match goal with
-  | H: _%sep ?m |- (Bignum.Bignum felem_size_in_words ?a _ * _)%sep ?m =>
-       seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a) H
-  end;
-  [> transitivity 40%nat; trivial | ];
-  (* proves the memory matches up *)
-  use_sep_assumption; cancel; cancel_seps_at_indices 0%nat 0%nat; cbn; [> trivial | eapply RelationClasses.reflexivity].
-
 Local Ltac single_step :=
-  repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_stack.
+  repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds.
 
 (* Attempts to find anybytes terms in the goal and rewrites the first corresponding stack hypothesis to byte representation.
    straightline only supports deallocation for byte representation at the moment. *)
@@ -391,54 +378,36 @@ Ltac solve_deallocation :=
   end;
   repeat straightline.
 
-(* An example that demonstrates why we need to set Strategy in add_precomputed_ok below *)
-Example demo_strategy : forall x,
-  (@Field.bounded_by field_parameters (Zpos (xO (xO (xO (xO (xO xH))))))
-        BW32 (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
-        (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
-           (Naive.word (Zpos (xO (xO (xO (xO (xO xH))))))) Naive.word32_ok
-           byte) frep25519
-        (@loose_bounds field_parameters (Zpos (xO (xO (xO (xO (xO xH))))))
-           BW32 (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
-           (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
-              (Naive.word (Zpos (xO (xO (xO (xO (xO xH))))))) Naive.word32_ok
-              byte) frep25519) x =
-          @Field.bounded_by field_parameters (Zpos (xO (xO (xO (xO (xO xH))))))
-        BW32 (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
-        (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
-           (Naive.word (Zpos (xO (xO (xO (xO (xO xH))))))) Naive.word32_ok
-           byte) frep25519
-        (@bin_outbounds (Zpos (xO (xO (xO (xO (xO xH)))))) BW32
-           (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
-           (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
-              (Naive.word (Zpos (xO (xO (xO (xO (xO xH))))))) Naive.word32_ok
-              byte) field_parameters frep25519 (@add field_parameters)
-           (@bin_add (Zpos (xO (xO (xO (xO (xO xH)))))) BW32
-              (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
-              (@SortedListWord.map (Zpos (xO (xO (xO (xO (xO xH))))))
-                 (Naive.word (Zpos (xO (xO (xO (xO (xO xH)))))))
-                 Naive.word32_ok byte) field_parameters frep25519)) x).
-Proof.
-  (* reflexivity. *) (* Does not complete within 1 minute. *)
-  (* Now set Strategy precedence... *)
-  Strategy -1000 [bin_outbounds bin_add].
-  reflexivity. (* ...and completes immediately *)
-Qed.
+Ltac split_output_stack stack_var ptr_var num_points :=
+  match goal with
+  | H : context[stack_var $@ ptr_var] |- _ =>
+    split_stack_at_n_in stack_var ptr_var 40%nat H;
+    split_stack_at_n_in (skipn 40 stack_var) (ptr_var.+40) 40%nat H;
+    split_stack_at_n_in (skipn 80 stack_var) (ptr_var.+80) 40%nat H;
+    match num_points with
+    | 4 => idtac
+    | 5 =>
+      split_stack_at_n_in (skipn 120 stack_var) (ptr_var.+120) 40%nat H
+    end
+  end.
 
 Lemma to_cached_ok: program_logic_goal_for_function! to_cached.
 Proof.
   (* Without this, resolution of cbv stalls out Qed. *)
   Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_outbounds bin_outbounds].
 
-  straightline.
+  repeat straightline.
   destruct_points.
-
-  repeat single_step.
+  split_output_stack out p_out 4.
   repeat straightline.
 
+  repeat single_step.
+
+  repeat straightline.
   lazy delta [cached_repr].
   unshelve eexists.
-  eexists (_, _, _, _). 2: solve_mem.
+  eexists (_, _, _, _).
+  2: solve_mem.
   lazy match zeta beta delta [bin_model bin_mul bin_add bin_carry_add bin_sub cached_coordinates coordinates proj1_sig m1_prep] in *.
   ssplit; try solve_bounds.
   congruence.
@@ -449,10 +418,13 @@ Proof.
   (* Without this, resolution of cbv stalls out Qed. *)
   Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
 
-  repeat straightline.
+  do 4 straightline.
   destruct_points.
+  split_output_stack out p_out 5.
+  repeat straightline.
 
-  repeat single_step.
+  Time repeat single_step. (* Avoid performance regressions: Keep this around 90s*)
+
   repeat straightline.
   solve_deallocation.
 
@@ -469,8 +441,10 @@ Proof.
   (* Without this, resolution of cbv stalls out Qed. *)
   Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_outbounds bin_outbounds].
 
-  straightline.
+  do 3 straightline.
   destruct_points.
+  split_output_stack out p_out 5.
+  repeat straightline.
 
   repeat single_step.
 
@@ -491,15 +465,18 @@ Proof.
   (* Without this, resolution of cbv stalls out Qed. *)
   Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_outbounds bin_outbounds].
 
-  straightline.
+  do 4 straightline.
   destruct_points.
+  split_output_stack out p_out 5.
+  repeat straightline.
 
-  repeat single_step. repeat straightline.
+  repeat single_step.
 
+  repeat straightline.
   solve_deallocation.
-
   unshelve eexists.
-  eexists (_, _, _, _, _). 2: solve_mem.
+  eexists (_, _, _, _, _).
+  2: solve_mem.
   lazy match beta zeta delta [m1_readd coordinates proj1_sig bin_model bin_mul bin_add bin_carry_add bin_sub] in *.
   ssplit; try solve_bounds.
   Prod.inversion_prod. congruence.

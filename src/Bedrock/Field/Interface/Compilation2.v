@@ -3,6 +3,7 @@ Require Import Rupicola.Lib.Alloc.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Local Open Scope Z_scope.
+Import bedrock2.Memory.
 
 Section Compile.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
@@ -12,8 +13,8 @@ Section Compile.
   Context {locals_ok : map.ok locals}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
-          {field_representaton : FieldRepresentation}
-          {field_representation_ok : FieldRepresentation_ok}.
+          {field_representation : FieldRepresentation}
+          {field_representation_ok : FieldRepresentation_ok (field_representation:=field_representation)}.
 
   Definition maybe_bounded mbounds v :=
     match mbounds with
@@ -47,25 +48,36 @@ Section Compile.
     sepsimpl; simpl in *; eauto using relax_bounds.
   Qed.
 
-  Lemma FElem'_from_bytes
+  Lemma FElem'_iff_bytes
     : forall px : word.rep,
-      Lift1Prop.iff1 (Placeholder px) (Lift1Prop.ex1 (FElem None px)).
-  Proof using mem_ok word_ok.
+      Lift1Prop.iff1 (Lift1Prop.ex1 (Placeholder px)) (Lift1Prop.ex1 (FElem None px)).
+  Proof using field_representation_ok mem_ok word_ok.
     unfold FElem.
     intros.
     split; intros.
     {
-      apply FElem_from_bytes in H.
-      destruct H.
+      destruct H as [bs H].
+      apply Placeholder_impl_FElem_bytes in H.
       do 2 eexists.
       sepsimpl; simpl; eauto.
     }
     {
-      destruct H as [? [? ?]].
+      destruct H as [ws [? H]].
       sepsimpl.
-
-      eapply FElem_to_bytes; eauto.
+      eexists.
+      eapply FElem_impl_Placeholder; eauto.
     }
+  Qed.
+
+  Lemma FElem'_to_bytes
+    : forall bounds px x,
+      Lift1Prop.impl1 (FElem bounds px x) (Lift1Prop.ex1 (Placeholder px)).
+  Proof.
+    intros. cbv [FElem]. intros m [f F].
+    extract_ex1_and_emp_in F.
+    sepsimpl.
+    eexists. eapply FElem_impl_Placeholder.
+    eassumption.
   Qed.
 
   #[refine]
@@ -77,14 +89,20 @@ Section Compile.
   Proof.
     {
       intros; intros m H.
-      apply FElem'_from_bytes.
+      apply FElem'_to_bytes in H.
+      cbv[Placeholder] in *.
+      sepsimpl.
       eexists.
-      eapply drop_bounds_FElem; eauto.
+      pose felem_size_ok.
+      ssplit; try eassumption.
+      lia.
     }
     {
       intros; intros m H.
-      apply FElem'_from_bytes.
-      eauto.
+      apply FElem'_iff_bytes.
+      cbv [Memory.anybytes Placeholder] in *. sepsimpl.
+      eexists; try eassumption.
+      sepsimpl; try eassumption.
     }
   Defined.
 
@@ -92,11 +110,10 @@ Section Compile.
     repeat straightline';
     handle_call;
     lazymatch goal with
-    | |- sep _ _ _ => ecancel_assumption
+    | |- sep _ _ _ => ecancel_assumption_impl
     | _ => idtac
     end; eauto;
     sepsimpl; repeat straightline'; subst; eauto.
-
 
   Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_BinOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
   Local Hint Extern 1 (spec_of _) => (simple refine (@spec_of_UnOp _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
@@ -135,7 +152,7 @@ Section Compile.
         (cmd.call [] name [expr.var out_var; expr.var x_var; expr.var y_var])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
-  Proof using ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using ext_spec_ok locals_ok mem_ok word_ok field_representation_ok.
     repeat straightline'.
     unfold FElem in *.
     sepsimpl.
@@ -180,7 +197,7 @@ Section Compile.
         (cmd.call [] name [expr.var out_var; expr.var x_var])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
-  Proof using ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using ext_spec_ok locals_ok mem_ok word_ok field_representation_ok.
     repeat straightline'.
     unfold FElem in *.
     sepsimpl.
@@ -260,7 +277,7 @@ Section Compile.
         (cmd.call [] felem_copy [expr.var out_var; expr.var x_var])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
-  Proof using ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using ext_spec_ok locals_ok mem_ok word_ok field_representation_ok.
     repeat straightline'.
     unfold FElem in *.
     sepsimpl.
@@ -302,7 +319,7 @@ Section Compile.
                   [expr.var out_var; expr.literal x])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
-  Proof using ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using ext_spec_ok locals_ok mem_ok word_ok field_representation_ok.
     repeat straightline'.
     unfold FElem in *.
     extract_ex1_and_emp_in H1.

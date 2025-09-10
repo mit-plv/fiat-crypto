@@ -9,7 +9,8 @@ Require Import compiler.Symbols.
 Require Import compiler.MMIO.
 Require Import coqutil.Word.Bitwidth32.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Field.Interface.Compilation2.
+Require Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20.
+Require Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
 Require Import Crypto.Bedrock.Field.Synthesis.New.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Group.AdditionChains.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
@@ -23,7 +24,6 @@ Require Import bedrock2Examples.memequal.
 Require Import bedrock2Examples.memswap.
 Require Import bedrock2Examples.memconst.
 Require Import Rupicola.Examples.Net.IPChecksum.IPChecksum.
-Require Crypto.Bedrock.End2End.RupicolaCrypto.ChaCha20.
 
 Local Open Scope string_scope.
 Import Syntax Syntax.Coercions NotationsCustomEntry.
@@ -171,7 +171,6 @@ Proof.
 Qed.
 
 Local Open Scope list_scope.
-Require Crypto.Bedrock.End2End.RupicolaCrypto.Spec.
 Local Definition be2 z := rev (le_split 2 z).
 Local Coercion to_list : tuple >-> list.
 Local Coercion Z.b2z : bool >-> Z.
