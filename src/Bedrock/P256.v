@@ -50,7 +50,7 @@ Axiom p256_coord_sqr_ok : forall functions, map.get functions "p256_coord_sqr" =
 Axiom p256_coord_mul : Syntax.func.
 Axiom p256_coord_mul_ok : forall functions, map.get functions "p256_coord_mul" = Some p256_coord_mul -> spec_of_p256_coord_mul functions.
 
-Import shrd full_sub full_add full_mul memmove.
+Import memcpy shrd full_sub full_add full_mul memmove.
 
 Definition platform := &[,
   full_add; full_sub; full_mul; shrd;
@@ -117,7 +117,8 @@ Proof.
   pose_correctness br_broadcast_odd_ok.
 
   pose_correctness memmove.memmove_ok.
-  pose proof br_memcpy_ok (map.of_list funcs) eq_refl ltac:(assumption).
+  match goal with H : _ |- _ =>
+  pose proof br_memcpy_ok (map.of_list funcs) eq_refl H end.
   pose_correctness br_memset_ok.
   pose_correctness br_memcxor_ok.
 
