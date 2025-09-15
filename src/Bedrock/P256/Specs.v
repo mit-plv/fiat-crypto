@@ -289,15 +289,6 @@ Context {ext_spec : Semantics.ExtSpec}.
   { requires t m := m =* d$@p_d * R /\ length d = n :> Z;
     ensures t' m := t' = t /\ let out := repeat (Byte.byte.of_Z v) (Z.to_nat n) in m =* out$@p_d * R }.
 
-#[export] Instance spec_of_br_memcpy : spec_of "br_memcpy" :=
-  fnspec! "br_memcpy" (p_d p_s n : word) / (d s : list byte) R,
-  { requires t m := m =* d$@p_d * s$@p_s * R /\ length d = n :> Z /\ length s = n :> Z /\ n <= 2^63;
-    ensures t' m := t' = t /\ m =* s$@p_d * s$@p_s * R }.
-
-Definition br_memcpy := func! (d, s, n) {
-  memmove(d, s, n)
-}.
-
 #[export] Instance spec_of_br_memcxor : spec_of "br_memcxor" :=
   fnspec! "br_memcxor" (p_d p_s n mask : word) / (d s : list byte) R,
   { requires t m := m =* d$@p_d * s$@p_s * R /\ length d = n :> Z /\ length s = n :> Z;
@@ -357,7 +348,7 @@ Definition spec_of_p256_coord_sub_nonmont : spec_of "p256_coord_sub" :=
 End WithSemantics.
 
 From bedrock2 Require Import BasicC64Semantics.
-From bedrock2Examples Require shrd full_sub full_add full_mul memmove.
+From bedrock2Examples Require shrd full_sub full_add full_mul memmove memcpy.
 #[export] Existing Instance shrd.spec_of_shrd.
 #[export] Instance spec_of_memmove : spec_of "memmove". apply memmove.spec_of_memmove. Defined.
 #[export] Hint Mode Interface.map.map - - : typeclass_instances.

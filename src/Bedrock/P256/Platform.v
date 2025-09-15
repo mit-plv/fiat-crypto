@@ -167,12 +167,6 @@ Definition br_memcxor := func! (p_d, p_s, n, m) {
 }.
 
 
-Lemma br_memcpy_ok : program_logic_goal_for_function! br_memcpy.
-Proof.
-  cbv [spec_of_br_memcpy].
-  repeat (straightline || straightline_call); intuition eauto; try ecancel_assumption; trivial.
-Qed.
-
 Lemma br_memset_ok : program_logic_goal_for_function! br_memset.
 Admitted.
 

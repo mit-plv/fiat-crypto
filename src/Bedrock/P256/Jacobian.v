@@ -304,6 +304,7 @@ Definition p256_point_add_vartime_if_doubling := func!(p_out, p_P, p_Q) {
   br_memcpy(p_out, p_sel, $(3*32))
 }.
 
+Import memcpy.
 Lemma p256_point_add_vartime_if_doubling_ok : program_logic_goal_for_function! p256_point_add_vartime_if_doubling.
 Proof.
   cbv [spec_of_p256_point_add_vartime_if_doubling].
