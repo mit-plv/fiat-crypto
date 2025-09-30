@@ -11,7 +11,7 @@ function Print-Group {
 
 # Using WMI to get CPU information
 Print-Group -name "wmic cpu get" -command { Get-CimInstance -ClassName CIM_Processor | Select Caption, DeviceID, Name, NumberOfCores, MaxClockSpeed, Status }
-Print-Group -name "wmic cpu list /format:list" -command { wmic cpu list /format:list }
+Print-Group -name "wmic cpu list /format:list" -command { Get-CimInstance -ClassName CIM_Processor | Format-List }
 
 # Running git configuration commands via bash
 $CYGWIN_ROOT = $env:CYGWIN_ROOT
