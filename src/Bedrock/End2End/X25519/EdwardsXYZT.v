@@ -178,13 +178,12 @@ Local Notation felem_size_in_bytes := (felem_size_in_bytes(FieldRepresentation:=
 Local Notation bounded_by := (bounded_by(FieldRepresentation:=frep25519)).
 Local Notation word := (Naive.word 32).
 Local Notation felem := (felem(FieldRepresentation:=frep25519)).
-Local Notation point := (point(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(d:=d)).
+Local Notation point := (Extended.point(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(d:=d)).
 Local Notation cached := (cached(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(d:=d)).
-Local Notation coordinates := (coordinates(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(Feq:=Logic.eq)(a:=a)(d:=d)).
 Local Notation cached_coordinates := (cached_coordinates(Fzero:=F.zero)(Fadd:=F.add)(Fdiv:=F.div)(Fmul:=F.mul)(Fsub:=F.sub)(Feq:=Logic.eq)(a:=a)(d:=d)).
 Local Notation precomputed_coordinates := (precomputed_coordinates(Fone:=F.one)(Fadd:=F.add)(Fmul:=F.mul)(Fsub:=F.sub)(Feq:=Logic.eq)(a:=a)(d:=d)).
 Local Notation m1double :=
-  (m1double(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+  (Extended.m1double(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
            (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
            (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
            (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
@@ -210,8 +209,8 @@ Local Notation m1add_precomputed_coordinates :=
 
 Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
 
-Definition projective_repr P := { p | let '(x,y,z,ta,tb) := p in
-                            coordinates P = (feval x, feval y, feval z, feval ta, feval tb) /\
+Definition projective_repr (P : point) := { p | let '(x,y,z,ta,tb) := p in
+                            proj1_sig P = (feval x, feval y, feval z, feval ta, feval tb) /\
                             bounded_by tight_bounds x /\ bounded_by tight_bounds y /\ bounded_by tight_bounds z /\
                               bounded_by loose_bounds ta /\ bounded_by loose_bounds tb }.
 Local Notation "c 'p5@' p" := (let '(x,y,z,ta,tb) := proj1_sig c in sep (sep (sep (sep (FElem (p) x) (FElem (p .+ felem_size) y))
@@ -319,13 +318,13 @@ Local Ltac destruct_points :=
   repeat match goal with
     | _ => progress destruct_head' @Readdition.cached
     | _ => progress destruct_head' cached_repr
-    | _ => progress destruct_head' @Basic.point
+    | _ => progress destruct_head' @Extended.point
     | _ => progress destruct_head' projective_repr
     | _ => progress destruct_head' @precomputed_point
     | _ => progress destruct_head' precomputed_repr
     | _ => progress destruct_head' prod
     | _ => progress destruct_head' and
-    | _ => progress lazy beta match zeta delta [coordinates precomputed_coordinates cached_coordinates proj1_sig] in *
+    | _ => progress lazy beta match zeta delta [precomputed_coordinates cached_coordinates proj1_sig] in *
   end.
 
 Local Ltac cbv_bounds H :=
@@ -408,7 +407,7 @@ Proof.
   unshelve eexists.
   eexists (_, _, _, _).
   2: solve_mem.
-  lazy match zeta beta delta [bin_model bin_mul bin_add bin_carry_add bin_sub cached_coordinates coordinates proj1_sig m1_prep] in *.
+  lazy match zeta beta delta [bin_model bin_mul bin_add bin_carry_add bin_sub cached_coordinates proj1_sig m1_prep] in *.
   ssplit; try solve_bounds.
   congruence.
 Qed.
@@ -428,7 +427,7 @@ Proof.
   repeat straightline.
   solve_deallocation.
 
-  lazy beta match zeta delta [m1add_precomputed_coordinates projective_repr precomputed_coordinates coordinates proj1_sig].
+  lazy beta match zeta delta [m1add_precomputed_coordinates projective_repr precomputed_coordinates proj1_sig].
   unshelve eexists.
   eexists (_, _, _, _, _).
   2: solve_mem.
@@ -451,7 +450,7 @@ Proof.
   (* Solve the postconditions *)
   repeat straightline.
   solve_deallocation.
-  lazy beta match zeta delta [projective_repr coordinates proj1_sig m1double bin_model bin_add bin_mul bin_sub bin_carry_add bin_sub bin_carry_sub un_model un_square] in *.
+  lazy beta match zeta delta [projective_repr proj1_sig m1double bin_model bin_add bin_mul bin_sub bin_carry_add bin_sub bin_carry_sub un_model un_square] in *.
   unshelve eexists.
   eexists (_, _, _, _, _).
   2: solve_mem.
@@ -477,7 +476,7 @@ Proof.
   unshelve eexists.
   eexists (_, _, _, _, _).
   2: solve_mem.
-  lazy match beta zeta delta [m1_readd coordinates proj1_sig bin_model bin_mul bin_add bin_carry_add bin_sub] in *.
+  lazy match beta zeta delta [m1_readd proj1_sig bin_model bin_mul bin_add bin_carry_add bin_sub] in *.
   ssplit; try solve_bounds.
   Prod.inversion_prod. congruence.
 Qed.

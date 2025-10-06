@@ -26,7 +26,7 @@ Section ExtendedCoordinates.
           {nonsquare_d : forall x, x^2 <> d}.
   Local Notation Epoint := (@E.point F Feq Fone Fadd Fmul a d).
   Local Notation onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2) (only parsing).
-  Local Notation point := (point (Feq:=Feq)(Fzero:=Fzero)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(d:=d)).
+  Local Notation point := (Extended.point (Feq:=Feq)(Fzero:=Fzero)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(d:=d)).
 
   Definition precomputed_point := { P | let '(half_ypx, half_ymx, xyd) := P in
                             let x := half_ypx - half_ymx in
@@ -45,10 +45,10 @@ Section ExtendedCoordinates.
     | _ => progress (Prod.inversion_prod; subst)
     | _ => progress destruct_head' prod
     | _ => progress destruct_head' @E.point
-    | _ => progress destruct_head' Basic.point
+    | _ => progress destruct_head' Extended.point
     | _ => progress destruct_head' @precomputed_point
     | _ => progress destruct_head' and
-    | _ => progress cbv beta match zeta delta [eq CompleteEdwardsCurve.E.eq Basic.eq E.eq E.zero E.add fst snd precomputed_coordinates coordinates E.coordinates proj1_sig point] in *
+    | _ => progress cbv beta match zeta delta [eq CompleteEdwardsCurve.E.eq Extended.eq E.eq E.zero E.add fst snd precomputed_coordinates E.coordinates proj1_sig point] in *
     | |- _ /\ _ => split | |- _ <-> _ => split
     end.
   Local Ltac t := repeat t_step; try Field.fsatz.
@@ -72,7 +72,7 @@ Section ExtendedCoordinates.
       let '(half_ypx, half_ymx, _) := precomputed_coordinates P in
         (half_ypx - half_ymx, half_ypx + half_ymx, 1,
          half_ypx - half_ymx, half_ypx + half_ymx)) _ ). abstract t. Defined.
-  Global Instance Proper_to_projective : Proper (eq==>(Basic.eq (Feq:=Feq))) to_projective.
+  Global Instance Proper_to_projective : Proper (eq==>(Extended.eq (Feq:=Feq))) to_projective.
   Proof using Type. cbv [to_projective]; t. Qed.
 
   Definition from_projective (P:point) : precomputed_point.
@@ -82,7 +82,7 @@ Section ExtendedCoordinates.
       let x := X * iZ in 
       let y := Y * iZ in 
         ((y+x)/2, (y-x)/2, x*y*d)) _ ). abstract t. Defined.
-  Global Instance Proper_from_projective: Proper (Basic.eq (Feq:=Feq)==>eq) from_projective.
+  Global Instance Proper_from_projective: Proper (Extended.eq (Feq:=Feq)==>eq) from_projective.
   Proof using Type. cbv [from_projective]; t. Qed.
 
   Global Instance Equivalence_eq : Equivalence eq.
@@ -119,13 +119,13 @@ Section ExtendedCoordinates.
       eapply (H_nz (f2 * Finv f1)(f3 * Finv f1)); t). Defined.
     
     Create HintDb points_as_coordinates discriminated.
-    Hint Unfold XYZT.Basic.point XYZT.Basic.coordinates XYZT.Basic.from_twisted XYZT.Basic.m1add
+    Hint Unfold Extended.point proj1_sig Extended.from_affine Extended.m1add
          E.point E.coordinates m1add_precomputed_coordinates of_twisted precomputed_point : points_as_coordinates.
-    Local Notation m1add := (Basic.m1add(nonzero_a:=nonzero_a)(square_a:=square_a)(a_eq_minus1:=a_eq_minus1)(nonsquare_d:=nonsquare_d)(k_eq_2d:=reflexivity _)).
-    Local Notation XYZT_of_twisted := (Basic.from_twisted(nonzero_a:=nonzero_a)(d:=d)).
+    Local Notation m1add := (Extended.m1add(nonzero_a:=nonzero_a)(square_a:=square_a)(a_eq_minus1:=a_eq_minus1)(nonsquare_d:=nonsquare_d)(k_eq_2d:=reflexivity _)).
+    Local Notation XYZT_of_twisted := (Extended.from_affine(nonzero_a:=nonzero_a)(d:=d)).
     Lemma m1add_precomputed_coordinates_correct P Q :
       let '(X1, Y1, Z1, Ta1, Tb1) := proj1_sig (m1add_precomputed_coordinates (P) (of_twisted Q)) in
-      let '(X2, Y2, Z2, _, _) := coordinates (m1add P (XYZT_of_twisted Q)) in
+      let '(X2, Y2, Z2, _, _) := proj1_sig (m1add P (XYZT_of_twisted Q)) in
             Z2*X1 = Z1*X2 /\ Z2*Y1 = Z1*Y2 /\ X1*Y1 = Z1*Ta1*Tb1.
     Proof. cbv [proj1_sig m1add_precomputed_coordinates of_twisted m1add XYZT_of_twisted]; t.
     Qed.
