@@ -1,0 +1,45 @@
+opam-version: "2.0"
+version: "dev"
+authors: [
+  "Andres Erbsen <andreser@mit.edu>"
+  "Google Inc."
+  "Jade Philipoom <jadep@mit.edu> <jade.philipoom@gmail.com>"
+  "Massachusetts Institute of Technology"
+  "Zoe Paraskevopoulou <zoe.paraskevopoulou@gmail.com>"
+]
+maintainer: "Jason Gross <jgross@mit.edu>"
+homepage: "https://github.com/mit-plv/fiat-crypto"
+bug-reports: "https://github.com/mit-plv/fiat-crypto/issues"
+license: "MIT OR Apache-2.0 OR BSD-1-Clause"
+build: [
+  [make "-j%{jobs}%" "EXTERNAL_DEPENDENCIES=1" "SKIP_COQSCRIPTS_INCLUDE=1" "coq" "standalone-ocaml"]
+]
+install: [
+  [make "EXTERNAL_DEPENDENCIES=1" "SKIP_COQSCRIPTS_INCLUDE=1" "BINDIR=%{bin}%" "install" "install-standalone-unified-ocaml"]
+  ["etc/test-run-fiat-crypto-silent.sh" "%{bin}%/fiat_crypto"] {with-test}
+  ["etc/test-run-fiat-crypto-silent.sh" "fiat_crypto"] {with-test}
+]
+depends: [
+  "conf-findutils" {build}
+  "ocaml" {build & >= "4.08~"}
+  "ocamlfind" {build}
+  "coq" {>= "8.18~"}
+  "coq-coqprime" {>= "1.2.0" | = "dev"}
+  "coq-rewriter" {( >= "0.0.6" & <= "0.0.9" ) | = "dev"}
+  "coq-rupicola" {= "0.0.8" | = "dev"}
+  "coq-bedrock2-compiler" {= "0.0.6" | = "dev"}
+]
+conflict-class: [
+  "coq-fiat-crypto"
+]
+dev-repo: "git+https://github.com/mit-plv/fiat-crypto.git"
+synopsis: "Cryptographic Primitive Code Generation by Fiat"
+description: """
+Coq code and proofs for a command-line binary that can synthesize proven-correct
+big-integer modular field arithmetic operations for cryptography.
+Target languages include C, Rust, Zig, Go, and bedrock2.
+"""
+tags: ["logpath:Crypto"]
+url {
+  src: "git+https://github.com/mit-plv/fiat-crypto.git#master"
+}
