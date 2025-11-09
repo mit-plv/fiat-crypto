@@ -33,7 +33,7 @@ jobs:
       OPAMCONFIRMLEVEL: "unsafe-yes"
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         submodules: recursive
     - name: Setup Python
@@ -132,7 +132,7 @@ jobs:
     runs-on: windows-latest
     needs: build
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Download standalone Windows
       uses: actions/download-artifact@v4
       with:
@@ -164,7 +164,7 @@ jobs:
     permissions:
       contents: write  # IMPORTANT: mandatory for making GitHub Releases
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
