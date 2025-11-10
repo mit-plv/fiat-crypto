@@ -20,7 +20,7 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: 0.15.1
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Test Zig files
         run: (cd fiat-zig && zig build && zig build test)
       - name: Test Zig field inversion example
