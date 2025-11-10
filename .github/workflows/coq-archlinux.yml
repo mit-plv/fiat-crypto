@@ -47,7 +47,7 @@ jobs:
     - run: tar -czvf generated-files.tgz fiat-*/
       if: failure()
     - name: upload generated files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: generated-files-archlinux
         path: generated-files.tgz
@@ -55,7 +55,7 @@ jobs:
     - run: find . -name "*.timing" | xargs tar -czvf timing-files.tgz
       if: failure()
     - name: upload generated timing files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: timing-files-archlinux
         path: timing-files.tgz
@@ -67,23 +67,23 @@ jobs:
     #- name: install-standalone-js-of-ocaml
     #  run: etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
     - name: upload standalone files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: standalone-archlinux
         path: dist/fiat_crypto
     #- name: upload standalone js files
-    #  uses: actions/upload-artifact@v4
+    #  uses: actions/upload-artifact@v5
     #  with:
     #    name: standalone-html-archlinux
     #    path: fiat-html
     - name: upload OCaml files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ExtractionOCaml-archlinux
         path: src/ExtractionOCaml
       if: always ()
     #- name: upload js_of_ocaml files
-    #  uses: actions/upload-artifact@v4
+    #  uses: actions/upload-artifact@v5
     #  with:
     #    name: ExtractionJsOfOCaml-archlinux
     #    path: src/ExtractionJsOfOCaml
@@ -91,7 +91,7 @@ jobs:
     - name: standalone-haskell
       run: etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'
     - name: upload Haskell files
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ExtractionHaskell-archlinux
         path: src/ExtractionHaskell
