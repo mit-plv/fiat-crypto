@@ -625,6 +625,7 @@ Section WithContext.
          | _ => None
          end.
 
+  
   Definition interp_op o (args : list Z) : option Z :=
     Eval cbv [invert_Some identity op_to_Z_binop] in
     let keep n x := Z.land x (Z.ones (Z.of_N n)) in
@@ -3821,7 +3822,16 @@ Definition simplify {opts : symbolic_options_computed_opt} (dag : dag) (e : node
 
 Lemma eval_simplify {opts : symbolic_options_computed_opt} G d n v : gensym_dag_ok G d -> eval_node G d n v -> eval G d (simplify d n) v.
 Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.
+Locate widest_registers.
 
+
+Compute (List.length widest_registers).
+Locate compute.
+Check List.length.
+Definition ThreeTup : Type := (compute! (Tuple.tuple nat 3)).
+Print ThreeTup.
+
+Check (compute! (List.length [1; 2])).
 Definition reg_state := Tuple.tuple (option idx) (compute! (List.length widest_registers)).
 Definition flag_state := Tuple.tuple (option idx) 6.
 Definition mem_state := list (idx * idx).
@@ -4041,7 +4051,7 @@ Definition error_get_reg_of_reg_index ri : symbolic_state -> error
 
 Definition GetFlag f : M idx :=
   some_or (fun s => get_flag s f) (error.get_flag f).
-Definition GetReg64 ri : M idx :=
+Definition GetRegFull ri : M idx :=
   some_or (fun st => get_reg st ri) (error_get_reg_of_reg_index ri).
 Definition Load64 (a : idx) : M idx := some_or (load a) (error.load a).
 Definition Remove64 (a : idx) : M idx
@@ -4060,7 +4070,8 @@ Definition PreserveFlag {T} (f : FLAG) (k : M T) : M T :=
   x <- k;
   _ <- (fun s => Success (tt, update_flag_with s (fun s => set_flag_internal s f vf)));
   ret x.
-Definition SetReg64 rn i : M unit :=
+
+Definition SetRegFull rn i : M unit :=
   fun s => Success (tt, update_reg_with s (fun s => set_reg s rn i)).
 Definition Store64 (a v : idx) : M unit :=
   ms <- some_or (store a v) (error.store a v);
@@ -4081,16 +4092,20 @@ Definition RevealConst (i : idx) : M Z :=
 
 Definition GetReg {opts : symbolic_options_computed_opt} {descr:description} r : M idx :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
-  v <- GetReg64 rn;
+  v <- GetRegFull rn;
   App ((slice lo sz), [v]).
 Definition SetReg {opts : symbolic_options_computed_opt} {descr:description} r (v : idx) : M unit :=
-  let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
-  if N.eqb sz 64
-  then v <- App (slice 0 64, [v]);
-       SetReg64 rn v (* works even if old value is unspecified *)
-  else old <- GetReg64 rn;
-       v <- App ((set_slice lo sz), [old; v]);
-       SetReg64 rn v.
+  let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in (* sz is the size of the register, not the value *)
+  (* if N.eqb sz (widest_reg_size_of r )(* r is not aliasing *) 
+  then v <- App (slice 0 sz, [v]);
+      old <- GetRegFull rn;
+      SetRegFull rn v works even if old value is unspecified
+  else old <- GetRegFull rn;
+      v <- App ((set_slice lo sz), [old; v]);
+      SetRegFull rn v. *)
+  old <- GetRegFull rn;
+  v <- App ((set_slice lo sz), [old; v]);
+  SetRegFull rn v.
 
 Class AddressSize := address_size : OperationSize.
 Definition Address {opts : symbolic_options_computed_opt} {descr:description} {sa : AddressSize} (a : MEM) : M idx :=
@@ -4184,6 +4199,7 @@ Definition rcrcnt s cnt : Z :=
   Z.land cnt (Z.of_N s-1).
 
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
+
 Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:description} (instr : NormalInstruction) : M unit :=
   let stack_addr_size : AddressSize := 64%N in
   let sa : AddressSize := 64%N in
@@ -4304,7 +4320,7 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
     vh <- Symeval (shrZ@(v,PreARG (Z.of_N s)));
     lo <- resize_reg rax;
     hi <- (if (s =? 8)%N
-           then ret ah
+           then ret (SReg ah)
            else resize_reg rdx);
     _ <- SetOperand (lo:ARG) v;
     _ <- SetOperand (hi:ARG) vh;

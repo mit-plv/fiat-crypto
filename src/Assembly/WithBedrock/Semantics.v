@@ -154,6 +154,7 @@ Definition rcrcnt s cnt : Z :=
   if N.eqb s 16 then Z.land cnt 0x1f mod 17 else
   Z.land cnt (Z.of_N s-1).
 
+
 (* NOTE: currently immediate operands are treated as if sign-extension has been
  * performed ahead of time. *)
 Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstruction) : option machine_state :=
@@ -196,16 +197,16 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | lea, [reg dst; mem src] => (* Flags Affected: None *)
     Some (update_reg_with st (fun rs => set_reg rs dst (DenoteAddress sa st src)))
   | (add | adc) as opc, [dst; src] =>
-    c <- (match opc with adc => get_flag st CF | _ => Some false end);
+    c <- (match opc with adc => get_flag st CF | _ => Some false end); (* carry *)
     let c := Z.b2z c in
-    v1 <- DenoteOperand sa s st dst;
-    v2 <- DenoteOperand sa s st src;
+    v1 <- DenoteOperand sa s st dst; (* read from dst *)
+    v2 <- DenoteOperand sa s st src; (* read from src *)
     let v := v1 + v2 + c in
-    let v := Z.land v (Z.ones (Z.of_N s)) in
-    st <- SetOperand sa s st dst v;
+    let v := Z.land v (Z.ones (Z.of_N s)) in (* s is the size? mask to the reg size *)
+    st <- SetOperand sa s st dst v; (* set dst to the summed value *)
     let st := HavocFlagsFromResult s st v in
-    let st := SetFlag st CF (Z.odd (Z.shiftr (v1 + v2 + c) (Z.of_N s))) in
-    Some (SetFlag st OF (negb (Z.signed s v =? Z.signed s v1 + Z.signed s v2 + Z.signed s c)%Z))
+    let st := SetFlag st CF (Z.odd (Z.shiftr (v1 + v2 + c) (Z.of_N s))) in (* set carry flag if overflowed *)
+    Some (SetFlag st OF (negb (Z.signed s v =? Z.signed s v1 + Z.signed s v2 + Z.signed s c)%Z)) (* set overflow flag *)
   | (adcx | adox) as opc, [dst; src] =>
     let flag := match opc with adcx => CF | _ => OF end in
     v1 <- DenoteOperand sa s st dst;
@@ -215,6 +216,85 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let v := Z.land v (Z.ones (Z.of_N s)) in
     st <- SetOperand sa s st dst v;
     Some (SetFlag st flag (Z.odd (Z.shiftr (v1 + v2 + c) (Z.of_N s))))
+  | vaddps, [dst; src1; src2] => (* single precision vector addition *)
+    let lane_size := 32%N in (* 8 32 bit floats *)
+    let extract_lane (v : Z) (lane_idx : N) : Z :=
+      Z.land (Z.shiftr v (Z.of_N (lane_size * lane_idx))) (Z.ones (Z.of_N lane_size)) in
+    v1_full <- DenoteOperand sa s st src1;
+    v2_full <- DenoteOperand sa s st src2;
+    let results := [
+      extract_lane v1_full 0%N + extract_lane v2_full 0%N;
+      extract_lane v1_full 1%N + extract_lane v2_full 1%N;
+      extract_lane v1_full 2%N + extract_lane v2_full 2%N;
+      extract_lane v1_full 3%N + extract_lane v2_full 3%N;
+      extract_lane v1_full 4%N + extract_lane v2_full 4%N;
+      extract_lane v1_full 5%N + extract_lane v2_full 5%N;
+      extract_lane v1_full 6%N + extract_lane v2_full 6%N;
+      extract_lane v1_full 7%N + extract_lane v2_full 7%N
+    ] in 
+    let v :=
+      Z.lor (Z.shiftl (nth_default 0 results 0) (Z.of_N (lane_size * 0)))
+      (Z.lor (Z.shiftl (nth_default 0 results 1) (Z.of_N (lane_size * 1)))
+      (Z.lor (Z.shiftl (nth_default 0 results 2) (Z.of_N (lane_size * 2)))
+      (Z.lor (Z.shiftl (nth_default 0 results 3) (Z.of_N (lane_size * 3)))
+      (Z.lor (Z.shiftl (nth_default 0 results 4) (Z.of_N (lane_size * 4)))
+      (Z.lor (Z.shiftl (nth_default 0 results 5) (Z.of_N (lane_size * 5)))
+      (Z.lor (Z.shiftl (nth_default 0 results 6) (Z.of_N (lane_size * 6)))
+      (Z.shiftl (nth_default 0 results 7) (Z.of_N (lane_size * 7)))
+      ))))))
+    in
+    st <- SetOperand sa s st dst v;
+    Some st
+  | vpaddq, [dst; src1; src2] => (* packed quadword integer addition *)
+    let lane_size := 64%N in (* 4 64-bit integers *)
+    let extract_lane (v : Z) (lane_idx : N) : Z :=
+      Z.land (Z.shiftr v (Z.of_N (lane_size * lane_idx))) (Z.ones (Z.of_N lane_size)) in
+    v1_full <- DenoteOperand sa s st src1;
+    v2_full <- DenoteOperand sa s st src2;
+    let results := [
+      Z.land (extract_lane v1_full 0%N + extract_lane v2_full 0%N) (Z.ones (Z.of_N lane_size));
+      Z.land (extract_lane v1_full 1%N + extract_lane v2_full 1%N) (Z.ones (Z.of_N lane_size));
+      Z.land (extract_lane v1_full 2%N + extract_lane v2_full 2%N) (Z.ones (Z.of_N lane_size));
+      Z.land (extract_lane v1_full 3%N + extract_lane v2_full 3%N) (Z.ones (Z.of_N lane_size))
+    ] in
+    let v :=
+      Z.lor (Z.shiftl (nth_default 0 results 0) (Z.of_N (lane_size * 0)))
+      (Z.lor (Z.shiftl (nth_default 0 results 1) (Z.of_N (lane_size * 1)))
+      (Z.lor (Z.shiftl (nth_default 0 results 2) (Z.of_N (lane_size * 2)))
+      (Z.shiftl (nth_default 0 results 3) (Z.of_N (lane_size * 3)))
+      ))
+    in
+    st <- SetOperand sa s st dst v;
+    Some st
+  | vmovq, [dst; src] => (* move quadword *)
+    (* vmovq handles several cases:
+       - vmovq xmm, r64: move 64-bit scalar to lower 64 bits of xmm, zero upper bits
+       - vmovq r64, xmm: move lower 64 bits of xmm to scalar register
+       - vmovq xmm, xmm/m64: move 64 bits, zero upper bits of destination
+       Note: Writing to XMM zeroes upper 128 bits of corresponding YMM (AVX convention) *)
+    match dst, src with
+    | reg (VReg dst_vr), reg (SReg src_sr) =>
+        (* vmovq xmm, r64 - move scalar to vector, zero upper bits *)
+        v <- DenoteOperand sa 64 st (SReg src_sr);
+        let v := Z.land v (Z.ones 64) in (* ensure 64-bit value *)
+        (* Only lower 64 bits set, rest is zero - this effectively zeros all upper bits *)
+        Some (update_reg_with st (fun rs => set_reg rs (VReg dst_vr) v))
+    | reg (SReg dst_sr), reg (VReg src_vr) =>
+        (* vmovq r64, xmm - extract lower 64 bits of vector to scalar *)
+        v_full <- DenoteOperand sa s st (VReg src_vr);
+        let v := Z.land v_full (Z.ones 64) in (* extract lower 64 bits *)
+        Some (update_reg_with st (fun rs => set_reg rs (SReg dst_sr) v))
+    | reg (VReg dst_vr), reg (VReg src_vr) =>
+        (* vmovq xmm, xmm - move lower 64 bits, zero upper bits of dst *)
+        v_full <- DenoteOperand sa s st (VReg src_vr);
+        let v := Z.land v_full (Z.ones 64) in (* extract lower 64 bits *)
+        Some (update_reg_with st (fun rs => set_reg rs (VReg dst_vr) v))
+    | _, _ =>
+        (* vmovq xmm, m64 or vmovq m64, xmm - use standard operand handling *)
+        v <- DenoteOperand sa 64 st src;
+        let v := Z.land v (Z.ones 64) in (* ensure 64-bit *)
+        SetOperand sa 64 st dst v
+    end
   | (sbb | sub) as opc, [dst; src] =>
     c <- (match opc with sbb => get_flag st CF | _ => Some false end);
     let c := Z.b2z c in
@@ -251,7 +331,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let v := v1 * v2 in
     lo <- resize_reg rax;
     hi <- (if (s =? 8)%N
-           then Some ah
+           then Some (SReg ah)
            else resize_reg rdx);
     st <- SetOperand sa s st lo v;
     st <- SetOperand sa s st hi (Z.shiftr v (Z.of_N s));
@@ -384,15 +464,18 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
                SetOperand sa s st dst v
 
   | nop, [] => Some st
-
   | ret, _ => None (* not sure what to do with this ret, maybe exlude it? *)
 
+    (* catchall for an operator with no operands *)
   | adc, _
   | adcx, _
   | add, _
   | adox, _
   | and, _
   | bzhi, _
+  | vaddps, _
+  | vpaddq, _
+  | vmovq, _
   | db, _
   | dw, _
   | dd, _
