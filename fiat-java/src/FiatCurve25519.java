@@ -26,6 +26,52 @@ static class Box<T> {
 
 
 /**
+ * The function fiat_Curve25519_addcarryx_u32 is an addition with carry. <p>
+ * <p>
+ * Postconditions: <p>
+ *   out1 = (arg1 + arg2 + arg3) mod 2^32 <p>
+ *   out2 = ⌊(arg1 + arg2 + arg3) / 2^32⌋ <p>
+ * <p>
+ * Input Bounds: <p>
+ *   arg1: [0x0 ~&gt; 0x1] <p>
+ *   arg2: [0x0 ~&gt; 0xffffffff] <p>
+ *   arg3: [0x0 ~&gt; 0xffffffff] <p>
+ * Output Bounds: <p>
+ *   out1: [0x0 ~&gt; 0xffffffff] <p>
+ *   out2: [0x0 ~&gt; 0x1] <p>
+ */
+static void fiat_Curve25519_addcarryx_u32(Box<Integer> out1, Box<Integer> out2, int arg1, int arg2, int arg3) {
+  long x1 = (((long) Integer.toUnsignedLong(((Number) (arg1)).intValue()) + (long) Integer.toUnsignedLong(((Number) (arg2)).intValue())) + (long) Integer.toUnsignedLong(((Number) (arg3)).intValue()));
+  int x2 = ((int) Integer.toUnsignedLong(((Number) (x1)).intValue()) & 0xffffffff);
+  int x3 = (int) Integer.toUnsignedLong(((Number) ((x1 >>> 32))).intValue());
+  out1.set(x2);
+  out2.set(x3);
+}
+
+/**
+ * The function fiat_Curve25519_subborrowx_u32 is a subtraction with borrow. <p>
+ * <p>
+ * Postconditions: <p>
+ *   out1 = (-arg1 + arg2 + -arg3) mod 2^32 <p>
+ *   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^32⌋ <p>
+ * <p>
+ * Input Bounds: <p>
+ *   arg1: [0x0 ~&gt; 0x1] <p>
+ *   arg2: [0x0 ~&gt; 0xffffffff] <p>
+ *   arg3: [0x0 ~&gt; 0xffffffff] <p>
+ * Output Bounds: <p>
+ *   out1: [0x0 ~&gt; 0xffffffff] <p>
+ *   out2: [0x0 ~&gt; 0x1] <p>
+ */
+static void fiat_Curve25519_subborrowx_u32(Box<Integer> out1, Box<Integer> out2, int arg1, int arg2, int arg3) {
+  long x1 = (((long) Integer.toUnsignedLong(((Number) (arg2)).intValue()) - (long) Integer.toUnsignedLong(((Number) (arg1)).intValue())) - (long) Integer.toUnsignedLong(((Number) (arg3)).intValue()));
+  int x2 = (int) Integer.toUnsignedLong(((Number) ((x1 >>> 32))).intValue());
+  int x3 = ((int) Integer.toUnsignedLong(((Number) (x1)).intValue()) & 0xffffffff);
+  out1.set(x3);
+  out2.set(((int) Integer.toUnsignedLong(((Number) (0x0)).intValue()) - (int) Integer.toUnsignedLong(((Number) (x2)).intValue())));
+}
+
+/**
  * The function fiat_Curve25519_addcarryx_u26 is an addition with carry. <p>
  * <p>
  * Postconditions: <p>
@@ -691,145 +737,146 @@ public static void fiat_Curve25519_to_bytes(int[] out1, final int[] arg1) {
   Box<Integer> x20 = new Box<Integer>((int)0);
   fiat_Curve25519_subborrowx_u25(x19, x20, (x18).get(), (arg1[9]), 0x1ffffff);
   Box<Integer> x21 = new Box<Integer>((int)0);
-  fiat_Curve25519_cmovznz_u32(x21, (x20).get(), (int) Integer.toUnsignedLong(((Number) (0x0)).intValue()), 0xffffffff);
   Box<Integer> x22 = new Box<Integer>((int)0);
+  fiat_Curve25519_subborrowx_u32(x21, x22, (x20).get(), (int) Integer.toUnsignedLong(((Number) (0x0)).intValue()), (int) Integer.toUnsignedLong(((Number) (0x0)).intValue()));
   Box<Integer> x23 = new Box<Integer>((int)0);
-  fiat_Curve25519_addcarryx_u26(x22, x23, 0x0, (x1).get(), ((x21).get() & 0x3ffffed));
   Box<Integer> x24 = new Box<Integer>((int)0);
+  fiat_Curve25519_addcarryx_u26(x23, x24, 0x0, (x1).get(), ((x21).get() & 0x3ffffed));
   Box<Integer> x25 = new Box<Integer>((int)0);
-  fiat_Curve25519_addcarryx_u25(x24, x25, (x23).get(), (x3).get(), ((x21).get() & 0x1ffffff));
   Box<Integer> x26 = new Box<Integer>((int)0);
+  fiat_Curve25519_addcarryx_u25(x25, x26, (x24).get(), (x3).get(), ((x21).get() & 0x1ffffff));
   Box<Integer> x27 = new Box<Integer>((int)0);
-  fiat_Curve25519_addcarryx_u26(x26, x27, (x25).get(), (x5).get(), ((x21).get() & 0x3ffffff));
   Box<Integer> x28 = new Box<Integer>((int)0);
+  fiat_Curve25519_addcarryx_u26(x27, x28, (x26).get(), (x5).get(), ((x21).get() & 0x3ffffff));
   Box<Integer> x29 = new Box<Integer>((int)0);
-  fiat_Curve25519_addcarryx_u25(x28, x29, (x27).get(), (x7).get(), ((x21).get() & 0x1ffffff));
   Box<Integer> x30 = new Box<Integer>((int)0);
+  fiat_Curve25519_addcarryx_u25(x29, x30, (x28).get(), (x7).get(), ((x21).get() & 0x1ffffff));
   Box<Integer> x31 = new Box<Integer>((int)0);
-  fiat_Curve25519_addcarryx_u26(x30, x31, (x29).get(), (x9).get(), ((x21).get() & 0x3ffffff));
   Box<Integer> x32 = new Box<Integer>((int)0);
+  fiat_Curve25519_addcarryx_u26(x31, x32, (x30).get(), (x9).get(), ((x21).get() & 0x3ffffff));
   Box<Integer> x33 = new Box<Integer>((int)0);
-  fiat_Curve25519_addcarryx_u25(x32, x33, (x31).get(), (x11).get(), ((x21).get() & 0x1ffffff));
   Box<Integer> x34 = new Box<Integer>((int)0);
+  fiat_Curve25519_addcarryx_u25(x33, x34, (x32).get(), (x11).get(), ((x21).get() & 0x1ffffff));
   Box<Integer> x35 = new Box<Integer>((int)0);
-  fiat_Curve25519_addcarryx_u26(x34, x35, (x33).get(), (x13).get(), ((x21).get() & 0x3ffffff));
   Box<Integer> x36 = new Box<Integer>((int)0);
+  fiat_Curve25519_addcarryx_u26(x35, x36, (x34).get(), (x13).get(), ((x21).get() & 0x3ffffff));
   Box<Integer> x37 = new Box<Integer>((int)0);
-  fiat_Curve25519_addcarryx_u25(x36, x37, (x35).get(), (x15).get(), ((x21).get() & 0x1ffffff));
   Box<Integer> x38 = new Box<Integer>((int)0);
+  fiat_Curve25519_addcarryx_u25(x37, x38, (x36).get(), (x15).get(), ((x21).get() & 0x1ffffff));
   Box<Integer> x39 = new Box<Integer>((int)0);
-  fiat_Curve25519_addcarryx_u26(x38, x39, (x37).get(), (x17).get(), ((x21).get() & 0x3ffffff));
   Box<Integer> x40 = new Box<Integer>((int)0);
+  fiat_Curve25519_addcarryx_u26(x39, x40, (x38).get(), (x17).get(), ((x21).get() & 0x3ffffff));
   Box<Integer> x41 = new Box<Integer>((int)0);
-  fiat_Curve25519_addcarryx_u25(x40, x41, (x39).get(), (x19).get(), ((x21).get() & 0x1ffffff));
-  int x42 = ((x40).get() << 6);
-  int x43 = ((x38).get() << 4);
-  int x44 = ((x36).get() << 3);
-  int x45 = ((x34).get() * 0x2);
-  int x46 = ((x30).get() << 6);
-  int x47 = ((x28).get() << 5);
-  int x48 = ((x26).get() << 3);
-  int x49 = ((x24).get() << 2);
-  int x50 = ((x22).get() & 0xff);
-  int x51 = ((x22).get() >>> 8);
-  int x52 = (x51 & 0xff);
-  int x53 = (x51 >>> 8);
-  int x54 = (x53 & 0xff);
-  int x55 = (x53 >>> 8);
-  int x56 = (x49 + x55);
-  int x57 = (x56 & 0xff);
-  int x58 = (x56 >>> 8);
-  int x59 = (x58 & 0xff);
-  int x60 = (x58 >>> 8);
-  int x61 = (x60 & 0xff);
-  int x62 = (x60 >>> 8);
-  int x63 = (x48 + x62);
-  int x64 = (x63 & 0xff);
-  int x65 = (x63 >>> 8);
-  int x66 = (x65 & 0xff);
-  int x67 = (x65 >>> 8);
-  int x68 = (x67 & 0xff);
-  int x69 = (x67 >>> 8);
-  int x70 = (x47 + x69);
-  int x71 = (x70 & 0xff);
-  int x72 = (x70 >>> 8);
-  int x73 = (x72 & 0xff);
-  int x74 = (x72 >>> 8);
-  int x75 = (x74 & 0xff);
-  int x76 = (x74 >>> 8);
-  int x77 = (x46 + x76);
-  int x78 = (x77 & 0xff);
-  int x79 = (x77 >>> 8);
-  int x80 = (x79 & 0xff);
-  int x81 = (x79 >>> 8);
-  int x82 = (x81 & 0xff);
-  int x83 = (x81 >>> 8);
-  int x84 = ((x32).get() & 0xff);
-  int x85 = ((x32).get() >>> 8);
-  int x86 = (x85 & 0xff);
-  int x87 = (x85 >>> 8);
-  int x88 = (x87 & 0xff);
-  int x89 = (x87 >>> 8);
-  int x90 = (x45 + x89);
-  int x91 = (x90 & 0xff);
-  int x92 = (x90 >>> 8);
-  int x93 = (x92 & 0xff);
-  int x94 = (x92 >>> 8);
-  int x95 = (x94 & 0xff);
-  int x96 = (x94 >>> 8);
-  int x97 = (x44 + x96);
-  int x98 = (x97 & 0xff);
-  int x99 = (x97 >>> 8);
-  int x100 = (x99 & 0xff);
-  int x101 = (x99 >>> 8);
-  int x102 = (x101 & 0xff);
-  int x103 = (x101 >>> 8);
-  int x104 = (x43 + x103);
-  int x105 = (x104 & 0xff);
-  int x106 = (x104 >>> 8);
-  int x107 = (x106 & 0xff);
-  int x108 = (x106 >>> 8);
-  int x109 = (x108 & 0xff);
-  int x110 = (x108 >>> 8);
-  int x111 = (x42 + x110);
-  int x112 = (x111 & 0xff);
-  int x113 = (x111 >>> 8);
-  int x114 = (x113 & 0xff);
-  int x115 = (x113 >>> 8);
-  int x116 = (x115 & 0xff);
-  int x117 = (x115 >>> 8);
-  out1[0] = x50;
-  out1[1] = x52;
-  out1[2] = x54;
-  out1[3] = x57;
-  out1[4] = x59;
-  out1[5] = x61;
-  out1[6] = x64;
-  out1[7] = x66;
-  out1[8] = x68;
-  out1[9] = x71;
-  out1[10] = x73;
-  out1[11] = x75;
-  out1[12] = x78;
-  out1[13] = x80;
-  out1[14] = x82;
-  out1[15] = x83;
-  out1[16] = x84;
-  out1[17] = x86;
-  out1[18] = x88;
-  out1[19] = x91;
-  out1[20] = x93;
-  out1[21] = x95;
-  out1[22] = x98;
-  out1[23] = x100;
-  out1[24] = x102;
-  out1[25] = x105;
-  out1[26] = x107;
-  out1[27] = x109;
-  out1[28] = x112;
-  out1[29] = x114;
-  out1[30] = x116;
-  out1[31] = x117;
+  Box<Integer> x42 = new Box<Integer>((int)0);
+  fiat_Curve25519_addcarryx_u25(x41, x42, (x40).get(), (x19).get(), ((x21).get() & 0x1ffffff));
+  int x43 = ((x41).get() << 6);
+  int x44 = ((x39).get() << 4);
+  int x45 = ((x37).get() << 3);
+  int x46 = ((x35).get() * 0x2);
+  int x47 = ((x31).get() << 6);
+  int x48 = ((x29).get() << 5);
+  int x49 = ((x27).get() << 3);
+  int x50 = ((x25).get() << 2);
+  int x51 = ((x23).get() & 0xff);
+  int x52 = ((x23).get() >>> 8);
+  int x53 = (x52 & 0xff);
+  int x54 = (x52 >>> 8);
+  int x55 = (x54 & 0xff);
+  int x56 = (x54 >>> 8);
+  int x57 = (x50 + x56);
+  int x58 = (x57 & 0xff);
+  int x59 = (x57 >>> 8);
+  int x60 = (x59 & 0xff);
+  int x61 = (x59 >>> 8);
+  int x62 = (x61 & 0xff);
+  int x63 = (x61 >>> 8);
+  int x64 = (x49 + x63);
+  int x65 = (x64 & 0xff);
+  int x66 = (x64 >>> 8);
+  int x67 = (x66 & 0xff);
+  int x68 = (x66 >>> 8);
+  int x69 = (x68 & 0xff);
+  int x70 = (x68 >>> 8);
+  int x71 = (x48 + x70);
+  int x72 = (x71 & 0xff);
+  int x73 = (x71 >>> 8);
+  int x74 = (x73 & 0xff);
+  int x75 = (x73 >>> 8);
+  int x76 = (x75 & 0xff);
+  int x77 = (x75 >>> 8);
+  int x78 = (x47 + x77);
+  int x79 = (x78 & 0xff);
+  int x80 = (x78 >>> 8);
+  int x81 = (x80 & 0xff);
+  int x82 = (x80 >>> 8);
+  int x83 = (x82 & 0xff);
+  int x84 = (x82 >>> 8);
+  int x85 = ((x33).get() & 0xff);
+  int x86 = ((x33).get() >>> 8);
+  int x87 = (x86 & 0xff);
+  int x88 = (x86 >>> 8);
+  int x89 = (x88 & 0xff);
+  int x90 = (x88 >>> 8);
+  int x91 = (x46 + x90);
+  int x92 = (x91 & 0xff);
+  int x93 = (x91 >>> 8);
+  int x94 = (x93 & 0xff);
+  int x95 = (x93 >>> 8);
+  int x96 = (x95 & 0xff);
+  int x97 = (x95 >>> 8);
+  int x98 = (x45 + x97);
+  int x99 = (x98 & 0xff);
+  int x100 = (x98 >>> 8);
+  int x101 = (x100 & 0xff);
+  int x102 = (x100 >>> 8);
+  int x103 = (x102 & 0xff);
+  int x104 = (x102 >>> 8);
+  int x105 = (x44 + x104);
+  int x106 = (x105 & 0xff);
+  int x107 = (x105 >>> 8);
+  int x108 = (x107 & 0xff);
+  int x109 = (x107 >>> 8);
+  int x110 = (x109 & 0xff);
+  int x111 = (x109 >>> 8);
+  int x112 = (x43 + x111);
+  int x113 = (x112 & 0xff);
+  int x114 = (x112 >>> 8);
+  int x115 = (x114 & 0xff);
+  int x116 = (x114 >>> 8);
+  int x117 = (x116 & 0xff);
+  int x118 = (x116 >>> 8);
+  out1[0] = x51;
+  out1[1] = x53;
+  out1[2] = x55;
+  out1[3] = x58;
+  out1[4] = x60;
+  out1[5] = x62;
+  out1[6] = x65;
+  out1[7] = x67;
+  out1[8] = x69;
+  out1[9] = x72;
+  out1[10] = x74;
+  out1[11] = x76;
+  out1[12] = x79;
+  out1[13] = x81;
+  out1[14] = x83;
+  out1[15] = x84;
+  out1[16] = x85;
+  out1[17] = x87;
+  out1[18] = x89;
+  out1[19] = x92;
+  out1[20] = x94;
+  out1[21] = x96;
+  out1[22] = x99;
+  out1[23] = x101;
+  out1[24] = x103;
+  out1[25] = x106;
+  out1[26] = x108;
+  out1[27] = x110;
+  out1[28] = x113;
+  out1[29] = x115;
+  out1[30] = x117;
+  out1[31] = x118;
 }
 
 /**

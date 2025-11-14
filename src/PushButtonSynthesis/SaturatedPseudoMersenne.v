@@ -24,15 +24,13 @@ Require Import Crypto.Language.API.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Arithmetic.ModOps.
-Require Import Crypto.Arithmetic.Saturated.
-Require Import Crypto.Arithmetic.SolinasReduction.
+Require Import Crypto.Arithmetic.WeightStream.
+Require Import Crypto.Arithmetic.SaturatedPseudoMersenne.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
-Require Import Crypto.PushButtonSynthesis.SaturatedSolinasReificationCache.
-Require Import Crypto.PushButtonSynthesis.SolinasReductionReificationCache.
+Require Import Crypto.PushButtonSynthesis.SaturatedPseudoMersenneReificationCache.
 Require Import Crypto.Assembly.Equivalence.
 Import ListNotations.
 Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
@@ -57,6 +55,7 @@ Local Coercion Z.pos : positive >-> Z.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
+Local Opaque reified_add_gen. (* needed for making [autorewrite] not take a very long time *)
 Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
 Local Opaque reified_square_gen.
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
@@ -68,8 +67,9 @@ Section __.
           {pipeline_to_string_opts : PipelineToStringOptions}
           {synthesis_opts : SynthesisOptions}
           (s : Z)
-          (c : list (Z * Z)).
+          (c' : list (Z * Z)).
   Context (machine_wordsize : machine_wordsize_opt).
+  Local Notation c := (Associational.eval c').
 
   Local Instance override_pipeline_opts : PipelineOptions
     := {| widen_bytes := true (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
@@ -80,15 +80,12 @@ Section __.
   Definition possible_values_of_machine_wordsize
     := prefix_with_carry [machine_wordsize].
 
-  Definition n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
-  Definition m := s - Associational.eval c.
-  Definition weight := UniformWeight.uweight machine_wordsize.
-  Definition up_bound := 2 ^ (machine_wordsize / 4).
-  Definition base : Z := 2 ^ machine_wordsize.
+  Definition n : nat := Z.to_nat ((Z.log2_up s + machine_wordsize - 1) / machine_wordsize).
+  Definition m := s - c.
+  Definition bound (_ : nat) : positive := Pos.pow 2 (Z.to_pos machine_wordsize).
 
   Local Notation possible_values := possible_values_of_machine_wordsize.
   Local Notation boundsn := (saturated_bounds n machine_wordsize).
-  Local Notation bounds4 := (saturated_bounds 4 machine_wordsize).
 
   Local Existing Instance default_translate_to_fancy.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
@@ -102,18 +99,14 @@ Section __.
     := check_args_of_list
          (List.map
             (fun v => (true, v))
-            [((0 <? s)%Z, Pipeline.Value_not_ltZ "0 < s" 0 s)
-             ; ((0 <? Associational.eval c)%Z, Pipeline.Value_not_ltZ "0 < Associational.eval c" 0 (Associational.eval c))
-             ; ((0 <? s - Associational.eval c)%Z, Pipeline.Value_not_ltZ "0 < s - Associational.eval c" 0 (s - Associational.eval c))
+            [  ((0 <? c)%Z, Pipeline.Value_not_ltZ "0 < c" 0 c)
+             ; ((0 <? s - c)%Z, Pipeline.Value_not_ltZ "0 < s - c" 0 (s - c))
              ; (negb (s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s ≠ 0" s 0)
              ; (negb (n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n ≠ 0" n 0)
              ; ((n =? 4)%Z, Pipeline.Values_not_provably_equalZ "n = 4" n 4)
              ; (0 <? machine_wordsize, Pipeline.Value_not_ltZ "0 < machine_wordsize" 0 machine_wordsize)
              ; (machine_wordsize =? 64, Pipeline.Values_not_provably_equalZ "machine_wordsize = 64" machine_wordsize 64)
              ; ((1 <? n)%nat, Pipeline.Value_not_ltZ "1 < n" 1 n)
-             ; (fst (Rows.adjust_s weight (S (S n)) s) =? weight n, Pipeline.Values_not_provably_equalZ "fst (Rows.adjust_s weight (S (S n)) s) = weight n" (fst (Rows.adjust_s weight (S (S n)) s)) (weight n))
-             ; (snd (Rows.adjust_s weight (S (S n)) s), Pipeline.Invalid_argument "tmp")
-             ; (weight n / s * Associational.eval c <? up_bound, Pipeline.Value_not_ltZ "weight n / s * Associational.eval c < up_bound" (weight n / s * Associational.eval c) up_bound)
          ])
          res.
 
@@ -128,41 +121,30 @@ Section __.
           (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
-    : (n > 1)%nat /\
-        s > 0 /\
-        Associational.eval c > 0 /\
-        s - Associational.eval c <> 0 /\
-        machine_wordsize = 64 /\
-        base <> 0 /\
-        Rows.adjust_s weight (S (S n)) s = (weight n, true) /\
-        weight n / s * Associational.eval c < up_bound.
+    : (n > 1)%nat /\ s > 0 /\ c > 0 /\ s - c <> 0.
   Proof using curve_good.
     prepare_use_curve_good ().
     { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
-    { unfold base.
-      apply Z.pow_nonzero; use_curve_good_t. }
-    { lazymatch goal with
-      | |- ?x = _ => rewrite surjective_pairing with (p:=x)
-      end.
-      congruence. }
   Qed.
 
-  Local Notation evalf := (eval weight n).
-  Local Notation weightf := weight.
-  Local Notation notations_for_docstring
-    := (CorrectnessStringification.dyn_context.cons
-          weightf "weight"
-          (CorrectnessStringification.dyn_context.cons
-             evalf "eval"
-             CorrectnessStringification.dyn_context.nil))%string.
-  Local Notation "'docstring_with_summary_from_lemma!' summary correctness"
-    := (docstring_with_summary_from_lemma_with_ctx!
-          notations_for_docstring
-          summary
-          correctness)
-         (only parsing, at level 10, summary at next level, correctness at next level).
+  Check addmod bound c.
+  Goal True.
+    let t := constr:(nat -> positive) in
+    let r := reify_type  t in
+    idtac r.
+  Check GallinaReify.Reify (fun x => Z.add x x).
+
+  Definition add
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         possible_values
+         (reified_add_gen
+            @ GallinaReify.Reify bound
+            @ GallinaReify.Reify c)
+         (Some boundsn, (Some boundsn, tt))
+         (Some boundsn).
 
   Definition mul
     := Pipeline.BoundsPipeline
@@ -188,6 +170,15 @@ Section __.
          (Some boundsn, tt)
          (Some boundsn).
 
+  Definition sadd (prefix : string)
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "add" add
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " adds two field elements."]%string)
+             (add_correct weightf n m boundsn)).
+
   Definition smul (prefix : string)
     : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
@@ -210,6 +201,21 @@ Section __.
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
   Local Ltac prove_correctness _ := Primitives.prove_correctness use_curve_good.
+
+  Lemma add_correct res
+        (Hres : add = Success res)
+    : add_correct weight n m boundsn (Interp res).
+  Proof using curve_good.
+    prove_correctness ().
+    cbv [evalf weightf weight up_bound] in *.
+    match goal with
+    | H : machine_wordsize = _ |- _ => rewrite H in *
+    end.
+    apply (fun pf => @SolinasReduction.SolinasReduction.add_correct (@wprops _ _ pf)); auto; lia.
+  Qed.
+
+  Lemma Wf_add res (Hres : add = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma mul_correct res
         (Hres : mul = Success res)
@@ -247,7 +253,7 @@ Section __.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("mul", wrap_s smul); ("square", wrap_s ssquare)].
+      := [("add", wrap_s sadd); ("mul", wrap_s smul); ("square", wrap_s ssquare)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 
@@ -268,6 +274,15 @@ Section __.
 End __.
 
 Module Export Hints.
+#[global]
+  Hint Opaque
+       add
+  : wf_op_cache.
+#[global]
+  Hint Immediate
+       Wf_add
+  : wf_op_cache.
+
 #[global]
   Hint Opaque
        mul

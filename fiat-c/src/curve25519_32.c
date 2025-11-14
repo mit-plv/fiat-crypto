@@ -44,6 +44,58 @@ static __inline__ uint32_t fiat_25519_value_barrier_u32(uint32_t a) {
 
 
 /*
+ * The function fiat_25519_addcarryx_u32 is an addition with carry.
+ *
+ * Postconditions:
+ *   out1 = (arg1 + arg2 + arg3) mod 2^32
+ *   out2 = ⌊(arg1 + arg2 + arg3) / 2^32⌋
+ *
+ * Input Bounds:
+ *   arg1: [0x0 ~> 0x1]
+ *   arg2: [0x0 ~> 0xffffffff]
+ *   arg3: [0x0 ~> 0xffffffff]
+ * Output Bounds:
+ *   out1: [0x0 ~> 0xffffffff]
+ *   out2: [0x0 ~> 0x1]
+ */
+static FIAT_25519_FIAT_INLINE void fiat_25519_addcarryx_u32(uint32_t* out1, fiat_25519_uint1* out2, fiat_25519_uint1 arg1, uint32_t arg2, uint32_t arg3) {
+  uint64_t x1;
+  uint32_t x2;
+  fiat_25519_uint1 x3;
+  x1 = ((arg1 + (uint64_t)arg2) + arg3);
+  x2 = (uint32_t)(x1 & UINT32_C(0xffffffff));
+  x3 = (fiat_25519_uint1)(x1 >> 32);
+  *out1 = x2;
+  *out2 = x3;
+}
+
+/*
+ * The function fiat_25519_subborrowx_u32 is a subtraction with borrow.
+ *
+ * Postconditions:
+ *   out1 = (-arg1 + arg2 + -arg3) mod 2^32
+ *   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^32⌋
+ *
+ * Input Bounds:
+ *   arg1: [0x0 ~> 0x1]
+ *   arg2: [0x0 ~> 0xffffffff]
+ *   arg3: [0x0 ~> 0xffffffff]
+ * Output Bounds:
+ *   out1: [0x0 ~> 0xffffffff]
+ *   out2: [0x0 ~> 0x1]
+ */
+static FIAT_25519_FIAT_INLINE void fiat_25519_subborrowx_u32(uint32_t* out1, fiat_25519_uint1* out2, fiat_25519_uint1 arg1, uint32_t arg2, uint32_t arg3) {
+  int64_t x1;
+  fiat_25519_int1 x2;
+  uint32_t x3;
+  x1 = ((arg2 - (int64_t)arg1) - arg3);
+  x2 = (fiat_25519_int1)(x1 >> 32);
+  x3 = (uint32_t)(x1 & UINT32_C(0xffffffff));
+  *out1 = x3;
+  *out2 = (fiat_25519_uint1)(0x0 - x2);
+}
+
+/*
  * The function fiat_25519_addcarryx_u26 is an addition with carry.
  *
  * Postconditions:
@@ -1005,27 +1057,27 @@ static FIAT_25519_FIAT_INLINE void fiat_25519_to_bytes(uint8_t out1[32], const f
   uint32_t x19;
   fiat_25519_uint1 x20;
   uint32_t x21;
-  uint32_t x22;
-  fiat_25519_uint1 x23;
-  uint32_t x24;
-  fiat_25519_uint1 x25;
-  uint32_t x26;
-  fiat_25519_uint1 x27;
-  uint32_t x28;
-  fiat_25519_uint1 x29;
-  uint32_t x30;
-  fiat_25519_uint1 x31;
-  uint32_t x32;
-  fiat_25519_uint1 x33;
-  uint32_t x34;
-  fiat_25519_uint1 x35;
-  uint32_t x36;
-  fiat_25519_uint1 x37;
-  uint32_t x38;
-  fiat_25519_uint1 x39;
-  uint32_t x40;
-  fiat_25519_uint1 x41;
-  uint32_t x42;
+  fiat_25519_uint1 x22;
+  uint32_t x23;
+  fiat_25519_uint1 x24;
+  uint32_t x25;
+  fiat_25519_uint1 x26;
+  uint32_t x27;
+  fiat_25519_uint1 x28;
+  uint32_t x29;
+  fiat_25519_uint1 x30;
+  uint32_t x31;
+  fiat_25519_uint1 x32;
+  uint32_t x33;
+  fiat_25519_uint1 x34;
+  uint32_t x35;
+  fiat_25519_uint1 x36;
+  uint32_t x37;
+  fiat_25519_uint1 x38;
+  uint32_t x39;
+  fiat_25519_uint1 x40;
+  uint32_t x41;
+  fiat_25519_uint1 x42;
   uint32_t x43;
   uint32_t x44;
   uint32_t x45;
@@ -1033,74 +1085,75 @@ static FIAT_25519_FIAT_INLINE void fiat_25519_to_bytes(uint8_t out1[32], const f
   uint32_t x47;
   uint32_t x48;
   uint32_t x49;
-  uint8_t x50;
-  uint32_t x51;
-  uint8_t x52;
-  uint32_t x53;
-  uint8_t x54;
+  uint32_t x50;
+  uint8_t x51;
+  uint32_t x52;
+  uint8_t x53;
+  uint32_t x54;
   uint8_t x55;
-  uint32_t x56;
-  uint8_t x57;
-  uint32_t x58;
-  uint8_t x59;
-  uint32_t x60;
-  uint8_t x61;
+  uint8_t x56;
+  uint32_t x57;
+  uint8_t x58;
+  uint32_t x59;
+  uint8_t x60;
+  uint32_t x61;
   uint8_t x62;
-  uint32_t x63;
-  uint8_t x64;
-  uint32_t x65;
-  uint8_t x66;
-  uint32_t x67;
-  uint8_t x68;
+  uint8_t x63;
+  uint32_t x64;
+  uint8_t x65;
+  uint32_t x66;
+  uint8_t x67;
+  uint32_t x68;
   uint8_t x69;
-  uint32_t x70;
-  uint8_t x71;
-  uint32_t x72;
-  uint8_t x73;
-  uint32_t x74;
-  uint8_t x75;
+  uint8_t x70;
+  uint32_t x71;
+  uint8_t x72;
+  uint32_t x73;
+  uint8_t x74;
+  uint32_t x75;
   uint8_t x76;
-  uint32_t x77;
-  uint8_t x78;
-  uint32_t x79;
-  uint8_t x80;
-  uint32_t x81;
-  uint8_t x82;
+  uint8_t x77;
+  uint32_t x78;
+  uint8_t x79;
+  uint32_t x80;
+  uint8_t x81;
+  uint32_t x82;
   uint8_t x83;
   uint8_t x84;
-  uint32_t x85;
-  uint8_t x86;
-  uint32_t x87;
-  uint8_t x88;
-  fiat_25519_uint1 x89;
-  uint32_t x90;
-  uint8_t x91;
-  uint32_t x92;
-  uint8_t x93;
-  uint32_t x94;
-  uint8_t x95;
+  uint8_t x85;
+  uint32_t x86;
+  uint8_t x87;
+  uint32_t x88;
+  uint8_t x89;
+  fiat_25519_uint1 x90;
+  uint32_t x91;
+  uint8_t x92;
+  uint32_t x93;
+  uint8_t x94;
+  uint32_t x95;
   uint8_t x96;
-  uint32_t x97;
-  uint8_t x98;
-  uint32_t x99;
-  uint8_t x100;
-  uint32_t x101;
-  uint8_t x102;
+  uint8_t x97;
+  uint32_t x98;
+  uint8_t x99;
+  uint32_t x100;
+  uint8_t x101;
+  uint32_t x102;
   uint8_t x103;
-  uint32_t x104;
-  uint8_t x105;
-  uint32_t x106;
-  uint8_t x107;
-  uint32_t x108;
-  uint8_t x109;
+  uint8_t x104;
+  uint32_t x105;
+  uint8_t x106;
+  uint32_t x107;
+  uint8_t x108;
+  uint32_t x109;
   uint8_t x110;
-  uint32_t x111;
-  uint8_t x112;
-  uint32_t x113;
-  uint8_t x114;
-  uint32_t x115;
-  uint8_t x116;
+  uint8_t x111;
+  uint32_t x112;
+  uint8_t x113;
+  uint32_t x114;
+  uint8_t x115;
+  uint32_t x116;
   uint8_t x117;
+  uint8_t x118;
   fiat_25519_subborrowx_u26(&x1, &x2, 0x0, (arg1[0]), UINT32_C(0x3ffffed));
   fiat_25519_subborrowx_u25(&x3, &x4, x2, (arg1[1]), UINT32_C(0x1ffffff));
   fiat_25519_subborrowx_u26(&x5, &x6, x4, (arg1[2]), UINT32_C(0x3ffffff));
@@ -1111,125 +1164,125 @@ static FIAT_25519_FIAT_INLINE void fiat_25519_to_bytes(uint8_t out1[32], const f
   fiat_25519_subborrowx_u25(&x15, &x16, x14, (arg1[7]), UINT32_C(0x1ffffff));
   fiat_25519_subborrowx_u26(&x17, &x18, x16, (arg1[8]), UINT32_C(0x3ffffff));
   fiat_25519_subborrowx_u25(&x19, &x20, x18, (arg1[9]), UINT32_C(0x1ffffff));
-  fiat_25519_cmovznz_u32(&x21, x20, 0x0, UINT32_C(0xffffffff));
-  fiat_25519_addcarryx_u26(&x22, &x23, 0x0, x1, (x21 & UINT32_C(0x3ffffed)));
-  fiat_25519_addcarryx_u25(&x24, &x25, x23, x3, (x21 & UINT32_C(0x1ffffff)));
-  fiat_25519_addcarryx_u26(&x26, &x27, x25, x5, (x21 & UINT32_C(0x3ffffff)));
-  fiat_25519_addcarryx_u25(&x28, &x29, x27, x7, (x21 & UINT32_C(0x1ffffff)));
-  fiat_25519_addcarryx_u26(&x30, &x31, x29, x9, (x21 & UINT32_C(0x3ffffff)));
-  fiat_25519_addcarryx_u25(&x32, &x33, x31, x11, (x21 & UINT32_C(0x1ffffff)));
-  fiat_25519_addcarryx_u26(&x34, &x35, x33, x13, (x21 & UINT32_C(0x3ffffff)));
-  fiat_25519_addcarryx_u25(&x36, &x37, x35, x15, (x21 & UINT32_C(0x1ffffff)));
-  fiat_25519_addcarryx_u26(&x38, &x39, x37, x17, (x21 & UINT32_C(0x3ffffff)));
-  fiat_25519_addcarryx_u25(&x40, &x41, x39, x19, (x21 & UINT32_C(0x1ffffff)));
-  x42 = (x40 << 6);
-  x43 = (x38 << 4);
-  x44 = (x36 << 3);
-  x45 = (x34 * (uint32_t)0x2);
-  x46 = (x30 << 6);
-  x47 = (x28 << 5);
-  x48 = (x26 << 3);
-  x49 = (x24 << 2);
-  x50 = (uint8_t)(x22 & UINT8_C(0xff));
-  x51 = (x22 >> 8);
-  x52 = (uint8_t)(x51 & UINT8_C(0xff));
-  x53 = (x51 >> 8);
-  x54 = (uint8_t)(x53 & UINT8_C(0xff));
-  x55 = (uint8_t)(x53 >> 8);
-  x56 = (x49 + (uint32_t)x55);
-  x57 = (uint8_t)(x56 & UINT8_C(0xff));
-  x58 = (x56 >> 8);
-  x59 = (uint8_t)(x58 & UINT8_C(0xff));
-  x60 = (x58 >> 8);
-  x61 = (uint8_t)(x60 & UINT8_C(0xff));
-  x62 = (uint8_t)(x60 >> 8);
-  x63 = (x48 + (uint32_t)x62);
-  x64 = (uint8_t)(x63 & UINT8_C(0xff));
-  x65 = (x63 >> 8);
-  x66 = (uint8_t)(x65 & UINT8_C(0xff));
-  x67 = (x65 >> 8);
-  x68 = (uint8_t)(x67 & UINT8_C(0xff));
-  x69 = (uint8_t)(x67 >> 8);
-  x70 = (x47 + (uint32_t)x69);
-  x71 = (uint8_t)(x70 & UINT8_C(0xff));
-  x72 = (x70 >> 8);
-  x73 = (uint8_t)(x72 & UINT8_C(0xff));
-  x74 = (x72 >> 8);
-  x75 = (uint8_t)(x74 & UINT8_C(0xff));
-  x76 = (uint8_t)(x74 >> 8);
-  x77 = (x46 + (uint32_t)x76);
-  x78 = (uint8_t)(x77 & UINT8_C(0xff));
-  x79 = (x77 >> 8);
-  x80 = (uint8_t)(x79 & UINT8_C(0xff));
-  x81 = (x79 >> 8);
-  x82 = (uint8_t)(x81 & UINT8_C(0xff));
-  x83 = (uint8_t)(x81 >> 8);
-  x84 = (uint8_t)(x32 & UINT8_C(0xff));
-  x85 = (x32 >> 8);
-  x86 = (uint8_t)(x85 & UINT8_C(0xff));
-  x87 = (x85 >> 8);
-  x88 = (uint8_t)(x87 & UINT8_C(0xff));
-  x89 = (fiat_25519_uint1)(x87 >> 8);
-  x90 = (x45 + (uint32_t)x89);
-  x91 = (uint8_t)(x90 & UINT8_C(0xff));
-  x92 = (x90 >> 8);
-  x93 = (uint8_t)(x92 & UINT8_C(0xff));
-  x94 = (x92 >> 8);
-  x95 = (uint8_t)(x94 & UINT8_C(0xff));
-  x96 = (uint8_t)(x94 >> 8);
-  x97 = (x44 + (uint32_t)x96);
-  x98 = (uint8_t)(x97 & UINT8_C(0xff));
-  x99 = (x97 >> 8);
-  x100 = (uint8_t)(x99 & UINT8_C(0xff));
-  x101 = (x99 >> 8);
-  x102 = (uint8_t)(x101 & UINT8_C(0xff));
-  x103 = (uint8_t)(x101 >> 8);
-  x104 = (x43 + (uint32_t)x103);
-  x105 = (uint8_t)(x104 & UINT8_C(0xff));
-  x106 = (x104 >> 8);
-  x107 = (uint8_t)(x106 & UINT8_C(0xff));
-  x108 = (x106 >> 8);
-  x109 = (uint8_t)(x108 & UINT8_C(0xff));
-  x110 = (uint8_t)(x108 >> 8);
-  x111 = (x42 + (uint32_t)x110);
-  x112 = (uint8_t)(x111 & UINT8_C(0xff));
-  x113 = (x111 >> 8);
-  x114 = (uint8_t)(x113 & UINT8_C(0xff));
-  x115 = (x113 >> 8);
-  x116 = (uint8_t)(x115 & UINT8_C(0xff));
-  x117 = (uint8_t)(x115 >> 8);
-  out1[0] = x50;
-  out1[1] = x52;
-  out1[2] = x54;
-  out1[3] = x57;
-  out1[4] = x59;
-  out1[5] = x61;
-  out1[6] = x64;
-  out1[7] = x66;
-  out1[8] = x68;
-  out1[9] = x71;
-  out1[10] = x73;
-  out1[11] = x75;
-  out1[12] = x78;
-  out1[13] = x80;
-  out1[14] = x82;
-  out1[15] = x83;
-  out1[16] = x84;
-  out1[17] = x86;
-  out1[18] = x88;
-  out1[19] = x91;
-  out1[20] = x93;
-  out1[21] = x95;
-  out1[22] = x98;
-  out1[23] = x100;
-  out1[24] = x102;
-  out1[25] = x105;
-  out1[26] = x107;
-  out1[27] = x109;
-  out1[28] = x112;
-  out1[29] = x114;
-  out1[30] = x116;
-  out1[31] = x117;
+  fiat_25519_subborrowx_u32(&x21, &x22, x20, 0x0, 0x0);
+  fiat_25519_addcarryx_u26(&x23, &x24, 0x0, x1, (x21 & UINT32_C(0x3ffffed)));
+  fiat_25519_addcarryx_u25(&x25, &x26, x24, x3, (x21 & UINT32_C(0x1ffffff)));
+  fiat_25519_addcarryx_u26(&x27, &x28, x26, x5, (x21 & UINT32_C(0x3ffffff)));
+  fiat_25519_addcarryx_u25(&x29, &x30, x28, x7, (x21 & UINT32_C(0x1ffffff)));
+  fiat_25519_addcarryx_u26(&x31, &x32, x30, x9, (x21 & UINT32_C(0x3ffffff)));
+  fiat_25519_addcarryx_u25(&x33, &x34, x32, x11, (x21 & UINT32_C(0x1ffffff)));
+  fiat_25519_addcarryx_u26(&x35, &x36, x34, x13, (x21 & UINT32_C(0x3ffffff)));
+  fiat_25519_addcarryx_u25(&x37, &x38, x36, x15, (x21 & UINT32_C(0x1ffffff)));
+  fiat_25519_addcarryx_u26(&x39, &x40, x38, x17, (x21 & UINT32_C(0x3ffffff)));
+  fiat_25519_addcarryx_u25(&x41, &x42, x40, x19, (x21 & UINT32_C(0x1ffffff)));
+  x43 = (x41 << 6);
+  x44 = (x39 << 4);
+  x45 = (x37 << 3);
+  x46 = (x35 * (uint32_t)0x2);
+  x47 = (x31 << 6);
+  x48 = (x29 << 5);
+  x49 = (x27 << 3);
+  x50 = (x25 << 2);
+  x51 = (uint8_t)(x23 & UINT8_C(0xff));
+  x52 = (x23 >> 8);
+  x53 = (uint8_t)(x52 & UINT8_C(0xff));
+  x54 = (x52 >> 8);
+  x55 = (uint8_t)(x54 & UINT8_C(0xff));
+  x56 = (uint8_t)(x54 >> 8);
+  x57 = (x50 + (uint32_t)x56);
+  x58 = (uint8_t)(x57 & UINT8_C(0xff));
+  x59 = (x57 >> 8);
+  x60 = (uint8_t)(x59 & UINT8_C(0xff));
+  x61 = (x59 >> 8);
+  x62 = (uint8_t)(x61 & UINT8_C(0xff));
+  x63 = (uint8_t)(x61 >> 8);
+  x64 = (x49 + (uint32_t)x63);
+  x65 = (uint8_t)(x64 & UINT8_C(0xff));
+  x66 = (x64 >> 8);
+  x67 = (uint8_t)(x66 & UINT8_C(0xff));
+  x68 = (x66 >> 8);
+  x69 = (uint8_t)(x68 & UINT8_C(0xff));
+  x70 = (uint8_t)(x68 >> 8);
+  x71 = (x48 + (uint32_t)x70);
+  x72 = (uint8_t)(x71 & UINT8_C(0xff));
+  x73 = (x71 >> 8);
+  x74 = (uint8_t)(x73 & UINT8_C(0xff));
+  x75 = (x73 >> 8);
+  x76 = (uint8_t)(x75 & UINT8_C(0xff));
+  x77 = (uint8_t)(x75 >> 8);
+  x78 = (x47 + (uint32_t)x77);
+  x79 = (uint8_t)(x78 & UINT8_C(0xff));
+  x80 = (x78 >> 8);
+  x81 = (uint8_t)(x80 & UINT8_C(0xff));
+  x82 = (x80 >> 8);
+  x83 = (uint8_t)(x82 & UINT8_C(0xff));
+  x84 = (uint8_t)(x82 >> 8);
+  x85 = (uint8_t)(x33 & UINT8_C(0xff));
+  x86 = (x33 >> 8);
+  x87 = (uint8_t)(x86 & UINT8_C(0xff));
+  x88 = (x86 >> 8);
+  x89 = (uint8_t)(x88 & UINT8_C(0xff));
+  x90 = (fiat_25519_uint1)(x88 >> 8);
+  x91 = (x46 + (uint32_t)x90);
+  x92 = (uint8_t)(x91 & UINT8_C(0xff));
+  x93 = (x91 >> 8);
+  x94 = (uint8_t)(x93 & UINT8_C(0xff));
+  x95 = (x93 >> 8);
+  x96 = (uint8_t)(x95 & UINT8_C(0xff));
+  x97 = (uint8_t)(x95 >> 8);
+  x98 = (x45 + (uint32_t)x97);
+  x99 = (uint8_t)(x98 & UINT8_C(0xff));
+  x100 = (x98 >> 8);
+  x101 = (uint8_t)(x100 & UINT8_C(0xff));
+  x102 = (x100 >> 8);
+  x103 = (uint8_t)(x102 & UINT8_C(0xff));
+  x104 = (uint8_t)(x102 >> 8);
+  x105 = (x44 + (uint32_t)x104);
+  x106 = (uint8_t)(x105 & UINT8_C(0xff));
+  x107 = (x105 >> 8);
+  x108 = (uint8_t)(x107 & UINT8_C(0xff));
+  x109 = (x107 >> 8);
+  x110 = (uint8_t)(x109 & UINT8_C(0xff));
+  x111 = (uint8_t)(x109 >> 8);
+  x112 = (x43 + (uint32_t)x111);
+  x113 = (uint8_t)(x112 & UINT8_C(0xff));
+  x114 = (x112 >> 8);
+  x115 = (uint8_t)(x114 & UINT8_C(0xff));
+  x116 = (x114 >> 8);
+  x117 = (uint8_t)(x116 & UINT8_C(0xff));
+  x118 = (uint8_t)(x116 >> 8);
+  out1[0] = x51;
+  out1[1] = x53;
+  out1[2] = x55;
+  out1[3] = x58;
+  out1[4] = x60;
+  out1[5] = x62;
+  out1[6] = x65;
+  out1[7] = x67;
+  out1[8] = x69;
+  out1[9] = x72;
+  out1[10] = x74;
+  out1[11] = x76;
+  out1[12] = x79;
+  out1[13] = x81;
+  out1[14] = x83;
+  out1[15] = x84;
+  out1[16] = x85;
+  out1[17] = x87;
+  out1[18] = x89;
+  out1[19] = x92;
+  out1[20] = x94;
+  out1[21] = x96;
+  out1[22] = x99;
+  out1[23] = x101;
+  out1[24] = x103;
+  out1[25] = x106;
+  out1[26] = x108;
+  out1[27] = x110;
+  out1[28] = x113;
+  out1[29] = x115;
+  out1[30] = x117;
+  out1[31] = x118;
 }
 
 /*
