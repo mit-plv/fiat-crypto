@@ -40,7 +40,7 @@ jobs:
       run: |
         printf "%s@%s make %s\n\n" "${{ github.event.inputs.target_repository || github.repository }}" "${{ github.event.inputs.target_branch || github.ref }}" "${{ github.event.inputs.build_target }}"
         printf "%s@%s make %s\n\n" "${{ github.event.inputs.target_repository || github.repository }}" "${{ github.event.inputs.target_branch || github.ref }}" "${{ github.event.inputs.build_target }}" >> $GITHUB_STEP_SUMMARY
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         submodules: recursive
     - name: echo host build params

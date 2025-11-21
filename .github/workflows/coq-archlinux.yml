@@ -26,7 +26,7 @@ jobs:
     - name: Install system dependencies
       run: |
         pacman --noconfirm -Syu base-devel git make python3 which jq ghc ghc-static time diffutils rocq rocq-stdlib ocaml-zarith --needed
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         submodules: recursive
     - name: work around coq issue 15663
@@ -117,7 +117,7 @@ jobs:
     - name: Install system dependencies
       run: |
         pacman --noconfirm -Syu git --needed
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Download standalone archlinux
       uses: actions/download-artifact@v6
       with:
@@ -142,7 +142,7 @@ jobs:
 #    permissions:
 #      contents: write  # IMPORTANT: mandatory for making GitHub Releases
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version

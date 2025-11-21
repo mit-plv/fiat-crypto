@@ -29,7 +29,7 @@ jobs:
       cancel-in-progress: true
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         submodules: recursive
     - uses: jirutka/setup-alpine@v1
@@ -132,7 +132,7 @@ jobs:
     name: test-standalone-${{ matrix.alpine }}
     needs: build
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Download standalone ${{ matrix.alpine }}
       uses: actions/download-artifact@v6
       with:
@@ -164,7 +164,7 @@ jobs:
     permissions:
       contents: write  # IMPORTANT: mandatory for making GitHub Releases
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version

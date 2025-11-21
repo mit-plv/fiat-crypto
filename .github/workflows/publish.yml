@@ -9,7 +9,7 @@ jobs:
   publish-rust-crate:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Login to crates.io
       run: cargo login $CRATES_IO_TOKEN
       env:
@@ -27,7 +27,7 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Bump Rust crate version
       id: bumpRustViaPush
       run: |
