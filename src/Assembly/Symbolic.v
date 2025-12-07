@@ -92,7 +92,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
+Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | sub s | subborrow s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | xorZ | addcarryZ s | subborrowZ s.
 Definition op_beq a b := if op_eq_dec a b then true else false.
 End S.
@@ -103,6 +103,7 @@ Global Instance Show_op : Show op := fun o =>
   | const n => "const " ++ show n
   | add s => "add " ++ show s
   | addcarry s => "addcarry " ++ show s
+  | sub s => "sub" ++ show s
   | subborrow s => "subborrow " ++ show s
   | addoverflow s => "addoverflow " ++ show s
   | neg s => "neg " ++ show s
@@ -136,6 +137,7 @@ Definition show_op_subscript : Show op := fun o =>
   | const n => "const " ++ show n
   | add s => "add" ++ String.to_subscript (show s)
   | addcarry s => "addcarry" ++ String.to_subscript (show s)
+  | sub s => "sub" ++ String.to_subscript (show s)
   | subborrow s => "subborrow" ++ String.to_subscript (show s)
   | addoverflow s => "addoverflow" ++ String.to_subscript (show s)
   | neg s => "neg" ++ String.to_subscript (show s)
@@ -435,7 +437,7 @@ Module Export Options.
        |}.
 End Options.
 Module Export Hints.
-  Global Existing Instance default_rewriting_passes.
+Global Existing Instance default_rewriting_passes.
   Global Existing Instances
          Build_symbolic_options_opt
          Build_symbolic_options_computed_opt
@@ -625,7 +627,7 @@ Section WithContext.
          | _ => None
          end.
 
-  
+  (* defines what each op actually does in symbolic computation *)
   Definition interp_op o (args : list Z) : option Z :=
     Eval cbv [invert_Some identity op_to_Z_binop] in
     let keep n x := Z.land x (Z.ones (Z.of_N n)) in
@@ -651,6 +653,7 @@ Section WithContext.
       => let id := invert_Some (identity o) in
          let o := invert_Some (op_to_Z_binop o) in
          Some (keep s (List.fold_right o id args))
+		| sub s, [a; b] => Some (keep s (a - b))
     | (addZ|mulZ|andZ|orZ|xorZ) as o, args
       => let id := invert_Some (identity o) in
          let o := invert_Some (op_to_Z_binop o) in
@@ -668,6 +671,10 @@ Section WithContext.
     | subborrowZ s, cons a args' => Some (- Z.shiftr (a - List.fold_right Z.add 0 args') (Z.of_N s))
     | _, _ => None
     end%Z.
+
+  Definition interprets_as_binop (o : op) (f : Z -> Z -> Z) : Prop :=
+    forall a b, interp_op o [a; b] = Some (f a b).
+
 End WithContext.
 Definition interp0_op := interp_op (fun _ => None).
 
@@ -715,6 +722,7 @@ Section bound_node_via_PHOAS.
   Definition op_to_PHOAS_binop (o : op) : option _
     := match o with
        | add _ => Some ident.Z_add
+			 | sub _ => Some ident.Z_sub
        | shl _ => Some ident.Z_shiftl
        | shr _ => Some ident.Z_shiftr
        | and _ => Some ident.Z_land
@@ -744,6 +752,7 @@ Section bound_node_via_PHOAS.
   Definition op_to_bounds (o : op) : option _
     := match o with
        | add s
+			 | sub s
        | shl s
        | shr s
        | and s
@@ -755,6 +764,7 @@ Section bound_node_via_PHOAS.
        | _ => None
        end%zrange.
 
+	(* take in input bounds , output output bounds *)
   Definition op_to_PHOAS_bounds (o : op) : option (list (unit -> option zrange) -> option zrange)
     := let unthunk := List.map (fun x => x tt) in
        match o with
@@ -772,7 +782,7 @@ Section bound_node_via_PHOAS.
          => let id : Z := invert_Some (identity o) in
             let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
             Some (fun args => fold_right o (Some r[id~>id]) (unthunk args))
-       | (shl _|shr _) as o
+       | (shl _|shr _ |sub _) as o
          => let b : zrange := invert_Some (op_to_bounds o) in
             let o := interp_PHOAS_op (invert_Some (op_to_PHOAS_binop o)) in
             Some (fun args
@@ -2605,7 +2615,8 @@ Definition addcarry_small (d : dag) :=
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
 #[local] Instance describe_addcarry_small : description_of Rewrite.addcarry_small
-  := "Replaces (addcarry _, args) with 0 when bounds analysis can prove there's no carry".
+  := "Replaces (addcarry _, args) with 0 when bounds analysis c
+an prove there's no carry".
 Global Instance addcarry_small_ok : Ok addcarry_small.
 Proof using Type.
   t; f_equal.
@@ -4090,19 +4101,13 @@ Definition RevealConst (i : idx) : M Z :=
   | _ => err (error.expected_const i x)
   end.
 
+(* M idx is the idx of the result of reading and slicing the register value, along with threaded symbolic state including the DAG itself *)
 Definition GetReg {opts : symbolic_options_computed_opt} {descr:description} r : M idx :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   v <- GetRegFull rn;
   App ((slice lo sz), [v]).
 Definition SetReg {opts : symbolic_options_computed_opt} {descr:description} r (v : idx) : M unit :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in (* sz is the size of the register, not the value *)
-  (* if N.eqb sz (widest_reg_size_of r )(* r is not aliasing *) 
-  then v <- App (slice 0 sz, [v]);
-      old <- GetRegFull rn;
-      SetRegFull rn v works even if old value is unspecified
-  else old <- GetRegFull rn;
-      v <- App ((set_slice lo sz), [old; v]);
-      SetRegFull rn v. *)
   old <- GetRegFull rn;
   v <- App ((set_slice lo sz), [old; v]);
   SetRegFull rn v.
@@ -4159,6 +4164,8 @@ Definition GetOperand {opts : symbolic_options_computed_opt} {descr:description}
   | label l => err (error.unsupported_label_argument l)
   end.
 
+(* for destination (mem, reg, label) o, set dst to the value represented by idx i *)
+(* returns the state but unit instead of idx, since the doesnt actually compute a value *) 
 Definition SetOperand {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
   match o with
   | Syntax.const a => err (error.set_const a v)
@@ -4198,8 +4205,53 @@ Definition rcrcnt s cnt : Z :=
   if N.eqb s 16 then Z.land cnt 31 mod 17 else
   Z.land cnt (Z.of_N s-1).
 
+
+Module SymbolicVector.
+(* === Vector instruction helpers === *)
+(* These functions implement lane-parallel SIMD operations where the same
+   operation is applied independently to each lane (chunk) of the vector. *)
+
+(* Low-level: Build a single lane computation (slice -> op -> result) *)
+Definition make_lane {opts : symbolic_options_computed_opt} {descr : description}
+  (v1 v2 : idx) (lane_op : op) (lane_idx : nat) (lane_width : Z) : M idx :=
+  let offset := Z.of_nat lane_idx * lane_width in
+  l1 <- App (slice (Z.to_N offset) (Z.to_N lane_width), [v1]);
+  l2 <- App (slice (Z.to_N offset) (Z.to_N lane_width), [v2]);
+  App (lane_op, [l1; l2]).
+
+Fixpoint vector_binop_aux {opts : symbolic_options_computed_opt} {descr : description}
+  (v1 v2 : idx) (lane_op : op) (lane_idx : nat) (num_remaining : nat) 
+  (lane_width : Z) (acc : idx) : M idx :=
+  match num_remaining with
+  | O => ret acc
+  | S n =>
+      lane_val <- make_lane v1 v2 lane_op lane_idx lane_width;
+      new_acc <- App (set_slice (N.of_nat lane_idx * Z.to_N lane_width) (Z.to_N lane_width), 
+                      [acc; lane_val]);
+      vector_binop_aux v1 v2 lane_op (S lane_idx) n lane_width new_acc
+  end.
+
+(* Mid-level: Perform lane-parallel binary operation on two DAG indices *)
+Definition vector_binop_idx {opts : symbolic_options_computed_opt} {descr : description}
+  (v1 v2 : idx) (lane_op : op) (num_lanes : nat) (lane_width : Z) : M idx :=
+  zero <- App (const 0, []);
+  vector_binop_aux v1 v2 lane_op 0 num_lanes lane_width zero.
+
+(* High-level: Complete lane-parallel vector instruction (GetOperand -> compute -> SetOperand) *)
+Definition SymexVectorBinOp {opts : symbolic_options_computed_opt} {descr : description}
+  {s : OperationSize} {sa : AddressSize}
+  (dst src1 src2 : ARG) (lane_op : op) (num_lanes : nat) (lane_width : Z) : M unit :=
+  v1 <- GetOperand src1;
+v2 <- GetOperand src2;
+result <- vector_binop_idx v1 v2 lane_op num_lanes lane_width;
+SetOperand dst result.
+End SymbolicVector.
+
+
+
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
 
+Print Z.of_nat.
 Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:description} (instr : NormalInstruction) : M unit :=
   let stack_addr_size : AddressSize := 64%N in
   let sa : AddressSize := 64%N in
@@ -4211,6 +4263,28 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
   | (mov | movzx | movabs | movdqa | movdqu | movq | movd | movups), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- GetOperand src;
     SetOperand dst v
+
+  | vmovq, [dst; src] => (* this is technically innacurate - we should be zeroing upper bits, but for now this is a starting point. *)
+    (* vmovq always operates on 64 bits *)
+    v <- GetOperand (s:=64) src; (* gets the full register *)
+    v <- (App ((slice 0 64), [v]));
+    SetOperand (s:=64) dst v
+  | vpaddq, [dst; src1; src2] => (* packed add of quadwords - no flags affected *)
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (add 64) 4 64
+  | vpsubq, [dst; src1; src2] => (* packed subtract quadwords *)
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (sub 64) 4 64
+  | vpandq, [dst; src1; src2] => (* packed bitwise AND quadwords *)
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (and 64) 4 64
+  | vporq, [dst; src1; src2] => (* packed bitwise OR quadwords *)
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (or 64) 4 64
+  | vpxorq, [dst; src1; src2] => (* packed bitwise XOR quadwords *)
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (xor 64) 4 64
+  (* 32-bit lane versions (8 lanes in 256-bit register) *)
+  | vpaddd, [dst; src1; src2] => (* packed add doublewords *)
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (add 32) 8 32
+  | vpsubd, [dst; src1; src2] => (* packed subtract doublewords *)
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (sub 32) 8 32
+
   | xchg, [a; b] => (* Note: unbundle when switching from N to Z *)
     va <- GetOperand a;
     vb <- GetOperand b;
@@ -4403,7 +4477,6 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
                SetOperand dst v
 
   | nop, [] => ret tt
-
   | _, _ => err (error.unimplemented_instruction instr)
  end
   | Some prefix => err (error.unimplemented_prefix instr) end

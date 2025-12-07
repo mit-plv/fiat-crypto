@@ -92,7 +92,7 @@ Fixpoint assembly_stack_size_at (cur_stack_size : Z) (asm : _) : list Z
      | [] => []
      | l :: asm
        => let cng := match l.(rawline) with
-                     | INSTR {| Syntax.op := sub ; args := [reg rsp; Syntax.const n] |}
+                     | INSTR {| Syntax.op := Syntax.sub ; args := [reg rsp; Syntax.const n] |}
                        => n
                      | INSTR {| Syntax.op := Syntax.add ; args := [reg rsp; Syntax.const n] |}
                        => -n

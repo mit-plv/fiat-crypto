@@ -64,12 +64,22 @@ Section identity.
   Local Notation map_err_None v := (ErrorT.map_error (fun e => (None, e)) v).
   Local Notation map_err_Some label v := (ErrorT.map_error (fun e => (Some label, e)) v).
 
-  Definition check_id :=
+  Compute inl 0%N.
+
+  Definition check_id_dag_and_inputs :=
     let d := dag.empty in
-    input_types <- map_err_None (simplify_input_type t arg_bounds);
-    output_types <- map_err_None (simplify_base_type (type.final_codomain t) out_bounds);
-    let '(inputs, d) := build_inputs (descr:=Build_description "build_inputs" true) input_types d in 
-    Success d.
+    match simplify_input_type t arg_bounds with
+    | Error _ => None
+    | Success input_types =>
+        match simplify_base_type (type.final_codomain t) out_bounds with
+        | Error _ => None
+        | Success output_types =>
+            let '(inputs, d) := build_inputs (descr:=Build_description "build_inputs" true) input_types d in 
+            Some (inputs, d)
+        end
+    end.
+
+  Definition init_dag := check_id_dag_and_inputs.
 
   (* Run the equivalence check *)
   (* Definition check_id : ErrorT ParseValidatedError (ErrorT (option (string * Lines) * EquivalenceCheckingError) unit) :=

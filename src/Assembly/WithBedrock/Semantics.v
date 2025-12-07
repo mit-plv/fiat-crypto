@@ -62,6 +62,8 @@ Definition get_reg (st : reg_state) (r : REG) : Z
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
   let rv := Tuple.nth_default 0%Z (N.to_nat idx) st in
   Z.land (Z.shiftr rv (Z.of_N shift)) (Z.ones (Z.of_N bitcount)).
+
+(* implicitly zeros the higher bits when v is smaller than bitcount.? *)
 Definition set_reg (st : reg_state) (r : REG) (v : Z) : reg_state
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
      Tuple.from_list_default 0%Z _ (ListUtil.update_nth
@@ -69,6 +71,7 @@ Definition set_reg (st : reg_state) (r : REG) (v : Z) : reg_state
        (fun curv => Z.lor (Z.shiftl (Z.land v (Z.ones (Z.of_N bitcount))) (Z.of_N shift))
                           (Z.ldiff curv (Z.shiftl (Z.ones (Z.of_N bitcount)) (Z.of_N shift))))
        (Tuple.to_list _ st)).
+
 Definition annotate_reg_state (st : reg_state) : list (REG * Z)
   := List.combine widest_registers (Tuple.to_list _ st).
 Ltac print_reg_state st := let st' := (eval cbv in (annotate_reg_state st)) in idtac st'.
@@ -111,7 +114,7 @@ Definition DenoteAddress (sa : N) (st : machine_state) (a : MEM) : Z :=
     match mem_scale_reg a with Some (z, r) => get_reg st r * DenoteConst sa z | _ => 0 end +
     match mem_offset    a with Some  z     =>                DenoteConst sa z | _ => 0 end
   ) (Z.ones (Z.of_N sa)).
-
+  
 Definition DenoteOperand (sa s : N) (st : machine_state) (a : ARG) : option Z :=
   match a with
   | reg a => Some (get_reg st a)
@@ -131,6 +134,50 @@ Definition SetOperand (sa s : N) (st : machine_state) (a : ARG) (v : Z) : option
   | const a => None
   | label _ => None
   end.
+
+
+
+Module SemanticVector.
+  (* Extract the ith lane of a vector register value *)
+  Definition extract_lane (v : Z) (lane_idx : nat) (lane_width : Z) : Z :=
+    Z.land (Z.shiftr v (Z.of_nat lane_idx * lane_width)) (Z.ones lane_width).
+
+  (* Insert a masked lane value at position i *)
+  Definition insert_lane (lane_val : Z) (lane_idx : nat) (lane_width : Z) : Z :=
+    Z.shiftl (Z.land lane_val (Z.ones lane_width)) (Z.of_nat lane_idx * lane_width).
+
+	Definition compute_lane (v1 v2 : Z) (lane_op : Z -> Z -> Z)
+      (lane_idx : nat) (lane_width : Z) : Z  :=
+    lane_op (extract_lane v1 lane_idx lane_width)
+            (extract_lane v2 lane_idx lane_width).
+
+  (* Compute one lane and insert it *)
+  Definition compute_and_insert_lane (v1 v2 : Z) (lane_op : Z -> Z -> Z) 
+      (lane_idx : nat) (lane_width : Z) : Z :=
+    insert_lane (compute_lane v1 v2 lane_op lane_idx lane_width) lane_idx lane_width.
+
+  (* Core: compute and combine all lanes in one pass *)
+  Fixpoint vector_binop_aux (v1 v2 : Z) (lane_op : Z -> Z -> Z)
+      (lane_idx num_remaining : nat) (lane_width : Z) : Z :=
+    match num_remaining with
+    | O => 0
+    | S n => Z.lor (compute_and_insert_lane v1 v2 lane_op lane_idx lane_width)
+                   (vector_binop_aux v1 v2 lane_op (S lane_idx) n lane_width)
+    end.
+
+  Definition vector_binop_values (v1 v2 : Z) (lane_op : Z -> Z -> Z) 
+      (num_lanes : nat) (lane_width : Z) : Z :=
+    vector_binop_aux v1 v2 lane_op 0 num_lanes lane_width.
+
+  (* High-level: unchanged interface *)
+  Definition DenoteVectorBinOp (sa s : N) (st : machine_state) (dst src1 src2 : ARG)
+      (lane_op : Z -> Z -> Z) (num_lanes : nat) (lane_width : Z) : option machine_state :=
+    v1 <- DenoteOperand sa s st src1;
+    v2 <- DenoteOperand sa s st src2;
+    let result := vector_binop_values v1 v2 lane_op num_lanes lane_width in
+    SetOperand sa s st dst result.
+End SemanticVector.
+
 
 Definition result_flags s v :=
   (* note: AF and PF remain undefined *)
@@ -153,7 +200,6 @@ Definition rcrcnt s cnt : Z :=
   if N.eqb s 8 then Z.land cnt 0x1f mod 9 else
   if N.eqb s 16 then Z.land cnt 0x1f mod 17 else
   Z.land cnt (Z.of_N s-1).
-
 
 (* NOTE: currently immediate operands are treated as if sign-extension has been
  * performed ahead of time. *)
@@ -216,85 +262,31 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let v := Z.land v (Z.ones (Z.of_N s)) in
     st <- SetOperand sa s st dst v;
     Some (SetFlag st flag (Z.odd (Z.shiftr (v1 + v2 + c) (Z.of_N s))))
-  | vaddps, [dst; src1; src2] => (* single precision vector addition *)
-    let lane_size := 32%N in (* 8 32 bit floats *)
-    let extract_lane (v : Z) (lane_idx : N) : Z :=
-      Z.land (Z.shiftr v (Z.of_N (lane_size * lane_idx))) (Z.ones (Z.of_N lane_size)) in
-    v1_full <- DenoteOperand sa s st src1;
-    v2_full <- DenoteOperand sa s st src2;
-    let results := [
-      extract_lane v1_full 0%N + extract_lane v2_full 0%N;
-      extract_lane v1_full 1%N + extract_lane v2_full 1%N;
-      extract_lane v1_full 2%N + extract_lane v2_full 2%N;
-      extract_lane v1_full 3%N + extract_lane v2_full 3%N;
-      extract_lane v1_full 4%N + extract_lane v2_full 4%N;
-      extract_lane v1_full 5%N + extract_lane v2_full 5%N;
-      extract_lane v1_full 6%N + extract_lane v2_full 6%N;
-      extract_lane v1_full 7%N + extract_lane v2_full 7%N
-    ] in 
-    let v :=
-      Z.lor (Z.shiftl (nth_default 0 results 0) (Z.of_N (lane_size * 0)))
-      (Z.lor (Z.shiftl (nth_default 0 results 1) (Z.of_N (lane_size * 1)))
-      (Z.lor (Z.shiftl (nth_default 0 results 2) (Z.of_N (lane_size * 2)))
-      (Z.lor (Z.shiftl (nth_default 0 results 3) (Z.of_N (lane_size * 3)))
-      (Z.lor (Z.shiftl (nth_default 0 results 4) (Z.of_N (lane_size * 4)))
-      (Z.lor (Z.shiftl (nth_default 0 results 5) (Z.of_N (lane_size * 5)))
-      (Z.lor (Z.shiftl (nth_default 0 results 6) (Z.of_N (lane_size * 6)))
-      (Z.shiftl (nth_default 0 results 7) (Z.of_N (lane_size * 7)))
-      ))))))
-    in
-    st <- SetOperand sa s st dst v;
-    Some st
-  | vpaddq, [dst; src1; src2] => (* packed quadword integer addition *)
-    let lane_size := 64%N in (* 4 64-bit integers *)
-    let extract_lane (v : Z) (lane_idx : N) : Z :=
-      Z.land (Z.shiftr v (Z.of_N (lane_size * lane_idx))) (Z.ones (Z.of_N lane_size)) in
-    v1_full <- DenoteOperand sa s st src1;
-    v2_full <- DenoteOperand sa s st src2;
-    let results := [
-      Z.land (extract_lane v1_full 0%N + extract_lane v2_full 0%N) (Z.ones (Z.of_N lane_size));
-      Z.land (extract_lane v1_full 1%N + extract_lane v2_full 1%N) (Z.ones (Z.of_N lane_size));
-      Z.land (extract_lane v1_full 2%N + extract_lane v2_full 2%N) (Z.ones (Z.of_N lane_size));
-      Z.land (extract_lane v1_full 3%N + extract_lane v2_full 3%N) (Z.ones (Z.of_N lane_size))
-    ] in
-    let v :=
-      Z.lor (Z.shiftl (nth_default 0 results 0) (Z.of_N (lane_size * 0)))
-      (Z.lor (Z.shiftl (nth_default 0 results 1) (Z.of_N (lane_size * 1)))
-      (Z.lor (Z.shiftl (nth_default 0 results 2) (Z.of_N (lane_size * 2)))
-      (Z.shiftl (nth_default 0 results 3) (Z.of_N (lane_size * 3)))
-      ))
-    in
-    st <- SetOperand sa s st dst v;
-    Some st
-  | vmovq, [dst; src] => (* move quadword *)
-    (* vmovq handles several cases:
-       - vmovq xmm, r64: move 64-bit scalar to lower 64 bits of xmm, zero upper bits
-       - vmovq r64, xmm: move lower 64 bits of xmm to scalar register
-       - vmovq xmm, xmm/m64: move 64 bits, zero upper bits of destination
-       Note: Writing to XMM zeroes upper 128 bits of corresponding YMM (AVX convention) *)
-    match dst, src with
-    | reg (VReg dst_vr), reg (SReg src_sr) =>
-        (* vmovq xmm, r64 - move scalar to vector, zero upper bits *)
-        v <- DenoteOperand sa 64 st (SReg src_sr);
-        let v := Z.land v (Z.ones 64) in (* ensure 64-bit value *)
-        (* Only lower 64 bits set, rest is zero - this effectively zeros all upper bits *)
-        Some (update_reg_with st (fun rs => set_reg rs (VReg dst_vr) v))
-    | reg (SReg dst_sr), reg (VReg src_vr) =>
-        (* vmovq r64, xmm - extract lower 64 bits of vector to scalar *)
-        v_full <- DenoteOperand sa s st (VReg src_vr);
-        let v := Z.land v_full (Z.ones 64) in (* extract lower 64 bits *)
-        Some (update_reg_with st (fun rs => set_reg rs (SReg dst_sr) v))
-    | reg (VReg dst_vr), reg (VReg src_vr) =>
-        (* vmovq xmm, xmm - move lower 64 bits, zero upper bits of dst *)
-        v_full <- DenoteOperand sa s st (VReg src_vr);
-        let v := Z.land v_full (Z.ones 64) in (* extract lower 64 bits *)
-        Some (update_reg_with st (fun rs => set_reg rs (VReg dst_vr) v))
-    | _, _ =>
-        (* vmovq xmm, m64 or vmovq m64, xmm - use standard operand handling *)
-        v <- DenoteOperand sa 64 st src;
-        let v := Z.land v (Z.ones 64) in (* ensure 64-bit *)
-        SetOperand sa 64 st dst v
-    end
+
+		(* AVX instructions *)
+  | vmovq, [dst; src] => (* move quadword - handles vector/scalar conversions *)
+    v <- DenoteOperand sa 64 st src;  (* Will still read a whole register.. *)
+    let v := Z.land v (Z.ones 64) in  (* Ensure 64-bit value *)
+    SetOperand sa 64 st dst v
+  | vpaddq, [dst; src1; src2] => (* vector packed add quadword *)
+		let lane_add := (fun a b => Z.land (a + b) (Z.ones 64)) in
+      SemanticVector.DenoteVectorBinOp sa s st dst src1 src2 lane_add 4 64
+  | vpsubq, [dst; src1; src2] =>
+		let lane_sub := (fun a b => Z.land (a - b) (Z.ones 64)) in
+      SemanticVector.DenoteVectorBinOp sa s st dst src1 src2 lane_sub 4 64
+  | vpandq, [dst; src1; src2] =>
+      SemanticVector.DenoteVectorBinOp sa s st dst src1 src2 Z.land 4 64
+  | vporq, [dst; src1; src2] =>
+      SemanticVector.DenoteVectorBinOp sa s st dst src1 src2 Z.lor 4 64
+  | vpxorq, [dst; src1; src2] =>
+      SemanticVector.DenoteVectorBinOp sa s st dst src1 src2 Z.lxor 4 64
+  | vpaddd, [dst; src1; src2] =>
+      SemanticVector.DenoteVectorBinOp sa s st dst src1 src2
+        (fun a b => Z.land (a + b) (Z.ones 32)) 8 32
+  | vpsubd, [dst; src1; src2] =>
+      SemanticVector.DenoteVectorBinOp sa s st dst src1 src2
+        (fun a b => Z.land (a - b) (Z.ones 32)) 8 32
+
   | (sbb | sub) as opc, [dst; src] =>
     c <- (match opc with sbb => get_flag st CF | _ => Some false end);
     let c := Z.b2z c in
@@ -462,20 +454,22 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
        let rsp' := Z.land (rsp' + (Z.of_N s / 8)) (Z.ones (Z.of_N stack_addr_size)) in (* we don't actually need to truncate here, but it makes proofs a bit easier *)
        st   <- SetOperand stack_addr_size s st rsp rsp';
                SetOperand sa s st dst v
-
   | nop, [] => Some st
   | ret, _ => None (* not sure what to do with this ret, maybe exlude it? *)
-
     (* catchall for an operator with no operands *)
   | adc, _
   | adcx, _
   | add, _
+ 	| vpaddq, _
+ 	| vpsubq, _
+ 	| vpandq, _
+ 	| vporq, _
+ 	| vpxorq, _
+ 	| vpaddd, _
+ 	| vpsubd, _
   | adox, _
   | and, _
   | bzhi, _
-  | vaddps, _
-  | vpaddq, _
-  | vmovq, _
   | db, _
   | dw, _
   | dd, _
@@ -497,6 +491,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | lea, _
   | mov, _
   | movzx, _
+  | vmovq, _
   | or, _
   | imul, _
   | inc, _
