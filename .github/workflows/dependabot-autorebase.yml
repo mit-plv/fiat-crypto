@@ -48,8 +48,6 @@ jobs:
             echo "  Head: $HEAD_BRANCH"
 
             # Check if the PR is up to date with its base branch
-            # Get the merge base and latest commit on base branch
-            BASE_SHA=$(gh api "/repos/${{ github.repository }}/git/ref/heads/$BASE_BRANCH" --jq '.object.sha')
             PR_DATA=$(gh pr view $PR_NUMBER --json mergeStateStatus,mergeable)
             MERGE_STATE=$(echo "$PR_DATA" | jq -r '.mergeStateStatus')
             
