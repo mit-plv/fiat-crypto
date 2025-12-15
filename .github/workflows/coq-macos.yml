@@ -17,9 +17,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # macOS 12, 13 are x86_64; macOS 14 is arm64
+        # macOS 12, 13, 14-large, 15-large are x86_64; macOS 14, 14-xlarge, 15, 15-xlarge are arm64
         include:
-        - os: { name: 'macOS 13', arch: 'x86_64', runs-on: 'macos-13' }
+        - os: { name: 'macOS 14', arch: 'x86_64', runs-on: 'macos-14-large' }
           ocaml-compiler: '4.13.0'
         - os: { name: 'macOS 14', arch: 'arm64' , runs-on: 'macos-14' }
           ocaml-compiler: '4.14.2'
