@@ -58,17 +58,13 @@ jobs:
               echo "  PR #$PR_NUMBER is not up to date with $BASE_BRANCH. Attempting to rebase..."
               
               # Use GitHub's update-branch API to rebase/merge
-              RESULT=$(gh api \
+              if gh api \
                 --method PUT \
                 "/repos/${{ github.repository }}/pulls/$PR_NUMBER/update-branch" \
-                -f expected_head_sha="" \
-                2>&1 || echo "FAILED")
-              
-              if echo "$RESULT" | grep -q "FAILED"; then
-                echo "  ❌ Failed to update PR #$PR_NUMBER"
-                echo "  Error: $RESULT"
-              else
+                2>&1; then
                 echo "  ✅ Successfully updated PR #$PR_NUMBER"
+              else
+                echo "  ❌ Failed to update PR #$PR_NUMBER"
               fi
             else
               echo "  ✓ PR #$PR_NUMBER is already up to date"
