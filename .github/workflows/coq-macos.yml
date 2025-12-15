@@ -19,7 +19,7 @@ jobs:
       matrix:
         # macOS 12, 13, 14-large, 15-large are x86_64; macOS 14, 14-xlarge, 15, 15-xlarge are arm64
         include:
-        - os: { name: 'macOS 14', arch: 'x86_64', runs-on: 'macos-14-large' }
+        - os: { name: 'macOS 15', arch: 'x86_64', runs-on: 'macos-15-intel' }
           ocaml-compiler: '4.13.0'
         - os: { name: 'macOS 14', arch: 'arm64' , runs-on: 'macos-14' }
           ocaml-compiler: '4.14.2'
@@ -158,9 +158,9 @@ jobs:
       fail-fast: false
       matrix:
         arch: ['', '-x86_64', '-arm64']
-        os: ['macos-14-large', 'macos-14', 'macos-latest']
+        os: ['macos-15-intel', 'macos-14', 'macos-latest']
         exclude:
-          - os: 'macos-14-large'
+          - os: 'macos-15-intel'
             arch: '-arm64'
     runs-on: ${{ matrix.os }}
     needs: [build, combine-standalone]
