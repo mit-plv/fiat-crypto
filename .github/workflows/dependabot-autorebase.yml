@@ -49,7 +49,7 @@ jobs:
             echo "  Head: $HEAD_BRANCH"
 
             # Check if the PR is up to date with its base branch
-            PR_DATA=$(gh pr view $PR_NUMBER --json mergeStateStatus,mergeable)
+            PR_DATA=$(gh pr view $PR_NUMBER --json mergeStateStatus)
             MERGE_STATE=$(echo "$PR_DATA" | jq -r '.mergeStateStatus')
             
             echo "  Merge state: $MERGE_STATE"
