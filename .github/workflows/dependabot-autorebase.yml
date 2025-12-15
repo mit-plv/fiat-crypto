@@ -36,7 +36,8 @@ jobs:
             exit 0
           fi
 
-          echo "$DEPENDABOT_PRS" | jq -c '.' | while read -r pr; do
+          while read -r pr; do
+            [ -z "$pr" ] && continue
             PR_NUMBER=$(echo "$pr" | jq -r '.number')
             BASE_BRANCH=$(echo "$pr" | jq -r '.baseRefName')
             HEAD_BRANCH=$(echo "$pr" | jq -r '.headRefName')
@@ -58,18 +59,19 @@ jobs:
               echo "  PR #$PR_NUMBER is not up to date with $BASE_BRANCH. Attempting to rebase..."
               
               # Use GitHub's update-branch API to rebase/merge
-              if gh api \
+              if OUTPUT=$(gh api \
                 --method PUT \
                 "/repos/${{ github.repository }}/pulls/$PR_NUMBER/update-branch" \
-                2>&1; then
+                2>&1); then
                 echo "  ✅ Successfully updated PR #$PR_NUMBER"
               else
                 echo "  ❌ Failed to update PR #$PR_NUMBER"
+                echo "  Error: $OUTPUT"
               fi
             else
               echo "  ✓ PR #$PR_NUMBER is already up to date"
             fi
-          done
+          done <<< "$DEPENDABOT_PRS"
 
           echo ""
           echo "Finished processing dependabot PRs."
