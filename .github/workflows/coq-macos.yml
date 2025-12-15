@@ -134,12 +134,12 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - name: Download standalone MacOS x86_64
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: standalone-macos-x86_64
         path: dist-x86_64/
     - name: Download standalone MacOS arm64
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: standalone-macos-arm64
         path: dist-arm64/
@@ -167,7 +167,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - name: Download standalone MacOS${{ matrix.arch }}
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: standalone-macos${{ matrix.arch }}
         path: dist/
@@ -202,7 +202,7 @@ jobs:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
     - name: Download standalone MacOS${{ matrix.arch }}
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: standalone-macos${{ matrix.arch }}
         path: dist/
