@@ -1,0 +1,77 @@
+name: Dependabot Auto-Rebase
+
+on:
+  push:
+    branches: [ master, sp2019latest ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  rebase-dependabot-prs:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Find and rebase dependabot PRs
+        run: |
+          # Get all open PRs authored by dependabot
+          echo "Finding open dependabot PRs..."
+          DEPENDABOT_PRS=$(gh pr list \
+            --repo ${{ github.repository }} \
+            --author "dependabot[bot]" \
+            --state open \
+            --json number,baseRefName,headRefName,url \
+            --jq '.[]')
+
+          if [ -z "$DEPENDABOT_PRS" ]; then
+            echo "No open dependabot PRs found."
+            exit 0
+          fi
+
+          while read -r pr; do
+            [ -z "$pr" ] && continue
+            PR_NUMBER=$(echo "$pr" | jq -r '.number')
+            BASE_BRANCH=$(echo "$pr" | jq -r '.baseRefName')
+            HEAD_BRANCH=$(echo "$pr" | jq -r '.headRefName')
+            PR_URL=$(echo "$pr" | jq -r '.url')
+
+            echo ""
+            echo "Checking PR #$PR_NUMBER: $PR_URL"
+            echo "  Base: $BASE_BRANCH"
+            echo "  Head: $HEAD_BRANCH"
+
+            # Check if the PR is up to date with its base branch
+            PR_DATA=$(gh pr view $PR_NUMBER --json mergeStateStatus)
+            MERGE_STATE=$(echo "$PR_DATA" | jq -r '.mergeStateStatus')
+            
+            echo "  Merge state: $MERGE_STATE"
+
+            # If the PR is behind the base branch, rebase it
+            if [ "$MERGE_STATE" = "BEHIND" ] || [ "$MERGE_STATE" = "DIRTY" ]; then
+              echo "  PR #$PR_NUMBER is not up to date with $BASE_BRANCH. Attempting to rebase..."
+              
+              # Use GitHub's update-branch API to rebase/merge
+              if OUTPUT=$(gh api \
+                --method PUT \
+                "/repos/${{ github.repository }}/pulls/$PR_NUMBER/update-branch" \
+                2>&1); then
+                echo "  ✅ Successfully updated PR #$PR_NUMBER"
+              else
+                echo "  ❌ Failed to update PR #$PR_NUMBER"
+                echo "  Error: $OUTPUT"
+              fi
+            else
+              echo "  ✓ PR #$PR_NUMBER is already up to date"
+            fi
+          done <<< "$DEPENDABOT_PRS"
+
+          echo ""
+          echo "Finished processing dependabot PRs."
