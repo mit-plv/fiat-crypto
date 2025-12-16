@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  workflows: write
 
 jobs:
   rebase-dependabot-prs:
@@ -22,7 +23,6 @@ jobs:
 
       - name: Find and rebase dependabot PRs
         run: |
-          # Get all open PRs authored by dependabot
           echo "Finding open dependabot PRs..."
           DEPENDABOT_PRS=$(gh pr list \
             --repo ${{ github.repository }} \
@@ -30,56 +30,40 @@ jobs:
             --state open \
             --json number,baseRefName,headRefName,url \
             --jq '.[]')
-
+      
           if [ -z "$DEPENDABOT_PRS" ]; then
             echo "No open dependabot PRs found."
             exit 0
           fi
-
+      
+          # Ensure origin/* refs exist locally for rev-parse checks
+          git fetch --prune origin +refs/heads/*:refs/remotes/origin/*
+      
           while read -r pr; do
             [ -z "$pr" ] && continue
             PR_NUMBER=$(echo "$pr" | jq -r '.number')
             BASE_BRANCH=$(echo "$pr" | jq -r '.baseRefName')
-            HEAD_BRANCH=$(echo "$pr" | jq -r '.headRefName')
             PR_URL=$(echo "$pr" | jq -r '.url')
-
+      
             echo ""
             echo "Checking PR #$PR_NUMBER: $PR_URL"
             echo "  Base branch: $BASE_BRANCH"
-            echo "  Head branch: $HEAD_BRANCH"
-
-            # Get PR details including SHAs
-            PR_DATA=$(gh pr view $PR_NUMBER --json headRefOid,baseRefOid,mergeStateStatus)
-            PR_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.headRefOid')
-            PR_BASE_SHA=$(echo "$PR_DATA" | jq -r '.baseRefOid')
-            MERGE_STATE=$(echo "$PR_DATA" | jq -r '.mergeStateStatus')
-            
-            # Get the current tip of the base branch
+      
+            PR_DATA=$(gh pr view "$PR_NUMBER" --json baseRefOid --jq '.baseRefOid')
             BASE_TIP_SHA=$(git rev-parse "origin/$BASE_BRANCH")
-            
-            echo "  PR head SHA: $PR_HEAD_SHA"
-            echo "  PR base SHA: $PR_BASE_SHA"
+      
+            echo "  PR base SHA: $PR_DATA"
             echo "  Base branch tip SHA: $BASE_TIP_SHA"
-            echo "  Merge state: $MERGE_STATE"
-
-            # Check if the PR's base SHA matches the current tip of the base branch
-            if [ "$PR_BASE_SHA" != "$BASE_TIP_SHA" ]; then
-              echo "  PR #$PR_NUMBER is not up to date with $BASE_BRANCH. Attempting to rebase..."
-              
-              # Use GitHub's update-branch API to rebase/merge
-              if OUTPUT=$(gh api \
-                --method PUT \
-                "/repos/${{ github.repository }}/pulls/$PR_NUMBER/update-branch" \
-                2>&1); then
-                echo "  ✅ Successfully updated PR #$PR_NUMBER"
+      
+            if [ "$PR_DATA" != "$BASE_TIP_SHA" ]; then
+              echo "  PR #$PR_NUMBER is not up to date with $BASE_BRANCH. Rebasing..."
+              if OUTPUT=$(gh pr update-branch "$PR_NUMBER" --rebase 2>&1); then
+                echo "  ✅ Successfully rebased PR #$PR_NUMBER"
               else
-                echo "  ❌ Failed to update PR #$PR_NUMBER"
+                echo "  ❌ Failed to rebase PR #$PR_NUMBER"
                 echo "  Error: $OUTPUT"
               fi
             else
               echo "  ✓ PR #$PR_NUMBER is already up to date"
             fi
           done <<< "$DEPENDABOT_PRS"
-
-          echo ""
-          echo "Finished processing dependabot PRs."
