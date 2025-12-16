@@ -133,6 +133,26 @@ jobs:
         custom_script: |
           sudo git config --global --add safe.directory "*"
           sudo make EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 COQBIN="$(dirname "$(which coqc)")/" install install-standalone-ocaml
+    - name: display timing info
+      run: cat time-of-build-pretty.log
+    - name: display per-line timing info
+      run: etc/ci/github-actions-display-per-line-timing.sh
+    - name: Analyze disk space before docker save
+      run: |
+        echo "=== Disk space usage ==="
+        df -h
+        echo ""
+        echo "=== Top 20 largest directories in current directory ==="
+        du -h --max-depth=2 . | sort -hr | head -20
+        echo ""
+        echo "=== Top 20 largest directories in /home/runner ==="
+        du -h --max-depth=2 /home/runner | sort -hr | head -20
+        echo ""
+        echo "=== Docker images ==="
+        docker images
+        echo ""
+        echo "=== Docker system df ==="
+        docker system df -v
     - name: Save COQ_IMAGE
       uses: coq-community/docker-coq-action@v1
       with:
@@ -150,10 +170,6 @@ jobs:
       with:
         path: image.tar
         key: ${{ runner.os }}-docker-${{ hashFiles('image.tar') }}
-    - name: display timing info
-      run: cat time-of-build-pretty.log
-    - name: display per-line timing info
-      run: etc/ci/github-actions-display-per-line-timing.sh
 
   validate:
     strategy:
