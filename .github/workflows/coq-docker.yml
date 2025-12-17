@@ -85,6 +85,17 @@ jobs:
         name: ExtractionHaskell-source-${{ matrix.env.COQ_VERSION }}
         path: src/ExtractionHaskell
       if: always ()
+    - name: Clean up extracted source files to free disk space
+      run: |
+        echo "=== Disk space before cleanup ==="
+        df -h
+        echo ""
+        echo "=== Removing large extraction directories ==="
+        du -sh src/ExtractionOCaml src/ExtractionJsOfOCaml src/ExtractionHaskell || true
+        rm -rf src/ExtractionOCaml src/ExtractionJsOfOCaml src/ExtractionHaskell
+        echo ""
+        echo "=== Disk space after cleanup ==="
+        df -h
     - name: install-standalone-unified-ocaml
       run: make -f Makefile.standalone install-standalone-unified-ocaml BINDIR=dist
     - name: upload standalone files
@@ -98,6 +109,17 @@ jobs:
       with:
         name: build-outputs-docker-coq-${{ matrix.env.DOCKER_COQ_VERSION }}-ocaml-${{ matrix.env.DOCKER_OCAML_VERSION }}
         path: fiat-crypto-build.tar.gz
+    - name: Clean up tar.gz to free disk space
+      run: |
+        echo "=== Disk space before cleanup ==="
+        df -h
+        echo ""
+        echo "=== Removing tar.gz file ==="
+        ls -lh fiat-crypto-build.tar.gz || true
+        rm -f fiat-crypto-build.tar.gz
+        echo ""
+        echo "=== Disk space after cleanup ==="
+        df -h
     - run: find . -name "*.timing" | xargs tar -czvf timing-files.tgz
       if: failure()
     - name: upload generated timing files
@@ -153,6 +175,22 @@ jobs:
         echo ""
         echo "=== Docker system df ==="
         docker system df -v
+    - name: Clean up additional files before docker save
+      run: |
+        echo "=== Final cleanup before docker save ==="
+        echo "=== Disk space before cleanup ==="
+        df -h
+        echo ""
+        echo "=== Removing rupicola and rewriter build artifacts ==="
+        du -sh rupicola rewriter || true
+        rm -rf rupicola rewriter
+        echo ""
+        echo "=== Removing dist directory ==="
+        du -sh dist || true
+        rm -rf dist
+        echo ""
+        echo "=== Disk space after cleanup ==="
+        df -h
     - name: Save COQ_IMAGE
       uses: coq-community/docker-coq-action@v1
       with:
