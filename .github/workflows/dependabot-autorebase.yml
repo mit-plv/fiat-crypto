@@ -1,14 +1,11 @@
 name: Dependabot Auto-Rebase
-
 on:
   push:
     branches: [ master, sp2019latest ]
   workflow_dispatch:
-
 permissions:
   contents: write
   pull-requests: write
-
 jobs:
   rebase-dependabot-prs:
     runs-on: ubuntu-latest
@@ -16,7 +13,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -29,40 +26,98 @@ jobs:
             --state open \
             --json number,baseRefName,headRefName,url \
             --jq '.[]')
-      
+
           if [ -z "$DEPENDABOT_PRS" ]; then
             echo "No open dependabot PRs found."
             exit 0
           fi
-      
-          # Ensure origin/* refs exist locally for rev-parse checks
+
           git fetch --prune origin +refs/heads/*:refs/remotes/origin/*
-      
+          FAILED_PRS=()
+
           while read -r pr; do
             [ -z "$pr" ] && continue
             PR_NUMBER=$(echo "$pr" | jq -r '.number')
             BASE_BRANCH=$(echo "$pr" | jq -r '.baseRefName')
             PR_URL=$(echo "$pr" | jq -r '.url')
-      
+
             echo ""
+            echo "========================================"
             echo "Checking PR #$PR_NUMBER: $PR_URL"
             echo "  Base branch: $BASE_BRANCH"
-      
-            PR_DATA=$(gh pr view "$PR_NUMBER" --json baseRefOid --jq '.baseRefOid')
+
+            # Check if PR needs updating
+            PR_BASE_SHA=$(gh pr view "$PR_NUMBER" --json baseRefOid --jq '.baseRefOid')
             BASE_TIP_SHA=$(git rev-parse "origin/$BASE_BRANCH")
-      
-            echo "  PR base SHA: $PR_DATA"
+
+            echo "  PR base SHA: $PR_BASE_SHA"
             echo "  Base branch tip SHA: $BASE_TIP_SHA"
-      
-            if [ "$PR_DATA" != "$BASE_TIP_SHA" ]; then
-              echo "  PR #$PR_NUMBER is not up to date with $BASE_BRANCH. Rebasing..."
-              if OUTPUT=$(gh pr update-branch "$PR_NUMBER" --rebase 2>&1); then
-                echo "  ✅ Successfully rebased PR #$PR_NUMBER"
-              else
-                echo "  ❌ Failed to rebase PR #$PR_NUMBER"
-                echo "  Error: $OUTPUT"
-              fi
-            else
+
+            if [ "$PR_BASE_SHA" = "$BASE_TIP_SHA" ]; then
               echo "  ✓ PR #$PR_NUMBER is already up to date"
+              continue
             fi
+
+            echo "  PR #$PR_NUMBER is not up to date with $BASE_BRANCH"
+
+            # Function to check mergeable status
+            get_mergeable_status() {
+              gh pr view "$PR_NUMBER" --json mergeable --jq '.mergeable'
+            }
+
+            # Check mergeable status, retry if UNKNOWN
+            MERGEABLE=$(get_mergeable_status)
+            echo "  Mergeable status: $MERGEABLE"
+
+            if [ "$MERGEABLE" = "UNKNOWN" ]; then
+              echo "  Status UNKNOWN, waiting 5s for GitHub to calculate..."
+              sleep 5
+              MERGEABLE=$(get_mergeable_status)
+              echo "  Mergeable status (retry): $MERGEABLE"
+            fi
+
+            # Skip if conflicting
+            if [ "$MERGEABLE" = "CONFLICTING" ]; then
+              echo "  ❌ PR #$PR_NUMBER has conflicts. Manual intervention required."
+              FAILED_PRS+=("$PR_NUMBER")
+              continue
+            fi
+
+            # Attempt rebase
+            echo "  Attempting rebase..."
+            if OUTPUT=$(gh pr update-branch "$PR_NUMBER" --rebase 2>&1); then
+              echo "  ✅ Successfully rebased PR #$PR_NUMBER"
+              continue
+            fi
+
+            echo "  ⚠️ Rebase failed: $OUTPUT"
+            echo "  Waiting 5s and retrying rebase..."
+            sleep 5
+
+            if OUTPUT=$(gh pr update-branch "$PR_NUMBER" --rebase 2>&1); then
+              echo "  ✅ Successfully rebased PR #$PR_NUMBER (retry)"
+              continue
+            fi
+
+            echo "  ⚠️ Rebase retry failed: $OUTPUT"
+            echo "  Falling back to merge..."
+
+            if OUTPUT=$(gh pr update-branch "$PR_NUMBER" 2>&1); then
+              echo "  ✅ Successfully updated PR #$PR_NUMBER via merge"
+              continue
+            fi
+
+            echo "  ❌ Merge also failed: $OUTPUT"
+            FAILED_PRS+=("$PR_NUMBER")
+
           done <<< "$DEPENDABOT_PRS"
+
+          echo ""
+          echo "========================================"
+          if [ ${#FAILED_PRS[@]} -gt 0 ]; then
+            echo "❌ Failed to update the following PRs: ${FAILED_PRS[*]}"
+            exit 1
+          else
+            echo "✅ All PRs processed successfully"
+            exit 0
+          fi
