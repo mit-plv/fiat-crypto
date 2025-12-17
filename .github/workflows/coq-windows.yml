@@ -79,28 +79,28 @@ jobs:
       shell: pwsh
       if: failure()
     - name: upload generated timing files
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: timing-files-windows
         path: timing-files.zip
       if: failure()
     - name: upload OCaml files
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
     - name: upload js_of_ocaml files
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: ExtractionJsOfOCaml
         path: src/ExtractionJsOfOCaml
     - name: upload standalone files
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: standalone-windows
         path: dist/fiat_crypto.exe
     - name: upload standalone js files
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: standalone-html-windows
         path: fiat-html
@@ -117,7 +117,7 @@ jobs:
       run: etc/ci/github-actions-display-per-line-timing.sh
       shell: bash
 #    - name: upload timing and .vo info
-#      uses: actions/upload-artifact@v5
+#      uses: actions/upload-artifact@v6
 #      with:
 #        name: build-outputs
 #        path: .
