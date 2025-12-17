@@ -85,17 +85,6 @@ jobs:
         name: ExtractionHaskell-source-${{ matrix.env.COQ_VERSION }}
         path: src/ExtractionHaskell
       if: always ()
-    - name: Clean up extracted source files to free disk space
-      run: |
-        echo "=== Disk space before cleanup ==="
-        df -h
-        echo ""
-        echo "=== Removing large extraction directories ==="
-        du -sh src/ExtractionOCaml src/ExtractionJsOfOCaml src/ExtractionHaskell || true
-        rm -rf src/ExtractionOCaml src/ExtractionJsOfOCaml src/ExtractionHaskell
-        echo ""
-        echo "=== Disk space after cleanup ==="
-        df -h
     - name: install-standalone-unified-ocaml
       run: make -f Makefile.standalone install-standalone-unified-ocaml BINDIR=dist
     - name: upload standalone files
@@ -170,24 +159,35 @@ jobs:
         echo "=== Top 20 largest directories in /home/runner ==="
         du -h --max-depth=2 /home/runner | sort -hr | head -20
         echo ""
+        echo "=== Checking /home/runner/.rustup ==="
+        du -sh /home/runner/.rustup/* 2>/dev/null || echo "No rustup directory"
+        echo ""
+        echo "=== Checking /home/runner/actions-runner ==="
+        du -sh /home/runner/actions-runner/* 2>/dev/null || echo "No actions-runner directory"
+        echo ""
         echo "=== Docker images ==="
         docker images
         echo ""
         echo "=== Docker system df ==="
         docker system df -v
-    - name: Clean up additional files before docker save
+        echo ""
+        echo "=== Checking /dev/sdb1 mount and permissions ==="
+        mount | grep sdb1 || echo "sdb1 not mounted"
+        ls -ld /mnt 2>/dev/null || echo "Cannot access /mnt"
+        touch /mnt/test-write-permissions 2>/dev/null && rm /mnt/test-write-permissions && echo "Can write to /mnt" || echo "Cannot write to /mnt"
+    - name: Clean up system files before docker save
       run: |
-        echo "=== Final cleanup before docker save ==="
+        echo "=== Cleanup before docker save ==="
         echo "=== Disk space before cleanup ==="
         df -h
         echo ""
-        echo "=== Removing rupicola and rewriter build artifacts ==="
-        du -sh rupicola rewriter || true
-        rm -rf rupicola rewriter
+        echo "=== Removing rustup toolchains ==="
+        du -sh /home/runner/.rustup 2>/dev/null || true
+        rm -rf /home/runner/.rustup
         echo ""
-        echo "=== Removing dist directory ==="
-        du -sh dist || true
-        rm -rf dist
+        echo "=== Removing actions-runner cached files ==="
+        du -sh /home/runner/actions-runner/cached 2>/dev/null || true
+        rm -rf /home/runner/actions-runner/cached
         echo ""
         echo "=== Disk space after cleanup ==="
         df -h
