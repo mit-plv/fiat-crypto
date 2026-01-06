@@ -23,8 +23,28 @@ Import Stringification.Language.Compilers.ToString.
 Import Stringification.Language.Compilers.ToString.int.Notations.
 
 Module Rust.
-  Definition comment_module_header_block := List.map (fun line => "//! " ++ line)%string.
-  Definition comment_block := List.map (fun line => "/** " ++ line ++ " */")%string.
+  (* Wrap the whole module docstring in a preformatted text block. This
+     preserves formatting and avoids having the lines run together in one
+     paragraph. Also, the stringified expressions will contain square braces,
+     which need to be in a code block or be backslash-escaped, so they aren't
+     interpreted as links. *)
+  Definition comment_module_header_block (lines : list string) :=
+    ["//! ```text"%string]
+    ++ List.map (fun line => "//! " ++ line)%string lines
+    ++ ["//! ```"%string].
+
+  (* These docstrings above typedefs are either one or two lines. In docstrings
+     with two lines, the second line provides the bounds. We insert a blank line
+     between the two lines, to separate paragraphs and keep the summary short.
+     We also wrap the remainder in a preformatted text block, for the same
+     reasons as above. *)
+  Definition comment_block (lines : list string) :=
+    let lines := match lines with
+      | nil => nil
+      | cons one_line nil => cons one_line nil
+      | cons first_line rest => [first_line; ""%string; "```text"%string] ++ rest ++ ["```"%string]
+      end in
+    List.map (fun line => "/** " ++ line ++ " */")%string lines.
 
 
   (* Supported integer bitwidths *)
@@ -456,14 +476,19 @@ Module Rust.
     : (list string * ToString.ident_infos) + string :=
     match ExprOfPHOAS do_bounds_check e name_list inbounds intypedefs outtypedefs with
     | inl (indata, outdata, f) =>
-      inl (((List.map (fun s => if (String.length s =? 0)%nat then "///" else ("/// " ++ s))%string (comment indata outdata))
+      inl (((let lines := match (comment indata outdata) with
+                | nil => nil
+                | cons line nil => cons line nil
+                | cons summary (cons "" rest) => [summary; ""; "```text"] ++ removelast rest ++ ["```"; last rest ""]
+                | lines => lines end in
+              (List.map (fun s => if (String.length s =? 0)%nat then "///" else ("/// " ++ s))%string lines))
               ++ match input_bounds_to_string indata inbounds with
                  | nil => nil
-                 | ls => ["/// Input Bounds:"] ++ List.map (fun v => "///   " ++ v)%string ls
+                 | ls => ["/// ```text"; "/// Input Bounds:"] ++ List.map (fun v => "///   " ++ v)%string ls ++ ["/// ```"]
                  end
               ++ match bound_to_string outdata outbounds with
                  | nil => nil
-                 | ls => ["/// Output Bounds:"] ++ List.map (fun v => "///   " ++ v)%string ls
+                 | ls => ["/// ```text"; "/// Output Bounds:"] ++ List.map (fun v => "///   " ++ v)%string ls ++ ["/// ```"]
                  end
               ++ to_function_lines internal_private private all_private inline prefix name (indata, outdata, f))%list%string,
            IR.ident_infos.collect_all_infos f intypedefs outtypedefs)
