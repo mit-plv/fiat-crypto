@@ -650,7 +650,7 @@ Ltac nth_tac' :=
     | [ H: None = Some _  |- _ ] => inversion H
     | [ H: Some _ = None |- _ ] => inversion H
     | [ |- Some _ = Some _ ] => apply f_equal
-  end); eauto; try (autorewrite with list in *); try lia; eauto.
+  end); eauto; try (autorewrite with list in * ); try lia; eauto.
 Lemma nth_error_map {A B f n l}
   : nth_error (@map A B f l) n = option_map f (nth_error l n).
 Proof. revert n; induction l, n; nth_tac'. Qed.

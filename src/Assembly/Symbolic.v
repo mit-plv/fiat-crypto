@@ -4211,8 +4211,8 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
     v <- Symeval (selectznz@(ZF, src, dst));
     SetOperand dst v
   | seto, [dst] =>
-    of <- GetFlag OF;
-    SetOperand dst of
+    from <- GetFlag OF;
+    SetOperand dst from
   | setc, [dst] =>
     cf <- GetFlag CF;
     SetOperand dst cf
