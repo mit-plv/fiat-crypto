@@ -35,7 +35,7 @@ Tactic Notation "tc_rewrite" "(" open_constr(tag) ")" open_constr(from) "->" "in
 Tactic Notation "tc_rewrite" "(" open_constr(tag) ")" open_constr(from) "->" "in" hyp_list(H) :=
   typeclass_do_left_to_right tag from ltac:(fun lem => rewrite -> lem in H).
 Tactic Notation "tc_rewrite" "(" open_constr(tag) ")" open_constr(from) "->" "in" hyp_list(H) "|-" "*" :=
-  typeclass_do_left_to_right tag from ltac:(fun lem => rewrite -> lem in H |- *).
+  typeclass_do_left_to_right tag from ltac:(fun lem => rewrite -> lem in H |- * ).
 Tactic Notation "tc_rewrite" "(" open_constr(tag) ")" open_constr(from) "->" "in" "*" "|-" "*" :=
   typeclass_do_left_to_right tag from ltac:(fun lem => rewrite -> lem in * |- * ).
 Tactic Notation "tc_rewrite" "(" open_constr(tag) ")" open_constr(from) "->" "in" "*" "|-" :=
@@ -49,7 +49,7 @@ Tactic Notation "tc_rewrite" "(" open_constr(tag) ")" "<-" open_constr(from) "in
 Tactic Notation "tc_rewrite" "(" open_constr(tag) ")" "<-" open_constr(from) "in" hyp_list(H) :=
   typeclass_do_right_to_left tag from ltac:(fun lem => rewrite <- lem in H).
 Tactic Notation "tc_rewrite" "(" open_constr(tag) ")" "<-" open_constr(from) "in" hyp_list(H) "|-" "*" :=
-  typeclass_do_right_to_left tag from ltac:(fun lem => rewrite <- lem in H |- *).
+  typeclass_do_right_to_left tag from ltac:(fun lem => rewrite <- lem in H |- * ).
 Tactic Notation "tc_rewrite" "(" open_constr(tag) ")" "<-" open_constr(from) "in" "*" "|-" "*" :=
   typeclass_do_right_to_left tag from ltac:(fun lem => rewrite <- lem in * |- * ).
 Tactic Notation "tc_rewrite" "(" open_constr(tag) ")" "<-" open_constr(from) "in" "*" "|-" :=
