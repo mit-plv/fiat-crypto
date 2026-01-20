@@ -12,6 +12,7 @@ Require Import bedrock2.WeakestPrecondition.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import bedrock2.ZnWords.
 Require Import coqutil.Byte.
+Require Import coqutil.Macros.symmetry.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Properties.
 Require Import coqutil.Map.OfListWord.
@@ -105,7 +106,7 @@ Section WithParameters.
   Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
-  Local Notation word := (Naive.word 64).
+  Local Notation word := (BasicC64Semantics.word).
   Local Notation felem := (felem(FieldRepresentation:=frep256k1)).
   Local Notation Wpoint := (WeierstrassCurve.W.point(F:=F M_pos)(Feq:=Logic.eq)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)).
   Local Notation Wzero := (WeierstrassCurve.W.zero(F:=F M_pos)(Feq:=Logic.eq)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)).
@@ -133,11 +134,45 @@ Section WithParameters.
   Local Arguments word.unsigned : simpl never.
   Local Arguments word.of_Z : simpl never.
 
-  Local Ltac solve_mem :=
+  Local Ltac solve_length :=
+    try lia;
+    match goal with
+      | |- Datatypes.length _ = _ =>
+        rewrite ?ws2bs_felem_length, ?felem_length; try eapply felem_length;
+        try lia; change felem_size_in_bytes with 32 in *; try lia
+    end.
+
+  (* solve_mem may try to call ecancel assumption or do matching on non separation logic goals, which
+    can be quite slow in this file. This tactic prevents it.*)
+  Ltac ensure_memory_goal :=
+    match goal with
+      | |- ?G ?m =>
+        lazymatch type of G with | _ -> Prop => idtac | _ => fail end;
+        lazymatch type of m with | @map.rep _ _ _ => idtac | _ => fail end
+    end.
+
+  (* This is mainly to keep clean ifs and back and forth conversions between felem and lists of
+    words as used by rupicola. *)
+  Ltac simplify_mem_hyps :=
+    rewrite ?ws2felem_felem_to_list, ?felem_to_list_ws2felem in *; try solve_length;
     repeat match goal with
+      | H: context [if ?P then felem_to_list ?x1 else felem_to_list ?x2] |- _ =>
+          replace (if P then felem_to_list x1 else felem_to_list x2) with
+                  (felem_to_list (if P then x1 else x2)) in H; [| destruct P; exact eq_refl]
+    end.
+
+  Local Ltac solve_mem :=
+    simplify_mem_hyps;
+    try match goal with
       | |- exists _ : _ -> Prop, _%sep _ => eexists
-      | |- _%sep _ => ecancel_assumption_impl
-      end.
+    end;
+    ensure_memory_goal;
+    repeat match goal with
+      | H: ?P%sep ?m |- ?G%sep ?m => progress ecancel_assumption_preprocess_with solve_length; simplify_mem_hyps
+      | |- _%sep _ => ecancel_assumption
+    end.
+
+  Local Ltac solve_dealloc := dealloc_preprocess; repeat straightline.
 
   Local Ltac cbv_bounds H :=
     cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_outbounds bin_outbounds] in H;
@@ -148,18 +183,8 @@ Section WithParameters.
       | H: bounded_by _ ?x |- bounded_by _ ?x => apply H
       end.
 
-  Local Ltac solve_stack :=
-    (* Rewrites the `stack$@a` term in H to use a Bignum instead *)
-    match goal with
-    | H: _%sep ?m |- (Bignum.Bignum felem_size_in_words ?a _ * _)%sep ?m =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H
-    end;
-    [> transitivity 32%nat; trivial | ];
-    (* proves the memory matches up *)
-    use_sep_assumption; cancel; cancel_seps_at_indices 0%nat 0%nat; cbn; [> trivial | eapply RelationClasses.reflexivity].
-
   Local Ltac single_step :=
-    repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_stack.
+    repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds.
 
   Local Instance spec_of_laddermul : spec_of "secp256k1_laddermul" :=
     fnspec! "secp256k1_laddermul"
@@ -177,14 +202,14 @@ Section WithParameters.
         t = t' /\
         match proj1_sig (ScalarMult.joye_ladder scalarbitsz (Z.testbit k) P HPnz) with
         | inl (X', Y') =>
-            exists OX' OY',
+            exists (OX' OY' : felem),
               X' = (feval OX') /\ Y' = (feval OY') /\
               bounded_by tight_bounds OX' /\
               bounded_by tight_bounds OY' /\
               m' =* (FElem OXptr OX') * (FElem OYptr OY') * kbytes$@kptr *
                     (FElem Xptr X) * (FElem Yptr Y) * R
         | _ => (* result is point at infinity *)
-            exists OX' OY',
+            exists (OX' OY' : felem),
               0%F = (feval OX') /\ 0%F = (feval OY') /\
               m' =* (FElem OXptr OX') * (FElem OYptr OY') * kbytes$@kptr *
                     (FElem Xptr X) * (FElem Yptr Y) * R
@@ -461,8 +486,8 @@ Section WithParameters.
     repeat straightline.
     straightline_call; ssplit.
     destruct (xorb _ _); simpl; auto.
-    rewrite <- Bignum_as_array. unfold FElem in Hmem.
-    ecancel_assumption_impl. repeat straightline.
+    solve_mem.
+    repeat straightline.
     eexists. split. repeat straightline.
     eexists; split. apply map.get_put_same.
     repeat straightline. eexists; split.
@@ -475,20 +500,16 @@ Section WithParameters.
     cbv [dlet.dlet] in H26.
     straightline_call; ssplit.
     destruct (xorb _ _); auto.
-    rewrite <- Bignum_as_array. ecancel_assumption_impl.
+    solve_mem.
     repeat straightline.
     cbv [dlet.dlet] in H27.
-    assert (Hlen: forall ptr v m R, (FElem ptr v * R)%sep m -> Datatypes.length v = felem_size_in_words).
-    { unfold FElem. rewrite Bignum_as_array.
-      intros * XX. apply Arrays.length_of_sizedlistarray_value_R in XX. exact XX. }
-    repeat rewrite cswap_low_combine_eq in H27 by (repeat erewrite Hlen by ecancel_assumption; reflexivity).
+    repeat rewrite cswap_low_combine_eq in H27 by (repeat erewrite felem_length by ecancel_assumption; exact eq_refl).
     rewrite cswap_combine_eq in H27.
     2: destruct (xorb _ _); cbv; auto.
-    2-3: symmetry; eapply Hlen; ecancel_assumption.
+    2-3: symmetry; eapply felem_length; ecancel_assumption.
     rewrite cswap_combine_eq in H27.
     2: destruct (xorb _ _); cbv; auto.
-    2-3: symmetry; eapply Hlen; ecancel_assumption.
-    rewrite <- Bignum_as_array in H27.
+    2-3: symmetry; eapply felem_length; ecancel_assumption.
     repeat rewrite car_cswap, cdr_cswap in H27.
     rewrite word.unsigned_eqb, Core.word.unsigned_of_Z_b2z, word.unsigned_of_Z_1 in H27.
     assert (XY: forall bb, (Z.b2z bb =? 1) = bb) by (destruct bb; auto).
@@ -496,7 +517,8 @@ Section WithParameters.
     eexists; split.
     repeat (repeat straightline; eexists; split; [unfold l; repeat rewrite map.get_put_diff by congruence; rewrite Hloc' by congruence; eassumption|]).
     repeat straightline. straightline_call; ssplit.
-    8: unfold FElem; ecancel_assumption_impl.
+    8: { solve_mem. }
+    all: rewrite ?felem_to_list_ws2felem; try solve_length.
     instantiate (1 := if xorb (snd (fst iter_res)) (Z.testbit k vi) then R0' else R1').
     destruct (xorb _ _); [exact Hproj0|exact Hproj1].
     instantiate (1 := if xorb (snd (fst iter_res)) (Z.testbit k vi) then R1' else R0').
@@ -568,30 +590,9 @@ Section WithParameters.
 
     repeat straightline.
     single_step.
-    instantiate (3 := Jacobian.of_affine P).
+    instantiate (1 := Jacobian.of_affine P).
     unfold Jacobian.of_affine, Jacobian.of_affine_impl, WeierstrassCurve.W.coordinates.
     cbn [proj1_sig]. rewrite H15. eexists. reflexivity.
-    1-2: solve_bounds.
-    repeat match goal with
-    | H: context [Array.array ptsto _ ?a _] |- context [FElem ?a _] =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H; [trivial|]
-    end.
-    multimatch goal with
-    | |- _ ?m1 =>
-        multimatch goal with
-        | H:_ ?m2
-          |- _ =>
-            syntactic_unify._syntactic_unify_deltavar m1 m2;
-            refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
-        end
-    end.
-    cbv [FElem].
-    cancel. cancel_seps_at_indices 0%nat 4%nat; [reflexivity|].
-    cancel_seps_at_indices 0%nat 3%nat; [reflexivity|].
-    cancel_seps_at_indices 0%nat 2%nat; [reflexivity|].
-    cancel_seps_at_indices 0%nat 1%nat; [reflexivity|].
-    cancel_seps_at_indices 0%nat 0%nat; [reflexivity|].
-    ecancel.
 
     repeat straightline.
     instantiate (1:=HPaff) in H48.
@@ -612,37 +613,31 @@ Section WithParameters.
     eexists; ssplit; [unfold loc'0; repeat rewrite map.get_put_diff by congruence; rewrite H46|]; repeat straightline. congruence.
 
     single_step. rewrite Core.word.b2w_if; destruct vswap; auto.
-    rewrite <- Bignum_as_array. unfold FElem in H56. ecancel_assumption_impl.
-    repeat straightline. red in H64.
-    assert (Hlen: forall ptr v m R, (FElem ptr v * R)%sep m -> Datatypes.length v = felem_size_in_words).
-    { unfold FElem. rewrite Bignum_as_array.
-      intros * XX. apply Arrays.length_of_sizedlistarray_value_R in XX. exact XX. }
-    rewrite cswap_low_combine_eq in H64 by (repeat erewrite Hlen by ecancel_assumption; reflexivity).
+    repeat straightline.
+    red in H64.
+    rewrite cswap_low_combine_eq in H64 by (repeat erewrite felem_length by ecancel_assumption; exact eq_refl).
     rewrite cswap_combine_eq in H64.
     2: destruct vswap; cbv; auto.
-    2-3: symmetry; eapply Hlen; ecancel_assumption.
+    2-3: symmetry; eapply felem_length; ecancel_assumption.
     repeat rewrite car_cswap, cdr_cswap in H64.
     rewrite word.unsigned_eqb, Core.word.unsigned_b2w, word.unsigned_of_Z_1 in H64.
     assert (XY: forall bb, (Z.b2z bb =? 1) = bb) by (destruct bb; auto).
     rewrite XY in H64; clear XY.
-    rewrite <- Bignum_as_array in H64.
     eexists; ssplit. repeat straightline.
     eexists; ssplit; [unfold loc'0; repeat rewrite map.get_put_diff by congruence; apply map.get_put_same|repeat straightline].
     eexists; ssplit; [unfold loc'0; repeat rewrite map.get_put_diff by congruence; rewrite H46|]; repeat straightline. congruence.
     eexists; ssplit; [unfold loc'0; repeat rewrite map.get_put_diff by congruence; rewrite H46|]; repeat straightline. congruence.
 
     single_step. rewrite Core.word.b2w_if; destruct vswap; auto.
-    rewrite <- Bignum_as_array. ecancel_assumption_impl.
     repeat straightline. red in H65.
-    rewrite cswap_low_combine_eq in H65 by (repeat erewrite Hlen by ecancel_assumption; reflexivity).
+    rewrite cswap_low_combine_eq in H65 by (repeat erewrite felem_length by ecancel_assumption; reflexivity).
     rewrite cswap_combine_eq in H65.
     2: destruct vswap; cbv; auto.
-    2-3: symmetry; eapply Hlen; ecancel_assumption.
+    2-3: symmetry; eapply felem_length; ecancel_assumption.
     repeat rewrite car_cswap, cdr_cswap in H65.
     rewrite word.unsigned_eqb, Core.word.unsigned_b2w, word.unsigned_of_Z_1 in H65.
     assert (XY: forall bb, (Z.b2z bb =? 1) = bb) by (destruct bb; auto).
     rewrite XY in H65; clear XY.
-    rewrite <- Bignum_as_array in H65.
     eexists; ssplit. repeat straightline.
     eexists; ssplit. unfold l9. rewrite map.get_put_diff by congruence.
     apply map.get_put_same. repeat straightline.
@@ -662,33 +657,13 @@ Section WithParameters.
     single_step.
     exists (if vswap then feval x8 else feval x6).
     exists (if vswap then feval x9 else feval x7).
-    instantiate (2:=if vswap then R1' else R0').
+    instantiate (1:=if vswap then R1' else R0').
     destruct (vswap); [exact H68|exact H62].
-    exists 1%F. instantiate (3:=Jacobian.of_affine P).
+    exists 1%F. instantiate (1:=Jacobian.of_affine P).
     unfold Jacobian.of_affine, WeierstrassCurve.W.coordinates.
     cbv [proj1_sig].
     assert (proj1_sig P = (let (xyi, _) := P in xyi)) as <- by (destruct P; reflexivity).
-    rewrite H15. reflexivity.
-    1-3:solve_bounds.
-    repeat match goal with
-    | H: context [Array.array ptsto _ ?a _] |- context [FElem ?a _] =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H; [trivial|]
-    end.
-    multimatch goal with
-    | |- _ ?m1 =>
-        multimatch goal with
-        | H:_ ?m2
-          |- _ =>
-            syntactic_unify._syntactic_unify_deltavar m1 m2;
-            refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
-        end
-    end.
-    cancel. cancel_seps_at_indices 0%nat 1%nat; [reflexivity|].
-    cancel_seps_at_indices 0%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 6%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 6%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 5%nat 0%nat; [reflexivity|].
-    ecancel.
+    rewrite H15. exact eq_refl.
     instantiate (1:=HPaff) in H73.
     repeat straightline.
 
@@ -712,7 +687,7 @@ Section WithParameters.
     { unfold Jacobian.co_z, Jacobian.z_of, Jacobian.opp.
       cbv [proj1_sig] in *. rewrite H75.
       destruct vswap; [rewrite H68|rewrite H62]; reflexivity. }
-    single_step.
+    straightline_call; ssplit.
     instantiate (1:=x10).
     instantiate (1:=if vswap then x9 else x7).
     instantiate (1:=if vswap then x8 else x6).
@@ -726,27 +701,7 @@ Section WithParameters.
     rewrite H79. reflexivity.
     1-2: destruct vswap; solve_bounds.
     1-3: solve_bounds.
-    repeat match goal with
-    | H: context [Array.array ptsto _ ?a _] |- context [FElem ?a _] =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H; [trivial|]
-    end.
-    multimatch goal with
-    | |- _ ?m1 =>
-        multimatch goal with
-        | H:_ ?m2
-          |- _ =>
-            syntactic_unify._syntactic_unify_deltavar m1 m2;
-            refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
-        end
-    end. fold FElem in *.
-    cancel. cancel_seps_at_indices 8%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 8%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 6%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 4%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 0%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 3%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 2%nat 0%nat; [reflexivity|].
-    ecancel.
+    solve_mem.
     instantiate (1:=Hzaddu_ob) in H73.
     repeat first [match goal with | |- cmd _ bedrock_func_body:($_ = load1(coq:(expr.var "k") + coq:(expr.var "i") >> coq:(expr.literal 3)) >> (coq:(expr.var "i") & coq:(expr.literal 7)) & coq:(expr.literal 1)) _ _ _ _ => idtac end |straightline].
     eapply spec_of_testbit; try reflexivity; try ecancel_assumption_impl; try lia.
@@ -767,14 +722,11 @@ Section WithParameters.
     rewrite H18.
     single_step.
     rewrite Core.word.b2w_if; destruct (Z.testbit k 0); auto.
-    rewrite <- Bignum_as_array.
-    unfold FElem in H89. ecancel_assumption_impl.
     repeat straightline. red in H90.
-    rewrite <- Bignum_as_array in H90.
-    rewrite cswap_low_combine_eq in H90 by (repeat erewrite Hlen by ecancel_assumption_impl; reflexivity).
+    rewrite cswap_low_combine_eq in H90 by (repeat erewrite felem_length by ecancel_assumption_impl;  reflexivity).
     rewrite cswap_combine_eq in H90.
     2: destruct (Z.testbit k 0); cbv; auto.
-    2-3: symmetry; eapply Hlen; ecancel_assumption_impl.
+    2-3: symmetry; eapply felem_length; ecancel_assumption_impl.
     repeat rewrite car_cswap, cdr_cswap in H90.
     rewrite word.unsigned_eqb, Core.word.unsigned_b2w, word.unsigned_of_Z_1 in H90.
     assert (XY: forall bb, (Z.b2z bb =? 1) = bb) by (destruct bb; auto).
@@ -791,14 +743,11 @@ Section WithParameters.
     rewrite H18.
     single_step.
     destruct (Z.testbit k 0); cbv; auto.
-    rewrite <- Bignum_as_array.
-    unfold FElem in H90. ecancel_assumption_impl.
     repeat straightline. red in H91.
-    rewrite <- Bignum_as_array in H91.
-    rewrite cswap_low_combine_eq in H91 by (repeat erewrite Hlen by ecancel_assumption_impl; reflexivity).
+    rewrite cswap_low_combine_eq in H91 by (repeat erewrite felem_length by ecancel_assumption_impl; reflexivity).
     rewrite cswap_combine_eq in H91.
     2: destruct (Z.testbit k 0); cbv; auto.
-    2-3: symmetry; eapply Hlen; ecancel_assumption_impl.
+    2-3: symmetry; eapply felem_length; ecancel_assumption_impl.
     repeat rewrite car_cswap, cdr_cswap in H91.
     rewrite word.unsigned_eqb, Core.word.unsigned_b2w, word.unsigned_of_Z_1 in H91.
     assert (XY: forall bb, (Z.b2z bb =? 1) = bb) by (destruct bb; auto).
@@ -812,8 +761,7 @@ Section WithParameters.
     rewrite H46 by congruence. reflexivity.
     repeat straightline.
     single_step.
-    3: { fold FElem in H91. ecancel_assumption_impl. }
-    reflexivity. solve_bounds.
+    reflexivity.
     repeat straightline.
     eexists; ssplit. repeat straightline. eexists; ssplit.
     unfold loc'1, l10, l9, l8, loc'0. repeat (rewrite map.get_put_diff by congruence).
@@ -825,6 +773,7 @@ Section WithParameters.
     unfold loc'1, l10, l9, l8, loc'0. repeat (rewrite map.get_put_diff by congruence).
     rewrite H46 by congruence. reflexivity.
     repeat straightline.
+    repeat seprewrite_in (symmetry! felem_to_sizedlistarray) H94.
     single_step.
     destruct (Z.testbit k 0); solve_bounds.
     repeat straightline.
@@ -837,7 +786,6 @@ Section WithParameters.
     eexists; ssplit. repeat straightline.
     repeat (eexists; ssplit; [unfold loc'1, l10, l9, l8, loc'0; repeat (rewrite map.get_put_diff by congruence); rewrite H46 by congruence; reflexivity|]; repeat straightline).
     cbv [bin_model bin_mul] in H98.
-
     single_step.
     destruct (Z.testbit k 0); solve_bounds.
     repeat straightline.
@@ -849,16 +797,7 @@ Section WithParameters.
     repeat straightline.
     cbv [bin_model bin_mul] in H104.
 
-    cbv [FElem Field.FElem] in *.
-    repeat match goal with
-    | |- context [anybytes ?a _ _] =>
-        match goal with
-        | H: _ ?a' |- context [map.split ?a' _ _] =>
-            seprewrite_in (@Bignum.Bignum_to_bytes _ _ _ _ _ _ felem_size_in_words a) H
-        end
-    end.
-    extract_ex1_and_emp_in H106.
-    repeat straightline.
+    solve_dealloc.
 
     unfold ScalarMult.joye_ladder.
     unfold ScalarMult.joye_ladder_inner.

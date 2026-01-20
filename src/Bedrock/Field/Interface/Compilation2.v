@@ -1,5 +1,6 @@
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Alloc.
+Require Import coqutil.Macros.symmetry.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Local Open Scope Z_scope.
@@ -24,7 +25,7 @@ Section Compile.
 
   (* TODO: Replace uses of the old FElem with this? *)
   Definition FElem mbounds ptr v :=
-    (Lift1Prop.ex1 (fun v' => (emp (feval v' = v /\ maybe_bounded mbounds v') * FElem ptr v')%sep)).
+    (Lift1Prop.ex1 (fun v' : felem => (emp (feval v' = v /\ maybe_bounded mbounds v') * FElem ptr v')%sep)).
 
   Lemma drop_bounds_FElem x_ptr x bounds
     : Lift1Prop.impl1 (FElem bounds x_ptr x)
@@ -48,38 +49,6 @@ Section Compile.
     sepsimpl; simpl in *; eauto using relax_bounds.
   Qed.
 
-  Lemma FElem'_iff_bytes
-    : forall px : word.rep,
-      Lift1Prop.iff1 (Lift1Prop.ex1 (Placeholder px)) (Lift1Prop.ex1 (FElem None px)).
-  Proof using field_representation_ok mem_ok word_ok.
-    unfold FElem.
-    intros.
-    split; intros.
-    {
-      destruct H as [bs H].
-      apply Placeholder_impl_FElem_bytes in H.
-      do 2 eexists.
-      sepsimpl; simpl; eauto.
-    }
-    {
-      destruct H as [ws [? H]].
-      sepsimpl.
-      eexists.
-      eapply FElem_impl_Placeholder; eauto.
-    }
-  Qed.
-
-  Lemma FElem'_to_bytes
-    : forall bounds px x,
-      Lift1Prop.impl1 (FElem bounds px x) (Lift1Prop.ex1 (Placeholder px)).
-  Proof.
-    intros. cbv [FElem]. intros m [f F].
-    extract_ex1_and_emp_in F.
-    sepsimpl.
-    eexists. eapply FElem_impl_Placeholder.
-    eassumption.
-  Qed.
-
   #[refine]
    Instance felem_alloc : Allocable (FElem None) :=
     {|
@@ -88,21 +57,27 @@ Section Compile.
     |}.
   Proof.
     {
+      pose proof Types.word_size_in_bytes_pos as HT.
       intros; intros m H.
-      apply FElem'_to_bytes in H.
-      cbv[Placeholder] in *.
-      sepsimpl.
-      eexists.
-      pose felem_size_ok.
-      ssplit; try eassumption.
-      lia.
+      cbv [FElem anybytes] in *. sepsimpl.
+      seprewrite_in felem_to_bytes H0.
+      eexists; ssplit; sepsimpl. use_sep_assumption. cancel.
+      cancel_seps_at_indices 0%nat 0%nat. reflexivity. cancel.
+      rewrite ws2bs_felem_length; trivial.
+      cbv [felem_size_in_bytes]. lia.
+      apply ws2bs_felem_width.
     }
     {
       intros; intros m H.
-      apply FElem'_iff_bytes.
-      cbv [Memory.anybytes Placeholder] in *. sepsimpl.
-      eexists; try eassumption.
-      sepsimpl; try eassumption.
+      cbv [FElem anybytes] in *. sepsimpl.
+      eexists. eexists. sepsimpl.
+      3: {
+        SeparationLogic.seprewrite (symmetry! (felem_from_bytes px x)).
+        lia.
+        sepsimpl. rewrite H. reflexivity. trivial.
+      }
+      reflexivity.
+      cbv [maybe_bounded]. trivial.
     }
   Defined.
 
@@ -157,6 +132,7 @@ Section Compile.
     unfold FElem in *.
     sepsimpl.
     prove_field_compilation.
+    rewrite ws2bs_felem_length. lia.
     apply H6.
 
     eapply Proper_sep_impl1; eauto.
@@ -202,6 +178,7 @@ Section Compile.
     unfold FElem in *.
     sepsimpl.
     prove_field_compilation.
+    rewrite ws2bs_felem_length. lia.
     apply H4.
 
     eapply Proper_sep_impl1; eauto.
@@ -282,6 +259,7 @@ Section Compile.
     unfold FElem in *.
     sepsimpl.
     prove_field_compilation.
+    rewrite ws2bs_felem_length. lia.
     apply H3.
 
     extract_ex1_and_emp_in_goal; ssplit; eauto.
@@ -324,6 +302,7 @@ Section Compile.
     unfold FElem in *.
     extract_ex1_and_emp_in H1.
     prove_field_compilation.
+    rewrite ws2bs_felem_length. lia.
     match goal with H : _ |- _ => rewrite word.of_Z_unsigned in H end.
     apply H3.
     extract_ex1_and_emp_in_goal; ssplit; eauto.

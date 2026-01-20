@@ -539,19 +539,6 @@ Section __.
     lia.
   Qed.
 
-  Lemma Bignum_as_array
-    : @Bignum.Bignum width word _ = sizedlistarray_value AccessWord.
-  Proof using field_representaton.
-    unfold Bignum.Bignum, sizedlistarray_value.
-    unfold listarray_value.
-    simpl.
-    rewrite Z2Nat.id.
-    reflexivity.
-    unfold bytes_per_word.
-    pose proof z_lt_width.
-    apply Z.div_pos; try lia.
-  Qed.
-
     Lemma compile_felem_cswap {tr m l functions} swap (lhs rhs : F M_pos) :
       let v := cswap swap lhs rhs in
       forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
@@ -584,14 +571,15 @@ Section __.
           k_impl
         <{ pred (nlet_eq [lhs_var; rhs_var] v k) }>.
   Proof using ext_spec_ok locals_ok mem_ok word_ok.
-    unfold FElem, Field.FElem.
-    rewrite !Bignum_as_array.
+    unfold FElem.
+    rewrite !FElem_as_array.
     repeat straightline' locals.
     sepsimpl.
     straightline_call.
     ssplit.
     { destruct swap; simpl; intuition fail. }
-    ecancel_assumption.
+    unfold sizedlistarray_value.
+    sepsimpl; try ecancel_assumption; try apply felem_length.
     repeat straightline' l.
     apply H4.
     sepsimpl.
@@ -614,10 +602,7 @@ Section __.
             /\ felem_size_in_words = length x0).
     {
       clear H11 H4 a0.
-      unfold sizedlistarray_value in H7; sepsimpl; auto.
-      seprewrite_in (sep_emp_2 R) H7.
-      sepsimpl.
-      auto.
+      auto using felem_length.
     }
     destruct H9.
     rewrite cswap_combine_eq in H11;
@@ -625,9 +610,9 @@ Section __.
       try solve [destruct swap; intuition congruence];[].
     replace ((word.eqb (word.of_Z (Z.b2z swap)) (word.of_Z 1))) with swap in H11.
     unfold dlet in H11.
-    use_sep_assumption.
-    cancel.
-    apply sep_comm.
+    destruct x, x0, swap;
+    cbv [sizedlistarray_value felem_to_list proj1_sig cswap] in *;
+    sepsimpl; simpl; ecancel_assumption.
     {
       destruct swap; simpl;
         [ rewrite word.eqb_eq | rewrite word.eqb_ne ];
@@ -638,26 +623,7 @@ Section __.
       rewrite word.unsigned_of_Z_0 in H13.
       lia.
     }
-    {
-      assert (Datatypes.length x0 = felem_size_in_words) as Heqsz;[|rewrite Heqsz; clear Heqsz].
-      {
-        revert H7.
-        unfold sizedlistarray_value.
-        intros; sepsimpl.
-        intuition.
-      }
-      assert (Datatypes.length x = felem_size_in_words) as Heqsz;[|apply Heqsz].
-      {
-        revert H7.
-        unfold sizedlistarray_value.
-        intros.
-        sepsimpl.
-        intuition.
-        repeat destruct H9 as [? H9].
-        sepsimpl.
-        assumption.
-      }
-    }
+    rewrite !felem_length; reflexivity.
   Qed.
   Hint Resolve compile_felem_cswap : compiler.
 

@@ -549,7 +549,7 @@ Qed.
       handle_side_conditions; [ apply valid_max_bounds | apply valid_length | | | ].
     { (* output length *)
       cbv [list_in_bounds WordByWordMontgomery.valid WordByWordMontgomery.small ] in *.
-      intuition idtac. rewrite H5. rewrite Partition.length_partition; trivial. }
+      intuition idtac. rewrite H6. rewrite Partition.length_partition; trivial. }
 
     { (* output *value* is correct *)
     intros. cbv [feval]. simpl. cbv [Representation.eval_words]. simpl.

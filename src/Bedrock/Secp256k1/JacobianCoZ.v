@@ -250,7 +250,7 @@ Section WithParameters.
   Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
-  Local Notation word := (Naive.word 64).
+  Local Notation word := (BasicC64Semantics.word).
   Local Notation felem := (felem(FieldRepresentation:=frep256k1)).
   Local Notation point := (Jacobian.point(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
   Local Notation co_z := (Jacobian.co_z(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
@@ -297,7 +297,7 @@ Section WithParameters.
              (FElem XK X) * (FElem YK Y) * (FElem ZK Z) * R;
       ensures t' m' :=
         t = t' /\
-        exists OX' OY' OZ',
+        exists (OX' OY' OZ' : felem),
         proj1_sig (jopp P) = ((feval OX'), (feval OY'), (feval OZ')) /\
         bounded_by tight_bounds OX' /\
         bounded_by tight_bounds OY' /\
@@ -320,7 +320,7 @@ Section WithParameters.
              (FElem XK X) * (FElem YK Y) * (FElem ZK Z) * R;
       ensures t' m' :=
         t = t' /\
-        exists OX' OY',
+        exists (OX' OY' : felem),
         proj1_sig (snd (make_co_z P Q HQaff)) = ((feval OX'), (feval OY'), (feval Z)) /\
         bounded_by tight_bounds OX' /\
         bounded_by tight_bounds OY' /\
@@ -347,7 +347,7 @@ Section WithParameters.
              (FElem X2K X2) * (FElem Y2K Y2) * (FElem ZK Z) * R;
       ensures t' m' :=
         t = t' /\
-        exists OX1' OY1' OX2' OY2' OZ',
+        exists (OX1' OY1' OX2' OY2' OZ' : felem),
         proj1_sig (fst (zaddu P Q HPQ)) = ((feval OX1'), (feval OY1'), (feval OZ')) /\
         proj1_sig (snd (zaddu P Q HPQ)) = ((feval OX2'), (feval OY2'), (feval OZ')) /\
         bounded_by tight_bounds OX1' /\
@@ -380,7 +380,7 @@ Section WithParameters.
              (FElem X2K X2) * (FElem Y2K Y2) * (FElem ZK Z) * R;
       ensures t' m' :=
         t = t' /\
-        exists OX1' OY1' OX2' OY2' OZ',
+        exists (OX1' OY1' OX2' OY2' OZ' : felem),
         proj1_sig (fst (zaddc P Q HPQ)) = ((feval OX1'), (feval OY1'), (feval OZ')) /\
         proj1_sig (snd (zaddc P Q HPQ)) = ((feval OX2'), (feval OY2'), (feval OZ')) /\
         bounded_by tight_bounds OX1' /\
@@ -408,7 +408,7 @@ Section WithParameters.
              (FElem X1K X1) * (FElem Y1K Y1) * R;
       ensures t' m' :=
         t = t' /\
-        exists OX1' OY1' OX2' OY2' OZ',
+        exists (OX1' OY1' OX2' OY2' OZ' : felem),
         proj1_sig (fst (dblu P HPaff)) = ((feval OX1'), (feval OY1'), (feval OZ')) /\
         proj1_sig (snd (dblu P HPaff)) = ((feval OX2'), (feval OY2'), (feval OZ')) /\
         bounded_by tight_bounds OX1' /\
@@ -435,7 +435,7 @@ Section WithParameters.
              (FElem X1K X1) * (FElem Y1K Y1) * R;
       ensures t' m' :=
         t = t' /\
-        exists OX1' OY1' OX2' OY2' OZ',
+        exists (OX1' OY1' OX2' OY2' OZ' : felem),
         proj1_sig (fst (tplu P HPaff)) = ((feval OX1'), (feval OY1'), (feval OZ')) /\
         proj1_sig (snd (tplu P HPaff)) = ((feval OX2'), (feval OY2'), (feval OZ')) /\
         bounded_by tight_bounds OX1' /\
@@ -465,7 +465,7 @@ Section WithParameters.
              (FElem X2K X2) * (FElem Y2K Y2) * (FElem ZK Z) * R;
       ensures t' m' :=
         t = t' /\
-        exists OX1 OY1 OX2 OY2 OZ,
+        exists (OX1 OY1 OX2 OY2 OZ : felem),
         proj1_sig (fst (zdau P Q HPQ)) = ((feval OX1), (feval OY1), (feval OZ)) /\
         proj1_sig (snd (zdau P Q HPQ)) = ((feval OX2), (feval OY2), (feval OZ)) /\
         bounded_by tight_bounds OX1 /\
@@ -489,11 +489,31 @@ Section WithParameters.
   Local Arguments word.unsigned : simpl never.
   Local Arguments word.of_Z : simpl never.
 
+  Local Ltac solve_length :=
+    try lia;
+    match goal with
+      | |- Datatypes.length _ = _ =>
+        solve [rewrite ?ws2bs_felem_length; try lia; change felem_size_in_bytes with 32 in *; lia]
+    end.
+
+  (* solve_mem may try to call ecancel assumption or do matching on non separation logic goals, which
+    can be quite slow in this file. This tactic prevents it.*)
+  Ltac ensure_memory_goal :=
+    match goal with
+      | |- ?G ?m =>
+        lazymatch type of G with | _ -> Prop => idtac | _ => fail end;
+        lazymatch type of m with | @map.rep _ _ _ => idtac | _ => fail end
+    end.
+
   Local Ltac solve_mem :=
-    repeat match goal with
+    try match goal with
       | |- exists _ : _ -> Prop, _%sep _ => eexists
-      | |- _%sep _ => ecancel_assumption_impl
-      end.
+    end;
+    ensure_memory_goal;
+    repeat match goal with
+      | H: ?P%sep ?m |- ?G%sep ?m => progress ecancel_assumption_preprocess_with solve_length
+      | |- _%sep _ => ecancel_assumption
+    end.
 
   Local Ltac cbv_bounds H :=
     cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_outbounds bin_outbounds] in H;
@@ -502,21 +522,10 @@ Section WithParameters.
   Local Ltac solve_bounds :=
     match goal with
       | H: bounded_by _ ?x |- bounded_by _ ?x => apply H
-      end.
-
-  Local Ltac solve_stack :=
-    (* Rewrites the `stack$@a` term in H to use a Bignum instead *)
-    cbv [FElem];
-    match goal with
-    | H: _%sep ?m |- (Bignum.Bignum felem_size_in_words ?a _ * _)%sep ?m =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H
-    end;
-    [> transitivity 32%nat; trivial | ];
-    (* proves the memory matches up *)
-    use_sep_assumption; cancel; cancel_seps_at_indices 0%nat 0%nat; cbn; [> trivial | eapply RelationClasses.reflexivity].
+    end.
 
   Local Ltac single_step :=
-    repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_stack.
+    repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_length.
 
   Lemma secp256k1_jopp_ok : program_logic_goal_for_function! secp256k1_jopp.
   Proof.
@@ -543,17 +552,8 @@ Section WithParameters.
     do 4 single_step.
     repeat straightline.
 
-    cbv [FElem] in *.
-    match goal with
-    | |- context [anybytes ?a _ _] =>
-        match goal with
-        | H: _ ?a' |- context [map.split ?a' _ _] =>
-            seprewrite_in (@Bignum.Bignum_to_bytes _ _ _ _ _ _ felem_size_in_words a) H
-        end
-    end.
-    extract_ex1_and_emp_in H26.
+    dealloc_preprocess. repeat straightline.
 
-    repeat straightline.
     exists x3, x5; ssplit. 2-3:solve_bounds.
     cbv [bin_model bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_model un_square] in *.
     cbv match beta delta [make_co_z proj1_sig fst snd].
@@ -575,19 +575,9 @@ Section WithParameters.
     do 4 single_step.
 
     repeat straightline.
-    (* Rewrites the FElems for the stack to be about bytes instead *)
-    cbv [FElem] in *.
-    repeat match goal with
-    | |- context [anybytes ?a _ _] =>
-        match goal with
-        | H: _ ?a' |- context [map.split ?a' _ _] =>
-            seprewrite_in (@Bignum.Bignum_to_bytes _ _ _ _ _ _ felem_size_in_words a) H
-        end
-    end.
-    extract_ex1_and_emp_in H92.
 
     (* Solve stack/memory stuff *)
-    repeat straightline.
+    dealloc_preprocess. repeat straightline.
 
     (* Post-conditions *)
     exists x7,x12,x2,x9,x0; ssplit. 3-7:solve_bounds.
@@ -609,17 +599,8 @@ Section WithParameters.
     do 4 single_step.
 
     repeat straightline.
-    cbv [FElem] in *.
-    repeat match goal with
-    | |- context [anybytes ?a _ _] =>
-        match goal with
-        | H: _ ?a' |- context [map.split ?a' _ _] =>
-            seprewrite_in (@Bignum.Bignum_to_bytes _ _ _ _ _ _ felem_size_in_words a) H
-        end
-    end.
-    extract_ex1_and_emp_in H140.
+    dealloc_preprocess. repeat straightline.
 
-    repeat straightline.
     exists x11,x23,x7,x19,x0; ssplit. 3-7:solve_bounds.
     1,2: cbv [bin_model bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_model un_square] in *.
     1,2: cbv match beta delta [zaddc proj1_sig fst snd].
@@ -636,17 +617,8 @@ Section WithParameters.
     repeat single_step.
 
     repeat straightline.
-    cbv [FElem] in *.
-    repeat match goal with
-    | |- context [anybytes ?a _ _] =>
-        match goal with
-        | H: _ ?a' |- context [map.split ?a' _ _] =>
-            seprewrite_in (@Bignum.Bignum_to_bytes _ _ _ _ _ _ felem_size_in_words a) H
-        end
-    end.
-    extract_ex1_and_emp_in H114.
+    dealloc_preprocess. repeat straightline.
 
-    repeat straightline.
     exists x13,x19,x8,x16,x0; ssplit. 3-7:solve_bounds.
     1,2: cbv [bin_model bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_model un_square] in *.
     1,2: cbv match beta delta [dblu proj1_sig fst snd].
@@ -664,46 +636,18 @@ Section WithParameters.
   Proof.
     Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
 
-    repeat straightline.
-    eapply Proper_call; cycle -1; [eapply H|try eabstract (solve [ Morphisms.solve_proper ])..]; [ .. | intros ? ? ? ? ].
-    ssplit; [eexists; eassumption|..]; try eassumption.
-    repeat match goal with
-    | H: context [array ptsto _ ?a _] |- context [FElem ?a _] =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H; [trivial|]
-    end.
-    multimatch goal with
-    | |- _ ?m1 =>
-        multimatch goal with
-        | H:_ ?m2
-          |- _ =>
-            syntactic_unify._syntactic_unify_deltavar m1 m2;
-            refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
-        end
-    end; cancel.
-    cancel_seps_at_indices 4%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 3%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 2%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 1%nat 0%nat; [reflexivity|].
-    cancel_seps_at_indices 0%nat 0%nat; [reflexivity|].
-    solve [ecancel].
+    single_step.
+    eexists.  eassumption.
+    Unshelve. 2: exact HPaff.
+    single_step.
+
+    instantiate (1:=(snd (dblu P HPaff))). assumption.
+    instantiate (1:=(fst (dblu P HPaff))). assumption.
 
     repeat straightline.
-    eapply Proper_call; cycle -1; [eapply H0|try eabstract (solve [ Morphisms.solve_proper ])..]; [ .. | intros ? ? ? ? ].
-    ssplit; [exact H28|exact H27|..]; try solve_bounds.
-    ecancel_assumption.
 
-    repeat straightline.
-    cbv [FElem] in *.
-    repeat match goal with
-    | |- context [anybytes ?a _ _] =>
-        match goal with
-        | H: _ ?a' |- context [map.split ?a' _ _] =>
-            seprewrite_in (@Bignum.Bignum_to_bytes _ _ _ _ _ _ felem_size_in_words a) H
-        end
-    end.
-    extract_ex1_and_emp_in H42.
+    dealloc_preprocess. repeat straightline.
 
-    repeat straightline.
     exists x5,x6,x7,x8,x9; ssplit. 3-7:solve_bounds.
     exact H35. exact H36.
 
@@ -717,17 +661,7 @@ Section WithParameters.
     do 43 single_step.
 
     repeat straightline.
-    cbv [FElem] in *.
-    repeat match goal with
-    | |- context [anybytes ?a _ _] =>
-        match goal with
-        | H: _ ?a' |- context [map.split ?a' _ _] =>
-            seprewrite_in (@Bignum.Bignum_to_bytes _ _ _ _ _ _ felem_size_in_words a) H
-        end
-    end.
-    extract_ex1_and_emp_in H208.
-
-    repeat straightline.
+    dealloc_preprocess. repeat straightline.
     exists x33,x36,x38,x41,x23; ssplit. 3-7:solve_bounds.
     1,2: cbv [bin_model bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_model un_square] in *.
     1,2: cbv match beta delta [zdau proj1_sig fst snd].
