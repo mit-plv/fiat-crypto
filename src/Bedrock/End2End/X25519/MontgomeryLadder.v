@@ -5,10 +5,12 @@ Require Import Crypto.Util.Decidable.
 Require Import Crypto.Spec.MontgomeryCurve.
 Require Import Crypto.Spec.Curve25519.
 Require Import Crypto.Bedrock.Specs.Field.
+Require Import bedrock2.Array.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Syntax.
 Require Import bedrock2Examples.memmove.
 Require Import bedrock2.SepAutoArray.
+Require Import bedrock2.ZnWords.
 Require Import compiler.Pipeline.
 Require Import compiler.Symbols.
 Require Import compiler.MMIO.
@@ -21,6 +23,7 @@ Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.Group.ScalarMult.CSwap.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 Require Import Crypto.Bedrock.End2End.X25519.Field25519.
+Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.End2End.X25519.clamp.
 Local Open Scope string_scope.
 Import ListNotations.
@@ -68,6 +71,10 @@ Import ProgramLogic.Coercions.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
 Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 
+Local Existing Instance field_parameters.
+Local Existing Instance frep25519.
+Local Existing Instance frep25519_ok.
+
 Definition x25519_spec s P := le_split 32 (M.X0 (Curve25519.M.scalarmult (Curve25519.clamp (le_combine s)) P)).
 Lemma length_x25519_spec s P : length (x25519_spec s P) = 32%nat. Proof. apply length_le_split. Qed.
 
@@ -95,6 +102,21 @@ Local Arguments word.wrap : simpl never.
 Local Arguments word.unsigned : simpl never.
 Local Arguments word.of_Z : simpl never.
 
+Local Ltac solve_length :=
+  try listZnWords;
+  match goal with
+    | |- length _ = _ => solve [change felem_size_in_bytes with 40 in *; ZnWords]
+  end.
+
+Local Ltac solve_mem :=
+  repeat match goal with
+    | |- exists _ : _ -> Prop, _%sep _ => eexists
+    | H: ?P%sep ?m |- ?G%sep ?m => progress ecancel_assumption_preprocess_with solve_length
+    | |- _%sep _ => ecancel_assumption
+  end.
+
+Local Ltac solve_dealloc := dealloc_preprocess; repeat straightline.
+
 Lemma x25519_ok : program_logic_goal_for_function! x25519.
 Proof.
   repeat straightline.
@@ -105,7 +127,8 @@ Proof.
 
   straightline_call; ssplit.
   { eexists. ecancel_assumption. }
-  { ecancel_assumption_impl. }
+  { solve_mem. }
+  { solve_length. }
 
   { unfold Field.bytes_in_bounds, frep25519, field_representation, Signature.field_representation, Representation.frep.
     match goal with |- ?P ?x ?z => let y := eval cbv in x in change (P y z) end; cbn.
@@ -120,10 +143,8 @@ Proof.
     eapply byte.unsigned_range. }
   repeat straightline.
 
-  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H24. { transitivity 40%nat; trivial. }
-
   straightline_call; ssplit.
-  { unfold FElem in *; extract_ex1_and_emp_in_goal; ssplit; try ecancel_assumption_impl.
+  { unfold Compilation2.FElem in *. extract_ex1_and_emp_in_goal; ssplit; try solve_mem.
     all: eauto.
     instantiate (1:=None). exact I. }
   { reflexivity. }
@@ -137,25 +158,24 @@ Proof.
   | H : context [montladder_gallina] |- _ =>
       rewrite (@montladder_gallina_equiv_affine (Curve25519.p) _ _ (Curve25519.field)) with
       (b_nonzero:=Curve25519.M.b_nonzero) (char_ge_3:=Curve25519.char_ge_3) in H;
-      [ unfold FElem, Field.FElem in H; extract_ex1_and_emp_in H | Lia.lia | vm_decide | apply M.a2m4_nonsq ]
+      [ unfold Compilation2.FElem; extract_ex1_and_emp_in H | Lia.lia | vm_decide | apply M.a2m4_nonsq ]
   end.
+  unfold Compilation2.FElem in *; extract_ex1_and_emp_in_hyps.
   straightline_call; ssplit.
   { ecancel_assumption. }
   { transitivity 32%nat; auto. }
   { eexists.
-    unfold FElem, Field.FElem in *; extract_ex1_and_emp_in_goal; ssplit.
+    unfold Compilation2.FElem in *. extract_ex1_and_emp_in_goal; extract_ex1_and_emp_in_hyps; ssplit.
     ecancel_assumption. }
   { intuition idtac. }
   repeat straightline_cleanup.
   repeat straightline.
-
-  cbv [Field.FElem] in *.
-  repeat seprewrite_in @Bignum.Bignum_to_bytes H32; extract_ex1_and_emp_in H32.
+  solve_dealloc.
   pose proof length_le_split 32 (Curve25519.clamp (le_combine s)).
   repeat straightline.
   cbv [x25519_spec].
   use_sep_assumption; cancel.
-  rewrite H36, le_combine_split.
+  rewrite H34, le_combine_split.
   do 7 Morphisms.f_equiv.
   pose proof clamp_range (le_combine s).
   change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255.
@@ -170,21 +190,19 @@ Proof.
   straightline_call; ssplit; try ecancel_assumption; repeat straightline; try listZnWords; [].
 
   straightline_call; ssplit.
-  { cbv [Field.FElem]. cbn. cbv [n]. ecancel_assumption_impl. }
+  solve_mem.
+  solve_length.
   repeat straightline.
 
-  seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 10 a2) H21. { transitivity 40%nat; trivial. }
-
   straightline_call; ssplit.
-  { unfold FElem, Field.FElem in *; extract_ex1_and_emp_in_goal; ssplit.
-       { use_sep_assumption. cancel; repeat ecancel_step.
-       cancel_seps_at_indices 0%nat 0%nat; trivial. cbn [seps]. reflexivity. }
+  { unfold Compilation2.FElem in *; extract_ex1_and_emp_in_goal; ssplit.
+    { solve_mem. }
     all : eauto.
     { instantiate (1:=None). exact I. } }
   { reflexivity. }
   { rewrite length_le_split. vm_compute. inversion 1. }
   repeat straightline.
-  unfold FElem in H26. extract_ex1_and_emp_in H26.
+  unfold Compilation2.FElem in H26. extract_ex1_and_emp_in H26.
   straightline_call; ssplit.
   { ecancel_assumption. }
   { transitivity 32%nat; auto. }
@@ -193,16 +211,13 @@ Proof.
   repeat straightline_cleanup.
   repeat straightline.
 
-  cbv [Field.FElem] in *.
-  seprewrite_in @Bignum.Bignum_to_bytes H29.
-  seprewrite_in @Bignum.Bignum_to_bytes H29.
-  extract_ex1_and_emp_in H29.
+  solve_dealloc.
   pose proof length_le_split 32 (Curve25519.clamp (le_combine s)).
 
   repeat straightline; intuition eauto.
   cbv [x25519_spec].
   use_sep_assumption; cancel.
-  rewrite H33, le_combine_split.
+  rewrite H31, le_combine_split.
   do 7 Morphisms.f_equiv.
   pose proof clamp_range (le_combine s).
   change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255.

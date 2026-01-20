@@ -159,7 +159,7 @@ Section WithParameters.
 
   Local Coercion F.to_Z : F >-> Z.
   Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
-  Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
+  Local Notation "xs $@ a" := (map.of_list_word_at a xs) (at level 10, format "xs $@ a").
 
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
   Local Notation word := (BasicC64Semantics.word).
@@ -174,10 +174,11 @@ Section WithParameters.
     { requires t m :=
         vx = feval x /\
         bounded_by loose_bounds x /\
-        m =* Placeholder zK z * (FElem xK x) * R;
+        Datatypes.length z = Z.to_nat felem_size_in_bytes /\
+        m =* z$@zK * (FElem xK x) * R;
       ensures t' m' :=
         t = t' /\
-        exists z',
+        exists z' : felem,
         feval z' = (F.inv vx) /\
         bounded_by tight_bounds z' /\
         m' =* (FElem zK z') * (FElem xK x) * R
@@ -188,11 +189,21 @@ Section WithParameters.
   Local Arguments word.unsigned : simpl never.
   Local Arguments word.of_Z : simpl never.
 
+  Local Ltac solve_length :=
+    try lia;
+    match goal with
+      | |- Datatypes.length _ = _ =>
+        solve [rewrite ?ws2bs_felem_length; try lia; change felem_size_in_bytes with 32 in *; lia]
+    end.
+
   Local Ltac solve_mem :=
     repeat match goal with
       | |- exists _ : _ -> Prop, _%sep _ => eexists
-      | |- _%sep _ => ecancel_assumption_impl
-      end.
+      | H: ?P%sep ?m |- ?G%sep ?m => progress ecancel_assumption_preprocess_with solve_length
+      | |- _%sep _ => ecancel_assumption
+    end.
+
+  Local Ltac solve_dealloc := dealloc_preprocess; repeat straightline.
 
   Local Ltac cbv_bounds H :=
     cbv [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub bin_carry_sub un_outbounds bin_outbounds] in H;
@@ -203,19 +214,8 @@ Section WithParameters.
       | H: bounded_by _ ?x |- bounded_by _ ?x => apply H
       end.
 
-  Local Ltac solve_stack :=
-    (* Rewrites the `stack$@a` term in H to use a Bignum instead *)
-    cbv [FElem];
-    match goal with
-    | H: _%sep ?m |- (Bignum.Bignum felem_size_in_words ?a _ * _)%sep ?m =>
-        seprewrite_in (@Bignum.Bignum_of_bytes _ _ _ _ _ _ 4 a) H
-    end;
-    [> transitivity 32%nat; trivial | ];
-    (* proves the memory matches up *)
-    use_sep_assumption; cancel; cancel_seps_at_indices 0%nat 0%nat; cbn; [> trivial | eapply RelationClasses.reflexivity].
-
   Local Ltac single_step :=
-    repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_stack.
+    repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_length.
 
   Lemma spec_of_shift functions tr mem loc post :
     forall var to (Hvar: var <> "i") (Hto: 2 <= to < 2^32) pvar vvar R,
@@ -270,7 +270,8 @@ Section WithParameters.
     rewrite map.get_put_diff by congruence. eauto.
     eexists. split. rewrite map.get_put_diff by congruence. eauto.
     reflexivity.
-    single_step. repeat straightline.
+    single_step.
+    repeat straightline.
     eexists. split.
     eexists. split. apply map.get_put_same. cbn. reflexivity.
     eexists. split. split; [reflexivity|].
@@ -294,91 +295,24 @@ Section WithParameters.
     Strategy -1000 [un_xbounds bin_xbounds bin_ybounds un_square bin_mul bin_add bin_carry_add bin_sub un_outbounds bin_outbounds].
 
     repeat single_step.
-    destruct H64 as (-> & -> & ? & ? & ? & ?).
-    eexists; split; [reflexivity|].
-    eapply spec_of_shift. congruence. lia. auto. reflexivity.
-    ecancel_assumption. eassumption.
-    repeat single_step.
-    destruct H82 as (-> & -> & ? & ? & ? & ?).
-    eexists; split; [reflexivity|].
-    eapply spec_of_shift. congruence. lia. auto. reflexivity.
-    ecancel_assumption. eassumption.
-    repeat single_step.
-    destruct H91 as (-> & -> & ? & ? & ? & ?).
-    eexists; split; [reflexivity|].
-    eapply spec_of_shift. congruence. lia. auto. reflexivity.
-    ecancel_assumption. eassumption.
-    repeat single_step.
-    destruct H100 as (-> & -> & ? & ? & ? & ?).
-    eexists; split; [reflexivity|].
-    eapply spec_of_shift. congruence. lia. auto. reflexivity.
-    ecancel_assumption. eassumption.
-    repeat single_step.
-    destruct H109 as (-> & -> & ? & ? & ? & ?).
-    eexists; split; [reflexivity|].
-    eapply spec_of_shift. congruence. lia. auto. reflexivity.
-    ecancel_assumption. eassumption.
-    repeat single_step.
-    destruct H124 as (-> & -> & ? & ? & ? & ?).
-    eexists; split; [reflexivity|].
-    eapply spec_of_shift. congruence. lia. auto. reflexivity.
-    ecancel_assumption. eassumption.
-    repeat single_step.
-    destruct H130 as (-> & -> & ? & ? & ? & ?).
-    eexists; split; [reflexivity|].
-    eapply spec_of_shift. congruence. lia. auto. reflexivity.
-    ecancel_assumption. eassumption.
-    repeat single_step.
-    destruct H139 as (-> & -> & ? & ? & ? & ?).
-    eexists; split; [reflexivity|].
-    eapply spec_of_shift. congruence. lia. auto. reflexivity.
-    ecancel_assumption. eassumption.
-    repeat single_step.
-    destruct H148 as (-> & -> & ? & ? & ? & ?).
-    eexists; split; [reflexivity|].
-    eapply spec_of_shift. congruence. lia. auto. reflexivity.
-    ecancel_assumption. eassumption.
-    repeat single_step.
-    destruct H157 as (-> & -> & ? & ? & ? & ?).
-    eexists; split; [reflexivity|].
-    eapply spec_of_shift. congruence. lia. auto. reflexivity.
-    ecancel_assumption. eassumption.
-    repeat single_step.
-    destruct H169 as (-> & -> & ? & ? & ? & ?).
-    eexists; split; [reflexivity|].
-    eapply spec_of_shift. congruence. lia. auto. reflexivity.
-    ecancel_assumption. eassumption.
-    repeat single_step.
-    destruct H178 as (-> & -> & ? & ? & ? & ?).
-    eexists; split; [reflexivity|].
-    eapply spec_of_shift. congruence. lia. auto. reflexivity.
-    ecancel_assumption. eassumption.
-    repeat single_step.
+
+    repeat (repeat straightline_cleanup;
+    eexists; split; [reflexivity|];
+    eapply spec_of_shift; [congruence| lia| auto| reflexivity|
+    | eassumption| ]; [ecancel_assumption| repeat single_step]).
 
     repeat straightline.
-    cbv [FElem] in *.
-    repeat match goal with
-    | |- context [anybytes ?a _ _] =>
-        match goal with
-        | H: _ ?a' |- context [map.split ?a' _ _] =>
-            seprewrite_in (Bignum.Bignum_to_bytes felem_size_in_words a) H
-        end
-    end.
-    extract_ex1_and_emp_in H194.
-
-    repeat straightline.
+    solve_dealloc.
     exists x42. ssplit; [|solve_bounds|ecancel_assumption].
     repeat match goal with
            | H : feval ?a = _ |- context [feval ?a] => rewrite H
            end.
-    cbv [un_model bin_model un_square bin_mul].
+    destruct x.
     unfold vx. rewrite (@F.Fq_inv_fermat _ _ two_lt_M).
+    cbv [un_model bin_model un_square bin_mul felem_to_list proj1_sig].
+
     rewrite F_M_pos.
-    repeat match goal with
-    | |- context [F.pow (F.pow (feval x) ?a) ?b] => rewrite (F.pow_pow_l (feval x) a b)
-    | |- context [F.mul (feval x) (F.pow (feval x) ?n)] => rewrite <- (F.pow_succ_r (feval x) n)
-    | |- context [F.mul (F.pow (feval x) ?n1) (F.pow (feval x) ?n2)] => rewrite <- (F.pow_add_r (feval x) n1 n2)
-    end.
+    repeat rewrite ?F.pow_pow_l, <- ?(F.pow_succ_r (feval x)), <- ?(F.pow_add_r (feval x)).
     f_equal.
   Qed.
 

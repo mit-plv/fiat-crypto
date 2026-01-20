@@ -123,7 +123,7 @@ Definition double := func! (p_out, p_a) {
   fe25519_mul(p_out.Z, cZ, cT)
 }.
 
-(* Converts a projective point p_a to a cached point p_out to prepare it for readdition. 
+(* Converts a projective point p_a to a cached point p_out to prepare it for readdition.
    Uses the field's parameter d, which is passed as p_d for now. *)
 Definition to_cached := func! (p_out, p_a, p_d) {
   fe25519_sub(p_out.half_YmX, p_a.Y, p_a.X);
@@ -135,7 +135,7 @@ Definition to_cached := func! (p_out, p_a, p_d) {
   fe25519_copy(p_out.Z, p_a.Z)
 }.
 
-(* Equivalent of m1_readd in src/Curves/Edwards/XYZT/Readdition.v 
+(* Equivalent of m1_readd in src/Curves/Edwards/XYZT/Readdition.v
    Adds a projective point p_a and cached point p_c and stores the result as projective point in p_out. *)
 Definition readd := func! (p_out, p_a, p_c) {
   stackalloc felem_size as A;
@@ -199,7 +199,7 @@ Local Notation m1_prep :=
                   (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
                   (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
                   (a:=a)(d:=d)(nonzero_a:=nonzero_a)(a_eq_minus1:=a_eq_minus1)
-                  (twice_d:=twice_d)(k_eq_2d:=k_eq_2d)(nonzero_d:=nonzero_d)). 
+                  (twice_d:=twice_d)(k_eq_2d:=k_eq_2d)(nonzero_d:=nonzero_d)).
 Local Notation m1_readd :=
   (m1_readd(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
            (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
@@ -219,7 +219,7 @@ Local Notation "a <> b" := (not (a = b)) : type_scope. Local Notation "0" := F.z
 Local Notation "1" := F.one. Local Infix "+" := F.add. Local Infix "*" := F.mul.
 Local Infix "-" := F.sub. Local Infix "/" := F.div. Local Notation "x ^ 2" := (x*x).
 
-Definition valid_projective_coords X Y Z Ta Tb :=
+Definition valid_projective_coords (X Y Z Ta Tb : felem):=
     ((a * (feval X)^2*(feval Z)^2 + (feval Y)^2*(feval Z)^2 = ((feval Z)^2)^2 + d * (feval X)^2 * (feval Y)^2)%F /\
     ((feval X) * (feval Y) = (feval Z) * (feval Ta) * (feval Tb))%F /\
     ((feval Z) <> 0)%F).
@@ -235,14 +235,14 @@ Definition coords_to_point (c : projective_coords) : point.
     cbv [proj1_sig feval_projective_coords valid_projective_coords] in *;
     destruct_head' prod; destruct_head' and; ssplit; assumption).
   Defined.
-Lemma point_implies_coords_valid (p : point) (X Y Z Ta Tb : felem): 
+Lemma point_implies_coords_valid (p : point) (X Y Z Ta Tb : felem):
   proj1_sig p = (feval X, feval Y, feval Z, feval Ta, feval Tb) -> valid_projective_coords X Y Z Ta Tb.
     intros.
     cbv[proj1_sig] in *. destruct_head' @Extended.point. destruct_head' prod. Prod.inversion_prod; subst.
-    assumption. 
+    assumption.
 Qed.
 
-Definition valid_precomputed_coords half_ypx half_ymx xyd :=
+Definition valid_precomputed_coords (half_ypx half_ymx xyd : felem) :=
     let x := (feval half_ypx) - (feval half_ymx) in
     let y := (feval half_ypx) + (feval half_ymx) in
     (a*x^2 + y^2 = 1 + d*x^2*y^2)
@@ -258,15 +258,15 @@ Definition precomputed_coords_to_precomputed (c : precomputed_coords) : precompu
   abstract (destruct_head' precomputed_coords; destruct_head' prod;
   destruct_head' and; cbv [feval_precomputed_coords valid_precomputed_coords proj1_sig] in *; assumption).
 Defined.
-Lemma precomputed_implies_coords_valid (p : precomputed_point) (half_ypx half_ymx xyd : felem): 
+Lemma precomputed_implies_coords_valid (p : precomputed_point) (half_ypx half_ymx xyd : felem):
   proj1_sig p = (feval half_ypx, feval half_ymx, feval xyd) -> valid_precomputed_coords half_ypx half_ymx xyd.
     intros.
     cbv[proj1_sig valid_precomputed_coords] in *. destruct_head' @Precomputed.precomputed_point.
     destruct_head' prod. Prod.inversion_prod; subst.
-    assumption. 
+    assumption.
 Qed.
 
-Definition valid_cached_coords half_YmX half_YpX Z Td :=
+Definition valid_cached_coords (half_YmX half_YpX Z Td : felem):=
   let X := (feval half_YpX) - (feval half_YmX) in
   let Y := (feval half_YpX) + (feval half_YmX) in
   let T := (feval Td) / d in
@@ -286,12 +286,12 @@ Definition cached_coords_to_cached (c : cached_coords) : cached.
   destruct_head' and;
     cbv [valid_cached_coords proj1_sig] in *; assumption).
 Defined.
-Lemma cached_implies_coords_valid (c : cached) (half_YmX half_YpX Z Td : felem): 
+Lemma cached_implies_coords_valid (c : cached) (half_YmX half_YpX Z Td : felem):
   proj1_sig c = (feval half_YmX, feval half_YpX, feval Z, feval Td) -> valid_cached_coords half_YmX half_YpX Z Td.
     intros.
     cbv[proj1_sig valid_cached_coords] in *. destruct_head' @Readdition.cached.
     destruct_head' prod. Prod.inversion_prod; subst.
-    assumption. 
+    assumption.
 Qed.
 
 (* Extended projective points. *)
@@ -310,7 +310,7 @@ Local Notation "c 'p4@' p" := (let '(half_ymx, half_ypx ,z,td) := proj1_sig c in
                               (FElem (p .+ (felem_size + felem_size + felem_size)) td))
                               (at level 10, format "c 'p4@' p").
 (* Precomputed points. *)
-Local Notation "c 'p3@' p" := (let '(half_ymx, half_ypx, xyd) := proj1_sig c in sep (sep 
+Local Notation "c 'p3@' p" := (let '(half_ymx, half_ypx, xyd) := proj1_sig c in sep (sep
                               (FElem (p) half_ymx)
                               (FElem (p .+ felem_size) half_ypx))
                               (FElem (p .+ (felem_size + felem_size)) xyd))
@@ -326,7 +326,7 @@ Instance spec_of_fe25519_half : spec_of "fe25519_half" :=
     m =* (FElem result_location old_result) * R;
     ensures t' m' :=
       t = t' /\
-      exists result,
+      exists result : felem,
         bounded_by tight_bounds result /\
         feval result = F.div (feval input) (F.add F.one F.one) /\
         m' =* (FElem result_location result)  * R}.
@@ -353,7 +353,7 @@ Global Instance spec_of_double : spec_of "double" :=
       requires t m :=
         m =* out $@ p_out * a p5@ p_a * R /\
         Datatypes.length out = Z.to_nat (5 * felem_size);
-      ensures t' m' := 
+      ensures t' m' :=
         t = t' /\
         exists a_double: projective_coords,
           m' =* a_double p5@ p_out * a p5@ p_a * R /\
@@ -436,40 +436,30 @@ Local Ltac solve_bounds :=
 
 Ltac split_stack_at_n_in stack p n H := rewrite <- (firstn_skipn n stack) in H;
   rewrite (map.of_list_word_at_app_n _ _ _ n) in H; try skipn_firstn_length;
-  let D := fresh in 
+  let D := fresh in
   unshelve(epose (sep_eq_putmany _ _ (map.adjacent_arrays_disjoint_n p (firstn n stack) (skipn n stack) n _ _)) as D);
   try skipn_firstn_length; seprewrite_in D H; rewrite ?skipn_skipn in H; bottom_up_simpl_in_hyp H; clear D.
 
-Local Ltac solve_mem :=
-  try match goal with  | |- exists _ : _ -> Prop, _%sep _ => eexists end;
-  match goal with  | H : _ %sep ?m |- _ %sep ?m => bottom_up_simpl_in_goal_nop_ok end;
+Local Ltac solve_length :=
+  try lia;
   match goal with
-  | |- _%sep _ => ecancel_assumption_impl
-  | H: ?P%sep ?m |- ?G%sep ?m =>  (* Solve Placeholder goals when a fixed size list is given *)
-    match P with context[map.of_list_word_at ?p ?stack] =>
-    match G with context[Placeholder ?p _] =>
-      solve [ cbv [Placeholder]; extract_ex1_and_emp_in_goal; bottom_up_simpl_in_goal_nop_ok;
-      split; [ecancel_assumption | skipn_firstn_length] ]
-    end end
+    | |- Datatypes.length _ = _ =>
+      solve [rewrite ?ws2bs_felem_length; try lia;
+          change felem_size_in_bytes with 40 in *; try listZnWords; lia]
+  end.
+
+Local Ltac solve_mem :=
+  repeat match goal with
+    | |- exists _ : _ -> Prop, _%sep _ => eexists
+    | H: ?P%sep ?m |- ?G%sep ?m => progress ecancel_assumption_preprocess_with solve_length
+    | H : _ %sep ?m |- _ %sep ?m => bottom_up_simpl_in_goal
+    | |- _%sep _ => ecancel_assumption
   end.
 
 Local Ltac single_step :=
-  repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds.
+  repeat straightline; straightline_call; ssplit; try solve_mem; try solve_bounds; try solve_length.
 
-(* Attempts to find anybytes terms in the goal and rewrites the first corresponding stack hypothesis
-   to byte representation. straightline only supports deallocation for byte representation at the moment. *)
-Ltac solve_deallocation :=
-  lazy [FElem] in *;
-  match goal with
-    H: ?P%sep _ |- ?G =>
-      repeat match G with context[anybytes ?p _ _] =>
-        match P with context[Bignum.Bignum felem_size_in_words p ?v] =>
-          seprewrite_in (Bignum.Bignum_to_bytes felem_size_in_words p) H
-        end
-      end;
-      extract_ex1_and_emp_in H
-  end;
-  repeat straightline.
+Ltac solve_deallocation := dealloc_preprocess; repeat straightline.
 
 Ltac split_output_stack stack_var ptr_var num_points :=
   match goal with
@@ -518,7 +508,7 @@ Proof.
       un_outbounds bin_outbounds].
 
   do 4 straightline.
-  pose proof (point_implies_coords_valid (m1add_precomputed_coordinates (coords_to_point a0) 
+  pose proof (point_implies_coords_valid (m1add_precomputed_coordinates (coords_to_point a0)
     (precomputed_coords_to_precomputed b))) as HPost.
   destruct_points.
   split_output_stack out p_out 5.
@@ -556,8 +546,8 @@ Proof.
   (* Solve the postconditions *)
   repeat straightline.
   solve_deallocation.
-  cbv [coords_to_point feval_projective_coords projective_coords 
-    proj1_sig m1double bin_model bin_add bin_mul bin_sub bin_carry_add 
+  cbv [coords_to_point feval_projective_coords projective_coords
+    proj1_sig m1double bin_model bin_add bin_mul bin_sub bin_carry_add
     bin_sub bin_carry_sub un_model un_square] in *.
   unshelve eexists.
   eexists (_, _, _, _, _).
