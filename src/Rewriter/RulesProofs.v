@@ -90,6 +90,13 @@ Local Hint Resolve
       eq_firstn_nat_rect
       eq_skipn_nat_rect
       eq_update_nth_nat_rect
+      unfold1_nat_rect_fbb_b 
+      unfold1_nat_rect_fbb_b_b
+      unfold1_list_rect_fbb_b 
+      unfold1_list_rect_fbb_b_b
+      unfold1_list_rect_fbb_b_b_b
+      unfold1_list_rect_fbb_b_b_b_b
+      unfold1_list_rect_fbb_b_b_b_b_b
   : core.
 
 (* to catch [prod_rect] and not just [prod_rect_nodep] *)
@@ -156,6 +163,7 @@ Lemma arith_rewrite_rules_proofs (max_const_val : Z)
 Proof using Type.
   start_proof; auto; intros; try lia.
   all: autorewrite with zsimplify_const; try reflexivity.
+  all : try (replace (-y * k) with (-(y*k)) by lia; set (y*k) as yk; clearbody yk).
   all: repeat first [ reflexivity
                     | match goal with
                       | [ |- context[Z.shiftl] ] => rewrite Z.shiftl_mul_pow2 by auto with zarith

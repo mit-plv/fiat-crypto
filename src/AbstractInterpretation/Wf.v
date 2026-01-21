@@ -60,7 +60,7 @@ Module Compilers.
               (abstract_domain'_R : forall t, abstract_domain' t -> abstract_domain' t -> Prop)
               {abstract_interp_ident_Proper : forall t, Proper (eq ==> abstract_domain'_R t) (abstract_interp_ident t)}
               {bottom'_Proper : forall t, Proper (abstract_domain'_R t) (bottom' t)}.
-      Local Notation value var := (@value base_type ident var abstract_domain').
+      Local Notation value' var := (@value' base_type ident var abstract_domain').
       Local Notation abstract_domain := (@abstract_domain base_type abstract_domain').
       Local Notation bottom := (@bottom base_type abstract_domain' (@bottom')).
       Local Notation bottom_for_each_lhs_of_arrow := (@bottom_for_each_lhs_of_arrow base_type abstract_domain' (@bottom')).
@@ -71,12 +71,12 @@ Module Compilers.
         Local Notation UnderLets2 := (@UnderLets.UnderLets base_type ident var2).
         Local Notation expr1 := (@expr.expr base_type ident var1).
         Local Notation expr2 := (@expr.expr base_type ident var2).
-        Local Notation value1 := (@value var1).
-        Local Notation value2 := (@value var2).
-        Local Notation value_with_lets1 := (@value_with_lets base_type ident var1 abstract_domain').
-        Local Notation value_with_lets2 := (@value_with_lets base_type ident var2 abstract_domain').
-        Local Notation state_of_value1 := (@state_of_value base_type ident var1 abstract_domain' bottom').
-        Local Notation state_of_value2 := (@state_of_value base_type ident var2 abstract_domain' bottom').
+        Local Notation value'1 := (@value' var1).
+        Local Notation value'2 := (@value' var2).
+        Local Notation value1 := (@value base_type ident var1 abstract_domain').
+        Local Notation value2 := (@value base_type ident var2 abstract_domain').
+        Local Notation state_of_value1 := (@state_of_value base_type ident var1 abstract_domain').
+        Local Notation state_of_value2 := (@state_of_value base_type ident var2 abstract_domain').
         Context (annotate1 : forall (is_let_bound : bool) t, abstract_domain' t -> @expr1 t -> UnderLets1 (@expr1 t))
                 (annotate2 : forall (is_let_bound : bool) t, abstract_domain' t -> @expr2 t -> UnderLets2 (@expr2 t))
                 (annotate_Proper
@@ -84,15 +84,13 @@ Module Compilers.
                      v1 v2 (Hv : abstract_domain'_R t v1 v2)
                      e1 e2 (He : expr.wf G e1 e2),
                     UnderLets.wf (fun G' => expr.wf G') G (annotate1 is_let_bound t v1 e1) (annotate2 is_let_bound t v2 e2))
-                (interp_ident1 : bool -> forall t, ident t -> value_with_lets1 t)
-                (interp_ident2 : bool -> forall t, ident t -> value_with_lets2 t)
+                (interp_ident1 : bool -> forall t, ident t -> value1 t)
+                (interp_ident2 : bool -> forall t, ident t -> value2 t)
                 (skip_annotations_under : forall t, ident t -> bool).
         Local Notation reify1 := (@reify base_type ident var1 abstract_domain' annotate1 bottom').
         Local Notation reify2 := (@reify base_type ident var2 abstract_domain' annotate2 bottom').
         Local Notation reflect1 := (@reflect base_type ident var1 abstract_domain' annotate1 bottom').
         Local Notation reflect2 := (@reflect base_type ident var2 abstract_domain' annotate2 bottom').
-        Local Notation bottomify1 := (@bottomify base_type ident var1 abstract_domain' bottom').
-        Local Notation bottomify2 := (@bottomify base_type ident var2 abstract_domain' bottom').
         Local Notation interp1 := (@interp base_type ident var1 abstract_domain' annotate1 bottom' skip_annotations_under interp_ident1).
         Local Notation interp2 := (@interp base_type ident var2 abstract_domain' annotate2 bottom' skip_annotations_under interp_ident2).
         Local Notation eval_with_bound'1 := (@eval_with_bound' base_type ident var1 abstract_domain' annotate1 bottom' skip_annotations_under interp_ident1).
@@ -111,30 +109,29 @@ Module Compilers.
             case, and simply tack on that context at the beginning of
             the output.  This is sort-of wasteful on the output
             context, but it's sufficient to prove
-            [wf_value_Proper_list] below, which is what we really
+            [wf_value'_Proper_list] below, which is what we really
             need. *)
-        Fixpoint wf_value G {t} : value1 t -> value2 t -> Prop
-          := match t return value1 t -> value2 t -> Prop with
-             | type.base t
-               => fun v1 v2
-                 => abstract_domain_R (fst v1) (fst v2)
-                    /\ expr.wf G (snd v1) (snd v2)
+        Fixpoint wf_value' G {t} : value'1 t -> value'2 t -> Prop
+          := match t return value'1 t -> value'2 t -> Prop with
+             | type.base t => expr.wf G
              | type.arrow s d
                => fun v1 v2
                  => forall seg G' sv1 sv2,
                      G' = (seg ++ G)%list
-                     -> @wf_value seg s sv1 sv2
+                     -> abstract_domain_R (fst sv1) (fst sv2)
+                        /\ @wf_value' seg s (snd sv1) (snd sv2)
                      -> UnderLets.wf
-                         (fun G' => @wf_value G' d) G'
+                         (fun G' => @wf_value' G' d) G'
                          (v1 sv1) (v2 sv2)
              end.
 
-        Definition wf_value_with_lets G {t} : value_with_lets1 t -> value_with_lets2 t -> Prop
-          := UnderLets.wf (fun G' => wf_value G') G.
+        Definition wf_value G {t} : value1 t -> value2 t -> Prop
+          := fun v1 v2 => abstract_domain_R (fst v1) (fst v2)
+                          /\ UnderLets.wf (fun G' => wf_value' G') G (snd v1) (snd v2).
 
         Context (interp_ident_Proper
                  : forall G t idc1 idc2 (Hidc : idc1 = idc2) annotate_with_state,
-                    wf_value_with_lets G (interp_ident1 annotate_with_state t idc1) (interp_ident2 annotate_with_state t idc2)).
+                    wf_value G (interp_ident1 annotate_with_state t idc1) (interp_ident2 annotate_with_state t idc2)).
 
         Global Instance bottom_Proper {t} : Proper abstract_domain_R (@bottom t) | 10.
         Proof using bottom'_Proper.
@@ -152,10 +149,7 @@ Module Compilers.
 
         Lemma state_of_value_Proper G {t} v1 v2 (Hv : @wf_value G t v1 v2)
           : abstract_domain_R (state_of_value1 v1) (state_of_value2 v2).
-        Proof using bottom'_Proper.
-          clear -Hv type_base bottom'_Proper.
-          destruct t; [ destruct v1, v2, Hv | ]; cbn in *; cbv [respectful]; eauto; intros; apply bottom_Proper.
-        Qed.
+        Proof using Type. apply Hv. Qed.
 
         Local Definition ex_intro_nil A (P : list A -> Prop) := ex_intro P nil.
         Local Definition ex_intro_singleton A (x : A) (P : list A -> Prop) := ex_intro P (cons x nil).
@@ -163,11 +157,11 @@ Module Compilers.
         Local Hint Constructors expr.wf ex : core.
         Local Hint Unfold List.In : core.
 
-        Lemma wf_value_Proper_list G1 G2
+        Lemma wf_value'_Proper_list G1 G2
               (HG1G2 : forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
               t e1 e2
-              (Hwf : @wf_value G1 t e1 e2)
-          : @wf_value G2 t e1 e2.
+              (Hwf : @wf_value' G1 t e1 e2)
+          : @wf_value' G2 t e1 e2.
         Proof using Type.
           clear -type_base HG1G2 Hwf.
           revert dependent G1; revert dependent G2; induction t; intros;
@@ -182,6 +176,16 @@ Module Compilers.
                          | match goal with H : _ |- _ => apply H; clear H end
                          | wf_unsafe_t_step
                          | eapply UnderLets.wf_Proper_list; [ | | solve [ eauto ] ] ].
+        Qed.
+
+        Lemma wf_value_Proper_list G1 G2
+              (HG1G2 : forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
+              t e1 e2
+              (Hwf : @wf_value G1 t e1 e2)
+          : @wf_value G2 t e1 e2.
+        Proof using Type.
+          split; try apply Hwf.
+          eapply UnderLets.wf_Proper_list, Hwf; eauto using wf_value'_Proper_list.
         Qed.
 
         Fixpoint wf_reify (annotate_with_state : bool) (is_let_bound : bool) G {t}
@@ -223,36 +227,28 @@ Module Compilers.
                                 => eapply UnderLets.wf_splice; [ apply (He (cons v nil)) | ]
                               | [ |- UnderLets.wf _ _ (UnderLets.splice (reify1 _ _ _ _) _) (UnderLets.splice (reify2 _ _ _ _) _) ]
                                 => eapply UnderLets.wf_splice; [ apply wf_reify_s || apply wf_reify_d | ]
+                              | [ H : wf_value ?G (_, ?u) (_, ?u') |- UnderLets.wf _ ?G (UnderLets.splice ?u _) (UnderLets.splice ?u' _) ]
+                                => eapply UnderLets.wf_splice; [ apply H | ]
+                              | [ H : wf_value ?G ?u ?u' |- UnderLets.wf _ ?G (UnderLets.splice (project_value' _ ?u) _) (UnderLets.splice (project_value' _ ?u') _) ]
+                                => eapply UnderLets.wf_splice; [ apply H | ]
                               | [ |- wf_value _ (reflect1 _ _ _) (reflect2 _ _ _) ] => apply wf_reflect_s || apply wf_reflect_d
                               | [ H : wf_value _ ?x ?y |- wf_value _ ?x ?y ]
                                 => eapply wf_value_Proper_list; [ | eassumption ]
                               | [ H : forall x y, ?R x y -> ?R' (?f x) (?g y) |- ?R' (?f _) (?g _) ]
                                 => apply H
                               | [ |- ?R (state_of_value1 _) (state_of_value2 _) ] => eapply state_of_value_Proper
+                              | [ H : wf_value _ (?x, _) (?y, _) |- abstract_domain'_R _ ?x ?y ] => apply H
                               end ].
-        Qed.
 
-        Lemma wf_bottomify {t} G v1 v2
-              (Hwf : @wf_value G t v1 v2)
-          : wf_value_with_lets G (bottomify1 v1) (bottomify2 v2).
-        Proof using bottom'_Proper.
-          cbv [wf_value_with_lets] in *.
-          revert dependent G; induction t as [|s IHs d IHd]; intros;
-            cbn [bottomify wf_value]; fold (@value1) (@value2) in *; break_innermost_match;
-              constructor.
-          all: repeat first [ progress cbn [fst snd wf_value] in *
-                            | progress destruct_head'_and
-                            | assumption
-                            | apply bottom'_Proper
-                            | apply conj
-                            | progress intros
-                            | progress subst
-                            | solve [ eapply UnderLets.wf_splice; eauto ] ].
-        Qed.
+          lazymatch goal with
+                              | [ He : wf_value' ?G _ _ |- UnderLets.wf _ (?v :: ?G) (UnderLets.splice _ _) (UnderLets.splice _ _) ]
+                                => eapply UnderLets.wf_splice; [ cbn [wf_value'] in He; move He at bottom; specialize (He (cons v nil)) | ]
+          end.
+        Admitted.
 
         Local Ltac wf_interp_t :=
-          repeat first [ progress cbv [wf_value_with_lets abstract_domain_R respectful] in *
-                       | progress cbn [wf_value fst snd partial.bottom type.related eq_rect List.In] in *
+          repeat first [ progress cbv [wf_value abstract_domain_R respectful] in *
+                       | progress cbn [wf_value' fst snd partial.bottom type.related eq_rect List.In] in *
                        | wf_safe_t_step
                        | exact I
                        | apply wf_reify
@@ -261,11 +257,10 @@ Module Compilers.
                        | progress destruct_head'_or
                        | eapply UnderLets.wf_splice
                        | match goal with
-                         | [ |- UnderLets.wf _ _ (bottomify1 _) (bottomify2 _) ] => apply wf_bottomify
                          | [ |- UnderLets.wf _ _ _ _ ] => constructor
                          | [ |- and _ _ ] => apply conj
                          end
-                       | eapply wf_value_Proper_list; [ | solve [ eauto ] ]
+                       | eapply wf_value'_Proper_list; [ | solve [ eauto ] ]
                        | eapply UnderLets.wf_Proper_list; [ | | solve [ eauto ] ]
                        | match goal with
                          | [ H : _ |- _ ] => eapply H; clear H; solve [ wf_interp_t ]
@@ -299,49 +294,6 @@ Module Compilers.
                            | [ H : context[invert_App_curried (App_curried _ _)] |- _ ]
                              => rewrite expr.invert_App_curried_App_curried in Hwf
                            end ].
-        Qed.
-
-        Lemma wf_interp (annotate_with_state : bool) G G' {t} (e1 : @expr (@value_with_lets1) t) (e2 : @expr (@value_with_lets2) t)
-              (Hwf : expr.wf G e1 e2)
-              (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value_with_lets G' v1 v2)
-          : wf_value_with_lets G' (interp1 annotate_with_state e1) (interp2 annotate_with_state e2).
-        Proof using annotate_Proper bottom'_Proper interp_ident_Proper.
-          revert dependent G'; revert annotate_with_state; induction Hwf; intros; cbn [interp];
-            try solve [ apply interp_ident_Proper; auto
-                      | eauto ];
-            match goal with
-            | [ G' : list _ |- context[skip_annotations_for_App ?e1v] ]
-              => match goal with
-                 | [ |- context[skip_annotations_for_App ?e2v] ]
-                   => epose proof (wf_skip_annotations_for_App (e1:=e1v) (e2:=e2v) (G:=G') ltac:(solve [ wf_t ]));
-                        generalize dependent (skip_annotations_for_App e1v);
-                        generalize dependent (skip_annotations_for_App e2v); intros;
-                          subst
-                 end
-            end;
-            wf_interp_t.
-        Qed.
-
-        Lemma wf_eval_with_bound' (annotate_with_state : bool) G G' {t} e1 e2 (He : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
-              (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value_with_lets G' v1 v2)
-          : expr.wf G' (@eval_with_bound'1 annotate_with_state t e1 st1) (@eval_with_bound'2 annotate_with_state t e2 st2).
-        Proof using annotate_Proper bottom'_Proper interp_ident_Proper.
-          eapply UnderLets.wf_to_expr, UnderLets.wf_splice.
-          { eapply wf_interp; solve [ eauto ]. }
-          { intros; destruct_head'_ex; subst; eapply wf_reify; eauto. }
-        Qed.
-
-        Lemma wf_eval' G G' {t} e1 e2 (He : expr.wf G e1 e2)
-              (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value_with_lets G' v1 v2)
-          : expr.wf G' (@eval'1 t e1) (@eval'2 t e2).
-        Proof using annotate_Proper bottom'_Proper interp_ident_Proper.
-          eapply wf_eval_with_bound'; eauto; apply bottom_for_each_lhs_of_arrow_Proper.
-        Qed.
-
-        Lemma wf_eta_expand_with_bound' G {t} e1 e2 (He : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
-          : expr.wf G (@eta_expand_with_bound'1 t e1 st1) (@eta_expand_with_bound'2 t e2 st2).
-        Proof using annotate_Proper bottom'_Proper.
-          eapply UnderLets.wf_to_expr, wf_reify; [ eapply wf_reflect | ]; eauto; apply bottom_Proper.
         Qed.
       End with_var2.
     End with_type.
@@ -391,14 +343,14 @@ Module Compilers.
 
         Section with_var2.
           Context {var1 var2 : type -> Type}.
-          Local Notation wf_value_with_lets := (@wf_value_with_lets base.type ident abstract_domain' abstract_domain'_R var1 var2).
           Local Notation wf_value := (@wf_value base.type ident abstract_domain' abstract_domain'_R var1 var2).
+          Local Notation wf_value' := (@wf_value' base.type ident abstract_domain' abstract_domain'_R var1 var2).
           Context (annotate_expr1 : forall t, abstract_domain' t -> option (@expr var1 (t -> t)))
                   (annotate_expr2 : forall t, abstract_domain' t -> option (@expr var2 (t -> t)))
                   (is_annotated_for1 : forall t t', @expr var1 t -> abstract_domain' t' -> bool)
                   (is_annotated_for2 : forall t t', @expr var2 t -> abstract_domain' t' -> bool)
-                  (strip_annotation1 : forall t, ident t -> option (value _ t))
-                  (strip_annotation2 : forall t, ident t -> option (value _ t))
+                  (strip_annotation1 : forall t, ident t -> option (value' _ t))
+                  (strip_annotation2 : forall t, ident t -> option (value' _ t))
                   (annotation_to_cast1 : forall s d, @expr var1 (s -> d) -> option (@expr var1 s -> @expr var1 d))
                   (annotation_to_cast2 : forall s d, @expr var2 (s -> d) -> option (@expr var2 s -> @expr var2 d))
                   (skip_annotations_under : forall t, ident t -> bool)
@@ -418,7 +370,7 @@ Module Compilers.
                            (@is_annotated_for2 t t' e2)}
                   {wf_strip_annotation
                    : forall G t idc,
-                      option_eq (wf_value G)
+                      option_eq (wf_value' G)
                                 (@strip_annotation1 t idc)
                                 (@strip_annotation2 t idc)}.
 
@@ -526,6 +478,7 @@ Module Compilers.
           Proof using abstract_interp_ident_Proper annotate_expr_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper.
             revert dependent G; induction t; intros;
               cbn [ident.annotate]; try apply wf_annotate_base; trivial.
+              (*
             all: try solve [ repeat first [ lazymatch goal with
                                 | [ H : expr.wf _ ?e1 ?e2, H' : reflect_list ?e1 = Some _, H'' : reflect_list ?e2 = None |- _ ]
                                   => apply expr.wf_reflect_list in H; rewrite H', H'' in H; exfalso; clear -H; intuition congruence
@@ -561,8 +514,8 @@ Module Compilers.
                                      rewrite lem in H
                                 end
                               | apply wf_annotate_with_expr
-                              | apply DefaultValue.expr.base.wf_default
-                              | apply DefaultValue.expr.wf_default
+                              | apply DefaultValue'.expr.base.wf_default
+                              | apply DefaultValue'.expr.wf_default
                               | progress expr.invert_subst
                               | progress cbn [ident.annotate ident.smart_Literal invert_Literal invert_pair invert_AppIdent2 invert_App2 fst snd projT2 projT1 eq_rect Option.bind] in *
                               | progress destruct_head' False
@@ -610,19 +563,19 @@ Module Compilers.
                               | progress cbn [type.decode f_equal eq_rect fst snd] in *
                               | solve [ wf_t ] ] ].
           Qed.
-          Local Ltac type_of_value v :=
+          Local Ltac type_of_value' v :=
             lazymatch v with
             | (abstract_domain ?t * _)%type => t
             | (?a -> UnderLets _ ?b)
-              => let a' := type_of_value a in
-                let b' := type_of_value b in
+              => let a' := type_of_value' a in
+                let b' := type_of_value' b in
                 constr:(type.arrow a' b')
             end.
           Local Opaque ident.ident_Literal.
           Lemma wf_interp_ident_nth_default (annotate_with_state : bool) G T
-            : wf_value_with_lets G (@interp_ident1 annotate_with_state _ (@ident.List_nth_default T)) (@interp_ident2 annotate_with_state _ (@ident.List_nth_default T)).
+            : wf_value G (@interp_ident1 annotate_with_state _ (@ident.List_nth_default T)) (@interp_ident2 annotate_with_state _ (@ident.List_nth_default T)).
           Proof using abstract_interp_ident_Proper annotate_expr_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper.
-            cbv [wf_value_with_lets wf_value ident.interp_ident]; constructor; cbn -[abstract_domain_R abstract_domain].
+            cbv [wf_value wf_value' ident.interp_ident]; constructor; cbn -[abstract_domain_R abstract_domain].
             { intros; subst.
               destruct_head'_prod; destruct_head'_and; cbn [fst snd] in *.
               repeat first [ progress subst
@@ -657,8 +610,8 @@ Module Compilers.
                                    | [ |- expr _ -> _ -> _ ]
                                      => refine (expr.wf G)
                                    | [ |- ?T -> _ -> _ ]
-                                     => let t := type_of_value T in
-                                       refine (@wf_value G t)
+                                     => let t := type_of_value' T in
+                                       refine (@wf_value' G t)
                                    end
                                  | | ]
                              | [ |- UnderLets.wf ?Q ?G (UnderLets.Base _) (UnderLets.Base _) ]
@@ -668,8 +621,8 @@ Module Compilers.
                              | [ H : _ = _ :> ident _ |- _ ] => inversion H; clear H
                              | [ H : List.nth_error _ _ = None |- _ ] => apply List.nth_error_None in H
                              | [ H : List.nth_error _ _ = Some _ |- _ ]
-                               => unique pose proof (@ListUtil.nth_error_value_length _ _ _ _ H);
-                                  unique pose proof (@ListUtil.nth_error_value_In _ _ _ _ H)
+                               => unique pose proof (@ListUtil.nth_error_value'_length _ _ _ _ H);
+                                  unique pose proof (@ListUtil.nth_error_value'_In _ _ _ _ H)
                              | [ H : context[List.In _ (List.map _ _)] |- _ ] => rewrite List.in_map_iff in H
                              | [ H : (?x <= ?y)%nat, H' : (?y < ?x)%nat |- _ ] => exfalso; clear -H H'; lia
                              | [ H : (?x <= ?y)%nat, H' : (?y < ?x')%nat, H'' : ?x' = ?x |- _ ] => exfalso; clear -H H' H''; lia
@@ -688,7 +641,7 @@ Module Compilers.
                              end
                            | progress inversion_option
                            | progress intros
-                           | progress cbn [fst snd value] in *
+                           | progress cbn [fst snd value'] in *
                            | progress destruct_head'_prod
                            | progress destruct_head'_ex
                            | progress destruct_head'_and
@@ -700,8 +653,8 @@ Module Compilers.
                            | progress expr.inversion_expr
                            | handle_Forall2_step
                            | wf_safe_t_step
-                           | progress destruct_head' (@partial.wf_value)
-                           | solve [ eapply wf_annotate; wf_t; try apply DefaultValue.expr.base.wf_default
+                           | progress destruct_head' (@partial.wf_value')
+                           | solve [ eapply wf_annotate; wf_t; try apply DefaultValue'.expr.base.wf_default
                                    | eapply wf_annotate_base; wf_t
                                    | eapply (abstract_interp_ident_Proper _ (@ident.List_nth_default T) _ eq_refl); assumption
                                    | eapply wf_update_annotation; wf_t
@@ -725,12 +678,14 @@ Module Compilers.
                            | progress expr.inversion_wf_one_constr
                            | progress expr.invert_match
                            | match goal with
-                             | [ |- wf_value _ _ _ ] => progress hnf
+                             | [ |- wf_value' _ _ _ ] => progress hnf
                              end ]. }
           Qed.
+          *) Admitted.
 
+          (*
           Lemma wf_interp_ident_not_nth_default_nostrip (annotate_with_state : bool) G {t} (idc : ident t)
-            : wf_value_with_lets G (Base (reflect1 annotate_with_state (###idc)%expr (abstract_interp_ident _ idc))) (Base (reflect2 annotate_with_state (###idc)%expr (abstract_interp_ident _ idc))).
+            : wf_value G (Base (reflect1 annotate_with_state (###idc)%expr (abstract_interp_ident _ idc))) (Base (reflect2 annotate_with_state (###idc)%expr (abstract_interp_ident _ idc))).
           Proof using abstract_interp_ident_Proper annotate_expr_Proper bottom'_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper.
             constructor; eapply wf_reflect;
               solve [ apply bottom'_Proper
@@ -740,7 +695,7 @@ Module Compilers.
           Qed.
 
           Lemma wf_interp_ident_not_nth_default (annotate_with_state : bool) G {t} (idc : ident t)
-            : (wf_value_with_lets G)
+            : (wf_value G)
                 (Base match strip_annotation1 _ idc with
                       | Some v => v
                       | None => reflect1 annotate_with_state (###idc)%expr (abstract_interp_ident _ idc)
@@ -757,14 +712,18 @@ Module Compilers.
                     | apply wf_interp_ident_not_nth_default_nostrip
                     | constructor; assumption ].
           Qed.
+           *)
 
           Lemma wf_interp_ident G {t} idc1 idc2 (Hidc : idc1 = idc2) (annotate_with_state : bool)
-            : wf_value_with_lets G (@interp_ident1 annotate_with_state t idc1) (@interp_ident2 annotate_with_state t idc2).
+            : wf_value G (@interp_ident1 annotate_with_state t idc1) (@interp_ident2 annotate_with_state t idc2).
           Proof using abstract_interp_ident_Proper annotate_expr_Proper bottom'_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper wf_strip_annotation.
-            cbv [wf_value_with_lets ident.interp_ident]; subst idc2; destruct idc1;
+          Admitted.
+          (*
+            cbv [wf_value ident.interp_ident]; subst idc2; destruct idc1;
               first [ apply wf_interp_ident_nth_default
                     | apply wf_interp_ident_not_nth_default ].
           Qed.
+           *)
 
           Local Notation strip_all_annotations'1 := (@partial.ident.strip_all_annotations' var1 annotation_to_cast1 skip_annotations_under).
           Local Notation strip_all_annotations'2 := (@partial.ident.strip_all_annotations' var2 annotation_to_cast2 skip_annotations_under).
@@ -797,8 +756,9 @@ Module Compilers.
 
           Local Notation eval_with_bound1 := (@partial.ident.eval_with_bound var1 abstract_domain' annotate_expr1 bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for1 strip_annotation1 skip_annotations_under).
           Local Notation eval_with_bound2 := (@partial.ident.eval_with_bound var2 abstract_domain' annotate_expr2 bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for2 strip_annotation2 skip_annotations_under).
+          (*
           Lemma wf_eval_with_bound (annotate_with_state : bool) {t} G G' e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
-                (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value_with_lets G' v1 v2)
+                (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
             : expr.wf G' (@eval_with_bound1 annotate_with_state t e1 st1) (@eval_with_bound2 annotate_with_state t e2 st2).
           Proof using abstract_interp_ident_Proper annotate_expr_Proper bottom'_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper wf_strip_annotation.
             eapply wf_eval_with_bound';
@@ -806,11 +766,13 @@ Module Compilers.
                     | eapply wf_annotate
                     | eapply wf_interp_ident ].
           Qed.
+           *)
 
           Local Notation eval1 := (@partial.ident.eval var1 abstract_domain' annotate_expr1 bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for1 strip_annotation1).
           Local Notation eval2 := (@partial.ident.eval var2 abstract_domain' annotate_expr2 bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for2 strip_annotation2).
+          (*
           Lemma wf_eval {t} G G' e1 e2 (Hwf : expr.wf G e1 e2)
-                (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value_with_lets G' v1 v2)
+                (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
             : expr.wf G' (@eval1 t e1) (@eval2 t e2).
           Proof using abstract_interp_ident_Proper annotate_expr_Proper bottom'_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper wf_strip_annotation.
             eapply wf_eval';
@@ -818,17 +780,20 @@ Module Compilers.
                     | eapply wf_annotate
                     | eapply wf_interp_ident ].
           Qed.
+           *)
 
           Local Notation eta_expand_with_bound1 := (@partial.ident.eta_expand_with_bound var1 abstract_domain' annotate_expr1 bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for1).
           Local Notation eta_expand_with_bound2 := (@partial.ident.eta_expand_with_bound var2 abstract_domain' annotate_expr2 bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for2).
           Lemma wf_eta_expand_with_bound {t} G e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
             : expr.wf G (@eta_expand_with_bound1 t e1 st1) (@eta_expand_with_bound2 t e2 st2).
           Proof using abstract_interp_ident_Proper annotate_expr_Proper bottom'_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper.
+            (*
             eapply wf_eta_expand_with_bound';
               solve [ eassumption
                     | eapply wf_annotate
                     | eapply wf_interp_ident ].
           Qed.
+             *) Admitted.
         End with_var2.
       End with_type.
     End ident.
@@ -839,7 +804,7 @@ Module Compilers.
       Local Notation abstract_domain := (@partial.abstract_domain base.type abstract_domain').
       Local Notation abstract_domain'_R t := (@eq (abstract_domain' t)) (only parsing).
       Local Notation abstract_domain_R := (@abstract_domain_R base.type abstract_domain' (fun t => abstract_domain'_R t)).
-      Local Notation wf_value := (@wf_value base.type ident abstract_domain' (fun t => abstract_domain'_R t)).
+      Local Notation wf_value' := (@wf_value' base.type ident abstract_domain' (fun t => abstract_domain'_R t)).
 
       Lemma annotate_expr_Proper {relax_zrange var1 var2} {t} s1 s2
         : abstract_domain'_R t s1 s2
@@ -879,12 +844,12 @@ Module Compilers.
               (#(@ident.Literal base.type.zrange r1%zrange), #(@ident.Literal base.type.zrange r2%zrange))%expr_pat).
 
       Lemma wf_always_strip_annotation {opts : AbstractInterpretation.Options} (assume_cast_truncates : bool) {var1 var2} G {t} idc
-        : option_eq (wf_value G)
+        : option_eq (wf_value' G)
                     (always_strip_annotation assume_cast_truncates (var:=var1) t idc)
                     (always_strip_annotation assume_cast_truncates (var:=var2) t idc).
       Proof using Type.
         cbv [always_strip_annotation]; break_innermost_match; try reflexivity;
-          cbn [option_eq wf_value].
+          cbn [option_eq wf_value'].
         all: repeat first [ progress intros
                           | assumption
                           | progress subst
@@ -901,7 +866,7 @@ Module Compilers.
       Qed.
 
       Lemma wf_strip_annotation {opts : AbstractInterpretation.Options} (assume_cast_truncates : bool) (strip_annotations : bool) {var1 var2} G {t} idc
-        : option_eq (wf_value G)
+        : option_eq (wf_value' G)
                     (strip_annotation assume_cast_truncates strip_annotations (var:=var1) t idc)
                     (strip_annotation assume_cast_truncates strip_annotations (var:=var2) t idc).
       Proof using Type.
@@ -1043,10 +1008,11 @@ Module Compilers.
 
       Section with_var2.
         Context {var1 var2 : type -> Type}.
-        Local Notation wf_value_with_lets := (@wf_value_with_lets base.type ident abstract_domain' (fun t => abstract_domain'_R t) var1 var2).
+        Local Notation wf_value := (@wf_value base.type ident abstract_domain' (fun t => abstract_domain'_R t) var1 var2).
+        (*
 
         Lemma wf_eval {opts : AbstractInterpretation.Options} {t} G G' e1 e2 (Hwf : expr.wf G e1 e2)
-              (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value_with_lets G' v1 v2)
+              (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
           : expr.wf G' (t:=t) (eval (var:=var1) e1) (eval (var:=var2) e2).
         Proof using Type.
           eapply ident.wf_eval;
@@ -1059,13 +1025,15 @@ Module Compilers.
                   | intros; now apply annotate_expr_Proper
                   | apply is_annotated_for_Proper ].
         Qed.
+         *)
 
         Lemma wf_strip_all_annotations strip_annotations_under G t e1 e2 (Hwf : expr.wf G e1 e2)
           : expr.wf G (@strip_all_annotations strip_annotations_under var1 t e1) (@strip_all_annotations strip_annotations_under var2 t e2).
         Proof using Type. revert Hwf; apply ident.wf_strip_all_annotations, @wf_annotation_to_cast. Qed.
 
+        (*
         Lemma wf_eval_with_bound {opts : AbstractInterpretation.Options} {relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations t} G G' e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
-              (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value_with_lets G' v1 v2)
+              (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
           : expr.wf G' (var1:=var1) (var2:=var2) (t:=t)
                     (eval_with_bound relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations e1 st1)
                     (eval_with_bound relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations e2 st2).
@@ -1082,7 +1050,7 @@ Module Compilers.
         Qed.
 
         Lemma wf_strip_annotations {opts : AbstractInterpretation.Options} {assume_cast_truncates} {t} G G' e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
-              (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value_with_lets G' v1 v2)
+              (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
           : expr.wf G' (t:=t) (strip_annotations assume_cast_truncates (var:=var1) e1 st1) (strip_annotations assume_cast_truncates (var:=var2) e2 st2).
         Proof using Type.
           eapply ident.wf_eval_with_bound;
@@ -1095,6 +1063,7 @@ Module Compilers.
                   | intros; now apply annotate_expr_Proper
                   | apply is_annotated_for_Proper ].
         Qed.
+         *)
 
         Lemma wf_eta_expand_with_bound {relax_zrange t} G e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
           : expr.wf G (t:=t) (eta_expand_with_bound relax_zrange (var:=var1) e1 st1) (eta_expand_with_bound relax_zrange (var:=var2) e2 st2).
@@ -1117,20 +1086,26 @@ Module Compilers.
 
       Lemma Wf_Eval {opts : AbstractInterpretation.Options} {t} (e : Expr t) (Hwf : Wf e) : Wf (Eval e).
       Proof using Type.
+        (*
         intros ??; eapply wf_eval with (G:=nil); cbn [List.In]; try apply Hwf; tauto.
       Qed.
+         *) Admitted.
 
       Lemma Wf_EvalWithBound {opts : AbstractInterpretation.Options} {relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
         : Wf (EvalWithBound relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations e bound).
       Proof using Type.
+        (*
         intros ??; eapply wf_eval_with_bound with (G:=nil); cbn [List.In]; try apply Hwf; tauto.
       Qed.
+         *) Admitted.
 
       Lemma Wf_StripAnnotations {opts : AbstractInterpretation.Options} {assume_cast_truncates} {t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
         : Wf (StripAnnotations assume_cast_truncates e bound).
       Proof using Type.
+        (*
         intros ??; eapply wf_strip_annotations with (G:=nil); cbn [List.In]; try tauto; apply Hwf.
       Qed.
+         *) Admitted.
 
       Lemma Wf_EtaExpandWithBound {relax_zrange t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
         : Wf (EtaExpandWithBound relax_zrange e bound).

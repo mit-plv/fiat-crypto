@@ -833,6 +833,7 @@ Module Compilers.
                         | [ |- context[Proper _ (fun y => Z.shiftl ?v _)] ] => is_var v; destruct v; auto with zarith
                         | _ => idtac
                         end.
+            all : try solve [eapply (ZRange.monotoneb_two_corners_and_zero_gen Z.abs); trivial; cbv [Proper respectful]; left; lia].
             all: try solve [ cbv [Proper respectful Basics.flip]; constructor; intros; lia ].
             all: try solve [ cbv [Proper respectful Basics.flip]; constructor; intros; autorewrite with zsimplify_const; lia ].
             all: cbv [is_bounded_by_bool ZRange.upper ZRange.lower]; rewrite ?Bool.andb_true_iff, ?Z.leb_le.
@@ -845,6 +846,22 @@ Module Compilers.
             all: try solve [ non_arith_t; Z.ltb_to_lt; reflexivity ].
             all: try solve [ non_arith_t; try match goal with |- ?x = true => destruct x eqn:? end; reflect_hyps; subst; nia ].
             all: try solve [ cbv [ZRange.ToConstant.four_corners ZRange.ToConstant.Option.four_corners ZRange.ToConstant.Option.apply_to_range ZRange.ToConstant.Option.two_corners ZRange.ToConstant.Option.union option_beq Bool.eqb] in *; non_arith_t; Z.ltb_to_lt; lia ].
+(*
+<<<<<<< HEAD
+            all: [ > idtac "WARNING: Remaining goal:"; print_context_and_goal () .. | | ].
+            { destruct y1.
+              eapply type.base.option.is_bounded_by_union_l; eauto.
+              eapply type.base.option.is_bounded_by_union_r; eauto. }
+            { destruct y1.
+              eapply type.base.option.is_bounded_by_union_l; trivial.
+              eapply type.base.option.is_bounded_by_union_r; trivial. }
+            { intros.
+              rewrite Z.le_sub_1_iff.
+              break_innermost_match; Z.ltb_to_lt;
+                auto with zarith. }
+            { non_arith_t; Z.ltb_to_lt; reflexivity. }
+=======
+*)
             (** For command-line debugging, we display goals that should not remain *)
             all: [ > idtac "WARNING: Remaining goal:"; print_context_and_goal () .. ].
           Qed.

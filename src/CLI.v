@@ -22,12 +22,11 @@ Require Import Crypto.Util.Strings.Sorting.
 Require Import Crypto.Util.Strings.ParseFlagOptions.
 Require Import Crypto.Util.DebugMonad.
 Require Import Crypto.Util.Listable.
-Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Crypto.PushButtonSynthesis.BaseConversion.
 Require Crypto.PushButtonSynthesis.DettmanMultiplication.
-Require Crypto.PushButtonSynthesis.SolinasReduction.
+Require Crypto.PushButtonSynthesis.P256ADX.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.C.
@@ -48,9 +47,7 @@ Module ForExtraction.
   Variant SynthesisKind : Set :=
     | word_by_word_montgomery
     | unsaturated_solinas
-    | saturated_solinas
     | dettman_multiplication
-    | solinas_reduction
     | base_conversion
   .
 
@@ -1214,42 +1211,6 @@ Module ForExtraction.
       := Parameterized.PipelineMain argv.
   End WordByWordMontgomery.
 
-  Module SaturatedSolinas.
-    Local Instance api : PipelineAPI
-      := {
-          spec :=
-            {| Arg.named_args := []
-               ; Arg.anon_args := [sc_spec]
-               ; Arg.anon_opt_args := []
-               ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec SaturatedSolinas.valid_names) |};
-
-          parse_args opts args
-          := let '(tt, (str_sc, (s, c)), tt, requests) := args in
-             let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
-             inl ((str_sc, show_requests),
-                  (s, c, requests));
-
-          show_lines_args :=
-            fun '((str_sc, show_requests),
-                  (s, c, requests))
-            => ["requested operations: " ++ show_requests;
-               "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)"];
-
-          Synthesize
-          := fun _ opts '(s, c, requests) comment_header prefix
-             => SaturatedSolinas.Synthesize s c machine_wordsize comment_header prefix requests
-        }.
-
-    Definition PipelineMain
-               {prog_name_count : Arg.prog_name_countT}
-               {supported_languages : supported_languagesT}
-               {A}
-               {io_driver : IODriverAPI A}
-               (argv : list string)
-      : A
-      := Parameterized.PipelineMain argv.
-  End SaturatedSolinas.
-
   Module DettmanMultiplication.
     Local Instance api : PipelineAPI
       := {
@@ -1297,14 +1258,14 @@ Module ForExtraction.
       := Parameterized.PipelineMain argv.
   End DettmanMultiplication.
 
-  Module SolinasReduction.
+  Module P256ADX.
     Local Instance api : PipelineAPI
       := {
         spec :=
         {| Arg.named_args := []
         ; Arg.anon_args := [sc_spec]
         ; Arg.anon_opt_args := []
-        ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec SolinasReduction.valid_names) |};
+        ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec P256ADX.valid_names) |};
 
         parse_args opts args
         := let '(tt, (str_sc, (s, c)), tt, requests) := args in
@@ -1315,12 +1276,11 @@ Module ForExtraction.
         show_lines_args :=
         fun '((str_sc, show_requests),
              (s, c, requests))
-        => ["requested operations: " ++ show_requests;
-           "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)"];
+        => ["requested operations: " ++ show_requests];
 
         Synthesize
         := fun _ opts '(s, c, requests) comment_header prefix
-           => SolinasReduction.Synthesize s c machine_wordsize comment_header prefix requests
+           => P256ADX.Synthesize machine_wordsize comment_header prefix requests
       }.
 
     Definition PipelineMain
@@ -1331,7 +1291,7 @@ Module ForExtraction.
                (argv : list string)
       : A
       := Parameterized.PipelineMain argv.
-  End SolinasReduction.
+  End P256ADX.
 
   Module BaseConversion.
     Local Instance api : PipelineAPI
@@ -1424,12 +1384,8 @@ Module ForExtraction.
                 => WordByWordMontgomery.PipelineMain (prog_name_count:=prog_name_count) argv
               | unsaturated_solinas
                 => UnsaturatedSolinas.PipelineMain (prog_name_count:=prog_name_count) argv
-              | saturated_solinas
-                => SaturatedSolinas.PipelineMain (prog_name_count:=prog_name_count) argv
               | dettman_multiplication
                 => DettmanMultiplication.PipelineMain (prog_name_count:=prog_name_count) argv
-              | solinas_reduction
-                => SolinasReduction.PipelineMain (prog_name_count:=prog_name_count) argv
               | base_conversion
                 => BaseConversion.PipelineMain (prog_name_count:=prog_name_count) argv
               end

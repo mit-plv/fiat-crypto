@@ -118,6 +118,7 @@ Module Compilers.
       Local Notation expr := (@expr.expr base_type ident).
       Local Notation UnderLets := (@UnderLets base_type ident).
       Local Notation value := (@value base_type ident var abstract_domain').
+      (*
       Local Notation value_with_lets := (@value_with_lets base_type ident var abstract_domain').
       Local Notation state_of_value := (@state_of_value base_type ident var abstract_domain' bottom').
       Context (annotate : forall (is_let_bound : bool) t, abstract_domain' t -> @expr var t -> @UnderLets var (@expr var t))
@@ -131,12 +132,10 @@ Module Compilers.
               (ident_extract_Proper : forall t, Proper (eq ==> abstract_domain_R) (ident_extract t)).
       Local Notation eta_expand_with_bound' := (@eta_expand_with_bound' base_type ident _ abstract_domain' annotate bottom').
       Local Notation eval_with_bound' := (@partial.eval_with_bound' base_type ident _ abstract_domain' annotate bottom' skip_annotations_under interp_ident).
-      Local Notation extract' := (@extract' base_type ident abstract_domain' bottom' ident_extract).
       Local Notation extract_gen := (@extract_gen base_type ident abstract_domain' bottom' ident_extract).
       Local Notation reify := (@reify base_type ident _ abstract_domain' annotate bottom').
       Local Notation reflect := (@reflect base_type ident _ abstract_domain' annotate bottom').
       Local Notation interp := (@interp base_type ident var abstract_domain' annotate bottom' skip_annotations_under interp_ident).
-      Local Notation bottomify := (@bottomify base_type ident _ abstract_domain' bottom').
 
       Lemma bottom_related t v : @abstraction_relation t bottom v.
       Proof using bottom'_related. cbv [abstraction_relation]; induction t; cbn; cbv [respectful_hetero]; eauto. Qed.
@@ -164,13 +163,17 @@ Module Compilers.
            | type.arrow s d
              => fun st e v
                => Proper type.eqv v
-                 /\ forall st_s e_s v_s,
-                   let st_s := match s with
-                               | type.base _ => st_s
-                               | type.arrow _ _ => bottom
-                               end in
-                   @related_bounded_value s st_s e_s v_s
-                   -> @related_bounded_value d (st st_s) (UnderLets.interp ident_interp (e e_s)) (v v_s)
+                  /\ Proper abstract_domain_R st
+                  /\ (forall st_s e_s v_s,
+                         let st_s := match s with
+                                     | type.base _ => st_s
+                                     | type.arrow _ _ => bottom
+                                     end in
+                         @related_bounded_value s st_s e_s v_s
+                         -> @related_bounded_value d (st st_s) (UnderLets.interp ident_interp (e e_s)) (v v_s))
+                  /\ (forall st_s e_s v_s,
+                         @related_bounded_value s st_s e_s v_s
+                         -> @related_bounded_value d (st st_s) (UnderLets.interp ident_interp (e e_s)) (v v_s))
            end.
       Definition related_bounded_value_with_lets {t} : abstract_domain t -> value_with_lets t -> type.interp base_interp t -> Prop
         := fun st e v => related_bounded_value st (UnderLets.interp ident_interp e) v.
@@ -316,7 +319,14 @@ Module Compilers.
         : @related_bounded_value t st' e v -> abstract_domain_R st' (state_of_value e).
       Proof using bottom'_Proper. intro H; destruct t; cbn in *; [ destruct e; apply H | repeat intro; refine bottom_Proper ]. Qed.
 
-      Lemma related_bounded_value_Proper {t} st1 st2 (Hst : abstract_domain_R (fill_in_bottom_for_arrows st1) (fill_in_bottom_for_arrows st2))
+      Lemma related_refl_of_related_bounded_value {t} st e v
+        : @related_bounded_value t st e v -> abstract_domain_R st st.
+      Proof using abstract_domain'_R_symmetric abstract_domain'_R_transitive.
+        destruct t; cbn; break_innermost_match; intros; destruct_head'_and; try assumption.
+        all: try now eapply abstract_domain'_R_refl_of_rel_l; eassumption.
+      Qed.
+
+      Lemma related_bounded_value_Proper {t} st1 st2 (Hst : abstract_domain_R st1 st2)
             a a1 a2
             (Ha' : type.eqv a1 a2)
         : @related_bounded_value t st1 a a1 -> @related_bounded_value t st2 a a2.
@@ -330,19 +340,26 @@ Module Compilers.
           { etransitivity; (idtac + symmetry); eassumption. }
           { eapply abstraction_relation'_Proper; (eassumption + reflexivity). } }
         { intros [? Hrel].
-          split; [ repeat intro; etransitivity; (idtac + symmetry); eapply Ha'; (eassumption + (etransitivity; (idtac + symmetry); eassumption)) | ].
-          pose proof (@bottom_Proper s) as Hsbot.
-          intros ?? v_s; destruct s; intros Hx; cbn [type.related] in *;
-            cbn [fill_in_bottom_for_arrows] in *; cbv [respectful] in *.
-          { specialize_by_assumption; cbn in *.
-            eapply IHd; [ cbn in Hst |- *; eapply Hst | apply Ha'; reflexivity | eapply Hrel, Hx ]; cbv [respectful].
-            cbn [related_bounded_value] in *.
-            break_innermost_match_hyps; destruct_head'_and.
-            eauto. }
-          { eapply IHd; [ eapply Hst | apply Ha' | eapply Hrel, Hx ];
-              [ eexact Hsbot | refine (@related_of_related_bounded_value _ _ _ v_s _); eassumption | refine bottom ]. } }
+          split; [ | split; [ | split ] ];
+            [ repeat intro; etransitivity; (idtac + symmetry); (eapply Ha' + eapply Hst); (eassumption + (etransitivity; (idtac + symmetry); eassumption)) ..
+            | | ].
+          { pose proof (@bottom_Proper s) as Hsbot.
+            intros ?? v_s; destruct s; intros Hx; cbn [type.related] in *;
+              cbn [fill_in_bottom_for_arrows] in *; cbv [respectful] in *.
+            { specialize_by_assumption; cbn in *.
+              eapply IHd; [ cbn in Hst |- *; eapply Hst | apply Ha'; reflexivity | eapply Hrel, Hx ]; cbv [respectful].
+              cbn [related_bounded_value] in *.
+              break_innermost_match_hyps; destruct_head'_and.
+              eauto. }
+            { eapply IHd; [ eapply Hst | apply Ha' | eapply Hrel, Hx ];
+                [ eexact Hsbot | refine (@related_of_related_bounded_value _ _ _ v_s _); eassumption ]. } }
+          { intros ?? v_s Hx; cbn [type.related] in *; cbv [respectful] in *.
+            eapply IHd; [ cbn in Hst |- *; eapply Hst | apply Ha' | eapply Hrel, Hx ].
+            all: try now eapply related_refl_of_related_bounded_value; eassumption.
+            all: try now eapply related_of_related_bounded_value; eassumption. } }
       Qed.
 
+      (*
       Lemma related_bounded_value_fill_bottom_iff {t} st1 st2 (Hst : abstract_domain_R st1 st2)
             a a1 a2
             (Ha' : type.eqv a1 a2)
@@ -352,14 +369,12 @@ Module Compilers.
         all: (idtac + symmetry); apply abstract_domain_R_fill_bottom_idempotent.
         all: (idtac + symmetry); assumption.
       Qed.
-
+*)
       Lemma related_bounded_value_Proper1 {t}
         : Proper (abstract_domain_R ==> eq ==> eq ==> Basics.impl) (@related_bounded_value t).
       Proof using abstraction_relation'_Proper abstract_domain'_R_transitive abstract_domain'_R_symmetric bottom'_Proper.
-        repeat intro; subst; eapply related_bounded_value_Proper.
-        { eapply fill_in_bottom_for_arrows_Proper; eassumption. }
-        { eapply related_of_related_bounded_value; eassumption. }
-        { assumption. }
+        repeat intro; subst; eapply related_bounded_value_Proper; try eassumption.
+        eapply related_of_related_bounded_value; eassumption.
       Qed.
 
       Lemma related_bounded_value_Proper_eq {t}
@@ -475,6 +490,7 @@ Module Compilers.
                             | [ |- type.related_hetero _ (@state_of_value ?t _) _ ]
                               => is_var t; destruct t; cbv [state_of_value]; [ cbn | apply bottom_related ]
                             end ].
+HERE
       Qed.
 
       Lemma interp_reify_first_order
@@ -526,25 +542,6 @@ Module Compilers.
         rewrite interp_annotate by eauto; reflexivity.
       Qed.
 
-      Lemma related_bounded_value_bottomify {t} v_st st v
-        : @related_bounded_value t v_st st v
-          -> @related_bounded_value t bottom (UnderLets.interp ident_interp (bottomify st)) v.
-      Proof using bottom'_Proper bottom'_related.
-        induction t; cbn in *;
-          repeat first [ progress subst
-                       | progress cbv [respectful] in *
-                       | progress cbn [UnderLets.interp] in *
-                       | progress destruct_head'_and
-                       | break_innermost_match_step
-                       | progress intros
-                       | apply conj
-                       | reflexivity
-                       | apply bottom'_Proper
-                       | apply bottom'_related
-                       | solve [ eauto ]
-                       | rewrite UnderLets.interp_splice ].
-      Qed.
-
       Context (interp_ident_Proper
                : forall annotate_with_state t idc,
                   related_bounded_value (ident_extract t idc) (UnderLets.interp ident_interp (interp_ident annotate_with_state t idc)) (ident_interp t idc)).
@@ -557,16 +554,16 @@ Module Compilers.
             (Hwf : expr.wf3 G e_st e1 e2)
             (Hwf' : expr.wf G' e2 e3)
         : related_bounded_value_with_lets
-            (extract' e_st)
+            (expr.interp (@ident_extract) e_st)
             (interp annotate_with_state e1)
             (expr.interp (@ident_interp) e2).
       Proof using interp_ident_Proper interp_annotate abstraction_relation'_Proper ident_interp_Proper' abstract_domain'_R_transitive abstract_domain'_R_symmetric bottom'_Proper bottom'_related.
         clear -ident_interp_Proper' interp_ident_Proper interp_annotate abstraction_relation'_Proper abstract_domain'_R_transitive abstract_domain'_R_symmetric bottom'_Proper bottom'_related HG HG' Hwf Hwf'.
         cbv [related_bounded_value_with_lets] in *;
           revert dependent annotate_with_state; revert dependent G'; induction Hwf; intros;
-            cbn [extract' interp expr.interp UnderLets.interp List.In related_bounded_value reify reflect] in *; cbv [Let_In] in *.
+            cbn [interp expr.interp UnderLets.interp List.In related_bounded_value reify reflect] in *; cbv [Let_In] in *.
         all: destruct annotate_with_state eqn:?.
-        all: repeat first [ progress intros
+        Ltac step HG HG' := first [ progress intros
                           | progress subst
                           | progress inversion_sigma
                           | progress inversion_prod
@@ -580,10 +577,10 @@ Module Compilers.
                           | progress cbn [UnderLets.interp List.In eq_rect fst snd projT1 projT2] in *
                           | rewrite UnderLets.interp_splice
                           | rewrite interp_annotate
-                          | solve [ cbv [Proper respectful Basics.impl] in *; unshelve eauto using related_of_related_bounded_value, related_bounded_value_bottomify ]
+                          | solve [ cbv [Proper respectful Basics.impl] in *; unshelve eauto using related_of_related_bounded_value ]
                           | progress specialize_by_assumption
                           | progress cbv [Let_In] in *
-                          | progress cbn [state_of_value extract'] in *
+                          | progress cbn [state_of_value expr.interp] in *
                           | progress expr.invert_subst
                           | match goal with
                             | [ |- abstract_domain ?t ] => exact (@bottom t)
@@ -629,7 +626,26 @@ Module Compilers.
                                            [ |- ?G ] => assert_fails has_evar G
                                          end))
                             end
-                          | reflexivity ].
+                                  | reflexivity ].
+        all: try solve [ repeat step HG HG' ].
+        all: step HG HG'.
+        all: step HG HG'.
+        all: try solve [ repeat step HG HG' ].
+        all: step HG HG'.
+        all: step HG HG'.
+        all: step HG HG'.
+        all: step HG HG'.
+        all: step HG HG'.
+        all: step HG HG'.
+        all: step HG HG'.
+        all: step HG HG'.
+        all: step HG HG'.
+        all: step HG HG'.
+        all: step HG HG'.
+        move f1 at bottom.
+        eapply IHHwf1.
+        cbn [expr.interp].
+        step HG HG'.
       Qed.
 
       Lemma interp_eval_with_bound'
@@ -1559,4 +1575,5 @@ Module Compilers.
                        | progress intros ]
         | eauto with wf typeclass_instances ].
   Qed.
+*) End with_type. End partial.
 End Compilers.

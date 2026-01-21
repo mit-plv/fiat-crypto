@@ -36,6 +36,52 @@ pub const LooseFieldElement = [5]u32;
 // Bounds: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]]
 pub const TightFieldElement = [5]u32;
 
+/// The function addcarryxU32 is an addition with carry.
+///
+/// Postconditions:
+///   out1 = (arg1 + arg2 + arg3) mod 2^32
+///   out2 = ⌊(arg1 + arg2 + arg3) / 2^32⌋
+///
+/// Input Bounds:
+///   arg1: [0x0 ~> 0x1]
+///   arg2: [0x0 ~> 0xffffffff]
+///   arg3: [0x0 ~> 0xffffffff]
+/// Output Bounds:
+///   out1: [0x0 ~> 0xffffffff]
+///   out2: [0x0 ~> 0x1]
+inline fn addcarryxU32(out1: *u32, out2: *u1, arg1: u1, arg2: u32, arg3: u32) void {
+    @setRuntimeSafety(mode == .Debug);
+
+    const x1 = ((cast(u64, arg1) + cast(u64, arg2)) + cast(u64, arg3));
+    const x2 = cast(u32, (x1 & cast(u64, 0xffffffff)));
+    const x3 = cast(u1, (x1 >> 32));
+    out1.* = x2;
+    out2.* = x3;
+}
+
+/// The function subborrowxU32 is a subtraction with borrow.
+///
+/// Postconditions:
+///   out1 = (-arg1 + arg2 + -arg3) mod 2^32
+///   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^32⌋
+///
+/// Input Bounds:
+///   arg1: [0x0 ~> 0x1]
+///   arg2: [0x0 ~> 0xffffffff]
+///   arg3: [0x0 ~> 0xffffffff]
+/// Output Bounds:
+///   out1: [0x0 ~> 0xffffffff]
+///   out2: [0x0 ~> 0x1]
+inline fn subborrowxU32(out1: *u32, out2: *u1, arg1: u1, arg2: u32, arg3: u32) void {
+    @setRuntimeSafety(mode == .Debug);
+
+    const x1 = ((cast(i64, arg2) - cast(i64, arg1)) - cast(i64, arg3));
+    const x2 = cast(i1, (x1 >> 32));
+    const x3 = cast(u32, (x1 & cast(i64, 0xffffffff)));
+    out1.* = x3;
+    out2.* = cast(u1, (cast(i2, 0x0) - cast(i2, x2)));
+}
+
 /// The function addcarryxU26 is an addition with carry.
 ///
 /// Postconditions:
@@ -378,75 +424,76 @@ pub fn toBytes(out1: *[17]u8, arg1: TightFieldElement) void {
     var x10: u1 = undefined;
     subborrowxU26(&x9, &x10, x8, (arg1[4]), 0x3ffffff);
     var x11: u32 = undefined;
-    cmovznzU32(&x11, x10, cast(u32, 0x0), 0xffffffff);
-    var x12: u32 = undefined;
-    var x13: u1 = undefined;
-    addcarryxU26(&x12, &x13, 0x0, x1, (x11 & 0x3fffffb));
-    var x14: u32 = undefined;
-    var x15: u1 = undefined;
-    addcarryxU26(&x14, &x15, x13, x3, (x11 & 0x3ffffff));
-    var x16: u32 = undefined;
-    var x17: u1 = undefined;
-    addcarryxU26(&x16, &x17, x15, x5, (x11 & 0x3ffffff));
-    var x18: u32 = undefined;
-    var x19: u1 = undefined;
-    addcarryxU26(&x18, &x19, x17, x7, (x11 & 0x3ffffff));
-    var x20: u32 = undefined;
-    var x21: u1 = undefined;
-    addcarryxU26(&x20, &x21, x19, x9, (x11 & 0x3ffffff));
-    const x22 = (x18 << 6);
-    const x23 = (x16 << 4);
-    const x24 = (x14 << 2);
-    const x25 = cast(u8, (x12 & cast(u32, 0xff)));
-    const x26 = (x12 >> 8);
-    const x27 = cast(u8, (x26 & cast(u32, 0xff)));
-    const x28 = (x26 >> 8);
-    const x29 = cast(u8, (x28 & cast(u32, 0xff)));
-    const x30 = cast(u8, (x28 >> 8));
-    const x31 = (x24 + cast(u32, x30));
-    const x32 = cast(u8, (x31 & cast(u32, 0xff)));
-    const x33 = (x31 >> 8);
-    const x34 = cast(u8, (x33 & cast(u32, 0xff)));
-    const x35 = (x33 >> 8);
-    const x36 = cast(u8, (x35 & cast(u32, 0xff)));
-    const x37 = cast(u8, (x35 >> 8));
-    const x38 = (x23 + cast(u32, x37));
-    const x39 = cast(u8, (x38 & cast(u32, 0xff)));
-    const x40 = (x38 >> 8);
-    const x41 = cast(u8, (x40 & cast(u32, 0xff)));
-    const x42 = (x40 >> 8);
-    const x43 = cast(u8, (x42 & cast(u32, 0xff)));
-    const x44 = cast(u8, (x42 >> 8));
-    const x45 = (x22 + cast(u32, x44));
-    const x46 = cast(u8, (x45 & cast(u32, 0xff)));
-    const x47 = (x45 >> 8);
-    const x48 = cast(u8, (x47 & cast(u32, 0xff)));
-    const x49 = (x47 >> 8);
-    const x50 = cast(u8, (x49 & cast(u32, 0xff)));
-    const x51 = cast(u8, (x49 >> 8));
-    const x52 = cast(u8, (x20 & cast(u32, 0xff)));
-    const x53 = (x20 >> 8);
-    const x54 = cast(u8, (x53 & cast(u32, 0xff)));
-    const x55 = (x53 >> 8);
-    const x56 = cast(u8, (x55 & cast(u32, 0xff)));
-    const x57 = cast(u8, (x55 >> 8));
-    out1[0] = x25;
-    out1[1] = x27;
-    out1[2] = x29;
-    out1[3] = x32;
-    out1[4] = x34;
-    out1[5] = x36;
-    out1[6] = x39;
-    out1[7] = x41;
-    out1[8] = x43;
-    out1[9] = x46;
-    out1[10] = x48;
-    out1[11] = x50;
-    out1[12] = x51;
-    out1[13] = x52;
-    out1[14] = x54;
-    out1[15] = x56;
-    out1[16] = x57;
+    var x12: u1 = undefined;
+    subborrowxU32(&x11, &x12, x10, cast(u32, 0x0), cast(u32, 0x0));
+    var x13: u32 = undefined;
+    var x14: u1 = undefined;
+    addcarryxU26(&x13, &x14, 0x0, x1, (x11 & 0x3fffffb));
+    var x15: u32 = undefined;
+    var x16: u1 = undefined;
+    addcarryxU26(&x15, &x16, x14, x3, (x11 & 0x3ffffff));
+    var x17: u32 = undefined;
+    var x18: u1 = undefined;
+    addcarryxU26(&x17, &x18, x16, x5, (x11 & 0x3ffffff));
+    var x19: u32 = undefined;
+    var x20: u1 = undefined;
+    addcarryxU26(&x19, &x20, x18, x7, (x11 & 0x3ffffff));
+    var x21: u32 = undefined;
+    var x22: u1 = undefined;
+    addcarryxU26(&x21, &x22, x20, x9, (x11 & 0x3ffffff));
+    const x23 = (x19 << 6);
+    const x24 = (x17 << 4);
+    const x25 = (x15 << 2);
+    const x26 = cast(u8, (x13 & cast(u32, 0xff)));
+    const x27 = (x13 >> 8);
+    const x28 = cast(u8, (x27 & cast(u32, 0xff)));
+    const x29 = (x27 >> 8);
+    const x30 = cast(u8, (x29 & cast(u32, 0xff)));
+    const x31 = cast(u8, (x29 >> 8));
+    const x32 = (x25 + cast(u32, x31));
+    const x33 = cast(u8, (x32 & cast(u32, 0xff)));
+    const x34 = (x32 >> 8);
+    const x35 = cast(u8, (x34 & cast(u32, 0xff)));
+    const x36 = (x34 >> 8);
+    const x37 = cast(u8, (x36 & cast(u32, 0xff)));
+    const x38 = cast(u8, (x36 >> 8));
+    const x39 = (x24 + cast(u32, x38));
+    const x40 = cast(u8, (x39 & cast(u32, 0xff)));
+    const x41 = (x39 >> 8);
+    const x42 = cast(u8, (x41 & cast(u32, 0xff)));
+    const x43 = (x41 >> 8);
+    const x44 = cast(u8, (x43 & cast(u32, 0xff)));
+    const x45 = cast(u8, (x43 >> 8));
+    const x46 = (x23 + cast(u32, x45));
+    const x47 = cast(u8, (x46 & cast(u32, 0xff)));
+    const x48 = (x46 >> 8);
+    const x49 = cast(u8, (x48 & cast(u32, 0xff)));
+    const x50 = (x48 >> 8);
+    const x51 = cast(u8, (x50 & cast(u32, 0xff)));
+    const x52 = cast(u8, (x50 >> 8));
+    const x53 = cast(u8, (x21 & cast(u32, 0xff)));
+    const x54 = (x21 >> 8);
+    const x55 = cast(u8, (x54 & cast(u32, 0xff)));
+    const x56 = (x54 >> 8);
+    const x57 = cast(u8, (x56 & cast(u32, 0xff)));
+    const x58 = cast(u8, (x56 >> 8));
+    out1[0] = x26;
+    out1[1] = x28;
+    out1[2] = x30;
+    out1[3] = x33;
+    out1[4] = x35;
+    out1[5] = x37;
+    out1[6] = x40;
+    out1[7] = x42;
+    out1[8] = x44;
+    out1[9] = x47;
+    out1[10] = x49;
+    out1[11] = x51;
+    out1[12] = x52;
+    out1[13] = x53;
+    out1[14] = x55;
+    out1[15] = x57;
+    out1[16] = x58;
 }
 
 /// The function fromBytes deserializes a field element from bytes in little-endian order.
