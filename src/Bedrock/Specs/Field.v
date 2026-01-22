@@ -3,7 +3,7 @@ Require Import coqutil.Byte coqutil.Word.LittleEndianList.
 From coqutil.Macros Require Import symmetry.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Field.Synthesis.Generic.Bignum.
+Require Crypto.Bedrock.Field.Common.Arrays.ByteBounds.
 Require Import Crypto.Bedrock.Field.Common.Arrays.MaxBounds.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Util.ZUtil.ModInv.
@@ -249,14 +249,14 @@ Section SpecProperties.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
           {field_representation : FieldRepresentation}
-          {field_representation_ok : FieldRepresentation_ok}.    
+          {field_representation_ok : FieldRepresentation_ok}.
 
   #[local] Coercion Z.to_nat : Z >-> nat.
 
   #[local] Notation ws2bs := (ws2bs (width:=width)).
   #[local] Notation bs2ws := (bs2ws (width:=width)).
   #[local] Notation bytes_per := (bytes_per (width:=width)).
-  
+
   Lemma felem_length (x : felem) : length (felem_to_list x) = felem_size_in_words.
   Proof.
     cbv [felem_to_list]. destruct x. trivial.
@@ -285,13 +285,13 @@ Section SpecProperties.
   Qed.
 
   Lemma felem_size_in_bytes_mod : felem_size_in_bytes mod bytes_per_word width = 0.
-  Proof. 
+  Proof.
     apply Z_mod_mult.
   Qed.
 
   Lemma felem_size_in_bytes_mod_nat :
     (felem_size_in_bytes mod (bytes_per_word width) = 0)%nat.
-  Proof. 
+  Proof.
     pose proof word_size_in_bytes_pos.
     cbv [bytes_per_word bytes_per felem_size_in_bytes] in *.
     rewrite Modulo.Z.mod_to_nat; try lia.
@@ -313,7 +313,7 @@ Section SpecProperties.
     rewrite ws2bs_length. lia.
   Qed.
 
-  Lemma bs2ws_felem_length bs : 
+  Lemma bs2ws_felem_length bs :
     length bs = felem_size_in_bytes ->
     length (bs2ws (bytes_per_word width) bs) = felem_size_in_words.
   Proof.
@@ -330,8 +330,8 @@ Section SpecProperties.
 
   Definition ws2felem (ws : list word) : felem.
   Proof.
-    refine (exist _ (if (length ws =? felem_size_in_words)%nat then 
-      (ws) else 
+    refine (exist _ (if (length ws =? felem_size_in_words)%nat then
+      (ws) else
       (List.repeat (word.of_Z 0) felem_size_in_words)) _).
     abstract (rewrite NatUtil.beq_nat_eq_nat_dec;
     destruct (Nat.eq_dec (length ws) (felem_size_in_words));
@@ -363,7 +363,7 @@ Section SpecProperties.
     Lift1Prop.iff1 (FElem p x) ((ws2bs (bytes_per_word width) x)$@p).
   Proof.
     cbv [FElem].
-    
+
     epose proof ((bytes_of_words _ _)) as Hbytes_of_words.
     cbn [id] in Hbytes_of_words.
     rewrite of_nat_bytes_per in *.
@@ -381,8 +381,8 @@ Section SpecProperties.
 
   Definition bs2felem (bs : list byte) : felem.
   Proof.
-    refine (exist _ (if (length bs =? felem_size_in_bytes)%nat then 
-      ((bs2ws (bytes_per_word width) bs)) else 
+    refine (exist _ (if (length bs =? felem_size_in_bytes)%nat then
+      ((bs2ws (bytes_per_word width) bs)) else
       (List.repeat (word.of_Z 0) felem_size_in_words)) _).
     abstract (rewrite NatUtil.beq_nat_eq_nat_dec;
     destruct (Nat.eq_dec (length bs) (felem_size_in_bytes));
@@ -409,14 +409,14 @@ Section SpecProperties.
     rapply proj_bs2felem.
     assumption.
   Qed.
-  
+
   Lemma felem_from_bytes p bs :
     length bs = felem_size_in_bytes ->
     Lift1Prop.iff1 (bs$@p) (FElem p (bs2felem bs)).
   Proof.
     intros HL.
     symmetry. etransitivity.
-    cbv [FElem]. 
+    cbv [FElem].
     rewrite proj_bs2felem; [|assumption].
 
     epose proof ((words_of_bytes _ _)) as Hwords_of_bytes.
@@ -442,7 +442,7 @@ Section SpecProperties.
     rewrite HL. pose proof felem_size_ok. lia.
 
     apply felem_from_bytes.
-    assumption. 
+    assumption.
   Qed.
 
   Lemma felem_to_Z_array p x :
@@ -453,7 +453,7 @@ Section SpecProperties.
               (word.of_Z (bytes_per_word width))
               p (List.map word.unsigned x)).
   Proof.
-    pose proof word_size_in_bytes_pos. 
+    pose proof word_size_in_bytes_pos.
     cbv [FElem].
     rewrite Util.array_truncated_scalar_scalar_iff1.
     split; intros; sepsimpl; try assumption.
@@ -490,7 +490,7 @@ Section SpecProperties.
     pose word_size_in_bytes_pos.
     lia.
   Qed.
-    
+
   Lemma felem_to_sizedlistarray p x :
     Lift1Prop.iff1
       (FElem p x)
@@ -501,13 +501,13 @@ Section SpecProperties.
     pose proof (felem_length x).
     unfold Arrays.sizedlistarray_value.
     split.
-    - intros. extract_ex1_and_emp_in_goal. split; assumption. 
+    - intros. extract_ex1_and_emp_in_goal. split; assumption.
     - intros. extract_ex1_and_emp_in_hyps. assumption.
-  Qed. 
+  Qed.
 
   Lemma sizedlistarray_to_felem p x :
     Datatypes.length x = felem_size_in_words ->
-    Lift1Prop.iff1 
+    Lift1Prop.iff1
       (Arrays.sizedlistarray_value access_size.word felem_size_in_words p x)
       (FElem p (ws2felem x)).
   Proof.
@@ -531,18 +531,18 @@ Ltac ensure_map m := lazymatch type of m with | @map.rep _ _ _ => idtac | _ => f
 Applies length_tac to all side conditions.*)
 Ltac ecancel_assumption_preprocess_with length_tac :=
   repeat match goal with
-    | |- ?G ?m => ensure_map m; match goal with H: ?P m |- _ => match P with 
-      | context[FElem ?p ?v] => match G with 
+    | |- ?G ?m => ensure_map m; match goal with H: ?P m |- _ => match P with
+      | context[FElem ?p ?v] => match G with
         | context[Arrays.sizedlistarray_value _ _ p _] =>
             seprewrite_in (felem_to_sizedlistarray p v) H
         | context[sepclause_of_map (map.of_list_word_at p _)] =>
             seprewrite_in (felem_to_bytes p v) H
-      end 
+      end
       | context[Arrays.sizedlistarray_value _ _ ?p ?v] => match G with
         | context[FElem p _] =>
           seprewrite_in (sizedlistarray_to_felem p v) H; [length_tac |]
-      end 
-      | context[array ptsto (word.of_Z 1) ?p ?v] => match G with 
+      end
+      | context[array ptsto (word.of_Z 1) ?p ?v] => match G with
         | context[sepclause_of_map (map.of_list_word_at p _)] =>
             seprewrite_in (array1_iff_eq_of_list_word_at p v) H; [length_tac |]
         | context[FElem p _] =>

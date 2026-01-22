@@ -250,7 +250,7 @@ Section WithParameters.
            clear; cbn; intuition Lia.lia
     | |- _ = LoadStoreList.list_lengths_from_args _ =>
       autounfold with list_lengths pairs list_lengths;
-        felem_to_array; sepsimpl; 
+        felem_to_array; sepsimpl;
         rewrite !map_length, !felem_length;
         exact eq_refl
     | _ => idtac
@@ -294,10 +294,6 @@ Section WithParameters.
            end.
 
     Ltac solve_length x Hlength := rewrite map_length; rewrite bs2ws_felem_length; [|assumption];
-    match goal with
-        | H : (FElem _ x * _)%sep _ |- _ => cbv [FElem Bignum.Bignum] in H; sepsimpl_hyps
-        | _ => idtac
-    end;
     match goal with
         | H : Datatypes.length x = _ |- _ => rewrite H
         | _ => idtac
@@ -498,7 +494,7 @@ Qed.
           f_equal. unfold felem_to_list at 1. cbv [proj1_sig].
           match goal with H : map word.unsigned _ = expr.interp _ (res _) _ |- _ =>
             rewrite <-H end.
-          apply map_Z_map_unsigned. } 
+          apply map_Z_map_unsigned. }
         { (* output bounds *)
           cbn [bounded_by field_representation frep proj1_sig felem_to_list] in *.
           match goal with H : map word.unsigned _ = _ |- _ =>
@@ -1078,7 +1074,7 @@ Context
             eapply MaxBounds.max_bounds_range_iff; eauto.
             lists_reserved_simplify pout.
             all: try solve_equivalence_side_conditions.
-            destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl; auto; cbv [FElem Bignum.Bignum] in *; sepsimpl;
+            destruct (bit_range_eq _ Hbound) as [Hbit| Hbit]; rewrite Hbit; simpl; auto;
             repeat rewrite map_length, ?bs2ws_felem_length, ?felem_length;
             match goal with
               | H : ?n1 = _ |- ?n1 = _ => rewrite H
