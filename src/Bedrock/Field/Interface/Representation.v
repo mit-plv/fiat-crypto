@@ -9,7 +9,6 @@ Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Common.Tactics.
 Require Import Crypto.Bedrock.Field.Common.Types.
-Require Import Crypto.Bedrock.Field.Synthesis.Generic.Bignum.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Util.ZRange.
