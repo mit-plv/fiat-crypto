@@ -15,7 +15,7 @@ jobs:
       - uses: actions/create-github-app-token@v2
         id: app-token
         with:
-          app-id: ${{ vars.AUTOREBASE_APPID }}
+          app-id: ${{ vars.AUTOREBASE_APP_ID }}
           private-key: ${{ secrets.AUTOREBASE_SECRET }}
       - uses: actions/checkout@v6
         with:
