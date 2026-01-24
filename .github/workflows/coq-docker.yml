@@ -98,6 +98,17 @@ jobs:
       with:
         name: build-outputs-docker-coq-${{ matrix.env.DOCKER_COQ_VERSION }}-ocaml-${{ matrix.env.DOCKER_OCAML_VERSION }}
         path: fiat-crypto-build.tar.gz
+    - name: Clean up tar.gz to free disk space
+      run: |
+        echo "=== Disk space before cleanup ==="
+        df -h
+        echo ""
+        echo "=== Removing tar.gz file ==="
+        ls -lh fiat-crypto-build.tar.gz || true
+        rm -f fiat-crypto-build.tar.gz
+        echo ""
+        echo "=== Disk space after cleanup ==="
+        df -h
     - run: find . -name "*.timing" | xargs tar -czvf timing-files.tgz
       if: failure()
     - name: upload generated timing files
@@ -148,11 +159,38 @@ jobs:
         echo "=== Top 20 largest directories in /home/runner ==="
         du -h --max-depth=2 /home/runner | sort -hr | head -20
         echo ""
+        echo "=== Checking /home/runner/.rustup ==="
+        du -sh /home/runner/.rustup/* 2>/dev/null || echo "No rustup directory"
+        echo ""
+        echo "=== Checking /home/runner/actions-runner ==="
+        du -sh /home/runner/actions-runner/* 2>/dev/null || echo "No actions-runner directory"
+        echo ""
         echo "=== Docker images ==="
         docker images
         echo ""
         echo "=== Docker system df ==="
         docker system df -v
+        echo ""
+        echo "=== Checking /dev/sdb1 mount and permissions ==="
+        mount | grep sdb1 || echo "sdb1 not mounted"
+        ls -ld /mnt 2>/dev/null || echo "Cannot access /mnt"
+        touch /mnt/test-write-permissions 2>/dev/null && rm /mnt/test-write-permissions && echo "Can write to /mnt" || echo "Cannot write to /mnt"
+    - name: Clean up system files before docker save
+      run: |
+        echo "=== Cleanup before docker save ==="
+        echo "=== Disk space before cleanup ==="
+        df -h
+        echo ""
+        echo "=== Removing rustup toolchains ==="
+        du -sh /home/runner/.rustup 2>/dev/null || true
+        rm -rf /home/runner/.rustup
+        echo ""
+        # echo "=== Removing actions-runner cached files ==="
+        # du -sh /home/runner/actions-runner/cached 2>/dev/null || true
+        # rm -rf /home/runner/actions-runner/cached
+        # echo ""
+        echo "=== Disk space after cleanup ==="
+        df -h
     - name: Save COQ_IMAGE
       uses: coq-community/docker-coq-action@v1
       with:
