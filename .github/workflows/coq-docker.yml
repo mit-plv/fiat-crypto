@@ -185,10 +185,10 @@ jobs:
         du -sh /home/runner/.rustup 2>/dev/null || true
         rm -rf /home/runner/.rustup
         echo ""
-        echo "=== Removing actions-runner cached files ==="
-        du -sh /home/runner/actions-runner/cached 2>/dev/null || true
-        rm -rf /home/runner/actions-runner/cached
-        echo ""
+        # echo "=== Removing actions-runner cached files ==="
+        # du -sh /home/runner/actions-runner/cached 2>/dev/null || true
+        # rm -rf /home/runner/actions-runner/cached
+        # echo ""
         echo "=== Disk space after cleanup ==="
         df -h
     - name: Save COQ_IMAGE
