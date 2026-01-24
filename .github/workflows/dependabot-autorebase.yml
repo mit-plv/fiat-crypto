@@ -16,7 +16,7 @@ jobs:
         id: app-token
         with:
           app-id: ${{ vars.AUTOREBASE_APP_ID }}
-          private-key: ${{ secrets.AUTOREBASE_SECRET }}
+          private-key: ${{ secrets.AUTOREBASE_APP_SECRET }}
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
