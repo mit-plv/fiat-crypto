@@ -125,3 +125,5 @@ jobs:
             echo "✅ All PRs processed successfully"
             exit 0
           fi
+        env:
+          GH_TOKEN: ${{ github.token }}
