@@ -15,7 +15,6 @@ From Coq Require Import RelationPairs.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.SetoidList.
 Require Import Crypto.Util.ListUtil.SetoidListFlatMap.
-Require Import Crypto.Util.ListUtil.StdlibCompat.
 Require Import Crypto.Util.Compose.
 Require Import Crypto.Util.Logic.Forall.
 Require Import Crypto.Util.Logic.Exists.

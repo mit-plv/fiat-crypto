@@ -27,7 +27,6 @@ Require Import Crypto.Util.ListUtil.Partition.
 Require Import Crypto.Util.ListUtil.Permutation.
 Require Import Crypto.Util.ListUtil.FoldMap.
 Require Import Crypto.Util.ListUtil.Forall.
-Require Import Crypto.Util.ListUtil.StdlibCompat.
 Require Import Crypto.Util.ListUtil.IndexOf.
 Require Import Crypto.Util.ListUtil.Split.
 Require Import Crypto.Util.OptionList.

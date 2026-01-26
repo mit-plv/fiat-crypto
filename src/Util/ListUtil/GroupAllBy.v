@@ -3,7 +3,6 @@ From Coq Require Import Arith.
 From Coq Require Import Permutation.
 From Coq Require Import List.
 Require Import Crypto.Util.ListUtil.Partition.
-Require Import Crypto.Util.ListUtil.StdlibCompat.
 Require Export Crypto.Util.FixCoqMistakes.
 Import ListNotations.
 Local Open Scope list_scope.

@@ -12,7 +12,6 @@ Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.Arithmetic.Saturated.
 Require Import (*hints*) Coq.btauto.Algebra.
 From Coq Require OrdersEx.
-Require Import Crypto.Util.ListUtil.StdlibCompat.
 Require Import Crypto.Util.ZUtil.ModInv.
 
 From Coq Require Import Lia.

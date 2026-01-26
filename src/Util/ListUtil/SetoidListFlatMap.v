@@ -4,7 +4,6 @@ From Coq Require Import SetoidList.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SpecializeUnderBindersBy.
-Require Import Crypto.Util.ListUtil.StdlibCompat.
 
 Import ListNotations.
 
