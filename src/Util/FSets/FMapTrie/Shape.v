@@ -9,7 +9,6 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.SetoidList.
 Require Import Crypto.Util.ListUtil.SetoidListFlatMap.
-Require Import Crypto.Util.ListUtil.StdlibCompat.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeUnderBindersBy.
