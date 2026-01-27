@@ -405,7 +405,7 @@ Ltac nth_tac' :=
     | [ H: None = Some _  |- _ ] => inversion H
     | [ H: Some _ = None |- _ ] => inversion H
     | [ |- Some _ = Some _ ] => apply f_equal
-  end); eauto; try (autorewrite with list in *); try lia; eauto.
+  end); eauto; try (autorewrite with list in * ); try lia; eauto.
 Lemma nth_error_map : forall A B (f:A->B) i xs y,
   nth_error (map f xs) i = Some y ->
   exists x, nth_error xs i = Some x /\ f x = y.
