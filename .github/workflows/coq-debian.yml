@@ -94,7 +94,7 @@ jobs:
         path: src/ExtractionJsOfOCaml
       if: always ()
     - name: standalone-haskell
-      run: etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M7G -RTS'
+      run: etc/ci/github-actions-make.sh -j1 standalone-haskell GHCFLAGS='+RTS -M9G -RTS'
     - name: upload Haskell files
       uses: actions/upload-artifact@v5
       with:
