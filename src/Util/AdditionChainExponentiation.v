@@ -13,8 +13,8 @@ Section AddChainExp.
      - connect to something that abstracts over F.pow, Z.pow, N.pow NOT scalarmult
   *)
 
-  Function fold_chain {T} (id:T) (op:T->T->T) (is:list (nat*nat)) (acc:list T) {struct is} : T :=
-    match is with
+  Function fold_chain {T} (id:T) (op:T->T->T) (si:list (nat*nat)) (acc:list T) {struct si} : T :=
+    match si with
     | nil =>
       match acc with
       | nil => id
