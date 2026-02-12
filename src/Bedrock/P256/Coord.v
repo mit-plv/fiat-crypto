@@ -1,4 +1,5 @@
 Require Import coqutil.Datatypes.List Coq.Lists.List.
+Require Import Curves.Weierstrass.P256.
 Require Import Bedrock.P256.Specs.
 Require Import Bedrock.P256.Platform.
 
@@ -13,7 +14,7 @@ micromega.Lia
 coqutil.Byte
 Lists.List micromega.Lia
 Jacobian
-Coq.Strings.String Coq.Lists.List 
+Coq.Strings.String Coq.Lists.List
 ProgramLogic WeakestPrecondition
 ProgramLogic.Coercions
 Word.Interface OfListWord Separation SeparationLogic
@@ -182,7 +183,7 @@ Proof.
   repeat seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm length_tac;
   repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac;
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac;
-  rewrite ?le_combine_split in Hm by lia 
+  rewrite ?le_combine_split in Hm by lia
   in domem H2; domem H3.
 
   simpl Z.of_nat in *; simpl Z.mul in *; simpl Z.add in *; simpl Nat.add in *.
@@ -207,7 +208,7 @@ Proof.
   all : apply Z.bits_inj'; intros i Hi;
   repeat rewrite <-?Z.shiftr_div_pow2, ?Z.land_spec, ?Z.lor_spec, ?Z.shiftr_spec', ?Z.shiftl_spec', ?Z.testbit_ones by try ZnWords.ZnWords.
   all: repeat (rewrite
-      ?Bool.andb_true_l, ?Bool.andb_true_r, ?Bool.orb_true_l, ?Bool.orb_true_r, 
+      ?Bool.andb_true_l, ?Bool.andb_true_r, ?Bool.orb_true_l, ?Bool.orb_true_r,
       ?Bool.andb_false_l, ?Bool.andb_false_r, ?Bool.orb_false_l, ?Bool.orb_false_r,
       ?Z.testbit_0_l, ?Z.testbit_neg_r, ?Z.testbit_high
     by intuition (idtac;
@@ -247,7 +248,7 @@ Proof.
   repeat seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm length_tac;
   repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac;
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac;
-  rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by lia 
+  rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by lia
   in domem H8; domem H9; domem H10.
 
   simpl Z.of_nat in *; simpl Z.mul in *; simpl Z.add in *; simpl Nat.add in *.
@@ -322,7 +323,7 @@ Proof.
   repeat seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm length_tac;
   repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac;
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac;
-  rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by lia 
+  rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by lia
   in domem H8; domem H9; domem H10.
 
   simpl Z.of_nat in *; simpl Z.mul in *; simpl Z.add in *; simpl Nat.add in *.
@@ -365,7 +366,7 @@ Proof.
   cbv [spec_of_p256_coord_set_minushalf_conditional].
   straightline; repeat straightline_cleanup.
   rename H into Hm.
-   
+
   rewrite <-(firstn_skipn 8 out), <-(firstn_skipn 8 out[_:]), <-(firstn_skipn 8 out[_:][_:]), ?skipn_skipn, ?firstn_skipn in Hm.
   repeat seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm length_tac.
   repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac.
@@ -382,7 +383,7 @@ Proof.
   repeat seprewrite_in_by (@Array.list_word_at_app_of_adjacent_eq) Hm ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
 
   revert Hm; eassert ((_ ++ _) = _)%list as ->; [|intros;ecancel_assumption].
-  eapply le_combine_inj. { length_tac. } 
+  eapply le_combine_inj. { length_tac. }
   subst v v0 v1 v2 mask mh0 mh1 mh2 mh3.
   case b; Decidable.vm_decide.
 Qed.

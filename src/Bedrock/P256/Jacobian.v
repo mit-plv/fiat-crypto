@@ -2,6 +2,7 @@ Require Import coqutil.Datatypes.List Coq.Lists.List.
 Require Import Bedrock.P256.Specs.
 
 Import Specs.NotationsCustomEntry Specs.coord Specs.point.
+Import Curves.Weierstrass.P256.
 
 Import bedrock2.Syntax bedrock2.NotationsCustomEntry
 LittleEndianList
@@ -12,7 +13,7 @@ micromega.Lia
 coqutil.Byte
 Lists.List micromega.Lia
 Jacobian
-Coq.Strings.String Coq.Lists.List 
+Coq.Strings.String Coq.Lists.List
 ProgramLogic WeakestPrecondition
 ProgramLogic.Coercions
 Word.Interface OfListWord Separation SeparationLogic
@@ -105,7 +106,7 @@ Proof.
     repeat straightline. }
 
   straightline_call; [eexists; ecancel_assumption|]; repeat straightline.
-  
+
   seprewrite_in_by Array.array1_iff_eq_of_list_word_at Hm0 ltac:(Lia.lia).
 
   straightline_call; ssplit; [ ecancel_assumption | trivial | exact eq_refl | ].
@@ -123,7 +124,7 @@ Proof.
 
   repeat straightline.
   rewrite ?Z.pow_1_r in *.
-  
+
   set (Z.odd _) as b in *.
 
   eapply WeakestPreconditionProperties.Proper_call; cycle -1;
@@ -140,7 +141,7 @@ Proof.
     cancel. }
   { ecancel_assumption. }
   { length_tac. }
-  
+
   repeat straightline.
 
   (* stackdealloc *)
@@ -255,7 +256,7 @@ rewrite ?app_length, ?length_coord in *.
 
   (* postcondition *)
   eexists; ssplit.
-  { 
+  {
     cbv [proj1_sig proj2_sig fst snd point.to_bytes].
     repeat seprewrite_in_by Array.list_word_at_app_of_adjacent_eq H93 ltac:(rewrite ?length_coord; listZnWords).
     (* other direction: repeat seprewrite_by Array.sep_eq_of_list_word_at_app ltac:(rewrite ?length_coord, ?app_length; trivial; try Lia.lia). *)
@@ -271,7 +272,7 @@ rewrite ?app_length, ?length_coord in *.
     case Decidable.dec; intros; try contradiction; split; trivial.
     rewrite Hierarchy.commutative in Hx.
     rewrite <-!F.pow_succ_r in Hx, Hy; simpl N.succ in Hx, Hy.
-    cbv [coord] in Hx, Hy; rewrite F.pow_0_iff, Ring.sub_zero_iff in Hx, Hy by (lia||exact _).
+    rewrite F.pow_0_iff, Ring.sub_zero_iff in Hx, Hy by (lia||exact _).
     rewrite ?F.pow_3_r, ?F.pow_2_r in Hx.
     rewrite ?F.pow_3_r, ?F.pow_2_r in Hy.
     split; Field.fsatz. }
@@ -379,23 +380,13 @@ Proof.
       rewrite Jacobian.eq_iff, Jacobian.to_affine_add, HP.
 Import Curves.Weierstrass.AffineProofs.
       symmetry.
-      unshelve eapply Hierarchy.left_identity.
-      unshelve eapply Hierarchy.monoid_is_left_identity.
-      unshelve eapply Hierarchy.group_monoid; shelve_unifiable.
-      unshelve eapply Hierarchy.commutative_group_group.
-      unshelve eapply W.commutative_group; try exact _.
-      cbv [id]. abstract Decidable.vm_decide. }
+      eapply Hierarchy.left_identity. }
     { (* P + 0 *)
       eexists; split. { ecancel_assumption. }
       apply Decidable.dec_bool, Jacobian.iszero_iff in HQ.
       rewrite Jacobian.eq_iff, Jacobian.to_affine_add, HQ.
       symmetry.
-      unshelve eapply Hierarchy.right_identity.
-      unshelve eapply Hierarchy.monoid_is_right_identity.
-      unshelve eapply Hierarchy.group_monoid; shelve_unifiable.
-      unshelve eapply Hierarchy.commutative_group_group.
-      unshelve eapply W.commutative_group; try exact _.
-      cbv [id]. abstract Decidable.vm_decide. }
+      unshelve eapply Hierarchy.right_identity. }
     { (* nz + nz' *)
       rewrite <-Bool.not_true_iff_false in HP, HQ.
       (* Decidable.dec_iff? *)
@@ -418,9 +409,9 @@ Import Curves.Weierstrass.AffineProofs.
     rewrite <-Bool.not_true_iff_false in HP, HQ.
     cbv [iszero] in HP, HQ; case Decidable.dec in HP; case Decidable.dec in HQ; try congruence.
     case (H19 ltac:(trivial) ltac:(trivial)) as [[HE ?]|[? HE]]; [case (HE eq_refl)|].
-    
+
     straightline_call; repeat straightline.
-    { split. { ecancel_assumption. } 
+    { split. { ecancel_assumption. }
       rewrite ?map_length, ?combine_length, ?repeat_length.
       rewrite H18, length_point. clear; ZnWords.ZnWords. }
 
@@ -483,7 +474,7 @@ Proof.
   rewrite <-(firstn_skipn 32 (skipn _ out)) in H18.
   rewrite !skipn_skipn in H18.
 rewrite ?app_length, ?length_coord in *.
-  progress repeat seprewrite_in_by Array.sep_eq_of_list_word_at_app H18 
+  progress repeat seprewrite_in_by Array.sep_eq_of_list_word_at_app H18
     ltac:(repeat rewrite ?app_length, ?firstn_length, ?skipn_length, ?Nat.min_l; try Lia.lia; trivial).
 
   progress change (Z.of_nat 32) with 32 in *.
@@ -585,7 +576,7 @@ Definition p256_point_add_affine_nz_nz_neq := func! (out, in1, in2) ~> ok {
   p256_coord_sub(out, out, u2);
   p256_coord_sub(h, u2, out);
   p256_coord_mul(s2, Hcub, in1.+$32);
-  p256_coord_mul(h, h, r); 
+  p256_coord_mul(h, h, r);
   p256_coord_sub(out.+$32, h, s2)
 }.
 
