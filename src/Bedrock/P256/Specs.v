@@ -129,16 +129,12 @@ Module Byte.
   Qed.
 End Byte.
 
-Local Open Scope Z_scope.
-
-Definition p256 : positive := 2^256 - 2^224 + 2^192 + 2^96 - 1.
-
-#[export] Instance prime_p256 : Znumtheory.prime p256. Admitted.
-
 Local Coercion F.to_Z : F >-> Z.
 
-Definition coord := F p256.
+Require Import Curves.Weierstrass.P256.
+
 Module Import coord. (* bytes in montgomery form *)
+  Notation coord := (F p256).
   Definition R : F p256 := F.of_Z _ (2^256).
   Coercion to_bytes (x : coord) : list byte := Z.to_bytes 32 (x * R)%F.
   Lemma length_coord (x : coord) : length x = 32%nat.
@@ -152,21 +148,13 @@ Module Import coord. (* bytes in montgomery form *)
   Qed.
 End coord.
 
-#[export] Instance coord_char_ge_3 : @Ring.char_ge coord eq 0%F 1%F F.opp F.add F.sub F.mul 3.
-Proof.  intros n Hn.   apply (@F.char_gt p256). cbv [p256]. Lia.lia. Qed.
-#[export] Instance coord_char_ge_12 : @Ring.char_ge coord eq 0%F 1%F F.opp F.add F.sub F.mul 12.
-Proof.  intros n Hn.   apply (@F.char_gt p256). cbv [p256]. Lia.lia. Qed.
-
 From Crypto.Curves Require Import Jacobian.
 Import Coq.Lists.List.
 
-Definition a : F p256 := F.opp (1+1+1).
-Definition b : F p256 := F.of_Z _ 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b.
-Definition point := @Jacobian.point coord eq F.zero F.add F.mul a b _.
-Definition add : point -> point -> point :=
-  @Jacobian.add coord eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div a b _ _ _.
-
 Module Import point.
+  Notation point := (@Jacobian.point coord eq F.zero F.add F.mul P256.a P256.b _).
+  Notation add :=
+    (@Jacobian.add coord eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div P256.a P256.b _ _ _).
   Coercion to_bytes (p : point) :=
     let p := proj1_sig p in
     to_bytes (fst (fst p)) ++ to_bytes (snd (fst p)) ++ to_bytes (snd p).
@@ -380,5 +368,3 @@ Module word.
     rewrite Z.land_comm, Z.land_ones, word.wrap_unsigned; trivial; blia.
   Qed.
 End word.
-
-Add Field Private_field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F p256)).
