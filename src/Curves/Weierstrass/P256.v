@@ -57,6 +57,27 @@ End W.
 
 Definition p256_group_order := 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551.
 
+#[export] Instance prime_order : prime p256_group_order.
+Proof.
+  simple refine (Pocklington_refl
+    (Pock_certif _ 7 [(187019741,1);(38189,1);(17449,1);(3407,1);(131,1);(71,1);(2,4)] 0xf72444b78fa654e632d4b)
+    [ Pock_certif 187019741 2 [(9350987,1);(2,2)] 1;
+      Pock_certif 9350987 2 [(229,1);(2,1)] 264;
+      Pock_certif 38189 2 [(9547,1);(2,2)] 1;
+      Pock_certif 17449 14 [(3,1);(2,3)] 1;
+      Pock_certif 9547 2 [(37,1);(2,1)] 1;
+      Pock_certif 3407 5 [(13,1);(2,1)] 26;
+      Pock_certif 229 6 [(3,1);(2,2)] 1;
+      Pock_certif 131 2 [(5,1);(2,1)] 1;
+      Pock_certif 71 7 [(5,1);(2,1)] 1;
+      Pock_certif 37 2 [(2,2)] 1;
+      Pock_certif 13 2 [(2,2)] 1;
+      Pock_certif 5 2 [(2,2)] 1;
+      Proof_certif 3 prime_3;
+      Proof_certif 2 prime_2] _)%positive.
+  native_cast_no_check (@eq_refl bool true).
+Qed.
+
 Lemma p256_mul_mod_n (a b : Z) (P : Wpoint) :
   W.eq (W.mul a P) (W.mul b P) <->
   a mod p256_group_order = b mod p256_group_order.
