@@ -9,7 +9,26 @@ Local Open Scope positive_scope.
 
 Definition p256 := 2^256 - 2^224 + 2^192 + 2^96 - 1.
 
-#[export] Instance prime_p256 : prime p256. Admitted.
+From Coq Require Import List. Import ListNotations.
+From Coqprime Require Import PocklingtonCertificat(Pocklington_refl,singleCertif(..)).
+
+#[export] Instance prime_p256 : prime p256.
+Proof.
+  remember prime; vm_compute; subst.
+  simple refine (Pocklington_refl
+    (Pock_certif _ 6 [(6700417,1);(490463,1);(65537,1);(641,1);(257,1);(17,1);(5,2);(3,1);(2,1)] 0x6f199ff1e192ee086c186e)
+    [ Pock_certif 6700417 5 [(3,1);(2,7)] 552;
+      Pock_certif 490463 7 [(53,1);(2,1)] 174;
+      Pock_certif 65537 3 [(2,16)] 1;
+      Pock_certif 641 3 [(2,7)] 1;
+      Pock_certif 257 3 [(2,8)] 1;
+      Pock_certif 53 2 [(2,2)] 4;
+      Pock_certif 17 3 [(2,4)] 1;
+      Pock_certif 5 2 [(2,2)] 1;
+      Proof_certif 3 prime_3;
+      Proof_certif 2 prime_2] _)%positive.
+  native_cast_no_check (@eq_refl bool true).
+Qed.
 
 Add Field Private_field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F p256)).
 
