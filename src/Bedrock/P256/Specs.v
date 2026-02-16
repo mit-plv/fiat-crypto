@@ -181,6 +181,7 @@ Import PeanoNat Lia.
 Import Tactics.
 Require Import UniquePose.
 
+Require Import Crypto.Spec.WeierstrassCurve.
 Require Curves.Weierstrass.AffineProofs.
 From bedrock2 Require ToCString.
 From coqutil Require Macros.WithBaseName.
@@ -236,6 +237,23 @@ Context {ext_spec : Semantics.ExtSpec}.
   fnspec! "p256_point_iszero" p_P / (P : point) ~> nz,
   { requires t m := m =*> P$@p_P;
     ensures t' m' := t' = t /\ m' = m /\ nz = word.broadcast (point.iszero P) }.
+
+#[export] Instance spec_of_p256_point_set_zero : spec_of "p256_point_set_zero" :=
+  fnspec! "p256_point_set_zero" p_out / out R,
+  { requires t m := m =* out$@p_out * R /\ length out = 96%nat;
+    ensures t' m' := t' = t /\ m' =* (Jacobian.of_affine W.zero)$@p_out * R }.
+
+(* TODO: This is already provided by the pipeline. Did I get the spec right? *)
+#[export] Instance spec_of_p256_coord_opp : spec_of "p256_coord_opp" :=
+  fnspec! "p256_coord_opp" p / (x : coord) R,
+  { requires t m := m =* x$@p * R;
+    ensures t' m' := t' = t /\ let x_opp := F.opp x in m' =* x_opp$@p * R }.
+
+(* TODO: This is already provided by the pipeline. Did I get the spec right? *)
+#[export] Instance spec_of_p256_coord_selectznz  : spec_of "p256_coord_select_znz" :=
+    fnspec! "p256_coord_select_znz" (p_out c p_z p_nz : word) / out (z nz : coord) R,
+    { requires t m := m =* (out$@p_out * R) /\ m =*> nz$@p_nz /\ m =*> z$@p_z /\ length out = length z;
+      ensures t' m' := if Z.eqb c 0 then (z$@p_out * R)%sep m' else (nz$@p_out * R)%sep m' }.
 
 #[export] Instance spec_of_p256_coord_add : spec_of "p256_coord_add" :=
   fnspec! "p256_coord_add" p_out p_x p_y / out (x y : coord) R,
