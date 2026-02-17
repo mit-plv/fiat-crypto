@@ -8,31 +8,6 @@ Local Open Scope list_scope.
 Local Open Scope string_scope.
 
 
-(** TODO: Remove this once we drop support for Coq 8.9 (it's in the stdlib in Coq 8.10 *)
-(** *** Conversion to/from [list ascii] *)
-
-Fixpoint string_of_list_ascii (s : list ascii) : string
-  := match s with
-     | nil => EmptyString
-     | cons ch s => String ch (string_of_list_ascii s)
-     end.
-
-Fixpoint list_ascii_of_string (s : string) : list ascii
-  := match s with
-     | EmptyString => nil
-     | String ch s => cons ch (list_ascii_of_string s)
-     end.
-
-Lemma string_of_list_ascii_of_string s : string_of_list_ascii (list_ascii_of_string s) = s.
-Proof.
-  induction s as [|? ? IHs]; [ reflexivity | cbn; apply f_equal, IHs ].
-Defined.
-
-Lemma list_ascii_of_string_of_list_ascii s : list_ascii_of_string (string_of_list_ascii s) = s.
-Proof.
-  induction s as [|? ? IHs]; [ reflexivity | cbn; apply f_equal, IHs ].
-Defined.
-
 (** *** String concatenation *)
 
 Lemma string_of_list_ascii_app s1 s2 : string_of_list_ascii (s1 ++ s2) = string_of_list_ascii s1 ++ string_of_list_ascii s2.
