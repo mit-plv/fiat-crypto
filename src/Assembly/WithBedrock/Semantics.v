@@ -261,8 +261,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     v2 <- DenoteOperand sa s st src2;
     let v := v1 * v2 in
     st <- SetOperand sa s st dst v;
-    let c := negb (v =? Z.land v (Z.ones (Z.of_N s)))%Z in
-    Some (SetFlag (SetFlag (HavocFlags st) CF c) OF c)
+    Some (HavocFlags st) (* conservative *)
   | sar, [dst; cnt] =>
     v1 <- DenoteOperand sa s st dst;
     cnt' <- DenoteOperand sa s st cnt;
