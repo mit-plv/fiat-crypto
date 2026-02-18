@@ -181,6 +181,7 @@ Import PeanoNat Lia.
 Import Tactics.
 Require Import UniquePose.
 
+Require Import Crypto.Spec.WeierstrassCurve.
 Require Curves.Weierstrass.AffineProofs.
 From bedrock2 Require ToCString.
 From coqutil Require Macros.WithBaseName.
@@ -236,6 +237,11 @@ Context {ext_spec : Semantics.ExtSpec}.
   fnspec! "p256_point_iszero" p_P / (P : point) ~> nz,
   { requires t m := m =*> P$@p_P;
     ensures t' m' := t' = t /\ m' = m /\ nz = word.broadcast (point.iszero P) }.
+
+#[export] Instance spec_of_p256_point_set_zero : spec_of "p256_point_set_zero" :=
+  fnspec! "p256_point_set_zero" p_out / out R,
+  { requires t m := m =* out$@p_out * R /\ length out = 96%nat;
+    ensures t' m' := t' = t /\ m' =* (Jacobian.of_affine W.zero)$@p_out * R }.
 
 #[export] Instance spec_of_p256_coord_add : spec_of "p256_coord_add" :=
   fnspec! "p256_coord_add" p_out p_x p_y / out (x y : coord) R,
