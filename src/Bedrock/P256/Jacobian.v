@@ -227,7 +227,7 @@ Proof.
   repeat seprewrite_in_by Array.array1_iff_eq_of_list_word_at H25 ltac:(Lia.lia).
 
   rewrite <-(firstn_skipn 32 out) in H25.
-  rewrite <-(firstn_skipn 32 (skipn _ out)) in H25.
+  rewrite <-(firstn_skipn 32 (SeparationLogic.skipn _ out)) in H25. (* WHY does this need to be SeparationLogic. ? *)
   rewrite ?skipn_skipn in H25.
 rewrite ?app_length, ?length_coord in *.
   repeat seprewrite_in_by Array.sep_eq_of_list_word_at_app H25 (* WHY does first rewrite take 0.1s? *)

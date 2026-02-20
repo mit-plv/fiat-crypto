@@ -25,6 +25,8 @@ Require Import bedrock2Examples.memswap.
 Require Import bedrock2Examples.memconst.
 Require Import Rupicola.Examples.Net.IPChecksum.IPChecksum.
 
+Local Arguments app {_} _ _.
+
 Local Open Scope string_scope.
 Import Syntax Syntax.Coercions NotationsCustomEntry.
 Import ListNotations.
@@ -353,10 +355,8 @@ Proof.
     fwd; slv; [].
     right. left. ssplit; trivial; []. eexists. ssplit; try eassumption. right. left.
     rewrite app_nth2 by ZnWords.
-    rewrite app_comm_cons.
+    rewrite !app_comm_cons.
     rewrite app_nth2 by SepAutoArray.listZnWords.
-    rewrite app_nth2 by SepAutoArray.listZnWords.
-    rewrite app_nth1 by SepAutoArray.listZnWords.
     match goal with |- context[nth ?x] => replace x with O by SepAutoArray.listZnWords end.
     cbn. intro. subst. apply E1. reflexivity. }
 
@@ -544,9 +544,7 @@ Proof.
     change [?x;?y] with ([x]++[y]).
     eapply TracePredicate.concat_app; cbv [TracePredicate.one]; f_equal. }
 
-    rewrite <-Hvv.
     rewrite !ListUtil.firstn_app_sharp by ZnWords.
-    rewrite !ListUtil.skipn_app_sharp by ZnWords.
     eexists _, _; ssplit; try eassumption; subst mmio_val; eauto.
 
     all : rewrite ?firstn_skipn; intuition auto.
@@ -617,9 +615,7 @@ Optimize Proof. Optimize Heap.
     change [?x;?y] with ([x]++[y]).
     eapply TracePredicate.concat_app; cbv [TracePredicate.one]; f_equal. }
 
-    rewrite <-Hvv.
     rewrite !ListUtil.firstn_app_sharp by ZnWords.
-    rewrite !ListUtil.skipn_app_sharp by ZnWords.
     eexists _, _; ssplit; try eassumption; subst mmio_val; eauto; congruence.
   }
 
