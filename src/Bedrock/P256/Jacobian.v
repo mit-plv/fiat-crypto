@@ -1,10 +1,12 @@
-Require Import coqutil.Datatypes.List Coq.Lists.List.
+Require Import coqutil.Datatypes.List.
 Require Import Bedrock.P256.Specs.
 
 Import Specs.NotationsCustomEntry Specs.coord Specs.point.
+Import Crypto.Spec.WeierstrassCurve.
 Import Curves.Weierstrass.P256.
 
 Import bedrock2.Syntax bedrock2.NotationsCustomEntry
+bedrock2.ZnWords
 LittleEndianList
 Crypto.Util.ZUtil.Modulo Zdiv ZArith BinInt
 BinInt BinNat Init.Byte
@@ -26,6 +28,8 @@ PeanoNat micromega.Lia
 Tactics
 UniquePose
 micromega.Lia Word.Properties.
+
+Require Import  Coq.Lists.List.
 
 Import Zbool. (*compat 8.20*)
 Import ListIndexNotations.
@@ -67,6 +71,27 @@ Proof.
   setoid_rewrite word.not_broadcast; rewrite Bool.negb_involutive; trivial.
 Qed.
 
+Definition p256_point_set_zero := func! (p_P) {
+  br_memset(p_P, $0, $(3*32))
+}.
+
+Lemma p256_point_set_zero_ok : program_logic_goal_for_function! p256_point_set_zero.
+Proof.
+  cbv [spec_of_p256_point_set_zero].
+  repeat straightline.
+
+  cbv [point.to_bytes] in *.
+
+  straightline_call; ssplit.
+  { ecancel_assumption. }
+  { ZnWords. }
+  repeat straightline.
+
+  cbv [fst snd proj1_sig Jacobian.of_affine Jacobian.of_affine_impl W.zero coord.to_bytes].
+  rewrite List.le_split_0_r. rewrite <- !repeat_app.
+  use_sep_assumption. Morphisms.f_equiv.
+Qed.
+
 Definition p256_coord_halve := func!(y, x) {
   stackalloc 32 as mmh;
   unpack! m = br_broadcast_odd(load(x));
@@ -74,7 +99,6 @@ Definition p256_coord_halve := func!(y, x) {
   u256_shr(y, x, $1);
   p256_coord_sub(y, y, mmh)
 }.
-
 
 Local Ltac length_tac :=
   repeat rewrite
@@ -235,14 +259,11 @@ rewrite ?app_length, ?length_coord in *.
 
   progress change (Z.of_nat 32) with 32 in *.
 
-  (* WHY does skipn get unfolded below without this?
-   *) repeat (set (List.skipn  _ _) in H25 || set (List.firstn  _ _) in H25).
-
   repeat (straightline_call; ssplit;
     [ solve [repeat match goal with
       | |- True => exact I
       | |- exists _, _ => letexists
-      | |- _ => subst l10 l11 l12; progress rewrite ?length_coord, ?firstn_length, ?skipn_length; Lia.lia
+      | |- _ => progress rewrite ?length_coord, ?firstn_length, ?skipn_length; ZnWords
       | _ => ecancel_assumption
       end] ..
     | repeat straightline ]).
