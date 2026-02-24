@@ -1,4 +1,4 @@
-From Crypto.Bedrock.P256 Require Import Specs Platform Coord Jacobian.
+From Crypto.Bedrock.P256 Require Import Specs Platform Coord Jacobian JacobianAffine.
 
 Import Specs.NotationsCustomEntry Specs.coord Specs.point.
 
@@ -53,7 +53,7 @@ Axiom p256_coord_mul_ok : forall functions, map.get functions "p256_coord_mul" =
 Import memcpy shrd full_sub full_add full_mul memmove.
 
 Definition platform := &[,
-  full_add; full_sub; full_mul; shrd;
+  br_full_add; br_full_sub; br_full_mul; shrd;
   br_value_barrier; br_declassify; br_broadcast_negative; br_broadcast_nonzero; br_broadcast_odd; br_cmov;  br_memcxor
   ].
 
@@ -70,7 +70,10 @@ Definition jacobian := &[,
  p256_point_iszero;
  p256_point_double;
  p256_point_add_nz_nz_neq;
- p256_point_add_vartime_if_doubling
+ p256_point_add_vartime_if_doubling;
+
+ p256_point_add_affine_nz_nz_neq;
+ p256_point_add_affinenz_conditional_vartime_if_doubling
  ].
 
 Compute String.concat LF (List.map c_func jacobian).
@@ -142,6 +145,8 @@ Proof.
 
   pose_correctness p256_point_add_vartime_if_doubling_ok.
 
+  pose_correctness p256_point_add_affine_nz_nz_neq_ok.
+  pose_correctness p256_point_add_affinenz_conditional_vartime_if_doubling_ok.
   trivial.
 Qed.
 

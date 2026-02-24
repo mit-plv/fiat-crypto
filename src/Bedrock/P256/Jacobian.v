@@ -340,8 +340,6 @@ Proof.
   { rewrite ?repeat_length; trivial. }
   { rewrite length_point; trivial. }
 
-  rewrite ?word.and_xorm1_l, ?word.and_xorm1_r in *.
-
   subst x x0 x3.
   letexists; ssplit; repeat straightline; subst v (* if ok *).
   { straightline_call; repeat straightline; ssplit (* memcpy *).
@@ -538,90 +536,3 @@ rewrite ?app_length, ?length_coord in *.
   rewrite ?F.pow_3_r, ?F.pow_2_r in H69.
   ecancel_assumption.
 Qed.
-
-Import BinInt. Local Open Scope Z_scope.
-
-Definition fe_set_1 := func! (o) {
-  o0 = $1; o1 = $0xffffffff00000000; o2 = -$1; o3 = $0xfffffffe;
-  store(o, o0); store(o+$8, o1); store(o+$16, o2); store(o+$24, o3)
-}.
-
-Definition p256_point_add_affine_nz_nz_neq := func! (out, in1, in2) ~> ok {
-  stackalloc 32 as z1z1;
-  stackalloc 32 as u2;
-  stackalloc 32 as h;
-  stackalloc 32 as s2;
-  stackalloc 32 as r;
-  stackalloc 32 as Hsqr;
-  stackalloc 32 as Hcub;
-
-  p256_coord_sqr(z1z1, in1.+$32.+$32);
-  p256_coord_mul(u2, in2, z1z1);
-  p256_coord_sub(h, u2, in1);
-  p256_coord_mul(s2, in1.+$32.+$32, z1z1);
-  p256_coord_mul(out.+$32.+$32, h, in1.+$32.+$32);
-  p256_coord_mul(s2, s2, in2.+$32);
-  p256_coord_sub(r, s2, in1.+$32);
-  p256_coord_sqr(Hsqr, h);
-  p256_coord_sqr(out, r);
-  p256_coord_mul(Hcub, Hsqr, h);
-  p256_coord_mul(u2, in1, Hsqr);
-
-  unpack! different_x = p256_coord_nonzero(Hcub);
-  unpack! different_y = p256_coord_nonzero(out);
-  unpack! ok = br_value_barrier(different_x | different_y);
-
-  p256_coord_sub(out, out, Hcub);
-  p256_coord_sub(out, out, u2);
-  p256_coord_sub(out, out, u2);
-  p256_coord_sub(h, u2, out);
-  p256_coord_mul(s2, Hcub, in1.+$32);
-  p256_coord_mul(h, h, r);
-  p256_coord_sub(out.+$32, h, s2)
-}.
-
-Definition p256_point_add_affine_conditional := func! (out, in1, in2, c) {
-  unpack! p1zero = p256_point_iszero(in1.+$32.+$32);
-  unpack! p2zero = constant_time_is_zero_w(c);
-  stackalloc (3*32) as p_out;
-  unpack! ok = p256_point_add_affine_nz_nz_neq(p_out, in1, in2);
-  unpack! ok = br_declassify(p1zero | p2zero | ok);
-  stackalloc (3*32) as t;
-  br_memset(t, $0, $3*$32);
-  memcxor(t, p_out,  $3*$32,     ~p1zero & ~p2zero);
-  memcxor(t, in1,    $3*$32,     ~p1zero &  p2zero);
-  memcxor(t, in2,    $3*$32,      p1zero & ~p2zero);
-  if !ok { p256_point_double(t, in1) };
-  br_memcpy(out, t, $(3*32))
-}.
-
-Definition sc_halve := func!(y, x) {
-  unpack! m = br_value_barrier(-(load(x)&$1)); (* is x odd? *)
-  mh0 = $0x79dce5617e3192a8; mh1 = $0xde737d56d38bcf42; mh2 = $0x7fffffffffffffff; mh3 = $0x7fffffff80000000; (* minus one half modulo l *)
-  stackalloc 32 as mmh; (* maybe minus half *)
-  store(mmh, m&mh0); store(mmh+$8, m&mh1); store(mmh+$16, m&mh2); store(mmh+$24, m&mh3);
-  y0 = load(y); y1 = load(y+$8); y2 = load(y+$16); y3 = load(y+$24);
-  unpack! y0 = shrd_64(y0, y1, $1);
-  unpack! y1 = shrd_64(y1, y2, $1);
-  unpack! y2 = shrd_64(y2, y3, $1);
-  y3 = y3 >> $1;
-  store(y, y0); store(y+$8, y1); store(y+$16, y2); store(y+$24, y3);
-  sc_sub(y, y, mmh)
-}.
-
-Definition sc_sub := func!(out, x, y) {
-  unpack! x1, x2 = sbb64($0, load(x), load(y));
-  unpack! x3, x4 = sbb64(x2, load(x+$8), load(y+$8));
-  unpack! x5, x6 = sbb64(x4, load(x+$16), load(y+$16));
-  unpack! x7, x8 = sbb64(x6, load(x+$24), load(y+$24));
-  x9 = -x8;
-  unpack! x10, x11 = adc64($0, x1, x9 & $0xf3b9cac2fc632551);
-  unpack! x12, x13 = adc64(x11, x3, x9 & $0xbce6faada7179e84);
-  unpack! x14, x15 = adc64(x13, x5, x9);
-  unpack! x16, x17 = adc64(x15, x7, x9 << $32);
-  x17 = x17+$0;
-  store(out, x10);
-  store(out+$8, x12);
-  store(out+$16, x14);
-  store(out+$24, x16)
-}.

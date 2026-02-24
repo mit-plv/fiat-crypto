@@ -16,23 +16,23 @@ Definition p256_coord_nonzero := func! (p_x) ~> nz {
 
 (*
 Definition p256_coord_sub := func!(out, x, y) {
-  unpack! t0, borrow = full_sub(load(x),          load(y),          $0);
-  unpack! t1, borrow = full_sub(load(x+$4),       load(y+$4),       borrow);
-  unpack! t2, borrow = full_sub(load(x+$4+$4),    load(y+$4+$4),    borrow);
-  unpack! t3, borrow = full_sub(load(x+$4+$4+$4), load(y+$4+$4+$4), borrow);
-  unpack! t4, borrow = full_sub(load(x+$4+$4+$4+$4), load(y+$4+$4+$4+$4), borrow);
-  unpack! t5, borrow = full_sub(load(x+$4+$4+$4+$4+$4), load(y+$4+$4+$4+$4+$4), borrow);
-  unpack! t6, borrow = full_sub(load(x+$4+$4+$4+$4+$4+$4), load(y+$4+$4+$4+$4+$4+$4), borrow);
-  unpack! t7, borrow = full_sub(load(x+$4+$4+$4+$4+$4+$4+$4), load(y+$4+$4+$4+$4+$4+$4+$4), borrow);
+  unpack! t0, borrow = br_full_sub(load(x),          load(y),          $0);
+  unpack! t1, borrow = br_full_sub(load(x+$4),       load(y+$4),       borrow);
+  unpack! t2, borrow = br_full_sub(load(x+$4+$4),    load(y+$4+$4),    borrow);
+  unpack! t3, borrow = br_full_sub(load(x+$4+$4+$4), load(y+$4+$4+$4), borrow);
+  unpack! t4, borrow = br_full_sub(load(x+$4+$4+$4+$4), load(y+$4+$4+$4+$4), borrow);
+  unpack! t5, borrow = br_full_sub(load(x+$4+$4+$4+$4+$4), load(y+$4+$4+$4+$4+$4), borrow);
+  unpack! t6, borrow = br_full_sub(load(x+$4+$4+$4+$4+$4+$4), load(y+$4+$4+$4+$4+$4+$4), borrow);
+  unpack! t7, borrow = br_full_sub(load(x+$4+$4+$4+$4+$4+$4+$4), load(y+$4+$4+$4+$4+$4+$4+$4), borrow);
   unpack! mask = br_value_barrier(-borrow);
-  unpack! r0, carry = full_add(t0, mask,   $0);
-  unpack! r1, carry = full_add(t1, mask,   carry);
-  unpack! r2, carry = full_add(t2, mask,   carry);
-  unpack! r3, carry = full_add(t3, $0,     carry);
-  unpack! r4, carry = full_add(t4, $0,     carry);
-  unpack! r5, carry = full_add(t5, $0,     carry);
-  unpack! r6, carry = full_add(t6, borrow, carry);
-  unpack! r7, carry = full_add(t7, mask,   carry);
+  unpack! r0, carry = br_full_add(t0, mask,   $0);
+  unpack! r1, carry = br_full_add(t1, mask,   carry);
+  unpack! r2, carry = br_full_add(t2, mask,   carry);
+  unpack! r3, carry = br_full_add(t3, $0,     carry);
+  unpack! r4, carry = br_full_add(t4, $0,     carry);
+  unpack! r5, carry = br_full_add(t5, $0,     carry);
+  unpack! r6, carry = br_full_add(t6, borrow, carry);
+  unpack! r7, carry = br_full_add(t7, mask,   carry);
   store(out,          r0);
   store(out+$4,       r1);
   store(out+$4+$4,    r2);

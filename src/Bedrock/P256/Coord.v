@@ -48,15 +48,15 @@ Definition p256_coord_nonzero := func! (p_x) ~> nz {
 }.
 
 Definition p256_coord_sub := func!(out, x, y) {
-  unpack! t0, borrow = full_sub(load(x),          load(y),          $0);
-  unpack! t1, borrow = full_sub(load(x+$8),       load(y+$8),       borrow);
-  unpack! t2, borrow = full_sub(load(x+$8+$8),    load(y+$8+$8),    borrow);
-  unpack! t3, borrow = full_sub(load(x+$8+$8+$8), load(y+$8+$8+$8), borrow);
+  unpack! t0, borrow = br_full_sub(load(x),          load(y),          $0);
+  unpack! t1, borrow = br_full_sub(load(x+$8),       load(y+$8),       borrow);
+  unpack! t2, borrow = br_full_sub(load(x+$8+$8),    load(y+$8+$8),    borrow);
+  unpack! t3, borrow = br_full_sub(load(x+$8+$8+$8), load(y+$8+$8+$8), borrow);
   unpack! mask = br_value_barrier(-borrow);
-  unpack! r0, carry = full_add(t0, mask,                       $0);
-  unpack! r1, carry = full_add(t1, mask & $0xffffffff,         carry);
-  unpack! r2, carry = full_add(t2, $0,                         carry);
-  unpack! r3, carry = full_add(t3, mask & $0xffffffff00000001, carry);
+  unpack! r0, carry = br_full_add(t0, mask,                       $0);
+  unpack! r1, carry = br_full_add(t1, mask & $0xffffffff,         carry);
+  unpack! r2, carry = br_full_add(t2, $0,                         carry);
+  unpack! r3, carry = br_full_add(t3, mask & $0xffffffff00000001, carry);
   store(out,          r0);
   store(out+$8,       r1);
   store(out+$8+$8,    r2);
@@ -81,15 +81,15 @@ Definition u256_set_p256_minushalf_conditional := func!(p_out, mask) {
 }.
 
 Definition p256_coord_add := func!(p_out, p_x, p_y) {
-  unpack! t0, carry = full_add(load(p_x),          load(p_y),          $0);
-  unpack! t1, carry = full_add(load(p_x+$8),       load(p_y+$8),       carry);
-  unpack! t2, carry = full_add(load(p_x+$8+$8),    load(p_y+$8+$8),    carry);
-  unpack! t3, carry = full_add(load(p_x+$8+$8+$8), load(p_y+$8+$8+$8), carry);
-  unpack! r0, borrow = full_sub(t0, $0xffffffffffffffff, $0);
-  unpack! r1, borrow = full_sub(t1, $0xffffffff,         borrow);
-  unpack! r2, borrow = full_sub(t2, $0,                  borrow);
-  unpack! r3, borrow = full_sub(t3, $0xffffffff00000001, borrow);
-  unpack! r4, borrow = full_sub(carry, $0, borrow);
+  unpack! t0, carry = br_full_add(load(p_x),          load(p_y),          $0);
+  unpack! t1, carry = br_full_add(load(p_x+$8),       load(p_y+$8),       carry);
+  unpack! t2, carry = br_full_add(load(p_x+$8+$8),    load(p_y+$8+$8),    carry);
+  unpack! t3, carry = br_full_add(load(p_x+$8+$8+$8), load(p_y+$8+$8+$8), carry);
+  unpack! r0, borrow = br_full_sub(t0, $0xffffffffffffffff, $0);
+  unpack! r1, borrow = br_full_sub(t1, $0xffffffff,         borrow);
+  unpack! r2, borrow = br_full_sub(t2, $0,                  borrow);
+  unpack! r3, borrow = br_full_sub(t3, $0xffffffff00000001, borrow);
+  unpack! r4, borrow = br_full_sub(carry, $0, borrow);
   unpack! r0 = br_cmov(borrow, t0, r0);
   unpack! r1 = br_cmov(borrow, t1, r1);
   unpack! r2 = br_cmov(borrow, t2, r2);

@@ -151,10 +151,16 @@ End coord.
 From Crypto.Curves Require Import Jacobian.
 Import Coq.Lists.List.
 
+Notation affine_point := (@WeierstrassCurve.W.point coord eq F.add F.mul P256.a P256.b).
+Module affine_point.
+  Definition iszero (P : affine_point) := proj1_sig P = inr tt.
+End affine_point.
+
 Module Import point.
   Notation point := (@Jacobian.point coord eq F.zero F.add F.mul P256.a P256.b _).
   Notation add :=
     (@Jacobian.add coord eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div P256.a P256.b _ _ _).
+  Coercion of_affine (p : affine_point) : point := Jacobian.of_affine p.
   Coercion to_bytes (p : point) :=
     let p := proj1_sig p in
     to_bytes (fst (fst p)) ++ to_bytes (snd (fst p)) ++ to_bytes (snd p).
@@ -303,9 +309,21 @@ Context {ext_spec : Semantics.ExtSpec}.
   }%sep.
 
 #[export] Instance spec_of_p256_point_add_affine_nz_nz_neq : spec_of "p256_point_add_affine_nz_nz_neq" :=
-  fnspec! "p256_point_add_affine_nz_nz_neq" p_x / (x : coord) ~> nz,
-  { requires t m := m =*> x$@p_x;
-    ensures t' m' := t' = t /\ m' = m /\ nz = word.of_Z 0 <-> x = F.zero }.
+  fnspec! "p256_point_add_affine_nz_nz_neq" p_out p_P p_Q / out (P : point) (Q : affine_point) R ~> ok,
+  { requires t m := m =* out$@p_out * P$@p_P * (Jacobian.of_affine Q)$@p_Q * R /\ length out = length P;
+    ensures t' m := t' = t /\ exists out,
+    m =* out$@p_out * P$@p_P * Q$@p_Q * R /\ length out = length P /\ (
+      ~ Jacobian.iszero P -> not (affine_point.iszero Q) ->
+        (ok <> word.of_Z 0 /\ exists pfPneqQ, out = (Jacobian.add_inequal_nz_nz P Q pfPneqQ : point)) \/
+        (ok = word.of_Z 0) /\ Jacobian.eq P Q)
+  }%sep.
+
+#[export] Instance spec_of_p256_point_add_affinenz_conditional_vartime_if_doubling : spec_of "p256_point_add_affinenz_conditional_vartime_if_doubling" :=
+  fnspec! "p256_point_add_affinenz_conditional_vartime_if_doubling" p_out p_P p_Q c / out (P : point) (Q : affine_point),
+  { requires t m := m =* out$@p_out * P$@p_P * (Jacobian.of_affine)Q$@p_Q /\ length out = length P /\ (affine_point.iszero Q -> c = word.of_Z 0);
+    ensures t' m := t' = t /\ exists out : point,
+      m =* out$@p_out * P$@p_P * Q$@p_Q /\ Jacobian.eq out (if word.eqb c (word.of_Z 0) then P else Jacobian.add P Q)
+  }%sep.
 
 #[export] Instance spec_of_br_cmov : spec_of "br_cmov" :=
   fnspec! "br_cmov" (c vnz vz : word) ~> r,
