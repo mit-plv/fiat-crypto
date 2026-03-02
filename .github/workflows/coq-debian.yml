@@ -32,8 +32,10 @@ jobs:
     steps:
     - name: install system dependencies
       run: |
+        echo "deb http://deb.debian.org/debian experimental main" >> /etc/apt/sources.list
         apt-get -o Acquire::Retries=30 update -y
-        apt-get -q -y --allow-unauthenticated -o Acquire::Retries=30 install sudo git make time jq python3 python-is-python3 ocaml coq libcoq-core-ocaml-dev libfindlib-ocaml-dev ocaml-findlib cabal-install js-of-ocaml
+        apt-get -q -y --allow-unauthenticated -o Acquire::Retries=30 install sudo git make time jq python3 python-is-python3 ocaml libfindlib-ocaml-dev ocaml-findlib cabal-install js-of-ocaml
+        apt-get -q -y --allow-unauthenticated -o Acquire::Retries=30 -t experimental install coq libcoq-core-ocaml-dev
     - uses: actions/checkout@v6
       with:
         submodules: recursive
@@ -120,7 +122,6 @@ jobs:
       matrix:
         include:
         - debian: sid
-        #- debian: bookworm # restore once 8.17 lands in Debian stable
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -154,7 +155,6 @@ jobs:
       matrix:
         include:
         - debian: sid
-        #- debian: bookworm # restore once 8.17 lands in Debian stable
     runs-on: ubuntu-latest
     container: debian:${{ matrix.debian }}
     needs: build

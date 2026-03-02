@@ -31,14 +31,15 @@ Building
 🌐 Try out synthesis [on the web](https://mit-plv.github.io/fiat-crypto/)!
 (Supported by [`js_of_ocaml`](https://ocsigen.org/js_of_ocaml/latest/manual/overview) compilation.)
 
-This repository requires [Coq](https://coq.inria.fr/) 8.20 or later, including OCaml libraries.
+This repository requires [Coq](https://coq.inria.fr/) 9.0.0 or later, including OCaml libraries.
 If you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
 Note that in some cases (such as installing Coq via homebrew on Mac), you may also need to install `ocaml-findlib` (for `ocamlfind`).
 The extracted OCaml code for the standalone binaries requires [OCaml](https://ocaml.org/) [4.08](https://ocaml.org/p/ocaml/4.08.0) or later.
 We suggest downloading [the latest version of Coq](https://github.com/coq/coq/wiki#coq-installation).
 Generation of JSON code via the Makefile also requires `jq`.
 
-Alternatively, choose your package-manager to install dependencies:
+Alternatively, choose your package-manager to install dependencies.
+Ensure the packaged coq version is at least 9.0.0. You can check this at [release-monitoring](https://release-monitoring.org/project/7594/).
 
 Package Manager | Command Line Invocation |
 --|--|
