@@ -30,11 +30,8 @@ Local Open Scope Z_scope.
 Local Open Scope list_scope.
 Local Open Scope string_scope.
 
-Local Notation "xs $@ a" := (map.of_list_word_at a xs)
-(at level 10, format "xs $@ a").
-Local Notation "$ n" := (match word.of_Z n return word with w => w end) (at level 9, format "$ n").
+Import (notations) coqutil.Map.Memory.
 Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
-Local Coercion F.to_Z : F >-> Z.
 
 #[local] Notation sizeof_point := 96%nat.
 
@@ -62,87 +59,66 @@ Definition p256_precompute_multiples := func! (p_table, p_P) {
 }.
 
 Import Crypto.Spec.WeierstrassCurve
-Crypto.Curves.Weierstrass.Affine
-Crypto.Curves.Weierstrass.AffineProofs
-Crypto.Curves.Weierstrass.Jacobian.Jacobian
-Curves.Weierstrass.P256
-Crypto.Bedrock.P256.Specs
-bedrock2.ZnWords.
+  Crypto.Curves.Weierstrass.Affine
+  Crypto.Curves.Weierstrass.AffineProofs
+  Crypto.Curves.Weierstrass.Jacobian.Jacobian
+  Curves.Weierstrass.P256
+  Crypto.Bedrock.P256.Specs
+  bedrock2.ZnWords.
 Require Import bedrock2.bottom_up_simpl.
 
 Module W.
-  (* Creates 0..n*P as list. *)
-  Fixpoint multiples (n : nat) (P : W.point) : list W.point :=
-    match n with
-      | 0%nat => [(W.mul 0 P)]
-      | S n => (multiples n P) ++ [(W.mul (S n) P)]
-    end.
+  Definition multiples n P := map (fun i : nat => W.mul i P) (seq 0 n).
 End W.
 
-Lemma multiples_app (n : nat) (P : W.point) :
-  W.multiples (S n) P = W.multiples n P ++ [(W.mul (S n) P)].
-Proof. reflexivity. Qed.
+Lemma multiples_succ_l (n : nat) (P : W.point) :
+  W.multiples (S n) P = W.multiples n P ++ [(W.mul n P)].
+Proof. cbv [W.multiples]. rewrite seq_S, map_app, map_cons; trivial. Qed.
 
 Lemma length_multiples (n : nat) (A : W.point) :
-  Logic.eq (List.length (W.multiples n A)) (S n).
-Proof.
-  induction n.
-  - cbv [W.multiples length]. reflexivity.
-  - rewrite multiples_app, length_app, length_cons, length_nil, IHn. lia.
-Qed.
+  Logic.eq (List.length (W.multiples n A)) n.
+Proof. cbv [W.multiples]. rewrite length_map, length_seq; trivial. Qed.
 
 Local Ltac solve_num_pre := repeat rewrite ?length_skipn, ?length_multiples, ?length_nil, ?length_firstn,
     ?map_length, ?length_point, ?length_app, ?length_cons in *.
 
-Local Ltac solve_num := solve_num_pre; try lia; pose proof Naive.word64_ok; ZnWords.
+Local Ltac solve_num := solve_num_pre; try lia; ZnWords.
 
-Local Ltac solve_mod_eq := unfold p256_group_order; rewrite Modulo.Z.cong_iff_0, Z.mod_divide by solve_num;
-      intros [?x]; solve_num.
+Lemma multiples_add_l n m P :
+  W.multiples (n+m) P = W.multiples n P ++ skipn n (W.multiples (n+m) P).
+Proof.
+  cbv [W.multiples].
+  rewrite ListUtil.seq_add, map_app, skipn_app, skipn_all2.
+  all: rewrite length_map, length_seq, ?Nat.sub_diag; trivial.
+Qed.
 
 Lemma skipn_multiples (n k : nat) P :
   (k <= n)%nat ->
-  W.multiples n P = (W.multiples k P) ++ (skipn (S k) (W.multiples n P)).
+  W.multiples n P = (W.multiples k P) ++ (skipn k (W.multiples n P)).
 Proof.
-  generalize dependent k.
-  induction n; intros.
-  { destruct k; [reflexivity | lia]. }
-  { destruct (lt_dec k (S n)).
-    { rewrite multiples_app, (IHn k) by solve_num.
-      rewrite <- app_assoc, !skipn_app. f_equal.
-      rewrite (List.skipn_all (S k) (W.multiples k P)) by solve_num.
-      rewrite app_nil_l, skipn_skipn. repeat f_equal; [solve_num|].
-      etransitivity; [symmetry; apply skipn_O|].
-      f_equal. solve_num.
-    }
-    { rewrite List.skipn_all; [rewrite app_nil_r|rewrite length_multiples;solve_num]. f_equal. solve_num. }
-  }
+  intros H.
+  pose proof multiples_add_l k (n-k) P.
+  replace (k + (n - k))%nat with n in * by lia; trivial.
 Qed.
 
 Lemma multiples_nth (n : nat) (A : W.point):
-  forall k : nat, k <= n ->
-  (List.nth k (W.multiples n A) (W.zero)) = W.mul k A.
+  forall i : nat, i < n ->
+  (List.nth_default W.zero (W.multiples n A) i) = W.mul i A.
 Proof.
-  intros.
-  rewrite (skipn_multiples n k) by solve_num.
-  rewrite app_nth1 by solve_num.
-  destruct k.
-  { cbv [W.multiples nth]. f_equal. }
-  { rewrite multiples_app, app_nth2 by solve_num.
-    rewrite length_multiples.
-    replace (S k - S k)%nat with 0%nat by lia.
-    reflexivity.
-  }
+  cbv [W.multiples]; intros.
+  erewrite ListUtil.map_nth_default with (x:=O) by (rewrite length_seq; lia).
+  rewrite ListUtil.nth_default_seq_inbounds by lia; trivial.
 Qed.
 
-Notation pointarray := (array (fun (p : word.rep) (Q : point) => sepclause_of_map ((to_bytes Q)$@p)) (word.of_Z (Z.of_nat 96))).
+#[local] Notation pointarray := (array (fun (p : word.rep) (Q : point) => sepclause_of_map ((to_bytes Q)$@p)) (word.of_Z (Z.of_nat 96))).
 
 #[export] Instance spec_of_p256_precompute_multiples : spec_of "p256_precompute_multiples" :=
   fnspec! "p256_precompute_multiples" p_table p_P / out (P : point) R,
   { requires t m := m =* out$@p_table * P$@p_P * R /\ length out = (sizeof_point * 17)%nat /\
       ~ Jacobian.iszero P;
-    ensures t' m := t' = t /\ exists out_multiples,
-      List.Forall2 W.eq (map Jacobian.to_affine out_multiples) (W.multiples 16 (Jacobian.to_affine P)) /\
-      m =* pointarray p_table out_multiples * P$@p_P * R
+    ensures t' m := t' = t /\ exists out,
+      m =* pointarray p_table out * P$@p_P * R /\
+      List.Forall2 W.eq (map Jacobian.to_affine out) (W.multiples 17 (Jacobian.to_affine P))
   }%sep.
 
 (* Matches up word additions in a simple equation. *)
@@ -156,26 +132,28 @@ Ltac match_up_pointers :=
 
 Lemma pointlist_firstn_nth_skipn (l : list point) (n : nat):
   n < length l ->
-  l = (firstn n l) ++ [(nth n l (Jacobian.of_affine W.zero))] ++ (skipn (S n) l).
-Proof. intros. rewrite firstn_nth_skipn; [reflexivity | solve_num]. Qed.
+  l = (firstn n l) ++ [(nth_default (Jacobian.of_affine W.zero) l n)] ++ (skipn (S n) l).
+Proof. intros. rewrite nth_default_eq, firstn_nth_skipn; [reflexivity | solve_num]. Qed.
 
 Lemma pointarray_split_nth p (l : list point) (n : nat):
   n < length l ->
   Lift1Prop.iff1
     (pointarray p l)
     (pointarray p (firstn n l) *
-      (sepclause_of_map ((to_bytes (nth n l (Jacobian.of_affine W.zero)))$@(p.+(sizeof_point * n)))) *
+      (sepclause_of_map ((to_bytes (nth_default (Jacobian.of_affine W.zero) l n))$@(p.+(sizeof_point * n)))) *
       (pointarray (p .+ (sizeof_point * (S n))) (skipn (S n) l)))%sep.
 Proof.
   intros. etransitivity.
   { eapply array_index_nat_inbounds with (n:=n). lia. }
-  rewrite <- hd_skipn_nth_default, nth_default_eq.
+  rewrite <- hd_skipn_nth_default.
   cancel.
   do 2 (cancel_seps_at_indices 0%nat 0%nat; [match_up_pointers; exact eq_refl|]).
   ecancel.
 Qed.
 
-Ltac hyp_containing a := match goal with H : context[a] |- _ => H end.
+Local Ltac hyp_containing a := match goal with H : context[a] |- _ => H end.
+
+Local Notation to_affine := Jacobian.to_affine.
 
 Lemma p256_precompute_multiples_ok : program_logic_goal_for_function! p256_precompute_multiples.
 Proof.
@@ -198,68 +176,62 @@ Proof.
 
   repeat straightline.
 
-  refine ((Loops.tailrec
-      (HList.polymorphic_list.cons _
-      (HList.polymorphic_list.cons _
-    (HList.polymorphic_list.nil)))
+  refine ((Loops.tailrec (HList.polymorphic_list.nil)
       (["p_table";"p_P";"i"]))
-      (fun (j:nat) todo partial_multiples t m p_table p_P i => PrimitivePair.pair.mk (
-        m =* (todo$@(p_table.+(Z.mul i sizeof_point)) *
-              pointarray p_table partial_multiples * P$@p_P * R)%sep /\
-              2 <= i <= 17 /\
-              j = (17%nat - (Z.to_nat (word.unsigned i)))%nat/\
-              length todo = (j * sizeof_point)%nat /\
-              length partial_multiples = (Z.to_nat (word.unsigned i)) /\
-        List.Forall2 W.eq (map Jacobian.to_affine partial_multiples)
-            (W.multiples (Z.to_nat (word.unsigned i - 1)) (Jacobian.to_affine P))
-          )
-      (fun T M (P_TABLE P_P I : word) => t = T /\
-                      exists multiples : list point,
-                        M =* pointarray p_table multiples * P$@p_P * R /\
-                        List.Forall2 W.eq (map Jacobian.to_affine multiples)
-                          ((W.multiples 16%nat) (Jacobian.to_affine P))
-                        ))
-      lt
-      _ _ _ _ _ _ _); Loops.loop_simpl.
+      (fun (v:nat) t m p_table p_P i => PrimitivePair.pair.mk (
+        exists multiples todo,
+          m =* (todo$@(p_table.+(Z.mul i sizeof_point)) *
+              pointarray p_table multiples * P$@p_P * R) /\
+          2 <= i <= 17 /\
+          v = i :> Z /\
+          length todo + sizeof_point*i = 17*sizeof_point /\
+          Forall2 W.eq (map to_affine multiples) (W.multiples v (to_affine P)))
+      (fun T M (P_TABLE P_P I : word) => t = T /\ exists multiples,
+          M =* pointarray p_table multiples * P$@p_P * R /\
+          Forall2 W.eq (map to_affine multiples) (W.multiples 17 (to_affine P))))
+      (fun v' v => v < v' <= 17)%nat
+      _ _ _ _ _); Loops.loop_simpl.
   { cbv [Loops.enforce]; cbn. split; exact eq_refl. }
-  { eapply Wf_nat.lt_wf. }
-  { repeat straightline. subst i. ssplit.
-    { instantiate (1:= ([(Jacobian.of_affine W.zero); P])).
-      cbv [array]. bottom_up_simpl_in_goal. ecancel_assumption. }
-    6: { bottom_up_simpl_in_goal. cbv [W.multiples map List.app].
-      repeat constructor.
-      { rewrite ScalarMult.scalarmult_1_l. reflexivity. }}
-    3: exact eq_refl.
-    all: solve_num.
+  { eapply Nat.gt_wf. }
+  { repeat straightline.
+    eexists [(Jacobian.of_affine W.zero); P], _; ssplit.
+    { cbv [array]. bottom_up_simpl_in_goal. ecancel_assumption. }
+    { ZnWords. }
+    { ZnWords. }
+    { rewrite Znat.Z2Nat.id; [exact eq_refl|ZnWords]. }
+    { listZnWords. }
+    { repeat constructor. rewrite ScalarMult.scalarmult_1_l. reflexivity. }
   }
 
   (* Loop postcondition implies function postcondition. *)
   2: {
     repeat straightline.
-    eexists _.
-    split; [eassumption|ecancel_assumption].
+    eexists; ssplit; [ecancel_assumption|trivial].
   }
 
-  intros ?j ?todo ?partial_multiples ?t ?m ?p_table ?p_P ?i.
+  intros ?v ?t ?m ?p_table ?p_P ?i.
   repeat straightline.
+  all : rename x into multiples.
+  all : rename x0 into todo.
 
   (* Loop postcondition holds after the final iteration *)
   2: {
-    assert (word.unsigned i0 = 17) as Hi0 by solve_num.
-    subst j; rewrite Hi0 in *.
+    replace todo with (@nil Byte.byte) in *; cycle 1.
+    { symmetry. apply length_zero_iff_nil. listZnWords. }
+    rewrite ?map.of_list_word_nil in *.
 
-    destruct todo; [|solve_num].
+    (* TODO: extract this lemma to coqutil.Map.Separation *)
+    assert (sepclause_of_map_empty : Lift1Prop.iff1 (sepclause_of_map (map:=mem) Interface.map.empty) (emp True)).
+    { cbv [sepclause_of_map emp]; split; intuition congruence. }
 
-    exists partial_multiples.
-    split; [|assumption].
-    rewrite map.of_list_word_nil in *.
-    use_sep_assumption. cancel.
-    cbv [seps emp Lift1Prop.iff1 sepclause_of_map]; intuition auto.
+    seprewrite_in sepclause_of_map_empty H6.
+    eexists; ssplit; [ecancel_assumption|].
+    eqapply H12. f_equal. ZnWords.
   }
 
   (* Loop invariant is preserved. *)
 
-  assert (word.unsigned i0 < 17) by solve_num.
+  assert (word.unsigned i0 < 17) by ZnWords.
 
   (* Split it out the first element of todo, which is the one we will fill in this iteration. *)
   seprewrite_in_by (Array.list_word_at_firstn_skipn (p_table0.+word.unsigned i0 * Z.of_nat 96) todo sizeof_point)
@@ -271,93 +243,91 @@ Proof.
 
   (* i is odd -> addition. *)
   { assert (3 <= word.unsigned i0). {
-      let H := unsigned.zify_expr v in try rewrite H in *; clear H.
-      solve_num.
+      let H := unsigned.zify_expr v0 in try rewrite H in *; clear H.
+      ZnWords.
     }
 
-    (* Split out i-1 * P and remember equations to easily but partial_multiples back together in the postcondition. *)
-    seprewrite_in_by (pointarray_split_nth p_table0 partial_multiples (Z.to_nat (word.unsigned i0 - 1)))
-        ltac:(hyp_containing (m0)) solve_num.
+    match goal with H : _ |- _ =>
+      let Hl := fresh in
+      pose proof Forall2_length H as Hl; rewrite ?length_map, ?length_multiples in Hl
+    end.
+
+    (* Split out i-1 * P and remember equations to easily but multiples back together in the postcondition. *)
+    seprewrite_in_by (pointarray_split_nth p_table0 multiples (Z.to_nat (word.unsigned i0 - 1)))
+        ltac:(hyp_containing m0) solve_num.
     unshelve epose proof
-        (pointlist_firstn_nth_skipn partial_multiples (Z.to_nat (word.unsigned i0 - 1)) _) as Hremember; [solve_num|].
+        (pointlist_firstn_nth_skipn multiples (Z.to_nat (word.unsigned i0 - 1)) _) as Hremember; [solve_num|].
     rewrite List.skipn_all in Hremember by solve_num. rewrite app_nil_r in Hremember.
-    set (nth (Z.to_nat (word.unsigned i0 - 1)) partial_multiples (Jacobian.of_affine W.zero)) as i0m1P.
 
     (* p256_point_add_nz_nz_neq *)
     straightline_call; ssplit.
     { use_sep_assumption; cancel.
-      (* Set Ltac Profiling. *)
-      cancel_seps_at_indices 3%nat 0%nat; [match_up_pointers; exact eq_refl|].
-      cancel_seps_at_indices 1%nat 0%nat; [match_up_pointers; exact eq_refl|].
-      (* Show Ltac Profile. *)
-      (* TODO: Resolve set bottleneck in better_lia:
-       ─solve_num ----------------------------------   0.0%  42.1%      13    5.191s
-        ├─solve_num_pre ----------------------------   0.1%  30.0%      13    3.202s
-        │└rewrite ?length_skipn, ?length_multiples,   30.0%  30.0%      64    0.419s
-        └─ZnWords ----------------------------------   0.0%  11.4%      13    1.936s
-          ├─better_lia -----------------------------   0.0%   7.4%      13    1.314s
-          │└PreOmega.Z.div_mod_to_equations --------   0.0%   6.8%      13    1.209s
-          │└PreOmega.Z.div_mod_to_equations' -------   0.0%   5.3%      13    0.976s
-          │└PreOmega.Z.div_mod_to_equations_step ---   0.1%   5.3%       0    0.060s
-          │└PreOmega.Z.div_mod_to_equations_generali   0.1%   5.1%     170    0.058s
-          │ ├─set (q := x / y) in * ----------------   2.5%   2.5%      85    0.029s
-          │ └─set (r := x mod y) in * --------------   2.4%   2.4%      85    0.029s
-          └─ZnWords_pre ----------------------------   0.0%   4.0%      13    0.622s
-      *)
+      cancel_seps_at_indices 3%nat 0%nat; [match_up_pointers; exact eq_refl|]. (* 0.4s *)
+      cancel_seps_at_indices 1%nat 0%nat; [match_up_pointers; exact eq_refl|]. (* 0.5s *)
       cbv [seps]; ecancel. }
     { solve_num. }
 
     repeat straightline.
 
-    assert (W.eq (Jacobian.to_affine i0m1P)
-                (W.mul (Z.of_nat (Z.to_nat (word.unsigned i0 - 1))) (Jacobian.to_affine P))) as WeqI0m1P. {
-      subst i0m1P.
-      erewrite <- multiples_nth.
-      { rewrite <- (map_nth Jacobian.to_affine), <- !nth_default_eq.
-        apply ListUtil.Forall2_forall_iff; [|eassumption|]; solve_num. }
-      { solve_num. }
-    }
+    let h := hyp_containing @Forall2 in rename h into Hf2.
 
-    (* To resolve the addition side condition, need that the points are not zero and not equal. *)
-    assert (~ Jacobian.eq i0m1P P) as Ne. {
-      rewrite Jacobian.eq_iff, <- (ScalarMult.scalarmult_1_l (eq:=W.eq) (Jacobian.to_affine P)),
-          WeqI0m1P, p256_mul_mod_n.
-      solve_mod_eq.
-    }
-    assert (~ Jacobian.iszero i0m1P) as Nz1. {
-      rewrite Jacobian.iszero_iff, <- (ScalarMult.scalarmult_0_l (eq:=W.eq) (Jacobian.to_affine P)),
-          WeqI0m1P, p256_mul_mod_n.
-      solve_mod_eq.
-    }
+    unshelve (match goal with H : ~ Jacobian.iszero ?P -> _ |- _ =>
+        repeat (let HH := fresh in assert (~ Jacobian.iszero P); [shelve|specialize (H HH)]); trivial;
+        rename H into Hadd end).
+    { rewrite Jacobian.iszero_iff.
+      erewrite <-ListUtil.map_nth_default_always.
+      eapply ListUtil.Forall2_forall_iff' in Hf2.
+      { rewrite Hf2, Jacobian.to_affine_of_affine, multiples_nth, Znat.Z2Nat.id by ZnWords.
+        rewrite <- (ScalarMult.scalarmult_0_l (eq:=W.eq) (Jacobian.to_affine P)), p256_mul_mod_n.
+        cbv [p256_group_order]; PreOmega.Z.div_mod_to_equations; lia. }
+      all: rewrite ?length_map, ?length_multiples; lia. }
 
-    (* TODO remove identifiers? *)
-    specialize (H22 Nz1 H5). destruct H22.
-    2: { destruct H18; contradiction. }
+    destruct Hadd as [(?&?&?)|[? Hadd] ]; trivial; [|contradict Hadd]; cycle 1.
+    { (* no doubling *)
+      rewrite Jacobian.eq_iff.
+      erewrite <-ListUtil.map_nth_default_always.
+      eapply ListUtil.Forall2_forall_iff' in Hf2.
+      { rewrite Hf2, Jacobian.to_affine_of_affine, multiples_nth, Znat.Z2Nat.id by ZnWords.
+        rewrite <- (ScalarMult.scalarmult_1_l (eq:=W.eq) (to_affine P)) at 2.
+        rewrite p256_mul_mod_n.
+        cbv [p256_group_order]; PreOmega.Z.div_mod_to_equations; lia. }
+      all: rewrite ?length_map, ?length_multiples; lia. }
 
-    repeat straightline.
-
-    eexists _, _, _.
-    split; [ssplit|split; [|intros;assumption]].
-    { subst i.
-      instantiate (1:= ((firstn (Z.to_nat (word.unsigned i0 - 1)) partial_multiples) ++ [i0m1P] ++ [(Jacobian.add_inequal_nz_nz i0m1P P x1) ])).
-      rewrite !array_app. repeat seprewrite (array_cons (T:=point)).
-      use_sep_assumption. cancel. subst x0. subst i0m1P.
+    eexists (Nat.succ v); split.
+    { subst i. subst x0.
+      eexists ((_ ++ [_]) ++ [_]), (skipn sizeof_point todo); ssplit.
+      { rewrite <-Hremember.
+        seprewrite @array_append; seprewrite @array_cons; seprewrite @array_nil.
+        use_sep_assumption; cancel.
       cancel_seps_at_indices 0%nat 0%nat; [match_up_pointers; exact eq_refl|].
-      cancel_seps_at_indices 0%nat 1%nat; [match_up_pointers; exact eq_refl|].
-      cancel_seps_at_indices 1%nat 2%nat; [match_up_pointers; exact eq_refl|].
+      cancel_seps_at_indices 3%nat 1%nat; [match_up_pointers; exact eq_refl|].
       rewrite List.skipn_all by solve_num.
-      cbv [array seps]. cancel.
+      cbn [array seps]; cancel.
+
+
+
+
+
+
+
+
+
+(* Stuck here: resotore Hremember? *)
+
+
+
+
+
+
     }
+    split; [ssplit|split; [|intros;assumption]].
     6: { subst i; subst i0m1P.
       rewrite app_assoc, <-Hremember.
       destruct (Z.to_nat (word.unsigned i0)) as [|n] eqn: Hi0; [solve_num|].
 
-      replace ((Z.to_nat (word.unsigned (i0.+1) - 1))) with (S n) by solve_num.
-      rewrite multiples_app, ?map_app.
-      apply Forall2_app.
-      { replace n with (Z.to_nat (word.unsigned i0 - 1)) by solve_num.
-        assumption.
-      }
+      progress replace ((Z.to_nat (word.unsigned (i0.+1)))) with (S (S n)) by solve_num.
+      rewrite multiples_succ_l, ?map_app.
+      apply Forall2_app; [assumption|].
       repeat constructor.
       rewrite Jacobian.to_affine_add_inequal_nz_nz by assumption.
       set ((W.mul (Z.of_nat (S n)) (Jacobian.to_affine P))) as snp.
@@ -408,10 +378,9 @@ Proof.
       subst i. rewrite !app_assoc, <- (app_assoc _ ([i0d2P])).
       rewrite <- Hrem, !map_app.
       destruct (Z.to_nat (word.unsigned i0)) as [|n] eqn:?H; [solve_num|].
-      replace ((Z.to_nat (word.unsigned (i0.+1) - 1))) with (S n) by solve_num.
-      rewrite  multiples_app.
-      apply Forall2_app.
-      { replace n with ((Z.to_nat (word.unsigned i0 - 1))) by solve_num. assumption. }
+      replace ((Z.to_nat (word.unsigned (i0.+1)))) with (S (S n)) by solve_num.
+      rewrite  multiples_succ_l.
+      apply Forall2_app; [assumption|].
       repeat constructor. rewrite <- Jacobian.double_minus_3_eq_double, Jacobian.to_affine_double.
       assert (W.eq (Jacobian.to_affine i0d2P) (W.mul (word.unsigned i0 / 2) (Jacobian.to_affine P))) as Weq. {
         replace ((word.unsigned i0 / 2)) with (Z.of_nat (Z.to_nat (word.unsigned i0 / 2))) by solve_num.
