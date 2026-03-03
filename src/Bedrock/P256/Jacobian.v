@@ -35,10 +35,7 @@ Local Open Scope bool_scope.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
 
-Local Notation "xs $@ a" := (map.of_list_word_at a xs)
-  (at level 10, format "xs $@ a").
-Local Notation "$ n" := (match word.of_Z n return word with w => w end) (at level 9, format "$ n").
-Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
+Import (notations) coqutil.Map.Memory.
 Local Coercion F.to_Z : F >-> Z.
 
 
@@ -263,7 +260,7 @@ rewrite ?app_length, ?length_coord in *.
     ecancel_assumption. }
   { rewrite ?app_length, ?length_point, ?length_coord; trivial. }
 
-  case (Properties.word.eqb_spec x3 $0); subst x3; rewrite word.lor_0_iff; [right|left]; split; trivial.
+  case (Properties.word.eqb_spec x3 (word.of_Z 0)); subst x3; rewrite word.lor_0_iff; [right|left]; split; trivial.
   { case H121 as [Hx Hy].
     subst x x0.
     rewrite !word.broadcast_0_iff in *.

@@ -30,8 +30,8 @@ Section Memory.
   Import Word.Properties Word.Interface Coq.Init.Byte coqutil.Map.OfListWord Map.Properties coqutil.Tactics.Tactics.
   Context {width: Z} {word: word width} {mem: map.map word byte}.
   Context {mem_ok: map.ok mem} {word_ok: word.ok word}.
-  Local Infix "$+" := map.putmany (at level 70).
-  Local Notation "xs $@ a" := (map.of_list_word_at a xs) (at level 10, format "xs $@ a").
+
+  Import (notations) coqutil.Map.Memory.
   Local Notation unchecked_store_bytes := (unchecked_store_bytes (mem:=mem) (word:=word)).
   Lemma unchecked_store_bytes_unchecked_store_bytes m a bs1 bs2 :
     length bs1 = length bs2 ->

@@ -158,8 +158,7 @@ Section WithParameters.
   Context {F_M_pos : Z.pos M_pos = m}.
 
   Local Coercion F.to_Z : F >-> Z.
-  Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
-  Local Notation "xs $@ a" := (map.of_list_word_at a xs) (at level 10, format "xs $@ a").
+  Import (notations) coqutil.Map.Memory.
 
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
   Local Notation word := (BasicC64Semantics.word).
