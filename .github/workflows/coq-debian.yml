@@ -34,7 +34,7 @@ jobs:
         echo "deb http://deb.debian.org/debian experimental main" >> /etc/apt/sources.list
         apt-get -o Acquire::Retries=30 update -y
         apt-get -q -y --allow-unauthenticated -o Acquire::Retries=30 install sudo git make time jq python3 python-is-python3 ocaml libfindlib-ocaml-dev ocaml-findlib cabal-install js-of-ocaml
-        apt-get -q -y --allow-unauthenticated -o Acquire::Retries=30 -t experimental install coq libcoq-core-ocaml-dev rocq-stdlib
+        apt-get -q -y --allow-unauthenticated -o Acquire::Retries=30 -t experimental install coq libcoq-core-ocaml-dev libcoq-stdlib
     - uses: actions/checkout@v6
       with:
         submodules: recursive
