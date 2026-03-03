@@ -32,25 +32,8 @@ Local Open Scope bool_scope.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
 
-Local Notation "xs $@ a" := (map.of_list_word_at a xs)
-  (at level 10, format "xs $@ a").
-Local Notation "$ n" := (match word.of_Z n return word with w => w end) (at level 9, format "$ n").
-Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
-Local Coercion F.to_Z : F >-> Z.
-
-Local Definition wmask : expr.expr := bedrock_expr:((-$1>>$27)&$63).
-Local Definition wsize : expr.expr := bedrock_expr:($wmask+$1).
-
-Import Map.Interface. (* Coercions *)
-Local Lemma eval_wmask (m : mem) (l : locals) : Semantics.eval_expr m l wmask = Some (word.of_Z 63).
-Proof. cbn. reflexivity. Qed.
-Local Lemma eval_wmask' : (word.and (word.sru (word.opp (word.of_Z 1)) (word.of_Z 27)) (word.of_Z 63)) = word.of_Z 63 :> word.
-Proof. reflexivity. Qed.
-Local Lemma eval_wsize (m : mem) (l : locals) : Semantics.eval_expr m l wsize = Some (word.of_Z 64).
-Proof. cbn. reflexivity. Qed.
-Local Lemma eval_wsize' : (word.and (word.sru (word.opp (word.of_Z 1)) (word.of_Z 27)) (word.of_Z 63).+1) = $64 :> word.
-Proof. reflexivity. Qed.
-
+Import (notations) coqutil.Map.Memory.
+Import bedrock2.wsize.
 
 Definition br_value_barrier := func! (a) ~> a {
   /*skip*/ (* insert appropriate incantation for compilers that optimize values *)
