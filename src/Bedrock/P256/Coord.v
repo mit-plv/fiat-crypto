@@ -36,11 +36,7 @@ Local Open Scope bool_scope.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
 
-Local Notation "xs $@ a" := (map.of_list_word_at a xs)
-  (at level 10, format "xs $@ a").
-Local Notation "$ n" := (match word.of_Z n return word with w => w end) (at level 9, format "$ n").
-Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
-Local Coercion F.to_Z : F >-> Z.
+Import (notations) coqutil.Map.Memory.
 
 
 Definition p256_coord_nonzero := func! (p_x) ~> nz {
@@ -294,6 +290,7 @@ Proof.
 Qed.
 
 
+Local Coercion F.to_Z : F >-> Z.
 Definition spec_of_p256_coord_add_nonmont : spec_of "p256_coord_add" :=
   fnspec! "p256_coord_add" p_out p_x p_y / out (x y : F p256) R,
   { requires t m := m =*> (le_split 32 x)$@p_x /\ m =*> (le_split 32 y)$@p_y /\ m =* out$@p_out * R /\ length out = 32%nat;
