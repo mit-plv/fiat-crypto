@@ -77,6 +77,7 @@ Module F.
   Notation Z_mod := of_Z (only parsing).
 End F.
 
+Coercion F.to_Z : F.F >-> BinInt.Z.
 Notation F := F.F.
 Declare Scope F_scope.
 Delimit Scope F_scope with F.

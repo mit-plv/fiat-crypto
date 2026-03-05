@@ -101,7 +101,6 @@ Section WithParameters.
 
   Add Ring Private_ring : (F.ring_theory M_pos) (morphism (F.ring_morph M_pos), constants [F.is_constant]).
 
-  Local Coercion F.to_Z : F >-> Z.
   Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
   Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 

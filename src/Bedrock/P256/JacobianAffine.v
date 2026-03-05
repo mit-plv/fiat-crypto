@@ -39,7 +39,6 @@ Local Notation "xs $@ a" := (map.of_list_word_at a xs)
   (at level 10, format "xs $@ a").
 Local Notation "$ n" := (match word.of_Z n return word with w => w end) (at level 9, format "$ n").
 Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
-Local Coercion F.to_Z : F >-> Z.
 
 
 Import Coq.micromega.Lia.

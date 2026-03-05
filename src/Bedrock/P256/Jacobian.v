@@ -36,7 +36,6 @@ Local Open Scope string_scope.
 Local Open Scope list_scope.
 
 Import (notations) coqutil.Map.Memory.
-Local Coercion F.to_Z : F >-> Z.
 
 
 Import Coq.micromega.Lia.

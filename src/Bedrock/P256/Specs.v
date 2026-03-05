@@ -129,7 +129,6 @@ Module Byte.
   Qed.
 End Byte.
 
-Local Coercion F.to_Z : F >-> Z.
 
 Require Import Curves.Weierstrass.P256.
 
