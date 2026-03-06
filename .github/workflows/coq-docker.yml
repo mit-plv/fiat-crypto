@@ -325,6 +325,17 @@ jobs:
     - name: echo build params
       run: etc/ci/describe-system-config.sh
     - run: opam update -y
+    - name: install binaryen
+      run: |
+        # The Ubuntu apt package only provides binaryen 108 which lacks wasm-merge.
+        # wasm_of_ocaml-compiler requires wasm-merge (added in binaryen 109+).
+        # Install a newer binaryen from GitHub releases into /usr/local/bin/ so it
+        # takes PATH precedence over the apt-installed version in /usr/bin/.
+        BINARYEN_VERSION=version_120
+        wget -q "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN_VERSION}/binaryen-${BINARYEN_VERSION}-x86_64-linux.tar.gz" -O /tmp/binaryen.tar.gz
+        cd /tmp && tar -xzf binaryen.tar.gz
+        sudo cp /tmp/binaryen-${BINARYEN_VERSION}/bin/* /usr/local/bin/
+        rm -rf /tmp/binaryen.tar.gz /tmp/binaryen-${BINARYEN_VERSION}
     - name: install wasm_of_ocaml
       run: opam install -y wasm_of_ocaml-compiler ocamlfind
     - name: echo build params
