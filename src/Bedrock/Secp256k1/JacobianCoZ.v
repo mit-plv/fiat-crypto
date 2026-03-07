@@ -245,7 +245,6 @@ Section WithParameters.
   Context {zero_a : id a = F.zero}
           {seven_b : id b = F.of_Z _ 7}.
 
-  Local Coercion F.to_Z : F >-> Z.
   Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
   Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
 

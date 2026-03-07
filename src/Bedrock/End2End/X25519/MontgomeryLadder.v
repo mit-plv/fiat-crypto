@@ -62,7 +62,6 @@ Definition x25519_base := func! (out, sk) {
 }.
 
 Import LittleEndianList.
-Local Coercion F.to_Z : F >-> Z.
 Require Import bedrock2.WeakestPrecondition bedrock2.Semantics bedrock2.ProgramLogic.
 Require Import bedrock2.Syntax bedrock2.Map.SeparationLogic.
 From Coq.Init Require Import Byte.

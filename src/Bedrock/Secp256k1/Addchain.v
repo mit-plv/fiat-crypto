@@ -157,7 +157,6 @@ Section WithParameters.
   Context {secp256k1_prime: prime m}.
   Context {F_M_pos : Z.pos M_pos = m}.
 
-  Local Coercion F.to_Z : F >-> Z.
   Import (notations) coqutil.Map.Memory.
 
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
