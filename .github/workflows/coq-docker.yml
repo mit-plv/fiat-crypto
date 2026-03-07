@@ -325,6 +325,11 @@ jobs:
     - name: echo build params
       run: etc/ci/describe-system-config.sh
     - run: opam update -y
+    - name: Set up binaryen >= 118
+      uses: acifani/setup-tinygo@v2
+      with:
+        tinygo-version: '0.30.0'
+        binaryen-version: '118'
     - name: install wasm_of_ocaml
       run: opam install -y wasm_of_ocaml-compiler ocamlfind
     - name: echo build params
