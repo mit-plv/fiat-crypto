@@ -343,6 +343,8 @@ Module Export RewritePass.
     | slice01_addcarryZ
     | slice01_subborrowZ
     | slice_set_slice
+    | slice_set_slice_disjoint
+    | slice_slice
     | truncate_small
     | unary_truncate
     | xor_same
@@ -372,7 +374,9 @@ Module Export RewritePass.
         ;slice01_addcarryZ
         ;slice01_subborrowZ
         ;set_slice_set_slice
+        ;slice_slice
         ;slice_set_slice
+        ;slice_set_slice_disjoint
         ;set_slice0_small
         ;shift_to_mul
         ;flatten_associative
@@ -2497,11 +2501,29 @@ Proof using Type. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; tr
 
 Definition slice_set_slice (d : dag) :=
   fun e => match e with
-    ExprApp (slice 0 s1, [ExprApp (set_slice 0 s2, [_; e'])]) =>
-      if N.leb s1 s2 then ExprApp (slice 0 s1, [e']) else e | _ => e end.
+    ExprApp (slice lo1 s1, [ExprApp (set_slice lo2 s2, [_; e'])]) =>
+      if N.leb lo2 lo1 && N.leb (lo1 + s1) (lo2 + s2) then ExprApp (slice (lo1 - lo2) s1, [e']) else e | _ => e end%bool%N.
 #[local] Instance describe_slice_set_slice : description_of Rewrite.slice_set_slice
-  := "Simplifies slice applied to set_slice".
+  := "Simplifies slice applied to set_slice when slice range is within set_slice range".
 Global Instance slice_set_slice_ok : Ok slice_set_slice.
+Proof using Type. t. f_equal. Z.bitblast. Qed.
+
+Definition slice_set_slice_disjoint (d : dag) :=
+  fun e => match e with
+    ExprApp (slice lo1 s1, [ExprApp (set_slice lo2 s2, [base; _])]) =>
+      if N.leb (lo1 + s1) lo2 || N.leb (lo2 + s2) lo1 then ExprApp (slice lo1 s1, [base]) else e | _ => e end%bool%N.
+#[local] Instance describe_slice_set_slice_disjoint : description_of Rewrite.slice_set_slice_disjoint
+  := "Simplifies slice through set_slice when ranges are disjoint".
+Global Instance slice_set_slice_disjoint_ok : Ok slice_set_slice_disjoint.
+Proof using Type. t. f_equal. Z.bitblast. Qed.
+
+Definition slice_slice (d : dag) :=
+  fun e => match e with
+    ExprApp (slice lo1 s1, [ExprApp (slice lo2 s2, [e'])]) =>
+      if N.leb (lo1 + s1) s2 then ExprApp (slice (lo2 + lo1) s1, [e']) else e | _ => e end%N.
+#[local] Instance describe_slice_slice : description_of Rewrite.slice_slice
+  := "Simplifies nested slice operations".
+Global Instance slice_slice_ok : Ok slice_slice.
 Proof using Type. t. f_equal. Z.bitblast. Qed.
 
 Definition set_slice_set_slice (d : dag) :=
@@ -3798,6 +3820,8 @@ Definition named_pass (name : RewritePass.rewrite_pass) : dag -> expr -> expr
      | RewritePass.slice01_addcarryZ => slice01_addcarryZ
      | RewritePass.slice01_subborrowZ => slice01_subborrowZ
      | RewritePass.slice_set_slice => slice_set_slice
+     | RewritePass.slice_set_slice_disjoint => slice_set_slice_disjoint
+     | RewritePass.slice_slice => slice_slice
      | RewritePass.truncate_small => truncate_small
      | RewritePass.unary_truncate => unary_truncate
      | RewritePass.xor_same => xor_same
@@ -4133,27 +4157,100 @@ Definition Address {opts : symbolic_options_computed_opt} {descr:description} {s
   App (add sa, [bi; offset]).
 
 Definition Load {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
-  if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
-  then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
+  let sz := Syntax.operand_size a s in
   addr <- Address a;
-  v <- Load64 addr;
-  App ((slice 0 (Syntax.operand_size a s)), [v]).
+  if ((sz =? 8) || (sz =? 64))%N%bool then
+    v <- Load64 addr;
+    App ((slice 0 sz), [v])
+  else if (sz =? 128)%N then
+    lo <- Load64 addr;
+    eight <- App (const 8, nil);
+    addr_hi <- App (add sa, [addr; eight]);
+    hi <- Load64 addr_hi;
+    zero <- App (const 0, nil);
+    v <- App (set_slice 0 64, [zero; lo]);
+    App (set_slice 64 64, [v; hi])
+  else if (sz =? 256)%N then
+    lo0 <- Load64 addr;
+    eight <- App (const 8, nil);
+    addr1 <- App (add sa, [addr; eight]);
+    lo1 <- Load64 addr1;
+    sixteen <- App (const 16, nil);
+    addr2 <- App (add sa, [addr; sixteen]);
+    lo2 <- Load64 addr2;
+    twentyfour <- App (const 24, nil);
+    addr3 <- App (add sa, [addr; twentyfour]);
+    lo3 <- Load64 addr3;
+    zero <- App (const 0, nil);
+    v0 <- App (set_slice 0 64, [zero; lo0]);
+    v1 <- App (set_slice 64 64, [v0; lo1]);
+    v2 <- App (set_slice 128 64, [v1; lo2]);
+    App (set_slice 192 64, [v2; lo3])
+  else err (error.unsupported_memory_access_size sz).
 
 Definition Remove {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
-  if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
-  then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
+  let sz := Syntax.operand_size a s in
   addr <- Address a;
-  v <- Remove64 addr;
-  App ((slice 0 (Syntax.operand_size a s)), [v]).
+  if ((sz =? 8) || (sz =? 64))%N%bool then
+    v <- Remove64 addr;
+    App ((slice 0 sz), [v])
+  else if (sz =? 128)%N then
+    lo <- Remove64 addr;
+    eight <- App (const 8, nil);
+    addr_hi <- App (add sa, [addr; eight]);
+    hi <- Remove64 addr_hi;
+    zero <- App (const 0, nil);
+    v <- App (set_slice 0 64, [zero; lo]);
+    App (set_slice 64 64, [v; hi])
+  else if (sz =? 256)%N then
+    lo0 <- Remove64 addr;
+    eight <- App (const 8, nil);
+    addr1 <- App (add sa, [addr; eight]);
+    lo1 <- Remove64 addr1;
+    sixteen <- App (const 16, nil);
+    addr2 <- App (add sa, [addr; sixteen]);
+    lo2 <- Remove64 addr2;
+    twentyfour <- App (const 24, nil);
+    addr3 <- App (add sa, [addr; twentyfour]);
+    lo3 <- Remove64 addr3;
+    zero <- App (const 0, nil);
+    v0 <- App (set_slice 0 64, [zero; lo0]);
+    v1 <- App (set_slice 64 64, [v0; lo1]);
+    v2 <- App (set_slice 128 64, [v1; lo2]);
+    App (set_slice 192 64, [v2; lo3])
+  else err (error.unsupported_memory_access_size sz).
 
 Definition Store {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
-  if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
-  then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
+  let sz := Syntax.operand_size a s in
   addr <- Address a;
-  old <- Load64 addr;
-  v <- App (slice 0 (Syntax.operand_size a s), [v]);
-  v <- App (set_slice 0 (Syntax.operand_size a s), [old; v])%N;
-  Store64 addr v.
+  if ((sz =? 8) || (sz =? 64))%N%bool then
+    old <- Load64 addr;
+    v <- App (slice 0 sz, [v]);
+    v <- App (set_slice 0 sz, [old; v])%N;
+    Store64 addr v
+  else if (sz =? 128)%N then
+    lo <- App (slice 0 64, [v]);
+    hi <- App (slice 64 64, [v]);
+    _ <- Store64 addr lo;
+    eight <- App (const 8, nil);
+    addr_hi <- App (add sa, [addr; eight]);
+    Store64 addr_hi hi
+  else if (sz =? 256)%N then
+    w0 <- App (slice 0 64, [v]);
+    w1 <- App (slice 64 64, [v]);
+    w2 <- App (slice 128 64, [v]);
+    w3 <- App (slice 192 64, [v]);
+    _ <- Store64 addr w0;
+    eight <- App (const 8, nil);
+    addr1 <- App (add sa, [addr; eight]);
+    _ <- Store64 addr1 w1;
+    sixteen <- App (const 16, nil);
+    addr2 <- App (add sa, [addr; sixteen]);
+    _ <- Store64 addr2 w2;
+    twentyfour <- App (const 24, nil);
+    addr3 <- App (add sa, [addr; twentyfour]);
+    Store64 addr3 w3
+  else err (error.unsupported_memory_access_size sz).
 
 (* note: this could totally just handle truncation of constants if semanics handled it *)
 Definition GetOperand {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (o : ARG) : M idx :=
@@ -4237,14 +4334,16 @@ Definition vector_binop_idx {opts : symbolic_options_computed_opt} {descr : desc
   zero <- App (const 0, []);
   vector_binop_aux v1 v2 lane_op 0 num_lanes lane_width zero.
 
-(* High-level: Complete lane-parallel vector instruction (GetOperand -> compute -> SetOperand) *)
+(* High-level: Complete lane-parallel vector instruction (GetOperand -> compute -> SetOperand).
+   num_lanes is derived from operation_size s and lane_width. *)
 Definition SymexVectorBinOp {opts : symbolic_options_computed_opt} {descr : description}
   {s : OperationSize} {sa : AddressSize}
-  (dst src1 src2 : ARG) (lane_op : op) (num_lanes : nat) (lane_width : Z) : M unit :=
+  (dst src1 src2 : ARG) (lane_op : op) (lane_width : Z) : M unit :=
+  let num_lanes := N.to_nat (s / Z.to_N lane_width)%N in
   v1 <- GetOperand src1;
-v2 <- GetOperand src2;
-result <- vector_binop_idx v1 v2 lane_op num_lanes lane_width;
-SetOperand dst result.
+  v2 <- GetOperand src2;
+  result <- vector_binop_idx v1 v2 lane_op num_lanes lane_width;
+  SetOperand dst result.
 End SymbolicVector.
 
 
@@ -4260,7 +4359,7 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
   let s : OperationSize := s in
   let resize_reg r := some_or (fun _ => reg_of_index_and_shift_and_bitcount_opt (reg_index r, 0%N (* offset *), s)) (fun _ => error.unimplemented_instruction instr) in
   match instr.(Syntax.op), instr.(args) with
-  | (mov | movzx | movabs | movdqa | movdqu | movq | movd | movups), [dst; src] => (* Note: unbundle when switching from N to Z *)
+  | (mov | movzx | movabs | movdqa | movdqu | movq | movd | movups | vmovdqu), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- GetOperand src;
     SetOperand dst v
 
@@ -4270,20 +4369,20 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
     v <- (App ((slice 0 64), [v]));
     SetOperand (s:=64) dst v
   | vpaddq, [dst; src1; src2] => (* packed add of quadwords - no flags affected *)
-      SymbolicVector.SymexVectorBinOp dst src1 src2 (add 64) 4 64
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (add 64) 64
   | vpsubq, [dst; src1; src2] => (* packed subtract quadwords *)
-      SymbolicVector.SymexVectorBinOp dst src1 src2 (sub 64) 4 64
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (sub 64) 64
   | vpandq, [dst; src1; src2] => (* packed bitwise AND quadwords *)
-      SymbolicVector.SymexVectorBinOp dst src1 src2 (and 64) 4 64
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (and 64) 64
   | vporq, [dst; src1; src2] => (* packed bitwise OR quadwords *)
-      SymbolicVector.SymexVectorBinOp dst src1 src2 (or 64) 4 64
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (or 64) 64
   | vpxorq, [dst; src1; src2] => (* packed bitwise XOR quadwords *)
-      SymbolicVector.SymexVectorBinOp dst src1 src2 (xor 64) 4 64
-  (* 32-bit lane versions (8 lanes in 256-bit register) *)
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (xor 64) 64
+  (* 32-bit lane versions *)
   | vpaddd, [dst; src1; src2] => (* packed add doublewords *)
-      SymbolicVector.SymexVectorBinOp dst src1 src2 (add 32) 8 32
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (add 32) 32
   | vpsubd, [dst; src1; src2] => (* packed subtract doublewords *)
-      SymbolicVector.SymexVectorBinOp dst src1 src2 (sub 32) 8 32
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (sub 32) 32
 
   | xchg, [a; b] => (* Note: unbundle when switching from N to Z *)
     va <- GetOperand a;

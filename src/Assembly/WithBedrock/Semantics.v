@@ -210,7 +210,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   let resize_reg r := reg_of_index_and_shift_and_bitcount_opt (reg_index r, 0%N (* offset *), s) in
   match instr.(prefix) with None =>
   match instr.(op), instr.(args) with
-  | (mov | movzx | movabs | movdqa | movdqu | movq | movd | movups), [dst; src] => (* Note: unbundle when switching from N to Z *)
+  | (mov | movzx | movabs | movdqa | movdqu | movq | movd | movups | vmovdqu), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- DenoteOperand sa s st src;
     SetOperand sa s st dst v
   | xchg, [a; b] => (* Flags Affected: None *)
@@ -492,6 +492,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | mov, _
   | movzx, _
   | vmovq, _
+  | vmovdqu, _
   | or, _
   | imul, _
   | inc, _

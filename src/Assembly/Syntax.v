@@ -215,6 +215,7 @@ Inductive OpCode :=
 | vpxorq
 | vpaddd
 | vpsubd
+| vmovdqu   (* Vector move double quadword unaligned *)
 .
 
 Derive OpCode_Listable SuchThat (@FinitelyListable OpCode OpCode_Listable) As OpCode_FinitelyListable.
@@ -312,6 +313,7 @@ Definition accesssize_of_declaration (opc : OpCode) : option AccessSize :=
   | vpxorq
   | vpaddd
   | vpsubd
+  | vmovdqu
     => None
   end.
 
