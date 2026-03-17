@@ -93,7 +93,12 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 Section S.
 Implicit Type s : OperationSize.
 Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | sub s | subborrow s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
-  | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | xorZ | addcarryZ s | subborrowZ s.
+  | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | xorZ | addcarryZ s | subborrowZ s
+  (* Vector ops: lane-parallel operations on packed vectors.
+     lane_width = bit width of each lane, num_lanes = number of lanes.
+     Each takes 2 args (full vector operands) and produces a full vector result. *)
+  | vadd (lane_width num_lanes : N)
+  | vsub (lane_width num_lanes : N).
 Definition op_beq a b := if op_eq_dec a b then true else false.
 End S.
 
@@ -129,6 +134,8 @@ Global Instance Show_op : Show op := fun o =>
   | xorZ => "xorZ"
   | addcarryZ s => "addcarryZ " ++ show s
   | subborrowZ s => "subborrowZ " ++ show s
+  | vadd lw nl => "vadd " ++ show lw ++ "x" ++ show nl
+  | vsub lw nl => "vsub " ++ show lw ++ "x" ++ show nl
   end%string.
 
 Definition show_op_subscript : Show op := fun o =>
@@ -163,6 +170,8 @@ Definition show_op_subscript : Show op := fun o =>
   | xorZ => "xorℤ"
   | addcarryZ s => "addcarryℤ" ++ String.to_subscript (show s)
   | subborrowZ s => "subborrowℤ" ++ String.to_subscript (show s)
+  | vadd lw nl => "vadd" ++ String.to_subscript (show lw) ++ "×" ++ String.to_subscript (show nl)
+  | vsub lw nl => "vsub" ++ String.to_subscript (show lw) ++ "×" ++ String.to_subscript (show nl)
   end%string.
 
 Module FMapOp.
@@ -345,6 +354,10 @@ Module Export RewritePass.
     | slice_set_slice
     | slice_set_slice_disjoint
     | slice_slice
+    | slice_tower
+    | slice_vadd
+    | slice_vsub
+    | sub_to_add_neg
     | truncate_small
     | unary_truncate
     | xor_same
@@ -375,9 +388,20 @@ Module Export RewritePass.
         ;slice01_subborrowZ
         ;set_slice_set_slice
         ;slice_slice
+        ;slice_vadd
+        ;slice_vsub
+        ;slice_tower
+        ;slice_set_slice_disjoint
+        ;slice_set_slice
+        (* Second round: after slice_set_slice peels one layer, the result may
+           need slice_set_slice_disjoint (or vice versa) for gather patterns
+           that nest 4+ set_slice levels (vmovq -> vpunpcklqdq -> vinserti128) *)
+        ;slice_set_slice_disjoint
         ;slice_set_slice
         ;slice_set_slice_disjoint
+        ;slice_set_slice
         ;set_slice0_small
+        ;sub_to_add_neg
         ;shift_to_mul
         ;flatten_associative
         ;consts_commutative
@@ -423,7 +447,7 @@ Module Export Options.
     ; asm_node_reveal_depth : node_reveal_depth_opt
     }.
 
-  Definition default_node_reveal_depth := 3%nat.
+  Definition default_node_reveal_depth := 6%nat.
 
   (* This holds the list of computed options, which are passed around between methods *)
   Class symbolic_options_computed_opt :=
@@ -631,6 +655,22 @@ Section WithContext.
          | _ => None
          end.
 
+  (* Lane-parallel vector interpretation: applies a scalar binary operation
+     independently to each lane of two packed vectors, combining results. *)
+  Fixpoint interp_vector_binop (scalar_op : Z -> Z -> Z) (lane_width : Z)
+    (lane_idx num_remaining : nat) (a b : Z) : Z :=
+    match num_remaining with
+    | O => 0
+    | S n =>
+        let offset := Z.of_nat lane_idx * lane_width in
+        let keep x := Z.land x (Z.ones lane_width) in
+        let la := keep (Z.shiftr a offset) in
+        let lb := keep (Z.shiftr b offset) in
+        let result := keep (scalar_op la lb) in
+        Z.lor (Z.shiftl result offset)
+              (interp_vector_binop scalar_op lane_width (S lane_idx) n a b)
+    end%Z.
+
   (* defines what each op actually does in symbolic computation *)
   Definition interp_op o (args : list Z) : option Z :=
     Eval cbv [invert_Some identity op_to_Z_binop] in
@@ -673,6 +713,8 @@ Section WithContext.
     | shrZ, [a; b] => Some (Z.shiftr a b)
     | addcarryZ s, args => Some (Z.shiftr (List.fold_right Z.add 0 args) (Z.of_N s))
     | subborrowZ s, cons a args' => Some (- Z.shiftr (a - List.fold_right Z.add 0 args') (Z.of_N s))
+    | vadd lw nl, [a; b] => Some (interp_vector_binop Z.add (Z.of_N lw) 0 (N.to_nat nl) a b)
+    | vsub lw nl, [a; b] => Some (interp_vector_binop Z.sub (Z.of_N lw) 0 (N.to_nat nl) a b)
     | _, _ => None
     end%Z.
 
@@ -841,6 +883,8 @@ Section bound_node_via_PHOAS.
        | addcarryZ _
        | subborrowZ _
        | set_slice _ _
+       | vadd _ _
+       | vsub _ _
          => None
        end%zrange.
 
@@ -2479,6 +2523,24 @@ Definition slice0 (d : dag) :=
   := "Merges (slice 0 s) into addZ,mulZ,negZ,shlZ,shrZ,andZ,orZ,xorZ".
 Global Instance slice0_ok : Ok slice0. Proof using Type. t. Qed.
 
+(* Normalizes sub s [a; b] into add s [a; neg s [b]], matching PHOAS representation. *)
+Definition sub_to_add_neg (d : dag) :=
+  fun e => match e with
+    ExprApp (sub s, [a; b]) =>
+      ExprApp (add s, [a; ExprApp (neg s, [b])])
+    | _ => e end.
+#[local] Instance describe_sub_to_add_neg : description_of Rewrite.sub_to_add_neg
+  := "Normalizes sub s [a, b] to add s [a, neg s [b]]".
+Global Instance sub_to_add_neg_ok : Ok sub_to_add_neg.
+Proof using Type. t. f_equal. Z.bitblast. simpl. repeat rewrite andb_true_r. rewrite Z.add_0_r. 
+rewrite Z.land_ones by lia.
+  rewrite <- Z.add_opp_r.
+  symmetry.
+  rewrite <- (Z.mod_pow2_bits_low (y + - y0) (Z.of_N s) i) by lia.
+  rewrite <- (Z.mod_pow2_bits_low (y + (- y0 mod 2 ^ Z.of_N s)) (Z.of_N s) i) by lia.
+  f_equal. rewrite Zplus_mod_idemp_r. reflexivity.
+Qed. 
+
 Definition slice01_addcarryZ (d : dag) :=
   fun e => match e with
     ExprApp (slice 0 1, [(ExprApp (addcarryZ s, args))]) =>
@@ -2508,14 +2570,54 @@ Definition slice_set_slice (d : dag) :=
 Global Instance slice_set_slice_ok : Ok slice_set_slice.
 Proof using Type. t. f_equal. Z.bitblast. Qed.
 
+(* Recursively peel disjoint set_slice layers. Needed for YMM (4-lane) operations
+   where set_slice chains are 3 deep and a single peel isn't enough. *)
+Fixpoint peel_disjoint_set_slices (lo1 s1 : N) (inner : expr) (fuel : nat) {struct fuel} : expr :=
+  match fuel with
+  | O => ExprApp (slice lo1 s1, [inner])
+  | S fuel' =>
+    match inner with
+    | ExprApp (set_slice lo2 s2, [base; _]) =>
+      if (N.leb (lo1 + s1) lo2 || N.leb (lo2 + s2) lo1)%bool
+      then peel_disjoint_set_slices lo1 s1 base fuel'
+      else ExprApp (slice lo1 s1, [inner])
+    | _ => ExprApp (slice lo1 s1, [inner])
+    end
+  end%N.
+
+
+Lemma peel_disjoint_set_slices_eval G d lo1 s1 inner v fuel :
+  gensym_dag_ok G d ->
+  eval G d (ExprApp (slice lo1 s1, [inner])) v ->
+  eval G d (peel_disjoint_set_slices lo1 s1 inner fuel) v.
+Proof using Type. 
+			intros. generalize dependent inner. induction fuel; intros inner H0. 
+			- unfold peel_disjoint_set_slices. exact H0.
+			- cbn [peel_disjoint_set_slices]. destruct inner. 
+				{ exact H0. }
+				{ destruct n. destruct o; try exact H0. 
+					destruct l as [| base l']. (* [] vs base :: l' *)
+					  - exact H0. (* [] case *)
+						- destruct l' as [| val l'']. (* [base] vs base :: val :: l'' *)
+    				+ exact H0. (* [base] case *)
+    				+ destruct l'' as [| ? l''']; try exact H0. (* [base; val] vs 3+ elements *)
+      * destruct ((lo1 + s1 <=? lo)%N || (lo + sz <=? lo1)%N) eqn:Hdisj; try exact H0.
+	 apply Bool.orb_true_iff in Hdisj. destruct Hdisj as [Hdisj | Hdisj]; apply N.leb_le in Hdisj. apply IHfuel. t. f_equal. Z.bitblast. 
+	 apply IHfuel. t. f_equal. Z.bitblast.
+	 }  
+Qed.
+
+			
+
+
 Definition slice_set_slice_disjoint (d : dag) :=
   fun e => match e with
     ExprApp (slice lo1 s1, [ExprApp (set_slice lo2 s2, [base; _])]) =>
-      if N.leb (lo1 + s1) lo2 || N.leb (lo2 + s2) lo1 then ExprApp (slice lo1 s1, [base]) else e | _ => e end%bool%N.
+      if N.leb (lo1 + s1) lo2 || N.leb (lo2 + s2) lo1 then peel_disjoint_set_slices lo1 s1 base 8 else e | _ => e end%bool%N.
 #[local] Instance describe_slice_set_slice_disjoint : description_of Rewrite.slice_set_slice_disjoint
-  := "Simplifies slice through set_slice when ranges are disjoint".
+  := "Simplifies slice through disjoint set_slice layers (recursive for deep chains)".
 Global Instance slice_set_slice_disjoint_ok : Ok slice_set_slice_disjoint.
-Proof using Type. t. f_equal. Z.bitblast. Qed.
+Proof using Type. t. apply peel_disjoint_set_slices_eval. exact H. t. f_equal. Z.bitblast. Qed.
 
 Definition slice_slice (d : dag) :=
   fun e => match e with
@@ -2525,6 +2627,324 @@ Definition slice_slice (d : dag) :=
   := "Simplifies nested slice operations".
 Global Instance slice_slice_ok : Ok slice_slice.
 Proof using Type. t. f_equal. Z.bitblast. Qed.
+
+(* Recursively normalize (slice lo sz) over nested slice/set_slice towers,
+   peeling three kinds of layers at once:
+   - nested slice lo2 s2: combine offsets to (lo2+lo, sz, e')
+   - disjoint set_slice lo2 s2: descend into base
+   - containing set_slice lo2 s2: descend into val with adjusted lo
+   Needed for gather patterns (vmovq -> vpunpcklqdq -> vinserti128) that
+   interleave slice and set_slice layers, which the individual rules miss. *)
+Fixpoint slice_tower_normalize (lo sz : N) (inner : expr) (fuel : nat) {struct fuel} : expr :=
+  match fuel with
+  | O => ExprApp (slice lo sz, [inner])
+  | S fuel' =>
+    match inner with
+    | ExprApp (slice lo2 s2, [e']) =>
+        if N.leb (lo + sz) s2
+        then slice_tower_normalize (lo2 + lo) sz e' fuel'
+        else ExprApp (slice lo sz, [inner])
+    | ExprApp (set_slice lo2 s2, [base; val]) =>
+        if (N.leb (lo + sz) lo2 || N.leb (lo2 + s2) lo)%bool
+        then slice_tower_normalize lo sz base fuel'
+        else if (N.leb lo2 lo && N.leb (lo + sz) (lo2 + s2))%bool
+        then slice_tower_normalize (lo - lo2) sz val fuel'
+        else ExprApp (slice lo sz, [inner])
+    | _ => ExprApp (slice lo sz, [inner])
+    end
+  end%N.
+
+Lemma slice_tower_normalize_eval G d : forall fuel lo sz inner v,
+  gensym_dag_ok G d ->
+  eval G d (ExprApp (slice lo sz, [inner])) v ->
+  eval G d (slice_tower_normalize lo sz inner fuel) v.
+Proof using Type.
+  induction fuel; intros lo sz inner v Hok H0.
+  - simpl. exact H0.
+  - cbn [slice_tower_normalize]. destruct inner; try exact H0.
+    destruct n as [op args]. destruct op; try exact H0.
+    + (* slice lo2 s2 *)
+      destruct args as [|e' args']; try exact H0.
+      destruct args' as [|? ?]; try exact H0.
+      destruct (N.leb (lo + sz) sz0) eqn:Hleb; try exact H0.
+      apply N.leb_le in Hleb.
+      apply IHfuel; trivial.
+      t. f_equal. Z.bitblast.
+    + (* set_slice lo2 s2 *)
+      destruct args as [|base args']; try exact H0.
+      destruct args' as [|val args'']; try exact H0.
+      destruct args'' as [|? ?]; try exact H0.
+      destruct ((lo + sz <=? lo0)%N || (lo0 + sz0 <=? lo)%N) eqn:Hdisj.
+      * apply IHfuel; trivial.
+        apply Bool.orb_true_iff in Hdisj.
+        destruct Hdisj as [Hd|Hd]; apply N.leb_le in Hd; t; f_equal; Z.bitblast.
+      * destruct ((lo0 <=? lo)%N && (lo + sz <=? lo0 + sz0)%N) eqn:Hcont; try exact H0.
+        apply Bool.andb_true_iff in Hcont. destruct Hcont as [Hc1 Hc2].
+        apply N.leb_le in Hc1. apply N.leb_le in Hc2.
+        apply IHfuel; trivial.
+        t. f_equal. Z.bitblast.
+Qed.
+
+Definition slice_tower (d : dag) :=
+  fun e => match e with
+    ExprApp (slice lo sz, [inner]) =>
+      slice_tower_normalize lo sz inner 16
+  | _ => e end.
+#[local] Instance describe_slice_tower : description_of Rewrite.slice_tower
+  := "Recursively normalizes slice over nested slice/set_slice towers (gather patterns)".
+Global Instance slice_tower_ok : Ok slice_tower.
+Proof using Type.
+  cbv [Ok slice_tower]; intros G d e v Hok Heval.
+  destruct e as [|n]; try exact Heval.
+  destruct n as [op args]. destruct op; try exact Heval.
+  destruct args as [|inner args']; try exact Heval.
+  destruct args' as [|? ?]; try exact Heval.
+  apply slice_tower_normalize_eval; assumption.
+Qed.
+
+Ltac bool_simpl :=
+    repeat (first [ rewrite !Bool.andb_true_r in *
+                  | rewrite !Bool.orb_false_r in *
+                  | rewrite !Bool.andb_false_r in *
+                  | rewrite !Bool.orb_false_l in *
+                  | rewrite !Bool.andb_true_l in *
+                  | rewrite !Bool.orb_true_l in *
+                  | simpl negb ]).
+
+(* Helper: build slice lo lw [v], coalescing nested slices.
+   If v = slice lo2 s2 [e'] and lo+lw <= s2, produce slice (lo2+lo) lw [e'] instead. *)
+Definition coalescing_slice (lo lw : N) (v : expr) : expr :=
+  match v with
+  | ExprApp (slice lo2 s2, [e']) =>
+      if N.leb (lo + lw) s2 then ExprApp (slice (lo2 + lo) lw, [e'])
+      else ExprApp (slice lo lw, [v])
+  | _ => ExprApp (slice lo lw, [v])
+  end%N.
+
+Lemma coalescing_slice_eval G d lo sz e v :
+  gensym_dag_ok G d ->
+  eval G d e v ->
+  eval G d (coalescing_slice lo sz e)
+    (Z.land (Z.shiftr v (Z.of_N lo)) (Z.ones (Z.of_N sz))).
+Proof using Type.
+  intros Hok Heval.
+  cbv [coalescing_slice].
+  (* In most cases coalescing_slice lo sz e = ExprApp(slice lo sz, [e]) *)
+  assert (Hplain : forall e' v', eval G d e' v' ->
+    eval G d (ExprApp (slice lo sz, [e'])) (Z.land (Z.shiftr v' (Z.of_N lo)) (Z.ones (Z.of_N sz)))).
+  { intros. eapply EApp; [econstructor; [eassumption | econstructor] | cbn [interp_op]; reflexivity]. }
+  destruct e; [exact (Hplain _ _ Heval) |].
+  destruct n as [op args].
+  destruct op; try exact (Hplain _ _ Heval).
+  (* only slice case remains *)
+  destruct args; try exact (Hplain _ _ Heval).
+  destruct args; try exact (Hplain _ _ Heval).
+  destruct (N.leb (lo + sz) _) eqn:Hleb; [| exact (Hplain _ _ Heval)].
+  (* coalesced: result is ExprApp(slice (_ + lo) sz, [e']) *)
+  apply N.leb_le in Hleb.
+  inversion Heval; subst.
+  match goal with H : Forall2 _ _ _ |- _ => inversion H; subst end.
+  match goal with H : Forall2 _ _ _ |- _ => inversion H; subst end.
+  match goal with H : interp_op _ (slice _ _) _ = Some _ |- _ =>
+    cbn [interp_op] in H; inversion H; clear H end.
+  eapply EApp.
+  - econstructor; [eassumption | econstructor].
+  - cbn [interp_op]. f_equal. Z.bitblast.
+Qed.
+
+(* Bits of interp_vector_binop outside [lane_idx*lw, (lane_idx+nr)*lw) are zero. *)
+Lemma interp_vector_binop_bounded scalar_op lw lane_idx nr a b n :
+  (0 < lw)%Z -> (0 <= n)%Z ->
+  (n < Z.of_nat lane_idx * lw \/ n >= Z.of_nat (lane_idx + nr) * lw)%Z ->
+  Z.testbit (interp_vector_binop scalar_op lw lane_idx nr a b) n = false.
+Proof using Type.
+  revert lane_idx.
+  induction nr as [|nr' IH]; intros lane_idx Hlw Hn Hrange.
+  - simpl. apply Z.testbit_0_l.
+  - simpl interp_vector_binop.
+    rewrite Z.lor_spec.
+    match goal with |- context [Z.testbit (Z.shiftl ?x _) _] =>
+      assert (Hshiftl : Z.testbit (Z.shiftl x (Z.of_nat lane_idx * lw)) n = false)
+    end.
+    { rewrite Z.shiftl_spec' by lia.
+      rewrite Z.land_spec, Z.testbit_ones_nonneg' by lia.
+      destruct (Z.ltb_spec n 0); [lia |].
+      destruct (Z.ltb_spec (n - Z.of_nat lane_idx * lw) 0); [simpl; ring |].
+      destruct (Z.ltb_spec (n - Z.of_nat lane_idx * lw) lw);
+        [exfalso; lia | simpl; ring]. }
+    rewrite Hshiftl. simpl.
+    apply IH; [lia | lia |].
+    replace (S lane_idx + nr')%nat with (lane_idx + S nr')%nat by lia.
+    destruct Hrange; [left | right]; lia.
+Qed.
+
+(* All bits of interp_vector_binop in a given lane are zero when outside that lane's range. *)
+Lemma interp_vector_binop_zero scalar_op lw lane_idx nr k a b :
+  (0 < lw)%Z ->
+  (k < lane_idx \/ k >= lane_idx + nr)%nat ->
+  Z.land (Z.shiftr (interp_vector_binop scalar_op lw lane_idx nr a b) (Z.of_nat k * lw))
+         (Z.ones lw) = 0.
+Proof using Type.
+  intros Hlw Hrange.
+  apply Z.bits_inj'; intros i Hi.
+  rewrite Z.land_spec, Z.shiftr_spec, Z.testbit_ones_nonneg', Z.bits_0 by lia.
+  destruct (Z.ltb_spec i lw).
+  - rewrite (interp_vector_binop_bounded _ _ lane_idx nr _ _ _ Hlw) by nia.
+    reflexivity.
+  - destruct (Z.testbit _ _), (i <? 0)%Z; reflexivity.
+Qed.
+
+(* Extracting lane k from interp_vector_binop gives the scalar op on that lane. *)
+Lemma interp_vector_binop_extract scalar_op lw lane_idx nr k a b :
+  (0 < lw)%Z ->
+  (lane_idx <= k)%nat ->
+  (k < lane_idx + nr)%nat ->
+  Z.land (Z.shiftr (interp_vector_binop scalar_op lw lane_idx nr a b) (Z.of_nat k * lw))
+         (Z.ones lw)
+  = Z.land (scalar_op (Z.land (Z.shiftr a (Z.of_nat k * lw)) (Z.ones lw))
+                       (Z.land (Z.shiftr b (Z.of_nat k * lw)) (Z.ones lw)))
+           (Z.ones lw).
+Proof using Type.
+  revert lane_idx.
+  induction nr as [|nr' IH]; intros lane_idx Hlw Hle Hlt.
+  - lia.
+  - simpl interp_vector_binop.
+    destruct (Nat.eq_dec k lane_idx).
+    + (* k = lane_idx: this iteration produces the lane we want *)
+      subst k.
+      apply Z.bits_inj'; intros i Hi.
+      rewrite !Z.land_spec.
+      rewrite Z.shiftr_spec by lia.
+      rewrite Z.lor_spec, Z.shiftl_spec by lia.
+      rewrite Z.land_spec.
+      rewrite Z.testbit_ones_nonneg' by lia.
+      destruct (Z.ltb_spec i lw).
+      * (* i < lw: in the lane *)
+        rewrite (interp_vector_binop_bounded _ _ (S lane_idx) nr' _ _ _ Hlw) by nia.
+        destruct (i <? 0)%Z eqn:?; simpl; [lia |].
+        replace (i + Z.of_nat lane_idx * lw - Z.of_nat lane_idx * lw)%Z with i by lia. 
+				rewrite Z.testbit_ones. 2: lia. 
+				destruct (0 <=? i) eqn:?, (i <? lw) eqn:?; 
+				rewrite Heqb0. bool_simpl.
+				all: try lia. reflexivity.
+      * (* i >= lw: masked out *)
+        destruct (i <? 0)%Z eqn:?; simpl; [lia |]. 
+        destruct (Z.testbit _ _), (Z.testbit _ _);  bool_simpl. 
+				all: replace (Z.testbit (Z.ones lw) i) with false
+         by (symmetry; apply Z.ones_spec_high; lia);
+       bool_simpl; reflexivity.
+    + (* k > lane_idx: the lane is in the recursive part *)
+      assert (Hkgt : (lane_idx < k)%nat) by lia.
+      assert (Hshiftl_bit : forall i, 0 <= i ->
+        Z.testbit (Z.shiftl (Z.land (scalar_op (Z.land (Z.shiftr a (Z.of_nat lane_idx * lw)) (Z.ones lw))
+                                                (Z.land (Z.shiftr b (Z.of_nat lane_idx * lw)) (Z.ones lw)))
+                                     (Z.ones lw))
+                             (Z.of_nat lane_idx * lw)) (i + Z.of_nat k * lw) = false).
+      { intros j Hj. rewrite Z.shiftl_spec by lia. rewrite Z.land_spec.
+        rewrite Z.testbit_ones_nonneg' by lia.
+        destruct (Z.ltb_spec (j + Z.of_nat k * lw - Z.of_nat lane_idx * lw) lw);
+          [exfalso; nia |]. bool_simpl. reflexivity. }
+      apply Z.bits_inj'; intros i Hi.
+      rewrite !Z.land_spec.
+      rewrite Z.shiftr_spec by lia.
+      rewrite Z.lor_spec.
+      rewrite Hshiftl_bit by lia.
+      rewrite Z.testbit_ones_nonneg' by lia. bool_simpl. 
+      destruct (Z.ltb_spec i lw); [| destruct (i <? 0)%Z eqn:?; simpl; try reflexivity; try lia].
+      * simpl. destruct (i <? 0)%Z; bool_simpl; try lia. 
+				assert (HIHR := IH (S lane_idx) Hlw ltac:(lia) ltac:(lia)).
+ 				 apply (f_equal (fun x => Z.testbit x i)) in HIHR.
+  			 rewrite Z.land_spec, Z.shiftr_spec, Z.testbit_ones_nonneg' in HIHR by lia.
+				   destruct (i <? lw) eqn:?; [| lia]. 
+					 rewrite Z.land_spec, Z.testbit_ones_nonneg' in HIHR by lia.
+					   destruct (i <? 0) eqn:?; [lia |].
+  destruct (i <? lw) eqn:?; [| lia].
+  bool_simpl. simpl in HIHR. rewrite HIHR. bool_simpl. reflexivity.
+Qed.
+
+
+(* Extracting lane k from a vector binop equals applying the scalar op to
+   the extracted lanes. Requires lo to be lane-aligned and in range. *)
+Lemma interp_vector_binop_slice_lane scalar_op lane_width lo sz a b num_lanes :
+  lane_width > 0 ->
+  sz = Z.to_N lane_width ->
+  (Z.of_N lo) mod lane_width = 0 ->
+  (lo + sz <= sz * num_lanes)%N ->
+  Z.land (scalar_op
+              (Z.land (Z.shiftr a (Z.of_N lo)) (Z.ones (Z.of_N sz)))
+              (Z.land (Z.shiftr b (Z.of_N lo)) (Z.ones (Z.of_N sz))))
+           (Z.ones (Z.of_N sz))
+  = Z.land (Z.shiftr (interp_vector_binop scalar_op lane_width 0 (N.to_nat num_lanes) a b) (Z.of_N lo))
+         (Z.ones (Z.of_N sz)).
+Proof using Type.
+  intros Hlw0 Hsz Hmod Hle.
+  (* Eliminate sz in favor of lane_width *)
+  rewrite Hsz in *. rewrite Z2N.id by lia.
+  (* lo is lane-aligned, so lo = lane_width * k for some k >= 0 *)
+  assert (Hdiv : (lane_width | Z.of_N lo)%Z) by (apply Z.mod_divide; lia).
+  destruct Hdiv as [k Hk].
+  assert (Hk0 : 0 <= k) by nia.
+  (* Rewrite lo in terms of k *)
+  replace (Z.of_N lo) with (Z.of_nat (Z.to_nat k) * lane_width)%Z by lia.
+  (* Apply the extract lemma *)
+  symmetry. apply interp_vector_binop_extract.
+  - lia.
+  - lia.
+  - (* k < num_lanes *)
+    assert (Z.of_N lo + lane_width <= lane_width * Z.of_N num_lanes)%Z by nia.
+    rewrite Hk in H. nia.
+Qed.
+	
+
+
+(* Decompose a slice of a vector add into a scalar add of slices.
+   slice lo lw (vadd lw nl [v1; v2]) → add lw [slice lo lw v1; slice lo lw v2]
+   when lo is lane-aligned (lo mod lw = 0) and in range (lo + lw <= lw * nl).
+   Uses coalescing_slice to collapse any nested slice(slice(...)) in the args,
+   since merge doesn't run rewrite passes on subexpressions. *)
+Definition slice_vadd (d : dag) :=
+  fun e => match e with
+    ExprApp (slice lo lw, [ExprApp (vadd lw' nl, [v1; v2])]) =>
+      if N.eqb lw lw' && N.eqb (lo mod lw)%N 0%N && N.leb (lo + lw) (lw' * nl) && N.ltb 0 lw
+      then ExprApp (add lw, [coalescing_slice lo lw v1; coalescing_slice lo lw v2])
+      else e | _ => e end%bool%N.
+#[local] Instance describe_slice_vadd : description_of Rewrite.slice_vadd
+  := "Decomposes slice of vector add into scalar add of slices".
+Global Instance slice_vadd_ok : Ok slice_vadd.
+Proof using Type.
+  t.
+  - eapply coalescing_slice_eval; eassumption.
+  - eapply coalescing_slice_eval; eassumption.
+  - cbn [fold_right]. f_equal. rewrite Z.add_0_r.
+    apply (interp_vector_binop_slice_lane Z.add (Z.of_N lane_width) lo sz _ _ _); destruct E; destruct H0; destruct H0.
+    + lia.
+    +  rewrite <- H0. lia.
+    + rewrite <- H0.  rewrite <- N2Z.inj_mod. rewrite H5. reflexivity.
+		+ rewrite H0 in *. exact H4.
+Qed.
+
+Definition slice_vsub (d : dag) :=
+  fun e => match e with
+    ExprApp (slice lo lw, [ExprApp (vsub lw' nl, [v1; v2])]) =>
+      if N.eqb lw lw' && N.eqb (lo mod lw)%N 0%N && N.leb (lo + lw) (lw' * nl) && N.ltb 0 lw
+      then ExprApp (add lw, [coalescing_slice lo lw v1; ExprApp (neg lw, [coalescing_slice lo lw v2])])
+      else e | _ => e end%bool%N.
+#[local] Instance describe_slice_vsub : description_of Rewrite.slice_vsub
+  := "Decomposes slice of vector sub into add of negated slice".
+Global Instance slice_vsub_ok : Ok slice_vsub.
+Proof using Type.
+  t; destruct E as [E' E4]; destruct E' as [E'' E3]; destruct E'' as [E1 E2].
+  - eapply coalescing_slice_eval; eassumption.
+  - eapply coalescing_slice_eval; eassumption.
+  - f_equal. cbn [fold_right]. rewrite Z.add_0_r. 
+	rewrite !Z.land_ones by lia.
+  rewrite Zplus_mod_idemp_r.
+  rewrite Z.add_opp_r.
+  rewrite <- !Z.land_ones by lia.
+  apply (interp_vector_binop_slice_lane Z.sub (Z.of_N lane_width) lo sz _ _ num_lanes); try lia. rewrite <- E1. rewrite <- N2Z.inj_mod by lia. rewrite E2. reflexivity.
+Qed.
+
+
 
 Definition set_slice_set_slice (d : dag) :=
   fun e => match e with
@@ -3380,7 +3800,7 @@ Definition combine_consts_pre (d : dag) : expr -> expr :=
 
 Definition cleanup_combine_consts (d : dag) : expr -> expr :=
   let simp_outside := List.fold_left (fun e f => f e) [flatten_associative d] in
-  let simp_inside := List.fold_left (fun e f => f e) [constprop d;drop_identity d;unary_truncate d;truncate_small d] in
+  let simp_inside := List.fold_left (fun e f => f e) [constprop d;drop_identity d;unary_truncate d;slice0 d;truncate_small d] in
   fun e => simp_outside match e with ExprApp (o, args)  =>
     ExprApp (o, List.map simp_inside args)
                    | _ => e end.
@@ -3822,6 +4242,10 @@ Definition named_pass (name : RewritePass.rewrite_pass) : dag -> expr -> expr
      | RewritePass.slice_set_slice => slice_set_slice
      | RewritePass.slice_set_slice_disjoint => slice_set_slice_disjoint
      | RewritePass.slice_slice => slice_slice
+     | RewritePass.slice_tower => slice_tower
+     | RewritePass.slice_vadd => slice_vadd
+     | RewritePass.slice_vsub => slice_vsub
+     | RewritePass.sub_to_add_neg => sub_to_add_neg
      | RewritePass.truncate_small => truncate_small
      | RewritePass.unary_truncate => unary_truncate
      | RewritePass.xor_same => xor_same
@@ -4132,9 +4556,12 @@ Definition GetReg {opts : symbolic_options_computed_opt} {descr:description} r :
   App ((slice lo sz), [v]).
 Definition SetReg {opts : symbolic_options_computed_opt} {descr:description} r (v : idx) : M unit :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in (* sz is the size of the register, not the value *)
-  old <- GetRegFull rn;
-  v <- App ((set_slice lo sz), [old; v]);
-  SetRegFull rn v.
+  if (N.eqb lo 0) && (N.eqb sz (widest_reg_size_of r))
+  then v <- App (slice 0 sz, [v]);
+       SetRegFull rn v
+  else old <- GetRegFull rn;
+       v <- App ((set_slice lo sz), [old; v]);
+       SetRegFull rn v.
 
 Class AddressSize := address_size : OperationSize.
 Definition Address {opts : symbolic_options_computed_opt} {descr:description} {sa : AddressSize} (a : MEM) : M idx :=
@@ -4305,10 +4732,8 @@ Definition rcrcnt s cnt : Z :=
 
 Module SymbolicVector.
 (* === Vector instruction helpers === *)
-(* These functions implement lane-parallel SIMD operations where the same
-   operation is applied independently to each lane (chunk) of the vector. *)
 
-(* Low-level: Build a single lane computation (slice -> op -> result) *)
+(* Old lane-decomposition approach (kept for instructions without vector ops yet) *)
 Definition make_lane {opts : symbolic_options_computed_opt} {descr : description}
   (v1 v2 : idx) (lane_op : op) (lane_idx : nat) (lane_width : Z) : M idx :=
   let offset := Z.of_nat lane_idx * lane_width in
@@ -4317,25 +4742,24 @@ Definition make_lane {opts : symbolic_options_computed_opt} {descr : description
   App (lane_op, [l1; l2]).
 
 Fixpoint vector_binop_aux {opts : symbolic_options_computed_opt} {descr : description}
-  (v1 v2 : idx) (lane_op : op) (lane_idx : nat) (num_remaining : nat) 
+  (v1 v2 : idx) (lane_op : op) (lane_idx : nat) (num_remaining : nat)
   (lane_width : Z) (acc : idx) : M idx :=
   match num_remaining with
   | O => ret acc
   | S n =>
       lane_val <- make_lane v1 v2 lane_op lane_idx lane_width;
-      new_acc <- App (set_slice (N.of_nat lane_idx * Z.to_N lane_width) (Z.to_N lane_width), 
+      new_acc <- App (set_slice (N.of_nat lane_idx * Z.to_N lane_width) (Z.to_N lane_width),
                       [acc; lane_val]);
       vector_binop_aux v1 v2 lane_op (S lane_idx) n lane_width new_acc
   end.
 
-(* Mid-level: Perform lane-parallel binary operation on two DAG indices *)
 Definition vector_binop_idx {opts : symbolic_options_computed_opt} {descr : description}
   (v1 v2 : idx) (lane_op : op) (num_lanes : nat) (lane_width : Z) : M idx :=
   zero <- App (const 0, []);
   vector_binop_aux v1 v2 lane_op 0 num_lanes lane_width zero.
 
-(* High-level: Complete lane-parallel vector instruction (GetOperand -> compute -> SetOperand).
-   num_lanes is derived from operation_size s and lane_width. *)
+(* Old-style: decompose into per-lane scalar ops. Used for instructions
+   that don't have a dedicated vector op yet. *)
 Definition SymexVectorBinOp {opts : symbolic_options_computed_opt} {descr : description}
   {s : OperationSize} {sa : AddressSize}
   (dst src1 src2 : ARG) (lane_op : op) (lane_width : Z) : M unit :=
@@ -4344,6 +4768,104 @@ Definition SymexVectorBinOp {opts : symbolic_options_computed_opt} {descr : desc
   v2 <- GetOperand src2;
   result <- vector_binop_idx v1 v2 lane_op num_lanes lane_width;
   SetOperand dst result.
+
+(* New-style: emit a vector op node in the DAG (as a hint for synthesis),
+   then decompose the result into per-lane scalar ops for equivalence checking.
+   Each lane is built via individual App calls so rewrite rules can simplify them.
+   vector_op: constructs the vector op (e.g. vadd).
+   scalar_op: the corresponding scalar op (e.g. add lane_width). *)
+Definition SymexVectorOp {opts : symbolic_options_computed_opt} {descr : description}
+  {s : OperationSize} {sa : AddressSize}
+  (dst src1 src2 : ARG) (vector_op : N -> N -> op) (scalar_op : op)
+  (lane_width_N : N) : M unit :=
+  let num_lanes := N.to_nat (s / lane_width_N)%N in
+  let lane_width := Z.of_N lane_width_N in
+  v1 <- GetOperand src1;
+  v2 <- GetOperand src2;
+  (* Insert the vector op node as a synthesis hint (not used for output) *)
+  _ <- App (vector_op lane_width_N (N.of_nat num_lanes), [v1; v2]);
+  (* Build per-lane scalar results (each App call gets individually simplified) *)
+  result <- vector_binop_idx v1 v2 scalar_op num_lanes lane_width;
+  SetOperand dst result.
+
+(* Broadcast: replicate a single value across all lanes via set_slice *)
+Fixpoint broadcast_aux {opts : symbolic_options_computed_opt} {descr : description}
+  (lane_val : idx) (lane_idx num_remaining : nat) (lane_width : N) (acc : idx) : M idx :=
+  match num_remaining with
+  | O => ret acc
+  | S n =>
+    new_acc <- App (set_slice (N.of_nat lane_idx * lane_width) lane_width, [acc; lane_val]);
+    broadcast_aux lane_val (S lane_idx) n lane_width new_acc
+  end.
+
+(* Blend: for each lane, pick from v1 or v2 based on immediate mask bit *)
+Fixpoint blend_aux {opts : symbolic_options_computed_opt} {descr : description}
+  (v1 v2 : idx) (mask : Z) (lane_idx num_remaining : nat)
+  (lane_width : N) (acc : idx) : M idx :=
+  match num_remaining with
+  | O => ret acc
+  | S n =>
+    let src := if Z.testbit mask (Z.of_nat lane_idx) then v2 else v1 in
+    lane_val <- App (slice (N.of_nat lane_idx * lane_width) lane_width, [src]);
+    new_acc <- App (set_slice (N.of_nat lane_idx * lane_width) lane_width, [acc; lane_val]);
+    blend_aux v1 v2 mask (S lane_idx) n lane_width new_acc
+  end.
+
+(* vpmuludq: for each 64-bit lane, multiply low 32 bits of each source *)
+Definition make_muludq_lane {opts : symbolic_options_computed_opt} {descr : description}
+  (v1 v2 : idx) (lane_idx : nat) (lane_width : N) : M idx :=
+  let offset := (N.of_nat lane_idx * lane_width)%N in
+  l1 <- App (slice offset lane_width, [v1]);
+  l2 <- App (slice offset lane_width, [v2]);
+  l1_lo <- App (slice 0 32, [l1]);
+  l2_lo <- App (slice 0 32, [l2]);
+  App (mul 64%N, [l1_lo; l2_lo]).
+
+Fixpoint muludq_aux {opts : symbolic_options_computed_opt} {descr : description}
+  (v1 v2 : idx) (lane_idx num_remaining : nat) (lane_width : N) (acc : idx) : M idx :=
+  match num_remaining with
+  | O => ret acc
+  | S n =>
+    lane_val <- make_muludq_lane v1 v2 lane_idx lane_width;
+    new_acc <- App (set_slice ((N.of_nat lane_idx * lane_width)%N) lane_width,
+                    [acc; lane_val]);
+    muludq_aux v1 v2 (S lane_idx) n lane_width new_acc
+  end.
+
+Definition SymexMuludq {opts : symbolic_options_computed_opt} {descr : description}
+  {s : OperationSize} {sa : AddressSize}
+  (dst src1 src2 : ARG) : M unit :=
+  let num_lanes := N.to_nat (s / 64)%N in
+  v1 <- GetOperand src1;
+  v2 <- GetOperand src2;
+  zero <- App (const 0, []);
+  result <- muludq_aux v1 v2 0 num_lanes 64%N zero;
+  SetOperand dst result.
+
+(* Vector shift by immediate: apply shift_op per lane with shared shift amount *)
+Fixpoint vector_shift_imm_aux {opts : symbolic_options_computed_opt} {descr : description}
+  (v shift_amt : idx) (shift_op : op) (lane_idx num_remaining : nat)
+  (lane_width : N) (acc : idx) : M idx :=
+  match num_remaining with
+  | O => ret acc
+  | S n =>
+    let offset := (N.of_nat lane_idx * lane_width)%N in
+    lane <- App (slice offset lane_width, [v]);
+    lane_val <- App (shift_op, [lane; shift_amt]);
+    new_acc <- App (set_slice offset lane_width, [acc; lane_val]);
+    vector_shift_imm_aux v shift_amt shift_op (S lane_idx) n lane_width new_acc
+  end.
+
+Definition SymexVectorShiftImm {opts : symbolic_options_computed_opt} {descr : description}
+  {s : OperationSize} {sa : AddressSize}
+  (dst src imm : ARG) (shift_op : op) : M unit :=
+  let num_lanes := N.to_nat (s / 64)%N in
+  v <- GetOperand src;
+  imm_idx <- GetOperand imm;
+  zero <- App (const 0, []);
+  result <- vector_shift_imm_aux v imm_idx shift_op 0 num_lanes 64%N zero;
+  SetOperand dst result.
+
 End SymbolicVector.
 
 
@@ -4369,9 +4891,9 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
     v <- (App ((slice 0 64), [v]));
     SetOperand (s:=64) dst v
   | vpaddq, [dst; src1; src2] => (* packed add of quadwords - no flags affected *)
-      SymbolicVector.SymexVectorBinOp dst src1 src2 (add 64) 64
+      SymbolicVector.SymexVectorOp dst src1 src2 vadd (add 64) 64%N
   | vpsubq, [dst; src1; src2] => (* packed subtract quadwords *)
-      SymbolicVector.SymexVectorBinOp dst src1 src2 (sub 64) 64
+      SymbolicVector.SymexVectorOp dst src1 src2 vsub (sub 64) 64%N
   | vpandq, [dst; src1; src2] => (* packed bitwise AND quadwords *)
       SymbolicVector.SymexVectorBinOp dst src1 src2 (and 64) 64
   | vporq, [dst; src1; src2] => (* packed bitwise OR quadwords *)
@@ -4382,7 +4904,101 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
   | vpaddd, [dst; src1; src2] => (* packed add doublewords *)
       SymbolicVector.SymexVectorBinOp dst src1 src2 (add 32) 32
   | vpsubd, [dst; src1; src2] => (* packed subtract doublewords *)
-      SymbolicVector.SymexVectorBinOp dst src1 src2 (sub 32) 32
+      SymbolicVector.SymexVectorOp dst src1 src2 vsub (sub 32) 32%N
+
+  | vpbroadcastq, [dst; src] => (* broadcast 64-bit value to all qword lanes *)
+    v <- GetOperand (s:=64) src;
+    lane <- App ((slice 0 64), [v]);
+    let num_lanes := N.to_nat (s / 64)%N in
+    zero <- App (const 0, []);
+    result <- SymbolicVector.broadcast_aux lane 0 num_lanes 64%N zero;
+    SetOperand dst result
+
+  | vpblendd, [dst; src1; src2; imm] => (* blend dwords by immediate mask *)
+    v1 <- GetOperand src1;
+    v2 <- GetOperand src2;
+    imm_idx <- GetOperand imm;
+    imm_c <- RevealConst imm_idx;
+    let num_lanes := N.to_nat (s / 32)%N in
+    zero <- App (const 0, []);
+    result <- SymbolicVector.blend_aux v1 v2 imm_c 0 num_lanes 32%N zero;
+    SetOperand dst result
+
+  | vpmuludq, [dst; src1; src2] => (* vector packed multiply unsigned dword to qword *)
+    SymbolicVector.SymexMuludq dst src1 src2
+  | vpsrlq, [dst; src; imm] => (* vector packed shift right logical qword *)
+    SymbolicVector.SymexVectorShiftImm dst src imm (shr 64)
+  | vpsllq, [dst; src; imm] => (* vector packed shift left logical qword *)
+    SymbolicVector.SymexVectorShiftImm dst src imm (shl 64)
+
+  | vpunpcklqdq, [dst; src1; src2] => (* interleave low qwords from each 128-bit half *)
+    v1 <- GetOperand src1;
+    v2 <- GetOperand src2;
+    let num_halves := N.to_nat (s / 128)%N in
+    zero <- App (const 0, []);
+    result <- (fix aux (half_idx remaining : nat) (acc : idx) {struct remaining} : M idx :=
+      match remaining with
+      | O => ret acc
+      | S n =>
+        (* low qword of each 128-bit half *)
+        let lo_offset := (N.of_nat half_idx * 128)%N in
+        lo1 <- App (slice lo_offset 64, [v1]);
+        lo2 <- App (slice lo_offset 64, [v2]);
+        (* place as [lo1, lo2] in the half_idx-th 128-bit group *)
+        let dst_lo := (N.of_nat half_idx * 128)%N in
+        let dst_hi := (N.of_nat half_idx * 128 + 64)%N in
+        acc' <- App (set_slice dst_lo 64, [acc; lo1]);
+        acc'' <- App (set_slice dst_hi 64, [acc'; lo2]);
+        aux (S half_idx) n acc''
+      end) 0%nat num_halves zero;
+    SetOperand dst result
+
+  | vpunpckhqdq, [dst; src1; src2] => (* interleave high qwords from each 128-bit half *)
+    v1 <- GetOperand src1;
+    v2 <- GetOperand src2;
+    let num_halves := N.to_nat (s / 128)%N in
+    zero <- App (const 0, []);
+    result <- (fix aux (half_idx remaining : nat) (acc : idx) {struct remaining} : M idx :=
+      match remaining with
+      | O => ret acc
+      | S n =>
+        (* high qword of each 128-bit half *)
+        let hi_offset := (N.of_nat half_idx * 128 + 64)%N in
+        hi1 <- App (slice hi_offset 64, [v1]);
+        hi2 <- App (slice hi_offset 64, [v2]);
+        (* place as [hi1, hi2] in the half_idx-th 128-bit group *)
+        let dst_lo := (N.of_nat half_idx * 128)%N in
+        let dst_hi := (N.of_nat half_idx * 128 + 64)%N in
+        acc' <- App (set_slice dst_lo 64, [acc; hi1]);
+        acc'' <- App (set_slice dst_hi 64, [acc'; hi2]);
+        aux (S half_idx) n acc''
+      end) 0%nat num_halves zero;
+    SetOperand dst result
+
+  | vpextrq, [dst; src; imm] => (* extract 64-bit lane from XMM *)
+    v <- GetOperand (s:=128%N) src;
+    imm_idx <- GetOperand imm;
+    imm_c <- RevealConst imm_idx;
+    let lane := Z.land imm_c 1 in
+    result <- App (slice (Z.to_N lane * 64) 64, [v]);
+    SetOperand (s:=64%N) dst result
+
+  | vextracti128, [dst; src; imm] => (* extract 128-bit lane from YMM *)
+    v <- GetOperand (s:=256%N) src;
+    imm_idx <- GetOperand imm;
+    imm_c <- RevealConst imm_idx;
+    let lane := Z.land imm_c 1 in
+    result <- App (slice (Z.to_N lane * 128) 128, [v]);
+    SetOperand (s:=128%N) dst result
+
+  | vinserti128, [dst; src1; src2; imm] => (* insert 128-bit into YMM *)
+    v1 <- GetOperand (s:=256%N) src1;
+    v2 <- GetOperand (s:=128%N) src2;
+    imm_idx <- GetOperand imm;
+    imm_c <- RevealConst imm_idx;
+    let lane := Z.land imm_c 1 in
+    result <- App (set_slice (Z.to_N lane * 128) 128, [v1; v2]);
+    SetOperand (s:=256%N) dst result
 
   | xchg, [a; b] => (* Note: unbundle when switching from N to Z *)
     va <- GetOperand a;
@@ -4576,6 +5192,14 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
                SetOperand dst v
 
   | nop, [] => ret tt
+  | vzeroupper, [] =>
+    let ymm_regs := [ymm0; ymm1; ymm2; ymm3; ymm4; ymm5; ymm6; ymm7;
+                      ymm8; ymm9; ymm10; ymm11; ymm12; ymm13; ymm14; ymm15] in
+    mapM_ (fun yr =>
+      v <- GetReg (VReg yr);
+      lo <- App ((slice 0 128), [v]);
+      SetReg (VReg yr) lo
+    ) ymm_regs
   | _, _ => err (error.unimplemented_instruction instr)
  end
   | Some prefix => err (error.unimplemented_prefix instr) end

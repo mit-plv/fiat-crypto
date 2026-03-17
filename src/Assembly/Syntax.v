@@ -216,6 +216,17 @@ Inductive OpCode :=
 | vpaddd
 | vpsubd
 | vmovdqu   (* Vector move double quadword unaligned *)
+| vzeroupper (* Zero upper 128 bits of all YMM registers *)
+| vpbroadcastq (* Broadcast 64-bit value to all lanes *)
+| vpblendd (* Blend packed dwords using immediate mask *)
+| vpmuludq    (* Vector packed multiply unsigned dword to qword *)
+| vpsrlq      (* Vector packed shift right logical quadword *)
+| vpsllq      (* Vector packed shift left logical quadword *)
+| vpunpcklqdq (* Unpack and interleave low quadwords *)
+| vpunpckhqdq (* Unpack and interleave high quadwords *)
+| vpextrq     (* Extract quadword from XMM register *)
+| vextracti128 (* Extract 128-bit lane from YMM register *)
+| vinserti128  (* Insert 128-bit lane into YMM register *)
 .
 
 Derive OpCode_Listable SuchThat (@FinitelyListable OpCode OpCode_Listable) As OpCode_FinitelyListable.
@@ -314,6 +325,17 @@ Definition accesssize_of_declaration (opc : OpCode) : option AccessSize :=
   | vpaddd
   | vpsubd
   | vmovdqu
+  | vzeroupper
+  | vpbroadcastq
+  | vpblendd
+  | vpmuludq
+  | vpsrlq
+  | vpsllq
+  | vpunpcklqdq
+  | vpunpckhqdq
+  | vpextrq
+  | vextracti128
+  | vinserti128
     => None
   end.
 
@@ -382,8 +404,10 @@ Definition standalone_operand_size (x : ARG) : option N :=
 Definition opcode_size (op : OpCode) :=
   match op with
   | seto | setc => Some 8
-  | ret | nop => Some 64 (* irrelevant? *)
+  | ret | nop | vzeroupper => Some 64 (* irrelevant? *)
   | clc => Some 1 (* irrelevant? *)
+  | vinserti128 | vextracti128 => Some 256 (* mixed YMM/XMM operands *)
+  | vpextrq => Some 128 (* XMM source, GPR dest *)
   | _ => None
   end%N.
 

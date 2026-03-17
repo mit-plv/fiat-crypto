@@ -176,6 +176,32 @@ Module SemanticVector.
     v2 <- DenoteOperand sa s st src2;
     let result := vector_binop_values v1 v2 lane_op num_lanes lane_width in
     SetOperand sa s st dst result.
+  (* Broadcast a value to all lanes *)
+  Fixpoint broadcast_aux (v : Z) (lane_idx num_remaining : nat) (lane_width : Z) : Z :=
+    match num_remaining with
+    | O => 0
+    | S n => Z.lor (insert_lane v lane_idx lane_width)
+                   (broadcast_aux v (S lane_idx) n lane_width)
+    end.
+
+  Definition broadcast (v : Z) (num_lanes : nat) (lane_width : Z) : Z :=
+    broadcast_aux v 0 num_lanes lane_width.
+
+  (* Blend two vectors using an immediate mask at given lane width *)
+  Fixpoint blend_aux (v1 v2 : Z) (mask : Z) (lane_idx num_remaining : nat) (lane_width : Z) : Z :=
+    match num_remaining with
+    | O => 0
+    | S n =>
+      let lane_val := if Z.testbit mask (Z.of_nat lane_idx)
+                      then extract_lane v2 lane_idx lane_width
+                      else extract_lane v1 lane_idx lane_width in
+      Z.lor (insert_lane lane_val lane_idx lane_width)
+            (blend_aux v1 v2 mask (S lane_idx) n lane_width)
+    end.
+
+  Definition blend (v1 v2 : Z) (mask : Z) (num_lanes : nat) (lane_width : Z) : Z :=
+    blend_aux v1 v2 mask 0 num_lanes lane_width.
+
 End SemanticVector.
 
 
@@ -286,6 +312,88 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | vpsubd, [dst; src1; src2] =>
       SemanticVector.DenoteVectorBinOp sa s st dst src1 src2
         (fun a b => Z.land (a - b) (Z.ones 32)) 8 32
+  | vpbroadcastq, [dst; src] =>
+    v <- DenoteOperand sa 64 st src;
+    let v64 := Z.land v (Z.ones 64) in
+    let num_lanes := N.to_nat (N.div s 64) in
+    let result := SemanticVector.broadcast v64 num_lanes 64 in
+    SetOperand sa s st dst result
+  | vpblendd, [dst; src1; src2; const imm] =>
+    v1 <- DenoteOperand sa s st src1;
+    v2 <- DenoteOperand sa s st src2;
+    let num_lanes := N.to_nat (N.div s 32) in
+    let result := SemanticVector.blend v1 v2 imm num_lanes 32 in
+    SetOperand sa s st dst result
+  | vpmuludq, [dst; src1; src2] => (* vector packed multiply unsigned dword to qword *)
+    let num_lanes := N.to_nat (N.div s 64) in
+    let lane_muludq := (fun a b => Z.land a (Z.ones 32) * Z.land b (Z.ones 32)) in
+    SemanticVector.DenoteVectorBinOp sa s st dst src1 src2 lane_muludq num_lanes 64
+  | vpsrlq, [dst; src; cnt] => (* vector packed shift right logical qword *)
+    let num_lanes := N.to_nat (N.div s 64) in
+    v <- DenoteOperand sa s st src;
+    cnt_val <- DenoteOperand sa s st cnt;
+    let cnt_val := Z.land cnt_val (Z.ones 8) in (* shift count from low byte *)
+    let result := SemanticVector.vector_binop_values v v
+      (fun a _ => Z.shiftr a cnt_val) num_lanes 64 in
+    SetOperand sa s st dst result
+  | vpsllq, [dst; src; cnt] => (* vector packed shift left logical qword *)
+    let num_lanes := N.to_nat (N.div s 64) in
+    v <- DenoteOperand sa s st src;
+    cnt_val <- DenoteOperand sa s st cnt;
+    let cnt_val := Z.land cnt_val (Z.ones 8) in
+    let result := SemanticVector.vector_binop_values v v
+      (fun a _ => Z.land (Z.shiftl a cnt_val) (Z.ones 64)) num_lanes 64 in
+    SetOperand sa s st dst result
+
+  | vpunpcklqdq, [dst; src1; src2] => (* interleave low qwords from each 128-bit half *)
+    v1 <- DenoteOperand sa s st src1;
+    v2 <- DenoteOperand sa s st src2;
+    let num_halves := N.to_nat (N.div s 128) in
+    let result := (fix aux (half_idx remaining : nat) :=
+      match remaining with
+      | O => 0
+      | S n =>
+        let base := Z.of_nat half_idx * 128 in
+        let lo1 := SemanticVector.extract_lane v1 (2 * half_idx) 64 in
+        let lo2 := SemanticVector.extract_lane v2 (2 * half_idx) 64 in
+        Z.lor (Z.lor (Z.shiftl lo1 base) (Z.shiftl lo2 (base + 64)))
+              (aux (S half_idx) n)
+      end) 0%nat num_halves in
+    SetOperand sa s st dst result
+  | vpunpckhqdq, [dst; src1; src2] => (* interleave high qwords from each 128-bit half *)
+    v1 <- DenoteOperand sa s st src1;
+    v2 <- DenoteOperand sa s st src2;
+    let num_halves := N.to_nat (N.div s 128) in
+    let result := (fix aux (half_idx remaining : nat) :=
+      match remaining with
+      | O => 0
+      | S n =>
+        let base := Z.of_nat half_idx * 128 in
+        let hi1 := SemanticVector.extract_lane v1 (2 * half_idx + 1) 64 in
+        let hi2 := SemanticVector.extract_lane v2 (2 * half_idx + 1) 64 in
+        Z.lor (Z.lor (Z.shiftl hi1 base) (Z.shiftl hi2 (base + 64)))
+              (aux (S half_idx) n)
+      end) 0%nat num_halves in
+    SetOperand sa s st dst result
+  | vpextrq, [dst; src; const imm] => (* extract 64-bit lane from XMM *)
+    v <- DenoteOperand sa 128 st src;
+    let lane := Z.land imm 1 in
+    let result := SemanticVector.extract_lane v (Z.to_nat lane) 64 in
+    SetOperand sa 64 st dst result
+  | vextracti128, [dst; src; const imm] => (* extract 128-bit lane from YMM *)
+    v <- DenoteOperand sa 256 st src;
+    let lane := Z.land imm 1 in
+    let result := SemanticVector.extract_lane v (Z.to_nat lane) 128 in
+    SetOperand sa 128 st dst result
+  | vinserti128, [dst; src1; src2; const imm] => (* insert 128-bit into YMM *)
+    v1 <- DenoteOperand sa 256 st src1;
+    v2 <- DenoteOperand sa 128 st src2;
+    let lane := Z.land imm 1 in
+    let mask128 := Z.ones 128 in
+    let shift := lane * 128 in
+    let cleared := Z.land v1 (Z.lnot (Z.shiftl mask128 shift)) in
+    let result := Z.lor cleared (Z.shiftl (Z.land v2 mask128) shift) in
+    SetOperand sa 256 st dst result
 
   | (sbb | sub) as opc, [dst; src] =>
     c <- (match opc with sbb => get_flag st CF | _ => Some false end);
@@ -455,6 +563,14 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
        st   <- SetOperand stack_addr_size s st rsp rsp';
                SetOperand sa s st dst v
   | nop, [] => Some st
+  | vzeroupper, [] =>
+    let ymm_regs := [ymm0; ymm1; ymm2; ymm3; ymm4; ymm5; ymm6; ymm7;
+                      ymm8; ymm9; ymm10; ymm11; ymm12; ymm13; ymm14; ymm15] in
+    Some (List.fold_left (fun (acc : machine_state) yr =>
+      let v := get_reg acc (VReg yr) in
+      let v' := Z.land v (Z.ones 128) in
+      update_reg_with acc (fun rs => set_reg rs (VReg yr) v')
+    ) ymm_regs st)
   | ret, _ => None (* not sure what to do with this ret, maybe exlude it? *)
     (* catchall for an operator with no operands *)
   | adc, _
@@ -467,6 +583,14 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
  	| vpxorq, _
  	| vpaddd, _
  	| vpsubd, _
+ 	| vpmuludq, _
+ 	| vpsrlq, _
+ 	| vpsllq, _
+ 	| vpunpcklqdq, _
+ 	| vpunpckhqdq, _
+ 	| vpextrq, _
+ 	| vextracti128, _
+ 	| vinserti128, _
   | adox, _
   | and, _
   | bzhi, _
@@ -523,6 +647,9 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | movups, _
   | neg, _
   | nop, _
+  | vzeroupper, _
+  | vpbroadcastq, _
+  | vpblendd, _
   | not, _
   | paddq, _
   | psubq, _
