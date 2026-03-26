@@ -13,7 +13,6 @@ From bedrock2Examples Require Import full_sub.
 From coqutil Require Import Byte.
 
 Import ProgramLogic.Coercions.
-Set Printing Coercions.
 
 Local Open Scope string_scope.
 Local Open Scope Z_scope.
@@ -25,27 +24,27 @@ Definition ctime_ltu :=
     unpack! r = br_value_barrier(r)
   }.
 
-Definition index_bits :=
-  func! (p_input, nbits, i, w) ~> r {
+(* Limb size (nonzero). *)
+Local Notation w := 5.
+
+Definition extract_limb_at_bit :=
+  func! (p_input, total_bits, i) ~> r {
     idx = i >> $3; (* index = i/8 *)
     a = load1(p_input + idx);
     b = $0;
-    if idx + $1 < (nbits + $7) >> $3 {
+    if idx + $1 < (total_bits + $7) >> $3 {
       b = load1(p_input + idx + $1)
     };
     s = a + (b << $8);
     t = s >> (i & $7); (* offset = i%8 *)
-    r = t & (($1 << w) - $1)
+    r = t & (($1 << $w) - $1)
   }.
 
-(* Limb size (nonzero). *)
-Local Notation w := 5.
-
-Definition limbs_unpack :=
-  func! (p_output, p_input, nbits) {
+Definition decompose_to_limbs :=
+  func! (p_output, p_input, total_bits) {
     i = $0;
-    while i < nbits {
-      unpack! r = index_bits(p_input, nbits, i, $w);
+    while i < total_bits {
+      unpack! r = extract_limb_at_bit(p_input, total_bits, i);
       store1(p_output, r); p_output = p_output + $1;
       i = i + $w;
       $(cmd.unset "r")
@@ -69,26 +68,28 @@ Definition signed_recode :=
     unpack! _c = signed_recode_carry(p_limbs, $0, n)
   }.
 
-(* TODO: Should we put all the positional defs and lemmas somewhere? *)
-Definition positional B := fold_right (fun a s => a + (B)*s) 0.
+Section WithBase.
+Context (B : Z).
+Definition positional := fold_right (fun a s => a + (B)*s) 0.
 
-Lemma positional_nil B :
-  positional B nil = 0.
+Lemma positional_nil :
+  positional nil = 0.
 Proof. reflexivity. Qed.
 
-Lemma positional_cons B h t :
-  positional B (h :: t) = h + B*(positional B t).
+Lemma positional_cons h t :
+  positional (h :: t) = h + B*(positional t).
 Proof. reflexivity. Qed.
 
-Definition positional_bytes B l :=
-  positional B (map byte.unsigned l).
+Definition positional_bytes l :=
+  positional (map byte.unsigned l).
 
-Definition positional_signed_bytes B l :=
-  positional B (map byte.signed l).
+Definition positional_signed_bytes l :=
+  positional (map byte.signed l).
 
-Lemma positional_bytes_cons B h t :
-  positional_bytes B (h :: t) = byte.unsigned h + B*(positional_bytes B t).
+Lemma positional_bytes_cons h t :
+  positional_bytes (h :: t) = byte.unsigned h + B*(positional_bytes t).
 Proof. constructor. Qed.
+End WithBase.
 
 Local Notation bytearray := (Array.array ptsto (word.of_Z 1)).
 
@@ -101,29 +102,28 @@ Local Notation bytearray := (Array.array ptsto (word.of_Z 1)).
       r = if word.ltu a b then word.of_Z 1 else word.of_Z 0
   }.
 
-#[export] Instance spec_of_index_bits : spec_of "index_bits" :=
-  fnspec! "index_bits" (p_input nbits i w : word) / input ~> r,
+#[export] Instance spec_of_extract_limb_at_bit : spec_of "extract_limb_at_bit" :=
+  fnspec! "extract_limb_at_bit" (p_input total_bits i : word) / input ~> r,
     { requires t m :=
         m =*> bytearray p_input input /\
-        8 * (length input - 1) < nbits <= 8 * length input /\
-        le_combine input < 2^nbits /\
-        i < nbits /\
-        0 <= w <= 8 /\
-        nbits + 7 <= (word.of_Z (-1) : word);
+        8 * (length input - 1) < total_bits <= 8 * length input /\
+        le_combine input < 2^total_bits /\
+        i < total_bits /\
+        total_bits + 7 <= (word.of_Z (-1) : word);
       ensures T M :=
         M = m /\
         T = t /\
         r = le_combine input / 2^i mod 2^w :>Z
     }.
 
-#[export] Instance spec_of_limbs_unpack : spec_of "limbs_unpack" :=
-  fnspec! "limbs_unpack" (p_output p_input nbits : word) / output input R,
+#[export] Instance spec_of_decompose_to_limbs : spec_of "decompose_to_limbs" :=
+  fnspec! "decompose_to_limbs" (p_output p_input total_bits : word) / output input R,
     { requires t m :=
         m =* bytearray p_output output * bytearray p_input input * R /\
-        8 * (length input - 1) < nbits <= 8 * length input /\
-        w * (length output - 1) < nbits <= w * length output /\
-        le_combine input < 2^nbits /\
-        nbits + 7 <= (word.of_Z (-1) : word);
+        8 * (length input - 1) < total_bits <= 8 * length input /\
+        w * (length output - 1) < total_bits <= w * length output /\
+        le_combine input < 2^total_bits /\
+        total_bits + 7 <= (word.of_Z (-1) : word);
       ensures T M := exists OUTPUT,
         M =* bytearray p_output OUTPUT * bytearray p_input input * R /\
         length output = length OUTPUT /\
@@ -204,19 +204,90 @@ Proof.
   ring.
 Qed.
 
-#[local] Ltac bitwise_setup k :=
-  apply Z.bits_inj'; intros k **;
-  repeat rewrite ?Z.land_spec, ?Z.lor_spec, ?Z.shiftl_spec, ?Z.testbit_mod_pow2, ?bitblast.Z.div_pow2_bits' by ZnWords.
+Lemma extract_limb_at_bit_zify a b offset :
+  0 <= a < 2^8 ->
+  0 <= b < 2^8 ->
+  0 <= word.unsigned offset < 8 ->
+  word.unsigned (word.and
+    (word.sru (word.add (word.of_Z a) (word.slu (word.of_Z b) (word.of_Z 8))) offset)
+    (word.sub (word.slu (word.of_Z 1) (word.of_Z w)) (word.of_Z 1))) =
+  ((a + (b * 2^8)) / 2^(word.unsigned offset)) mod (2^w).
+Proof.
+  intros.
+  assert (1 <= 2^w <= 2^8) by (split; [ZnWords | apply Z.pow_le_mono_r; lia]).
+  repeat rewrite ?word.unsigned_and_nowrap, ?word.unsigned_sru_nowrap, ?word.unsigned_add_nowrap,
+    ?word.unsigned_sub_nowrap, ?word.unsigned_slu, ?Z.shiftl_1_l;
+  repeat rewrite word.unsigned_of_Z_nowrap by lia; try ZnWords;
+  change (7) with (Z.ones 3); try rewrite Z.land_ones by lia; try ZnWords.
+  assert ((word.wrap (2 ^ w) - 1) = Z.ones w) as ->.
+      { rewrite Z.ones_equiv, Z.sub_1_r.
+        ZnWords. }
+  rewrite ?Z.shiftr_div_pow2; try ZnWords.
+  rewrite Z.land_ones by ZnWords.
+  rewrite Z.shiftl_mul_pow2 by lia.
+  cbv [word.wrap]. rewrite (Z.mod_small (b * 2^8)) by ZnWords.
+  trivial.
+Qed.
 
-#[local] Ltac bitwise_solve solver :=
-  repeat match goal with |- context _g[Z.ltb ?a ?b] => progress (
-    case (Z.ltb_spec a b) as [];
-    repeat rewrite ?Bool.andb_true_l, ?Bool.andb_true_r, ?Bool.andb_false_l, ?Bool.andb_false_r,
-                   ?Bool.orb_true_l, ?Bool.orb_true_r, ?Bool.orb_false_l, ?Bool.orb_false_r;
-    try solve [solver])
-  end.
+Lemma bytelist_extract_two num i b1 b2 w:
+  let idx := i / 8  in
+  let offset := i mod 8 in
+  b1 = (nth_default Byte.x00 num (Z.to_nat idx)) ->
+  b2 = (nth_default Byte.x00 num (S (Z.to_nat (idx)))) ->
+  0 <= w <= 8 ->
+  0 <= i < length num * 8 ->
+  (Z.of_bytes num / 2 ^ i) mod 2 ^ w =
+      ((byte.unsigned b1 + byte.unsigned  b2 * 2 ^ 8) / 2 ^ offset) mod 2 ^ w.
+Proof.
+  intros ? ? Hb1 Hb2. intros.
 
-Lemma index_bits_ok : program_logic_goal_for_function! index_bits.
+  assert (i = 8 * idx + offset) as Hi. {
+    subst idx offset. apply Z_div_mod_eq_full.
+  } rewrite Hi.
+
+  pose proof (Z.mod_pos_bound i 8 ltac:(lia)).
+  rewrite Z.pow_add_r, <- Z.div_div by lia.
+
+  replace (Z.of_bytes num) with
+      (Z.of_bytes ((firstn (Z.to_nat (idx)) num) ++ [b1] ++ [b2] ++ (skipn (S (S (Z.to_nat (idx)))) num))).
+  2: { rewrite Hb1, Hb2, !nth_default_eq, app_assoc.
+    rewrite firstn_nth by lia.
+    destruct (Nat.eq_dec (S (Z.to_nat idx)) ((length num))) as [Hlength|?].
+    { rewrite <- (le_combine_snoc_0 num).
+      f_equal.
+      rewrite List.skipn_all, nth_overflow by lia.
+      rewrite Hlength, firstn_all, app_nil_r.
+      reflexivity. }
+    { f_equal. rewrite firstn_nth_skipn by lia. reflexivity. }}
+
+  repeat rewrite Specs.le_combine_app.
+  rewrite !length_cons, !length_nil, firstn_length_le, Z2Nat.id by lia.
+
+  (* The lower part is zero because it's devided by something bigger. *)
+  pose proof (le_combine_bound (firstn (Z.to_nat idx) num)) as Hb. revert Hb.
+  rewrite !firstn_length_le, !Z2Nat.id by lia.
+  rewrite !(Z.mul_comm idx 8). rewrite !Div.Z.div_add' by lia. intros.
+  rewrite (Z.div_small _ (2 ^ (8 * idx))) by lia.
+
+  (* The higher part is zero because it's too big for any remains afters the modulo. *)
+  rewrite Z.mul_add_distr_l. rewrite Z.mul_assoc.
+  rewrite <- Z.pow_add_r by lia.
+  replace (2 ^ (Z.of_nat 1 * 8 + Z.of_nat 1 * 8)) with (2^offset * 2^(16-offset)). 2: {
+    rewrite <- Z.pow_add_r; f_equal; try lia.
+  }
+  rewrite <- !Z.mul_assoc, !Z.add_assoc.
+  rewrite Div.Z.div_add' by lia.
+  assert ((16 - offset) > w) by lia.
+  replace (2 ^ (16 - offset)) with (2^w * 2^(16-offset-w)). 2: {
+    rewrite <- Z.pow_add_r; f_equal; try lia.
+  }
+  rewrite <- Z.mul_assoc.
+  rewrite Modulo.Z.mod_add'_full.
+
+  rewrite !le_combine_1. do 2 f_equal. lia.
+Qed.
+
+Lemma extract_limb_at_bit_ok : program_logic_goal_for_function! extract_limb_at_bit.
 Proof.
   repeat (straightline || apply WeakestPreconditionProperties.dexpr_expr).
   (* First byte load. *)
@@ -237,183 +308,70 @@ Proof.
       case word.ltu_spec; intros; ZnWords. }
     repeat straightline.
     subst r t s v b.
-    (* Subtraction in address computation. *)
+    revert cond; case word.ltu_spec; intros; [|ZnWords].
+
+    rewrite extract_limb_at_bit_zify. 2,3: apply byte.unsigned_range.
+    2: { rewrite ?word.unsigned_and_nowrap. rewrite word.unsigned_of_Z_nowrap by lia.
+    change (7) with (Z.ones 3); rewrite Z.land_ones by lia; ZnWords. }
+
+    erewrite bytelist_extract_two; [| reflexivity | reflexivity | lia | ZnWords ].
+
     rewrite <-word.add_assoc, !word.word_sub_add_l_same_l.
-    repeat rewrite ?word.unsigned_and_nowrap, ?word.unsigned_sru, ?word.unsigned_add, ?word.unsigned_sub, ?word.unsigned_slu; try ZnWords.
-    { rewrite !word.unsigned_of_Z.
-      cbv [word.wrap].
-      rewrite (Z.mod_small 1) by lia.
-      change (7 mod 2^64) with (Z.ones 3).
-      rewrite Z.land_ones by lia.
-      set (nth_default Byte.x00 input (Z.to_nat (word.unsigned idx))) as b1.
-      set (nth_default Byte.x00 input (Z.to_nat ((word.unsigned idx + 1) mod 2 ^ 64))) as b2.
-      assert (1 <= 2^w <= 2^8) by (split; [ZnWords | apply Z.pow_le_mono_r; lia]).
-      assert ((Z.shiftl 1 (word.unsigned w) mod 2 ^ 64 - 1) mod 2 ^ 64 = Z.ones (word.unsigned w)) as ->.
-      { rewrite Z.shiftl_1_l.
-        (rewrite_strat (bottomup Z.mod_small)); try lia.
-        rewrite Z.ones_equiv, Z.sub_1_r.
-        reflexivity. }
-      set (word.unsigned i mod 2 ^ 3).
-      set ((le_combine input / 2 ^ word.unsigned i) mod 2 ^ word.unsigned w).
-      pose proof byte.unsigned_range b1.
-      pose proof byte.unsigned_range b2.
-      (rewrite_strat (bottomup Z.mod_small)); rewrite ?Z.shiftr_div_pow2; try ZnWords.
-      { rewrite Z.land_ones by ZnWords.
-        rewrite Z.shiftl_mul_pow2 by lia.
-        epose proof nth_default_le_split
-          (Z.to_nat (word.unsigned idx))
-          (length input) (le_combine input)
-          ltac:(ZnWords) Byte.x00 as Hb1.
-        rewrite split_le_combine in Hb1.
-        subst b1.
-        rewrite Hb1.
-        clear Hb1.
-        revert cond.
-        case word.ltu_spec;
-        repeat rewrite ?word.unsigned_add, ?word.unsigned_and, ?word.unsigned_sru, ?word.unsigned_of_Z_1, ?word.unsigned_of_Z_0 by ZnWords;
-        intros Hcond **; try lia.
-        unfold word.wrap in Hcond.
-        repeat rewrite word.unsigned_of_Z_nowrap in Hcond by lia.
-        epose proof nth_default_le_split
-          (Z.to_nat ((word.unsigned idx + 1) mod 2 ^ 64))
-          (length input) (le_combine input)
-          ltac:(ZnWords) Byte.x00 as Hb2.
-        rewrite split_le_combine in Hb2.
-        subst b2.
-        rewrite Hb2.
-        clear Hb2.
-        assert ((word.unsigned idx + 1) mod 2 ^ 64 = word.unsigned idx + 1) as -> by ZnWords.
-        rewrite !Z2Nat.id by ZnWords.
-        rewrite !byte.unsigned_of_Z.
-        rewrite !Z.shiftr_div_pow2 by ZnWords.
-        unfold byte.wrap.
-        subst z0 z.
-        set (le_combine input).
-        assert(
-          (z / 2 ^ (8 * word.unsigned idx)) mod 2 ^ 8 + (z / 2 ^ (8 * (word.unsigned idx + 1))) mod 2 ^ 8 * 2 ^ 8 =
-          z / 2 ^ (8 * word.unsigned idx) mod 2 ^ 16
-        ) as ->.
-        { rewrite <-Z.shiftl_mul_pow2 by lia.
-          rewrite <-bitblast.Z.or_to_plus.
-          { bitwise_setup k.
-            bitwise_solve ltac:(
-              (reflexivity) ||
-              (lia) ||
-              (assert (k - 8 + 8 * (word.unsigned idx + 1) = k + 8 * word.unsigned idx) as -> by ZnWords;
-              rewrite <-?Z.lor_spec, ?Z.lor_diag;
-              reflexivity)
-            ). }
-          bitwise_setup k.
-          bitwise_solve ltac:(
-            (lia) ||
-            (rewrite Z.testbit_0_l; reflexivity)
-          ). }
-        assert (word.unsigned idx = i / 2 ^ 3) as -> by ZnWords.
-        assert (z = z mod 2^nbits) as ->.
-        { rewrite Z.mod_small; trivial.
-          pose proof le_combine_bound input.
-          ZnWords. }
-        bitwise_setup k.
-        assert (k + i mod 2 ^ 3 + 8 * (i / 2 ^ 3) = k + i) as -> by ZnWords.
-        bitwise_solve ltac:(
-          (reflexivity) ||
-          (Z.to_euclidean_division_equations; nia) ||
-          (lia)
-        ). }
-      rewrite Z.shiftl_mul_pow2 by lia.
-      Z.to_euclidean_division_equations; nia. }
-    rewrite word.unsigned_of_Z_nowrap by lia.
+    subst idx.
+    repeat rewrite ?word.unsigned_and_nowrap, ?word.unsigned_sru, ?word.unsigned_add, ?word.unsigned_sub, ?word.unsigned_slu, ?Z.shiftr_div_pow2, ?word.unsigned_of_Z_nowrap by ZnWords.
+
     change (7) with (Z.ones 3).
-    rewrite Z.land_ones by lia.
-    ZnWords. }
+    rewrite Z.land_ones by ZnWords.
+    repeat f_equal; ZnWords.
+  }
   subst r t s b.
-  (* Subtraction in address computation. *)
-  rewrite word.word_sub_add_l_same_l.
-  repeat rewrite ?word.unsigned_and_nowrap, ?word.unsigned_sru, ?word.unsigned_add, ?word.unsigned_sub, ?word.unsigned_slu; try ZnWords.
-  { rewrite !word.unsigned_of_Z.
-    cbv [word.wrap].
-    rewrite (Z.mod_small 0), (Z.mod_small 1) by lia.
-    rewrite Z.add_0_r, Zmod_mod.
-    change (7 mod 2^64) with (Z.ones 3).
-    rewrite Z.land_ones by lia.
-    set (nth_default Byte.x00 input (Z.to_nat (word.unsigned idx))) as b.
-    assert (1 <= 2^w <= 2^8) by (split; [ZnWords | apply Z.pow_le_mono_r; lia]).
-    assert ((Z.shiftl 1 (word.unsigned w) mod 2 ^ 64 - 1) mod 2 ^ 64 = Z.ones (word.unsigned w)) as ->.
-    { rewrite Z.shiftl_1_l.
-      (rewrite_strat (bottomup Z.mod_small)); try lia.
-      rewrite Z.ones_equiv, Z.sub_1_r.
-      reflexivity. }
-    set (word.unsigned i mod 2 ^ 3).
-    set ((le_combine input / 2 ^ word.unsigned i) mod 2 ^ word.unsigned w).
-    pose proof byte.unsigned_range b.
-    (rewrite_strat (bottomup Z.mod_small)); rewrite ?Z.shiftr_div_pow2; try ZnWords.
-    { rewrite Z.land_ones by ZnWords.
-      epose proof nth_default_le_split
-        (Z.to_nat (word.unsigned idx))
-        (length input) (le_combine input)
-        ltac:(ZnWords) Byte.x00 as Hb.
-      rewrite split_le_combine in Hb.
-      subst b.
-      rewrite Hb.
-      clear Hb.
-      rewrite Z2Nat.id by ZnWords.
-      rewrite byte.unsigned_of_Z.
-      rewrite Z.shiftr_div_pow2 by ZnWords.
-      unfold byte.wrap.
-      subst z0 z.
-      set (le_combine input).
-      assert (word.unsigned idx = i / 2 ^ 3) as -> by ZnWords.
-      revert cond.
-      case word.ltu_spec;
-      repeat rewrite ?word.unsigned_add, ?word.unsigned_and, ?word.unsigned_sru, ?word.unsigned_of_Z_1 by ZnWords;
-      intros Hcond **; try lia.
-      unfold word.wrap in Hcond.
-      repeat rewrite word.unsigned_of_Z_nowrap in Hcond by lia.
-      assert (z = z mod 2^nbits) as ->.
-      { rewrite Z.mod_small; trivial.
-        pose proof le_combine_bound input.
-        ZnWords. }
-      bitwise_setup k.
-      assert (k + i mod 2 ^ 3 + 8 * (i / 2 ^ 3) = k + i) as -> by ZnWords.
-      bitwise_solve ltac:(
-        (reflexivity) ||
-        (Z.to_euclidean_division_equations; nia) ||
-        (exfalso; ZnWords)
-      ). }
-    { pose proof Z.mod_bound_pos i (2 ^ 3) ltac:(ZnWords) ltac:(lia).
-      Z.to_euclidean_division_equations; nia. } }
-  rewrite word.unsigned_of_Z_nowrap by lia.
+  revert cond; case word.ltu_spec; intros cond ?; [ZnWords|].
+
+  rewrite extract_limb_at_bit_zify. 2: apply byte.unsigned_range. 2: lia.
+  2: { rewrite ?word.unsigned_and_nowrap. rewrite word.unsigned_of_Z_nowrap by lia.
+  change (7) with (Z.ones 3); rewrite Z.land_ones by lia; ZnWords. }
+
+  erewrite bytelist_extract_two; [| reflexivity | reflexivity | lia | ZnWords].
+
+  subst idx.
+  repeat rewrite ?word.unsigned_and_nowrap, ?word.unsigned_sru, ?word.unsigned_add, ?word.unsigned_sub, ?word.unsigned_slu, ?Z.shiftr_div_pow2, ?word.unsigned_of_Z_nowrap by ZnWords.
+
+  rewrite ?word.unsigned_and_nowrap.
   change (7) with (Z.ones 3).
-  rewrite Z.land_ones by lia.
+  rewrite Z.land_ones by ZnWords.
+  repeat f_equal. { ZnWords. }
+
+  rewrite nth_default_eq, nth_overflow.
+  { reflexivity. }
   ZnWords.
 Qed.
 
-Lemma limbs_unpack_ok : program_logic_goal_for_function! limbs_unpack.
+Lemma decompose_to_limbs_ok : program_logic_goal_for_function! decompose_to_limbs.
 Proof.
   repeat straightline.
   refine ((Loops.tailrec
     (* types of ghost variables*) (HList.polymorphic_list.cons _
                                   (HList.polymorphic_list.cons _
                                    HList.polymorphic_list.nil))
-    (* program variables *) (["p_output";"p_input";"nbits";"i"] : list String.string))
-    (fun v output R t m p_output p_input nbits_ i => PrimitivePair.pair.mk (* precondition *)
+    (* program variables *) (["p_output";"p_input";"total_bits";"i"] : list String.string))
+    (fun v output R t m p_output p_input total_bits_ i => PrimitivePair.pair.mk (* precondition *)
       (v = word.unsigned i /\
-      nbits_ = nbits /\ (* input = inside loop *)
+      total_bits_ = total_bits /\ (* input = inside loop *)
       m =* bytearray p_output output * bytearray p_input input * R /\
-      8 * (length input - 1) < nbits <= 8 * length input /\
-      w * (length output - 1) < nbits - i <= w * length output /\
-      le_combine input < 2^nbits /\
-      nbits + w <= (word.of_Z (-1) : word))
-    (fun            T M P_OUTPUT P_INPUT NBITS I => (* postcondition *)
+      8 * (length input - 1) < total_bits <= 8 * length input /\
+      w * (length output - 1) < total_bits - i <= w * length output /\
+      le_combine input < 2^total_bits /\
+      total_bits + w <= (word.of_Z (-1) : word))
+    (fun            T M P_OUTPUT P_INPUT total_bits I => (* postcondition *)
       exists OUTPUT,
       M =* bytearray p_output OUTPUT * bytearray p_input input * R /\
       length output = length OUTPUT /\
       T = t /\
       p_input = P_INPUT /\
-      nbits = NBITS /\ (* inside loop = output *)
+      total_bits = total_bits /\ (* inside loop = output *)
       Forall (fun b => (0 <= byte.unsigned b < 2^w)) OUTPUT /\
       le_combine input / 2^i = positional_bytes (2^w) OUTPUT))
-    (fun n m => m < n <= nbits + w) (* well_founded relation *)
+    (fun n m => m < n <= total_bits + w) (* well_founded relation *)
     _ _ _ _ _ _ _);
   Loops.loop_simpl.
   { repeat straightline. }
@@ -424,7 +382,7 @@ Proof.
     { revert H7.
       case word.ltu_spec; intros;
       rewrite word.unsigned_of_Z_nowrap in H8 by ZnWords; try lia.
-      straightline_call. (* call index_bits *)
+      straightline_call. (* call extract_limb_at_bit *)
       { ssplit; try (eexists _; ecancel_assumption); trivial; ZnWords. }
       repeat straightline.
       clear dependent output; rename x into output.
@@ -448,7 +406,6 @@ Proof.
       { (* Forall bound on output. *)
         apply Forall_cons.
         { rewrite H19.
-          rewrite word.unsigned_of_Z_nowrap by ZnWords.
           rewrite byte.unsigned_of_Z.
           cbv [byte.wrap].
           rewrite Z.mod_small; ZnWords. }
@@ -456,7 +413,6 @@ Proof.
       rewrite positional_bytes_cons.
       rewrite <-H21, H19.
       subst i.
-      rewrite word.unsigned_of_Z_nowrap by ZnWords.
       rewrite word.unsigned_add_nowrap by ZnWords.
       rewrite word.unsigned_of_Z_nowrap by ZnWords.
       rewrite byte.unsigned_of_Z.
@@ -479,7 +435,7 @@ Proof.
     subst x.
     { apply Forall_nil. }
     cbv [positional_bytes positional map fold_right].
-    assert (2 ^ word.unsigned nbits <= 2 ^ word.unsigned x4) by (apply Z.pow_le_mono_r; ZnWords).
+    assert (2 ^ word.unsigned total_bits <= 2 ^ word.unsigned x4) by (apply Z.pow_le_mono_r; ZnWords).
     assert (le_combine input < 2 ^ word.unsigned x4) by ZnWords.
     apply Z.div_small.
     split; [apply le_combine_bound | trivial]. }
