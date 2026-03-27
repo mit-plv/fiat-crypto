@@ -507,89 +507,27 @@ Proof.
               ecancel_assumption. }
             { rewrite length_cons; ZnWords. }
             {
-              cbn [positional_signed_bytes positional_bytes positional map fold_right].
-              cbv [x4 x].
-              case word.ltu_spec; intros; case Z.eqb_spec; intros; try ZnWords;
-              revert H13; cbv[x positional_signed_bytes positional_bytes];
-              case word.ltu_spec; intros; try ZnWords;
-              [
-                rewrite word.unsigned_of_Z_1, (Z.add_comm 1), <-Z.sub_move_r in H17 |
-                rewrite word.unsigned_of_Z_0, Z.add_0_l in H17
-              ];
-              rewrite <-H17; cbv[v0] in *;
-              rewrite !Z.pow_mul_r by lia;
-              apply Z.sub_move_0_r;
-              set (positional (2 ^ w) (map byte.signed x8)).
+              match goal with H: context[positional_signed_bytes] |- _ => revert H end.
+              unfold positional_signed_bytes, positional_bytes.
+              rewrite Zeq_plus_swap.
+              cbn [map positional fold_right]. intros ->.
+              rewrite Z.mul_sub_distr_l.
 
-              (* TODO: ring_simplify stalls Qed so we perform some manual simplifications. *)
-              {
-                assert (
-                  (2 ^ w) * (z + (2 ^ w) ^ word.unsigned n * word.unsigned x6 - 1) =
-                  (2 ^ w) * z + (2 ^ w) * (2 ^ w) ^ word.unsigned n * word.unsigned x6 - 2 ^ w
-                ) as -> by lia.
-                set ((2 ^ w) * z) as cancel.
-                set (byte.signed (byte.of_Z (word.unsigned (word.sub (word.add (word.of_Z (byte.unsigned w0)) x2) (word.of_Z _))))).
-                assert (
-                  z0 + cancel + (2 ^ w) ^ word.unsigned x3 * word.unsigned x6 - (word.unsigned x2 + (byte.unsigned w0 + (cancel + (2 ^ w) * (2 ^ w) ^ word.unsigned n * word.unsigned x6 - 2 ^ w))) =
-                  z0 + (2 ^ w) ^ word.unsigned x3 * word.unsigned x6 - (2 ^ w) * word.unsigned x6 * (2 ^ w) ^ word.unsigned n - word.unsigned x2 - byte.unsigned w0 + 2 ^ w
-                ) as -> by lia.
-                shelve.
-              }
-              {
-                assert (
-                  (2 ^ w) * (z + (2 ^ w) ^ word.unsigned n * word.unsigned x6) =
-                  (2 ^ w) * z + (2 ^ w) * (2 ^ w) ^ word.unsigned n * word.unsigned x6
-                ) as -> by lia.
-                set ((2 ^ w) * z) as cancel.
-                set (byte.signed (byte.of_Z (word.unsigned (word.add (word.of_Z (byte.unsigned w0)) x2)))).
-                assert (
-                  z0 + cancel + (2 ^ w) ^ word.unsigned x3 * word.unsigned x6 - (word.unsigned x2 + (byte.unsigned w0 + (cancel + (2 ^ w) * (2 ^ w) ^ word.unsigned n * word.unsigned x6))) =
-                  z0 + (2 ^ w) ^ word.unsigned x3 * word.unsigned x6 - (2 ^ w) * word.unsigned x6 * (2 ^ w) ^ word.unsigned n - word.unsigned x2 - byte.unsigned w0
-                ) as -> by lia.
-                shelve.
-              }
+              subst n.
+              rewrite <- !Z.add_assoc, <- Z.sub_sub_distr, Z.add_sub_assoc, <- Z.sub_0_r.
+              f_equal.
+              2:{ rewrite word.unsigned_sub_nowrap, word.unsigned_of_Z_1, Z.mul_assoc, <- Z.pow_add_r by ZnWords.
+                rewrite Zeq_minus; [trivial|].
+                do 2 f_equal. lia. }
 
-              Unshelve.
-              { subst z0.
-                set (word.of_Z (byte.unsigned w0)) as b0.
-                assert (word.unsigned (word.sub (word.add b0 x2) (word.of_Z _)) = word.wrap (b0 + x2 - 2 ^ w)) as -> by ZnWords.
-                cbv [byte.signed].
-                rewrite byte.unsigned_of_Z, byte.swrap_wrap, word.byte_swrap_word_wrap by lia.
-                cbv [byte.swrap word.swrap].
-                subst b0.
-                rewrite word.unsigned_of_Z_nowrap by (pose proof byte.unsigned_range w0; lia).
-                rewrite Z.mod_small by (inversion H9; ZnWords).
-                ring_simplify.
-                subst n.
-                rewrite word.unsigned_sub_nowrap by ZnWords.
-                rewrite <-H8; cbn [length]; rewrite ?Nat2Z.inj_succ, ?Z.pow_succ_r by lia.
-                assert (
-                  (Z.succ (Z.of_nat (length limbs_rest)) - word.unsigned (word.of_Z 1)) =
-                  (Z.of_nat (length limbs_rest))
-                ) as -> by ZnWords.
-                ZnWords. }
-              { subst z0.
-                cbv [byte.signed].
-                rewrite byte.unsigned_of_Z, byte.swrap_wrap.
-                rewrite word.unsigned_add_nowrap.
-                { cbv [byte.swrap word.swrap].
-                  rewrite Z.mod_small by (inversion H9; ZnWords).
-                  ring_simplify.
-                  subst n.
-                  rewrite word.unsigned_sub_nowrap by ZnWords.
-                  rewrite <-H8; cbn [length]; rewrite ?Nat2Z.inj_succ, ?Z.pow_succ_r by lia.
-                  assert (
-                    (Z.succ (Z.of_nat (length limbs_rest)) - word.unsigned (word.of_Z 1)) =
-                    (Z.of_nat (length limbs_rest))
-                  ) as -> by ZnWords.
-                  rewrite word.unsigned_of_Z.
-                  cbv [word.wrap].
-                  rewrite Z.mod_small by (inversion H9; ZnWords).
-                  ZnWords. }
-                rewrite word.unsigned_of_Z.
-                cbv [word.wrap].
-                pose proof byte.unsigned_range w0.
-                ZnWords. } }
+              cbv [x4 x v0 byte.signed].
+              match goal with | H: Forall _ (_ :: _) |- _ => apply Forall_inv in H end.
+              case word.ltu_spec; case Z.eqb_spec; [ZnWords | | | ZnWords];
+              repeat rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_0, ?word.unsigned_sub_nowrap, ?word.unsigned_sub, ?word.unsigned_add_nowrap, ?byte.unsigned_of_Z, ?byte.swrap_wrap by ZnWords; intros.
+              { rewrite word.byte_swrap_word_wrap by ZnWords.
+                cbv [byte.swrap]. rewrite Z.mod_small; ZnWords. }
+              { cbv [byte.swrap]. rewrite Z.mod_small; ZnWords. }
+            }
             { constructor.
               { cbv [x4 x].
                 case word.ltu_spec; intros; case Z.eqb_spec; intros; try ZnWords; inversion H9; cbv [v0] in *;
