@@ -200,7 +200,7 @@ Section symbolic.
       { intros; rewrite !(fun var => @lookupb_extendb_full flat_type _ symbolic_expr _ var _ SymbolicExprContextOk).
         break_innermost_match; subst; simpl; intuition (eauto || congruence). }
       { intros *; rewrite !(fun var => @lookupb_extendb_full flat_type _ symbolic_expr _ var _ SymbolicExprContextOk).
-        break_innermost_match; subst; simpl; try setoid_rewrite lookupb_empty; eauto using SymbolicExprContextOk; try congruence. }
+        break_innermost_match; subst; simpl; try setoid_rewrite lookupb_empty; first [eauto; congruence|epose SymbolicExprContextOk; eauto; congruence]. }
       { intros *; intro H'; exact (flatten_binding_list_SmartVarfMap2_pair_same_in_eq2 H'). }
       { intros *; intro H'; destruct (flatten_binding_list_SmartVarfMap2_pair_In_split H'); eauto. }
       { apply wff_prepend_prefix; auto. }
