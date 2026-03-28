@@ -63,7 +63,7 @@ Section language.
               (failb _) (failb _) _ _);
       [ revert v | revert v' ];
       refine (_ : Wf.Named.Wf _ e);
-      apply Wf_from_unit; auto using PositiveContextOk.
+      apply Wf_from_unit; first[intros; apply PositiveContextOk|auto].
   Qed.
 
   Lemma Wf_GeneralizeVar_arrow

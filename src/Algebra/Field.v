@@ -60,7 +60,7 @@ Section Field.
   Proof using Type*.
     constructor.
     { apply Ring.ring_theory_for_stdlib_tactic. }
-    { intro H01. symmetry in H01. auto using (zero_neq_one(eq:=eq)). }
+    { intro H01. symmetry in H01. pose proof (zero_neq_one(eq:=eq)); auto. }
     { apply field_div_definition. }
     { apply left_multiplicative_inverse. }
   Qed.
