@@ -30,13 +30,6 @@ Local Open Scope Z_scope.
 Local Open Scope list_scope.
 Local Open Scope string_scope.
 
-(* TODO swap these for Import (notations) coqutil.Map.Memory. once landed.*)
-Local Notation "xs $@ a" := (map.of_list_word_at a xs)
-(at level 10, format "xs $@ a").
-Local Notation "$ n" := (match word.of_Z n return word with w => w end) (at level 9, format "$ n").
-Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
-Local Coercion F.to_Z : F >-> Z.
-
 #[local] Notation sizeof_point := 96%nat.
 
 Definition p256_precompute_multiples := func! (p_table, p_P) {
@@ -71,6 +64,10 @@ Import Crypto.Spec.WeierstrassCurve
   bedrock2.ZnWords.
 Require Import bedrock2.bottom_up_simpl.
 
+Import (notations) coqutil.Map.Memory.
+Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
+Local Unset Printing Coercions.
+
 Module W.
   (* Creates 0..(n-1)*P as list. *)
   Definition multiples n P := map (fun i : nat => W.mul i P) (seq 0 n).
@@ -88,23 +85,6 @@ Local Ltac solve_num_pre := repeat rewrite ?length_skipn, ?length_multiples, ?le
   ?length_firstn, ?map_length, ?length_point, ?length_app, ?length_cons in *.
 
 Local Ltac solve_num := solve_num_pre; try lia; ZnWords.
-
-Lemma multiples_add_l n m P :
-  W.multiples (n+m) P = W.multiples n P ++ skipn n (W.multiples (n+m) P).
-Proof.
-  cbv [W.multiples].
-  rewrite ListUtil.seq_add, map_app, skipn_app, skipn_all2.
-  all: rewrite length_map, length_seq, ?Nat.sub_diag; trivial.
-Qed.
-
-Lemma skipn_multiples (n k : nat) P :
-  (k <= n)%nat ->
-  W.multiples n P = (W.multiples k P) ++ (skipn k (W.multiples n P)).
-Proof.
-  intros H.
-  pose proof multiples_add_l k (n-k) P.
-  replace (k + (n - k))%nat with n in * by lia; trivial.
-Qed.
 
 Lemma multiples_nth (n : nat) (A : W.point):
   forall i : nat, i < n ->
