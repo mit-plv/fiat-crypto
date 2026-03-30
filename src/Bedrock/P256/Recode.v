@@ -517,7 +517,8 @@ Proof.
               cbv [x0 x v0 byte.signed].
               match goal with | H: Forall _ (_ :: _) |- _ => apply Forall_inv in H end.
               case word.ltu_spec; case Z.eqb_spec; [ZnWords | | | ZnWords];
-              repeat rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_0, ?word.unsigned_sub_nowrap, ?word.unsigned_sub, ?word.unsigned_add_nowrap, ?byte.unsigned_of_Z, ?byte.swrap_wrap by ZnWords; intros.
+              repeat rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_0, ?word.unsigned_sub_nowrap,
+                ?word.unsigned_sub, ?word.unsigned_add_nowrap, ?byte.unsigned_of_Z, ?byte.swrap_wrap by ZnWords; intros.
               { rewrite word.byte_swrap_word_wrap by ZnWords.
                 cbv [byte.swrap]. rewrite Z.mod_small; ZnWords. }
               { cbv [byte.swrap]. rewrite Z.mod_small; ZnWords. }
