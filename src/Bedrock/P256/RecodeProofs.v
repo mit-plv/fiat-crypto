@@ -76,7 +76,6 @@ Proof.
   ring.
 Qed.
 
-
 Lemma extract_limb_at_bit_zify a b i :
   0 <= a < 2^8 ->
   0 <= b < 2^8 ->
@@ -109,7 +108,7 @@ Lemma bytelist_extract_two num i b1 b2:
   b2 = (nth_default Byte.x00 num (S (Z.to_nat (idx)))) ->
   0 <= i < length num * 8 ->
   (Z.of_bytes num / 2 ^ i) mod 2 ^ w =
-      ((byte.unsigned b1 + byte.unsigned  b2 * 2 ^ 8) / 2 ^ offset) mod 2 ^ w.
+      ((byte.unsigned b1 + byte.unsigned b2 * 2 ^ 8) / 2 ^ offset) mod 2 ^ w.
 Proof.
   intros ? ? Hb1 Hb2. intros.
 
@@ -223,13 +222,13 @@ Proof.
       w * (length output - 1) < total_bits - i <= w * length output /\
       le_combine input < 2^total_bits /\
       total_bits + w <= (word.of_Z (-1) : word))
-    (fun            T M P_OUTPUT P_INPUT total_bits I => (* postcondition *)
+    (fun            T M P_OUTPUT P_INPUT TOTAL_BITS I => (* postcondition *)
       exists OUTPUT,
       M =* bytearray p_output OUTPUT * bytearray p_input input * R /\
       length output = length OUTPUT /\
       T = t /\
       p_input = P_INPUT /\
-      total_bits = total_bits /\ (* inside loop = output *)
+      total_bits = TOTAL_BITS /\ (* inside loop = output *)
       Forall (fun b => (0 <= byte.unsigned b < 2^w)) OUTPUT /\
       le_combine input / 2^i = positional_bytes (2^w) OUTPUT))
     (fun n m => m < n <= total_bits + w) (* well_founded relation *)
