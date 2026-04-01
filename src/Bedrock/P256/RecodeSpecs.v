@@ -37,7 +37,7 @@ Definition extract_limb_at_bit :=
     if idx + $1 < (total_bits + $7) >> $3 {
       b = load1(p_input + idx + $1)
     };
-    s = a + (b << $8);
+    s = a | (b << $8);
     t = s >> (i & $7); (* offset = i%8 *)
     r = t & (($1 << $w) - $1)
   }.

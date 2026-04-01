@@ -80,82 +80,68 @@ Lemma extract_limb_at_bit_zify a b i :
   0 <= a < 2^8 ->
   0 <= b < 2^8 ->
   word.unsigned (word.and
-    (word.sru (word.add (word.of_Z a) (word.slu (word.of_Z b) (word.of_Z 8))) (word.and i (word.of_Z 7)))
+    (word.sru (word.or (word.of_Z a) (word.slu (word.of_Z b) (word.of_Z 8))) (word.and i (word.of_Z 7)))
     (word.sub (word.slu (word.of_Z 1) (word.of_Z w)) (word.of_Z 1))) =
-  ((a + (b * 2^8)) / 2^((word.unsigned i) mod 8)) mod (2^w).
+  Z.land ((Z.shiftr (Z.lor a (Z.shiftl b 8)) (Z.land (word.unsigned i) (Z.ones 3)))) (Z.ones w).
 Proof.
-  intros.
-  assert (1 <= 2^w <= 2^8) by (split; [lia | apply Z.pow_le_mono_r; lia]).
-  pose proof Naive.word64_ok.
-  repeat rewrite ?word.unsigned_and_nowrap, ?word.unsigned_sru_nowrap, ?word.unsigned_add_nowrap,
-    ?word.unsigned_sub_nowrap, ?word.unsigned_slu, ?Z.shiftl_1_l,
-    ?word.unsigned_of_Z_nowrap; try lia; try ZnWords.
-  all: (change (7) with (Z.ones 3); rewrite Z.land_ones by lia).
-  2: ZnWords.
-
-  assert ((word.wrap (2 ^ w) - 1) = Z.ones w) as ->.
-      { rewrite Z.ones_equiv, Z.sub_1_r.
-        ZnWords. }
-  rewrite !Z.shiftr_div_pow2, Z.land_ones, Z.shiftl_mul_pow2 by ZnWords.
-  cbv [word.wrap]. rewrite (Z.mod_small (b * 2^8)) by ZnWords.
-  reflexivity.
+  intros. pose proof Naive.word64_ok.
+  assert ((word.wrap (Z.shiftl 1 5) - 1) = Z.ones 5) as H5 by (cbn; trivial).
+  repeat rewrite ?word.unsigned_sru_nowrap, ?word.unsigned_and_nowrap, ?word.unsigned_of_Z_nowrap,
+    ?word.unsigned_or_nowrap, ?word.unsigned_slu, ?word.unsigned_sub_nowrap, ?H5;
+      try (cbn; lia).
+  2: change (7) with (Z.ones 3); rewrite Z.land_ones by lia; ZnWords.
+  repeat f_equal; try ZnWords.
 Qed.
+
 
 Lemma bytelist_extract_two num i b1 b2:
   let idx := i / 8  in
-  let offset := i mod 8 in
   b1 = (nth_default Byte.x00 num (Z.to_nat idx)) ->
   b2 = (nth_default Byte.x00 num (S (Z.to_nat (idx)))) ->
   0 <= i < length num * 8 ->
-  (Z.of_bytes num / 2 ^ i) mod 2 ^ w =
-      ((byte.unsigned b1 + byte.unsigned b2 * 2 ^ 8) / 2 ^ offset) mod 2 ^ w.
+  Z.land ((Z.shiftr (Z.lor (byte.unsigned b1) (Z.shiftl (byte.unsigned b2) 8)) (Z.land i (Z.ones 3)))) (Z.ones w) =
+  (LittleEndianList.le_combine num / 2 ^ i) mod 2 ^ w.
 Proof.
-  intros ? ? Hb1 Hb2. intros.
+  intros ? Hb1 Hb2. intros.  pose proof Naive.word64_ok.
 
-  assert (i = 8 * idx + offset) as Hi. {
-    subst idx offset. apply Z_div_mod_eq_full.
-  } rewrite Hi.
+  rewrite (Z.land_ones _ 3) by lia.
+  replace (i mod 2^3) with (i - idx*8) by ZnWords.
 
-  pose proof (Z.mod_pos_bound i 8 ltac:(lia)).
-  rewrite Z.pow_add_r, <- Z.div_div by lia.
-
-  replace (Z.of_bytes num) with
-      (Z.of_bytes ((firstn (Z.to_nat (idx)) num) ++ [b1] ++ [b2] ++ (skipn (S (S (Z.to_nat (idx)))) num))).
-  2: { rewrite Hb1, Hb2, !nth_default_eq, app_assoc.
-    rewrite firstn_nth by lia.
+  replace (LittleEndianList.le_combine num) with
+      (LittleEndianList.le_combine
+        ((firstn (Z.to_nat (idx)) num) ++ [b1] ++ [b2] ++ (skipn (S (S (Z.to_nat (idx)))) num)));cycle 1.
+  { rewrite Hb1, Hb2, !nth_default_eq, app_assoc.
+    rewrite firstn_nth by ZnWords.
     destruct (Nat.eq_dec (S (Z.to_nat idx)) ((length num))) as [Hlength|?].
     { rewrite <- (le_combine_snoc_0 num).
       f_equal.
       rewrite List.skipn_all, nth_overflow by lia.
       rewrite Hlength, firstn_all, app_nil_r.
       reflexivity. }
-    { f_equal. rewrite firstn_nth_skipn by lia. reflexivity. }}
+    { f_equal. rewrite firstn_nth_skipn by ZnWords. reflexivity. }}
+  repeat rewrite LittleEndianList.le_combine_app.
+  rewrite <-(byte.wrap_unsigned b1), <-(byte.wrap_unsigned b2); cbv [byte.wrap].
 
-  repeat rewrite Specs.le_combine_app.
-  rewrite !length_cons, !length_nil, firstn_length_le, Z2Nat.id by lia.
+  rewrite le_combine_firstn, ?le_combine_1.
+  rewrite !length_cons, !length_nil, firstn_length_le, Z2Nat.id by ZnWords.
 
-  (* The lower part is zero because it's devided by something bigger. *)
-  pose proof (le_combine_bound (firstn (Z.to_nat idx) num)) as Hb. revert Hb.
-  rewrite !firstn_length_le, !Z2Nat.id by lia.
-  rewrite !(Z.mul_comm idx 8). rewrite !Div.Z.div_add' by lia. intros.
-  rewrite (Z.div_small _ (2 ^ (8 * idx))) by lia.
+  rewrite <-(byte.wrap_unsigned b1), <-(byte.wrap_unsigned b2); cbv [byte.wrap].
 
-  (* The higher part is zero because it's too big for any remains afters the modulo. *)
-  rewrite Z.mul_add_distr_l. rewrite Z.mul_assoc.
-  rewrite <- Z.pow_add_r by lia.
-  replace (2 ^ (Z.of_nat 1 * 8 + Z.of_nat 1 * 8)) with (2^offset * 2^(16-offset)). 2: {
-    rewrite <- Z.pow_add_r; f_equal; lia.
-  }
-  rewrite <- !Z.mul_assoc, !Z.add_assoc.
-  rewrite Div.Z.div_add' by lia.
-  assert ((16 - offset) > w) by lia.
-  replace (2 ^ (16 - offset)) with (2^w * 2^(16-offset-w)). 2: {
-    rewrite <- Z.pow_add_r; f_equal; lia.
-  }
-  rewrite <- Z.mul_assoc.
-  rewrite Modulo.Z.mod_add'_full.
+  apply Z.bits_inj'; intros.
+  repeat rewrite
+    <-?Z.shiftr_div_pow2, ?Z.testbit_mod_pow2,
+    ?bitblast.Z.shiftr_spec', ?bitblast.Z.shiftl_spec', ?Z.land_spec, ?Z.lor_spec,
+    ?Z.testbit_mod_pow2, ?Z.testbit_ones_nonneg
+    by (lia || ZnWords).
 
-  rewrite !le_combine_1. do 2 f_equal. lia.
+  repeat (trivial; case Z.ltb_spec; intros; try lia;
+    repeat rewrite
+      ?Z.add_sub_assoc,
+      ?Bool.andb_true_r, ?Bool.andb_true_l,
+      ?Bool.andb_false_r, ?Bool.andb_false_l,
+      ?Bool.orb_true_r, ?Bool.orb_true_l,
+      ?Bool.orb_false_r, ?Bool.orb_false_l;
+    repeat match goal with |- context [Z.testbit ?a ?b] => rewrite (Z.testbit_neg_r a b) by ZnWords end).
 Qed.
 
 Lemma extract_limb_at_bit_ok : program_logic_goal_for_function! extract_limb_at_bit.
@@ -183,23 +169,17 @@ Proof.
 
     rewrite extract_limb_at_bit_zify by apply byte.unsigned_range.
 
-    erewrite bytelist_extract_two; [| reflexivity | reflexivity | ZnWords ].
-
-    rewrite <-word.add_assoc, !word.word_sub_add_l_same_l.
-    subst idx.
-    repeat rewrite ?word.unsigned_sru, ?word.unsigned_add, ?word.unsigned_of_Z_nowrap by ZnWords.
-
-    repeat f_equal; ZnWords.
+    erewrite bytelist_extract_two; [reflexivity | | | ZnWords ].
+    all: repeat f_equal; ZnWords.
   }
   subst r t s b.
   revert cond; case word.ltu_spec; intros cond ?; [ZnWords|].
 
   rewrite extract_limb_at_bit_zify by (try apply byte.unsigned_range; lia).
 
-  erewrite bytelist_extract_two; [| reflexivity | reflexivity | ZnWords].
-
-  subst idx.
-  repeat f_equal. { ZnWords. }
+  replace 0 with (byte.unsigned Byte.x00).
+  erewrite bytelist_extract_two; [reflexivity | | | ZnWords ].
+  { repeat f_equal; try ZnWords. }
 
   rewrite nth_default_eq, nth_overflow.
   { reflexivity. }
