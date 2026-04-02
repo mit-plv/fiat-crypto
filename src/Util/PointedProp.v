@@ -55,14 +55,14 @@ Definition not_option_pointed_Prop (x : option pointed_Prop) : option pointed_Pr
      | None => Some trivial
      | Some (inject p) => Some (inject (~p))
      end.
-Arguments not_option_pointed_Prop _%option_pointed_prop.
+Arguments not_option_pointed_Prop _%_option_pointed_prop.
 
 Definition and_option_pointed_Prop (x y : option pointed_Prop) : option pointed_Prop
   := match x, y with
      | Some x, Some y => Some (and_pointed_Prop x y)
      | _, _ => None
      end.
-Arguments and_option_pointed_Prop (_ _)%option_pointed_prop.
+Arguments and_option_pointed_Prop (_ _)%_option_pointed_prop.
 
 Definition or_option_pointed_Prop (x y : option pointed_Prop) : option pointed_Prop
   := match x, y with
@@ -71,7 +71,7 @@ Definition or_option_pointed_Prop (x y : option pointed_Prop) : option pointed_P
      | None, Some y => Some y
      | None, None => None
      end.
-Arguments or_option_pointed_Prop (_ _)%option_pointed_prop.
+Arguments or_option_pointed_Prop (_ _)%_option_pointed_prop.
 
 Definition impl_option_pointed_Prop (x y : option pointed_Prop) : option pointed_Prop
   := match x, y with
@@ -79,7 +79,7 @@ Definition impl_option_pointed_Prop (x y : option pointed_Prop) : option pointed
      | Some x, Some y => Some (impl_pointed_Prop x y)
      | Some p, None => not_option_pointed_Prop p
      end.
-Arguments impl_option_pointed_Prop (_ _)%option_pointed_prop.
+Arguments impl_option_pointed_Prop (_ _)%_option_pointed_prop.
 
 Infix "/\" := and_pointed_Prop : pointed_prop_scope.
 Infix "\/" := or_pointed_Prop : pointed_prop_scope.

@@ -33,16 +33,16 @@ Local Open Scope large_zlike_scope.
 Local Open Scope Z_scope.
 Bind Scope small_zlike_scope with SmallT.
 Bind Scope large_zlike_scope with LargeT.
-Arguments decode_large (_ _ _)%Z _ _%large_zlike.
-Arguments decode_small (_ _ _)%Z _ _%small_zlike.
-Arguments Mod_SmallBound (_ _ _)%Z _ _%large_zlike.
-Arguments DivBy_SmallBound (_ _ _)%Z _ _%large_zlike.
-Arguments DivBy_SmallerBound (_ _ _)%Z _ _%large_zlike.
-Arguments Mul (_ _ _)%Z _ (_ _)%small_zlike.
-Arguments CarryAdd (_ _ _)%Z _ (_ _)%large_zlike.
-Arguments CarrySubSmall (_ _ _)%Z _ (_ _)%large_zlike.
-Arguments ConditionalSubtract (_ _ _)%Z _ _%bool _%small_zlike.
-Arguments ConditionalSubtractModulus (_ _ _)%Z _ _%small_zlike.
+Arguments decode_large (_ _ _)%_Z _ _%_large_zlike.
+Arguments decode_small (_ _ _)%_Z _ _%_small_zlike.
+Arguments Mod_SmallBound (_ _ _)%_Z _ _%_large_zlike.
+Arguments DivBy_SmallBound (_ _ _)%_Z _ _%_large_zlike.
+Arguments DivBy_SmallerBound (_ _ _)%_Z _ _%_large_zlike.
+Arguments Mul (_ _ _)%_Z _ (_ _)%_small_zlike.
+Arguments CarryAdd (_ _ _)%_Z _ (_ _)%_large_zlike.
+Arguments CarrySubSmall (_ _ _)%_Z _ (_ _)%_large_zlike.
+Arguments ConditionalSubtract (_ _ _)%_Z _ _%_bool _%_small_zlike.
+Arguments ConditionalSubtractModulus (_ _ _)%_Z _ _%_small_zlike.
 
 Infix "*" := Mul : large_zlike_scope.
 Notation "x + y" := (snd (CarryAdd x y)) : large_zlike_scope.
