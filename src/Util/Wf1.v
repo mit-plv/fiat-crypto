@@ -373,8 +373,8 @@ for fixn in range(1, 11):
   Definition Fix%(fixn)d_Proper_eq_with_assumption : Fix%(fixn)d_Proper_eq_with_assumption'T := Fix%(fixn)d_Proper_eq_with_assumption'.
 End Fix%(fixn)d.
 
-Arguments Fix%(fixn)d_Proper_eq {%(letters)s R Rwf P} %(fix_underscores)s.
-Arguments Fix%(fixn)d_Proper_eq_with_assumption {%(letters)s R Rwf P} _ _ %(fix_underscores)s.
+Arguments Fix%_(fixn)d_Proper_eq {%_(letters)s R Rwf P} %_(fix_underscores)s.
+Arguments Fix%_(fixn)d_Proper_eq_with_assumption {%_(letters)s R Rwf P} _ _ %_(fix_underscores)s.
 Global Existing Instance Fix%(fixn)d_Proper_eq.
 Global Existing Instance Fix%(fixn)d_Proper_eq_with_assumption.
 """ % locals())
