@@ -216,7 +216,7 @@ Module ident.
     Delimit Scope ident_scope with ident.
     Bind Scope ident_scope with ident.
     Bind Scope ident_scope with pident.
-    Global Arguments expr.Ident {base_type%type ident%function var%function t%etype} idc%ident.
+    Global Arguments expr.Ident {base_type%_type ident%_function var%_function t%_etype} idc%_ident.
     Notation "## x" := (Literal x) : ident_scope.
     Notation "## x" := (expr.Ident (wrap (Literal x))) : expr_scope.
     Notation "# x" := (expr.Ident (wrap x)) : expr_scope.

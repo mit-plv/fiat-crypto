@@ -315,7 +315,7 @@ Global Notation "a &' b" := (runtime_and a%RT b%RT) : runtime_scope.
 Definition runtime_shr := Z.shiftr.
 Global Notation "a >> b" := (runtime_shr a%RT b%RT) : runtime_scope.
 Definition runtime_lor := Z.lor.
-Global Arguments runtime_lor (_ _)%RT.
+Global Arguments runtime_lor (_ _)%_RT.
 
 Ltac cbv_runtime := cbv beta delta [runtime_add runtime_and runtime_lor runtime_mul runtime_opp runtime_shr].
 

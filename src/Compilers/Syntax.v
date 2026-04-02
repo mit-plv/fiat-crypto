@@ -121,14 +121,14 @@ Section language.
     End interp.
   End expr_param.
 End language.
-Global Arguments tuple' {_}%type_scope _%ctype_scope _%nat_scope.
-Global Arguments tuple {_}%type_scope _%ctype_scope _%nat_scope.
-Global Arguments Unit {_}%type_scope.
-Global Arguments Prod {_}%type_scope (_ _)%ctype_scope.
-Global Arguments Arrow {_}%type_scope (_ _)%ctype_scope.
-Global Arguments Tbase {_}%type_scope _%ctype_scope.
-Global Arguments domain {_}%type_scope _%ctype_scope.
-Global Arguments codomain {_}%type_scope _%ctype_scope.
+Global Arguments tuple' {_}%_type_scope _%_ctype_scope _%_nat_scope.
+Global Arguments tuple {_}%_type_scope _%_ctype_scope _%_nat_scope.
+Global Arguments Unit {_}%_type_scope.
+Global Arguments Prod {_}%_type_scope (_ _)%_ctype_scope.
+Global Arguments Arrow {_}%_type_scope (_ _)%_ctype_scope.
+Global Arguments Tbase {_}%_type_scope _%_ctype_scope.
+Global Arguments domain {_}%_type_scope _%_ctype_scope.
+Global Arguments codomain {_}%_type_scope _%_ctype_scope.
 
 Global Arguments Var {_ _ _ _} _.
 Global Arguments TT {_ _ _}.

@@ -12,7 +12,7 @@ Require Import Coq.NArith.BinNat.
 Local Open Scope type_scope.
 
 Class Decidable (P : Prop) := dec : {P} + {~P}.
-Arguments dec _%type_scope {_}.
+Arguments dec _%_type_scope {_}.
 Notation DecidableRel R := (forall x y, Decidable (R x y)).
 
 Global Instance hprop_eq_dec {A} `{DecidableRel (@eq A)} : IsHPropRel (@eq A) | 10.
