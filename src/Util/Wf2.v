@@ -576,8 +576,8 @@ for fixn in range(1, 11):
   Definition Fix%(fixn)d_2_%(fixn)d_eq : Fix%(fixn)d_2_%(fixn)d_eq'T := Fix%(fixn)d_2_%(fixn)d_eq'.
 End Fix2_%(fixn)d.
 
-Arguments Fix2_%(fixn)d_Proper_eq {A A' %(letters)s R Rwf P} %(fix_underscores)s.
-Arguments Fix2_%(fixn)d_Proper_eq_with_assumption {A A' %(letters)s R Rwf P} _ _ %(fix_underscores)s.
+Arguments Fix2_%_(fixn)d_Proper_eq {A A' %_(letters)s R Rwf P} %_(fix_underscores)s.
+Arguments Fix2_%_(fixn)d_Proper_eq_with_assumption {A A' %_(letters)s R Rwf P} _ _ %_(fix_underscores)s.
 Global Existing Instance Fix2_%(fixn)d_Proper_eq.
 Global Existing Instance Fix2_%(fixn)d_Proper_eq_with_assumption.
 """ % locals())

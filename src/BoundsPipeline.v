@@ -421,7 +421,7 @@ Module Pipeline.
           | Success x => k x
           | Error err => Debug.ret (Error err)
           end)%debugM.
-    Global Arguments bind {A B}%type_scope (x k)%pipelineM_scope.
+    Global Arguments bind {A B}%_type_scope (x k)%_pipelineM_scope.
     Notation sequence x y := (@bind unit _ x%pipelineM (fun 'tt => y%pipelineM)).
     Notation ret x := (@Debug.ret string _ (@Success ErrorMessage _ x)).
     Notation err msg := (@Debug.ret string _ (@Error ErrorMessage _ msg)).
