@@ -25,9 +25,9 @@ depends: [
   "ocamlfind" {build}
   "coq" {>= "8.18~"}
   "coq-coqprime" {>= "1.2.0" | = "dev"}
-  "coq-rewriter" {( >= "0.0.6" & <= "0.0.9" ) | = "dev"}
-  "coq-rupicola" {= "0.0.8" | = "dev"}
-  "coq-bedrock2-compiler" {= "0.0.6" | = "dev"}
+  "coq-rewriter" {( >= "0.0.6" & <= "0.0.15" ) | = "dev"}
+  "coq-rupicola" {= "0.0.11" | = "dev"}
+  "coq-bedrock2-compiler" {= "0.0.9" | = "dev"}
 ]
 conflict-class: [
   "coq-fiat-crypto"
