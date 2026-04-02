@@ -20,7 +20,7 @@ jobs:
     - name: Update opam bounds
       run: etc/update-opam-bounds.sh
     - name: Show diff
-      run: git diff
+      run: git diff --word-diff
     - name: Commit and push opam bound updates
       if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
       run: |
