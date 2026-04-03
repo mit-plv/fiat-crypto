@@ -39,6 +39,9 @@ jobs:
 
       - name: Checkout current repository
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
 
       - name: Determine version
         id: version
@@ -55,6 +58,9 @@ jobs:
           echo "tag=${VERSION_TAG}" >> "$GITHUB_OUTPUT"
           echo "num=${VERSION_NUM}" >> "$GITHUB_OUTPUT"
           echo "Version tag: ${VERSION_TAG}, Version number: ${VERSION_NUM}"
+
+      - name: Update opam bounds from submodule tags
+        run: ./etc/update-opam-bounds.sh
 
       - name: Prepare opam file
         run: |
