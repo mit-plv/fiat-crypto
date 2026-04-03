@@ -5,10 +5,13 @@ on:
     branches: [master]
   pull_request:
   workflow_dispatch:
+  schedule:
+  - cron: '0 0 * * *'
 
 jobs:
   check-opam-bounds:
     runs-on: ubuntu-latest
+    name: check-opam-bounds (${{ github.event_name }})
     steps:
     - uses: actions/checkout@v6
       with:
@@ -21,7 +24,7 @@ jobs:
 
   update-opam-bounds:
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
+    if: ((github.event_name == 'push' || github.event_name == 'schedule') && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
     environment:
       name: version-bump
     permissions:
