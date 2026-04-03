@@ -48,12 +48,12 @@ Module Type Runtime.
   Parameter runtime_div : Z -> Z -> Z.
   Parameter runtime_modulo : Z -> Z -> Z.
   Parameter runtime_opp : Z -> Z.
-  Arguments runtime_add (_ _)%RT.
-  Arguments runtime_sub (_ _)%RT.
-  Arguments runtime_mul (_ _)%RT.
-  Arguments runtime_div _%RT _%Z.
-  Arguments runtime_modulo _%RT _%Z.
-  Arguments runtime_opp _%RT.
+  Arguments runtime_add (_ _)%_RT.
+  Arguments runtime_sub (_ _)%_RT.
+  Arguments runtime_mul (_ _)%_RT.
+  Arguments runtime_div _%_RT _%_Z.
+  Arguments runtime_modulo _%_RT _%_Z.
+  Arguments runtime_opp _%_RT.
   Infix "*" := runtime_mul : runtime_scope.
   Infix "+" := runtime_add : runtime_scope.
   Infix "-" := runtime_sub : runtime_scope.

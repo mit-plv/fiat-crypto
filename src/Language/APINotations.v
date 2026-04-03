@@ -379,7 +379,7 @@ Module Compilers.
       Delimit Scope ident_scope with ident.
       Bind Scope ident_scope with ident.
       Notation interp := Compilers.ident_interp (only parsing).
-      Global Arguments expr.Ident {base_type%type ident%function var%function t%etype} idc%ident.
+      Global Arguments expr.Ident {base_type%_type ident%_function var%_function t%_etype} idc%_ident.
       Notation "## x" := (Compilers.ident_Literal x) (only printing) : ident_scope.
       Notation "## x" := (Compilers.ident_Literal (t:=base.reify_base_type_of x) x) (only parsing) : ident_scope.
       Notation "## x" := (expr.Ident (Compilers.ident_Literal x)) (only printing) : expr_scope.
