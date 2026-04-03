@@ -1,0 +1,103 @@
+name: Publish to opam
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., v0.0.1)'
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  PACKAGE_NAME: coq-fiat-crypto
+
+jobs:
+  publish-opam:
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+    steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          app-id: ${{ vars.OPAM_VERSION_BUMPER_APP_ID }}
+          private-key: ${{ secrets.OPAM_VERSION_BUMPER_PRIVATE_KEY }}
+          owner: JasonGross
+          repositories: opam-coq-archive
+
+      - uses: actions/create-github-app-token@v3
+        id: app-token-upstream
+        with:
+          app-id: ${{ vars.OPAM_VERSION_BUMPER_APP_ID }}
+          private-key: ${{ secrets.OPAM_VERSION_BUMPER_PRIVATE_KEY }}
+          owner: rocq-prover
+          repositories: opam
+
+      - name: Checkout current repository
+        uses: actions/checkout@v6
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.event.release.tag_name }}"
+          fi
+          # Ensure version starts with 'v'
+          VERSION_TAG="v${VERSION#v}"
+          # Version without 'v' prefix
+          VERSION_NUM="${VERSION#v}"
+          echo "tag=${VERSION_TAG}" >> "$GITHUB_OUTPUT"
+          echo "num=${VERSION_NUM}" >> "$GITHUB_OUTPUT"
+          echo "Version tag: ${VERSION_TAG}, Version number: ${VERSION_NUM}"
+
+      - name: Prepare opam file
+        run: |
+          ./etc/prepare-opam-release.sh "${{ steps.version.outputs.tag }}"
+
+      - name: Clone opam repository
+        run: |
+          git clone https://github.com/rocq-prover/opam.git opam-repo
+
+      - name: Create package directory and copy opam file
+        run: |
+          PKG_DIR="opam-repo/released/packages/${{ env.PACKAGE_NAME }}/${{ env.PACKAGE_NAME }}.${{ steps.version.outputs.num }}"
+          mkdir -p "$PKG_DIR"
+          cp "${{ env.PACKAGE_NAME }}.opam" "$PKG_DIR/opam"
+          echo "Created $PKG_DIR/opam"
+          cat "$PKG_DIR/opam"
+
+      - name: Push branch and create PR
+        working-directory: opam-repo
+        run: |
+          BRANCH_NAME="${{ env.PACKAGE_NAME }}-${{ steps.version.outputs.num }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH_NAME"
+          git add .
+          git commit -m "Add ${{ env.PACKAGE_NAME }}.${{ steps.version.outputs.num }}"
+
+          git remote add fork https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/JasonGross/opam-coq-archive.git
+          git push -u fork "$BRANCH_NAME"
+
+          printf '%s\n\n%s\n\n%s\n' \
+            "Add ${{ env.PACKAGE_NAME }} version ${{ steps.version.outputs.num }}." \
+            "Released from: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}" \
+            "Generated automatically by GitHub Actions" > /tmp/pr-body.md
+
+          gh pr create \
+            --repo rocq-prover/opam \
+            --base master \
+            --head "JasonGross:$BRANCH_NAME" \
+            --title "Add ${{ env.PACKAGE_NAME }}.${{ steps.version.outputs.num }}" \
+            --body-file /tmp/pr-body.md \
+            --no-maintainer-edit
+        env:
+          GH_TOKEN: ${{ steps.app-token-upstream.outputs.token }}
