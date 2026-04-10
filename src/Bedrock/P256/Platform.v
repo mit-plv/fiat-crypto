@@ -11,7 +11,7 @@ micromega.Lia
 coqutil.Byte
 Lists.List micromega.Lia
 Jacobian
-Coq.Strings.String Coq.Lists.List 
+Coq.Strings.String Coq.Lists.List
 ProgramLogic WeakestPrecondition
 ProgramLogic.Coercions
 Word.Interface OfListWord Separation SeparationLogic
@@ -120,7 +120,7 @@ Proof.
   all : apply Z.bits_inj'; intros i Hi;
     repeat rewrite <-?Z.land_ones, ?Z.land_spec, ?Z.lor_spec, ?Z.testbit_ones, ?Z.lnot_spec, ?Z.testbit_0_l by try ZnWords.ZnWords.
   all: repeat (((case Z.ltb_spec; [|]; intros)||(case Z.leb_spec; [|]; intros)); rewrite
-      ?Bool.andb_true_l, ?Bool.andb_true_r, ?Bool.orb_true_l, ?Bool.orb_true_r, 
+      ?Bool.andb_true_l, ?Bool.andb_true_r, ?Bool.orb_true_l, ?Bool.orb_true_r,
       ?Bool.andb_false_l, ?Bool.andb_false_r, ?Bool.orb_false_l, ?Bool.orb_false_r,
       ?Z.testbit_0_l, ?prove_Zeq_bitwise.testbit_minus1, ?Z.testbit_neg_r, ?Z.testbit_high
     by intuition (idtac;
@@ -132,6 +132,39 @@ Proof.
     cbn [negb]; trivial; try lia).
 Qed.
 
+Definition br_abs := func! (k, sign_mask) ~> r {
+  (* Alternatively we could have called br_cmov. *)
+  r = (k ^ sign_mask) + (sign_mask & $1)
+}.
+
+#[local] Ltac div_mod_lia := rewrite ?word.signed_eq_swrap_unsigned, ?word.swrap_as_div_mod in *;
+      PreOmega.Z.to_euclidean_division_equations; lia.
+
+Lemma opp_sub_opp_add n m : - n - m = - (n + m). Proof. lia. Qed.
+
+Lemma br_abs_ok : program_logic_goal_for_function! br_abs.
+Proof.
+  cbv [spec_of_br_abs]. repeat straightline.
+
+  subst r.
+  pose proof word.unsigned_range k.
+  destruct (Z.abs_spec (word.signed k)) as [[? ->] | [? ->]].
+    { repeat (rewrite ?H, ?word.unsigned_add_nowrap, ?unsigned_xor_nowrap,
+      ?word.unsigned_and_nowrap, ?word.unsigned_of_Z_nowrap,
+      ?word.unsigned_xor_nowrap, ?Z.land_0_l, ?Z.lxor_0_r;
+      try (lia || ZnWords.ZnWords); try (case Z.ltb_spec; intros)).
+      div_mod_lia. }
+    { repeat rewrite ?H, ?word.unsigned_add_nowrap, ?unsigned_xor_nowrap,
+      ?word.unsigned_and_nowrap, ?word.unsigned_of_Z_nowrap,
+      ?word.unsigned_xor_nowrap, ?Hsign, ?Z.land_ones; try (lia || ZnWords.ZnWords);
+      try (case Z.ltb_spec; intros); try div_mod_lia.
+      all: rewrite Z.land_comm, Z.land_ones_low by (lia || cbv; trivial).
+      all: rewrite Z.lxor_comm, <- word.unsigned_not_nowrap, word.unsigned_not;
+        rewrite Zbitwise.Z.lnot_eq_pred_opp; cbn.
+      all: unfold word.wrap;
+        rewrite opp_sub_opp_add, Modulo.Z.mod_opp_small by ZnWords.ZnWords.
+      all: div_mod_lia. }
+Qed.
 
 Definition br_memset := func! (p_d, v, n) {
   while n {
