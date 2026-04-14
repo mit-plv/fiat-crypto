@@ -93,12 +93,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 Section S.
 Implicit Type s : OperationSize.
 Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | sub s | subborrow s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
-  | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | xorZ | addcarryZ s | subborrowZ s
-  (* Vector ops: lane-parallel operations on packed vectors.
-     lane_width = bit width of each lane, num_lanes = number of lanes.
-     Each takes 2 args (full vector operands) and produces a full vector result. *)
-  | vadd (lane_width num_lanes : N)
-  | vsub (lane_width num_lanes : N).
+  | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | xorZ | addcarryZ s | subborrowZ s.
 Definition op_beq a b := if op_eq_dec a b then true else false.
 End S.
 
@@ -134,8 +129,6 @@ Global Instance Show_op : Show op := fun o =>
   | xorZ => "xorZ"
   | addcarryZ s => "addcarryZ " ++ show s
   | subborrowZ s => "subborrowZ " ++ show s
-  | vadd lw nl => "vadd " ++ show lw ++ "x" ++ show nl
-  | vsub lw nl => "vsub " ++ show lw ++ "x" ++ show nl
   end%string.
 
 Definition show_op_subscript : Show op := fun o =>
@@ -170,8 +163,6 @@ Definition show_op_subscript : Show op := fun o =>
   | xorZ => "xorℤ"
   | addcarryZ s => "addcarryℤ" ++ String.to_subscript (show s)
   | subborrowZ s => "subborrowℤ" ++ String.to_subscript (show s)
-  | vadd lw nl => "vadd" ++ String.to_subscript (show lw) ++ "×" ++ String.to_subscript (show nl)
-  | vsub lw nl => "vsub" ++ String.to_subscript (show lw) ++ "×" ++ String.to_subscript (show nl)
   end%string.
 
 Module FMapOp.
@@ -355,8 +346,6 @@ Module Export RewritePass.
     | slice_set_slice_disjoint
     | slice_slice
     | slice_tower
-    | slice_vadd
-    | slice_vsub
     | sub_to_add_neg
     | truncate_small
     | unary_truncate
@@ -388,8 +377,6 @@ Module Export RewritePass.
         ;slice01_subborrowZ
         ;set_slice_set_slice
         ;slice_slice
-        ;slice_vadd
-        ;slice_vsub
         ;slice_tower
         ;slice_set_slice_disjoint
         ;slice_set_slice
@@ -713,8 +700,6 @@ Section WithContext.
     | shrZ, [a; b] => Some (Z.shiftr a b)
     | addcarryZ s, args => Some (Z.shiftr (List.fold_right Z.add 0 args) (Z.of_N s))
     | subborrowZ s, cons a args' => Some (- Z.shiftr (a - List.fold_right Z.add 0 args') (Z.of_N s))
-    | vadd lw nl, [a; b] => Some (interp_vector_binop Z.add (Z.of_N lw) 0 (N.to_nat nl) a b)
-    | vsub lw nl, [a; b] => Some (interp_vector_binop Z.sub (Z.of_N lw) 0 (N.to_nat nl) a b)
     | _, _ => None
     end%Z.
 
@@ -883,8 +868,6 @@ Section bound_node_via_PHOAS.
        | addcarryZ _
        | subborrowZ _
        | set_slice _ _
-       | vadd _ _
-       | vsub _ _
          => None
        end%zrange.
 
@@ -2895,57 +2878,6 @@ Proof using Type.
     rewrite Hk in H. nia.
 Qed.
 	
-
-
-(* Decompose a slice of a vector add into a scalar add of slices.
-   slice lo lw (vadd lw nl [v1; v2]) → add lw [slice lo lw v1; slice lo lw v2]
-   when lo is lane-aligned (lo mod lw = 0) and in range (lo + lw <= lw * nl).
-   Uses coalescing_slice to collapse any nested slice(slice(...)) in the args,
-   since merge doesn't run rewrite passes on subexpressions. *)
-Definition slice_vadd (d : dag) :=
-  fun e => match e with
-    ExprApp (slice lo lw, [ExprApp (vadd lw' nl, [v1; v2])]) =>
-      if N.eqb lw lw' && N.eqb (lo mod lw)%N 0%N && N.leb (lo + lw) (lw' * nl) && N.ltb 0 lw
-      then ExprApp (add lw, [coalescing_slice lo lw v1; coalescing_slice lo lw v2])
-      else e | _ => e end%bool%N.
-#[local] Instance describe_slice_vadd : description_of Rewrite.slice_vadd
-  := "Decomposes slice of vector add into scalar add of slices".
-Global Instance slice_vadd_ok : Ok slice_vadd.
-Proof using Type.
-  t.
-  - eapply coalescing_slice_eval; eassumption.
-  - eapply coalescing_slice_eval; eassumption.
-  - cbn [fold_right]. f_equal. rewrite Z.add_0_r.
-    apply (interp_vector_binop_slice_lane Z.add (Z.of_N lane_width) lo sz _ _ _); destruct E; destruct H0; destruct H0.
-    + lia.
-    +  rewrite <- H0. lia.
-    + rewrite <- H0.  rewrite <- N2Z.inj_mod. rewrite H5. reflexivity.
-		+ rewrite H0 in *. exact H4.
-Qed.
-
-Definition slice_vsub (d : dag) :=
-  fun e => match e with
-    ExprApp (slice lo lw, [ExprApp (vsub lw' nl, [v1; v2])]) =>
-      if N.eqb lw lw' && N.eqb (lo mod lw)%N 0%N && N.leb (lo + lw) (lw' * nl) && N.ltb 0 lw
-      then ExprApp (add lw, [coalescing_slice lo lw v1; ExprApp (neg lw, [coalescing_slice lo lw v2])])
-      else e | _ => e end%bool%N.
-#[local] Instance describe_slice_vsub : description_of Rewrite.slice_vsub
-  := "Decomposes slice of vector sub into add of negated slice".
-Global Instance slice_vsub_ok : Ok slice_vsub.
-Proof using Type.
-  t; destruct E as [E' E4]; destruct E' as [E'' E3]; destruct E'' as [E1 E2].
-  - eapply coalescing_slice_eval; eassumption.
-  - eapply coalescing_slice_eval; eassumption.
-  - f_equal. cbn [fold_right]. rewrite Z.add_0_r. 
-	rewrite !Z.land_ones by lia.
-  rewrite Zplus_mod_idemp_r.
-  rewrite Z.add_opp_r.
-  rewrite <- !Z.land_ones by lia.
-  apply (interp_vector_binop_slice_lane Z.sub (Z.of_N lane_width) lo sz _ _ num_lanes); try lia. rewrite <- E1. rewrite <- N2Z.inj_mod by lia. rewrite E2. reflexivity.
-Qed.
-
-
-
 Definition set_slice_set_slice (d : dag) :=
   fun e => match e with
     ExprApp (set_slice lo1 s1, [ExprApp (set_slice lo2 s2, [x; e']); y]) =>
@@ -4243,8 +4175,6 @@ Definition named_pass (name : RewritePass.rewrite_pass) : dag -> expr -> expr
      | RewritePass.slice_set_slice_disjoint => slice_set_slice_disjoint
      | RewritePass.slice_slice => slice_slice
      | RewritePass.slice_tower => slice_tower
-     | RewritePass.slice_vadd => slice_vadd
-     | RewritePass.slice_vsub => slice_vsub
      | RewritePass.sub_to_add_neg => sub_to_add_neg
      | RewritePass.truncate_small => truncate_small
      | RewritePass.unary_truncate => unary_truncate
@@ -4512,7 +4442,8 @@ Definition GetFlag f : M idx :=
   some_or (fun s => get_flag s f) (error.get_flag f).
 Definition GetRegFull ri : M idx :=
   some_or (fun st => get_reg st ri) (error_get_reg_of_reg_index ri).
-Definition Load64 (a : idx) : M idx := some_or (load a) (error.load a).
+Definition Load64 (a : idx) : M idx := 
+  some_or (load a) (error.load a).
 Definition Remove64 (a : idx) : M idx
   := fun s => let '(vs, m) := remove a s in
               match vs with
@@ -4554,11 +4485,13 @@ Definition GetReg {opts : symbolic_options_computed_opt} {descr:description} r :
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   v <- GetRegFull rn;
   App ((slice lo sz), [v]).
-Definition SetReg {opts : symbolic_options_computed_opt} {descr:description} r (v : idx) : M unit :=
-  let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in (* sz is the size of the register, not the value *)
+Definition SetReg {opts : symbolic_options_computed_opt} {descr:description} 
+  r (v : idx) : M unit :=
+  let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
+  (* check size against widest register in heirarchy *)
   if (N.eqb lo 0) && (N.eqb sz (widest_reg_size_of r))
   then v <- App (slice 0 sz, [v]);
-       SetRegFull rn v
+       SetRegFull rn v (* works if old value is unspecified *)
   else old <- GetRegFull rn;
        v <- App ((set_slice lo sz), [old; v]);
        SetRegFull rn v.
@@ -4583,38 +4516,66 @@ Definition Address {opts : symbolic_options_computed_opt} {descr:description} {s
   bi <- App (add sa, [base; index]);
   App (add sa, [bi; offset]).
 
-Definition Load {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
+(* Load (n * 64) bits starting at addr, as a single idx.
+   Produces n sequential Load64s at addr, addr+8, ..., addr+8*(n-1),
+   combined via set_slice into one (n*64)-bit value. *)
+Fixpoint Load_of_idx {opts : symbolic_options_computed_opt} {descr:description}
+  {sa : AddressSize} (n : nat) (addr : idx) : M idx :=
+  match n with
+  | O      => App (const 0, nil)
+  | S n'   => prev   <- Load_of_idx n' addr;
+              offset <- App (const (8 * Z.of_nat n'), nil);
+              addr_k <- App (add sa, [addr; offset]);
+              chunk  <- Load64 addr_k;
+              App (set_slice (64 * N.of_nat n') 64, [prev; chunk])
+  end.
+
+(* 128-bit load from an already-computed address idx: 2x Load64 + set_slice chain *)
+Definition Load128_of_idx {opts : symbolic_options_computed_opt} {descr:description} {sa : AddressSize} (addr : idx) : M idx :=
+  Load_of_idx 2 addr.
+
+(* 256-bit load from an already-computed address idx: 4x Load64 + set_slice chain *)
+Definition Load256_of_idx {opts : symbolic_options_computed_opt} {descr:description} {sa : AddressSize} (addr : idx) : M idx :=
+  Load_of_idx 4 addr.
+
+(* Store (n * 64) bits starting at addr, given a single (n*64)-bit idx v.
+   Slices v into n 64-bit chunks and issues sequential Store64s at
+   addr, addr+8, ..., addr+8*(n-1). *)
+Fixpoint Store_of_idx {opts : symbolic_options_computed_opt} {descr:description} {sa : AddressSize} (n : nat) (addr v : idx) : M unit :=
+  match n with
+  | O      => ret tt
+  | S n'   => _      <- Store_of_idx n' addr v;
+              offset <- App (const (8 * Z.of_nat n'), nil);
+              addr_k <- App (add sa, [addr; offset]);
+              chunk  <- App (slice (64 * N.of_nat n') 64, [v]);
+              Store64 addr_k chunk
+  end.
+
+(* 128-bit store to an already-computed address idx: 2x Store64 of 64-bit slices *)
+Definition Store128_of_idx {opts : symbolic_options_computed_opt} {descr:description} {sa : AddressSize} (addr v : idx) : M unit :=
+  Store_of_idx 2 addr v.
+
+(* 256-bit store to an already-computed address idx: 4x Store64 of 64-bit slices *)
+Definition Store256_of_idx {opts : symbolic_options_computed_opt} {descr:description} {sa : AddressSize} (addr v : idx) : M unit :=
+  Store_of_idx 4 addr v.
+
+Definition Load {opts : symbolic_options_computed_opt} {descr:description} 
+  {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   let sz := Syntax.operand_size a s in
   addr <- Address a;
   if ((sz =? 8) || (sz =? 64))%N%bool then
     v <- Load64 addr;
     App ((slice 0 sz), [v])
   else if (sz =? 128)%N then
-    lo <- Load64 addr;
-    eight <- App (const 8, nil);
-    addr_hi <- App (add sa, [addr; eight]);
-    hi <- Load64 addr_hi;
-    zero <- App (const 0, nil);
-    v <- App (set_slice 0 64, [zero; lo]);
-    App (set_slice 64 64, [v; hi])
+    Load128_of_idx addr
   else if (sz =? 256)%N then
-    lo0 <- Load64 addr;
-    eight <- App (const 8, nil);
-    addr1 <- App (add sa, [addr; eight]);
-    lo1 <- Load64 addr1;
-    sixteen <- App (const 16, nil);
-    addr2 <- App (add sa, [addr; sixteen]);
-    lo2 <- Load64 addr2;
-    twentyfour <- App (const 24, nil);
-    addr3 <- App (add sa, [addr; twentyfour]);
-    lo3 <- Load64 addr3;
-    zero <- App (const 0, nil);
-    v0 <- App (set_slice 0 64, [zero; lo0]);
-    v1 <- App (set_slice 64 64, [v0; lo1]);
-    v2 <- App (set_slice 128 64, [v1; lo2]);
-    App (set_slice 192 64, [v2; lo3])
+    Load256_of_idx addr
   else err (error.unsupported_memory_access_size sz).
 
+
+(* Currently unused. Commented out until a caller needs it; at that point,
+   refactor to mirror Load_of_idx / Store_of_idx. *)
+(*
 Definition Remove {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   let sz := Syntax.operand_size a s in
   addr <- Address a;
@@ -4646,8 +4607,10 @@ Definition Remove {opts : symbolic_options_computed_opt} {descr:description} {s 
     v2 <- App (set_slice 128 64, [v1; lo2]);
     App (set_slice 192 64, [v2; lo3])
   else err (error.unsupported_memory_access_size sz).
+*)
 
-Definition Store {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
+Definition Store {opts : symbolic_options_computed_opt} {descr:description} 
+  {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
   let sz := Syntax.operand_size a s in
   addr <- Address a;
   if ((sz =? 8) || (sz =? 64))%N%bool then
@@ -4656,27 +4619,9 @@ Definition Store {opts : symbolic_options_computed_opt} {descr:description} {s :
     v <- App (set_slice 0 sz, [old; v])%N;
     Store64 addr v
   else if (sz =? 128)%N then
-    lo <- App (slice 0 64, [v]);
-    hi <- App (slice 64 64, [v]);
-    _ <- Store64 addr lo;
-    eight <- App (const 8, nil);
-    addr_hi <- App (add sa, [addr; eight]);
-    Store64 addr_hi hi
+    Store128_of_idx addr v
   else if (sz =? 256)%N then
-    w0 <- App (slice 0 64, [v]);
-    w1 <- App (slice 64 64, [v]);
-    w2 <- App (slice 128 64, [v]);
-    w3 <- App (slice 192 64, [v]);
-    _ <- Store64 addr w0;
-    eight <- App (const 8, nil);
-    addr1 <- App (add sa, [addr; eight]);
-    _ <- Store64 addr1 w1;
-    sixteen <- App (const 16, nil);
-    addr2 <- App (add sa, [addr; sixteen]);
-    _ <- Store64 addr2 w2;
-    twentyfour <- App (const 24, nil);
-    addr3 <- App (add sa, [addr; twentyfour]);
-    Store64 addr3 w3
+    Store256_of_idx addr v
   else err (error.unsupported_memory_access_size sz).
 
 (* note: this could totally just handle truncation of constants if semanics handled it *)
@@ -4731,15 +4676,23 @@ Definition rcrcnt s cnt : Z :=
 
 
 Module SymbolicVector.
-(* === Vector instruction helpers === *)
+(* === Vector instruction === *)
+Definition extract_lane {opts : symbolic_options_computed_opt} {descr : description}
+  (v : idx) (lane_idx : nat) (lane_width : Z) : M idx :=
+  let offset := Z.of_nat lane_idx * lane_width in
+  App (slice (Z.to_N offset) (Z.to_N lane_width), [v]).
 
-(* Old lane-decomposition approach (kept for instructions without vector ops yet) *)
 Definition make_lane {opts : symbolic_options_computed_opt} {descr : description}
   (v1 v2 : idx) (lane_op : op) (lane_idx : nat) (lane_width : Z) : M idx :=
   let offset := Z.of_nat lane_idx * lane_width in
-  l1 <- App (slice (Z.to_N offset) (Z.to_N lane_width), [v1]);
-  l2 <- App (slice (Z.to_N offset) (Z.to_N lane_width), [v2]);
+  l1 <- extract_lane v1 lane_idx lane_width;
+  l2 <- extract_lane v2 lane_idx lane_width;
   App (lane_op, [l1; l2]).
+
+Definition insert_lane {opts : symbolic_options_computed_opt} {descr : description}
+  (acc lane_val : idx) (lane_idx : nat) (lane_width : Z) : M idx :=
+  let offset := Z.of_nat lane_idx * lane_width in
+  App (set_slice (Z.to_N offset) (Z.to_N lane_width), [acc; lane_val]).
 
 Fixpoint vector_binop_aux {opts : symbolic_options_computed_opt} {descr : description}
   (v1 v2 : idx) (lane_op : op) (lane_idx : nat) (num_remaining : nat)
@@ -4748,45 +4701,23 @@ Fixpoint vector_binop_aux {opts : symbolic_options_computed_opt} {descr : descri
   | O => ret acc
   | S n =>
       lane_val <- make_lane v1 v2 lane_op lane_idx lane_width;
-      new_acc <- App (set_slice (N.of_nat lane_idx * Z.to_N lane_width) (Z.to_N lane_width),
-                      [acc; lane_val]);
+      new_acc <- insert_lane acc lane_val lane_idx lane_width;
       vector_binop_aux v1 v2 lane_op (S lane_idx) n lane_width new_acc
   end.
 
-Definition vector_binop_idx {opts : symbolic_options_computed_opt} {descr : description}
-  (v1 v2 : idx) (lane_op : op) (num_lanes : nat) (lane_width : Z) : M idx :=
-  zero <- App (const 0, []);
-  vector_binop_aux v1 v2 lane_op 0 num_lanes lane_width zero.
-
-(* Old-style: decompose into per-lane scalar ops. Used for instructions
-   that don't have a dedicated vector op yet. *)
+(* decompose into per-lane scalar ops. *)
 Definition SymexVectorBinOp {opts : symbolic_options_computed_opt} {descr : description}
   {s : OperationSize} {sa : AddressSize}
   (dst src1 src2 : ARG) (lane_op : op) (lane_width : Z) : M unit :=
   let num_lanes := N.to_nat (s / Z.to_N lane_width)%N in
   v1 <- GetOperand src1;
   v2 <- GetOperand src2;
-  result <- vector_binop_idx v1 v2 lane_op num_lanes lane_width;
+  acc <- App (const 0, []);
+  result <- vector_binop_aux v1 v2 lane_op 0 num_lanes lane_width acc;
   SetOperand dst result.
 
-(* New-style: emit a vector op node in the DAG (as a hint for synthesis),
-   then decompose the result into per-lane scalar ops for equivalence checking.
-   Each lane is built via individual App calls so rewrite rules can simplify them.
-   vector_op: constructs the vector op (e.g. vadd).
-   scalar_op: the corresponding scalar op (e.g. add lane_width). *)
-Definition SymexVectorOp {opts : symbolic_options_computed_opt} {descr : description}
-  {s : OperationSize} {sa : AddressSize}
-  (dst src1 src2 : ARG) (vector_op : N -> N -> op) (scalar_op : op)
-  (lane_width_N : N) : M unit :=
-  let num_lanes := N.to_nat (s / lane_width_N)%N in
-  let lane_width := Z.of_N lane_width_N in
-  v1 <- GetOperand src1;
-  v2 <- GetOperand src2;
-  (* Insert the vector op node as a synthesis hint (not used for output) *)
-  _ <- App (vector_op lane_width_N (N.of_nat num_lanes), [v1; v2]);
-  (* Build per-lane scalar results (each App call gets individually simplified) *)
-  result <- vector_binop_idx v1 v2 scalar_op num_lanes lane_width;
-  SetOperand dst result.
+
+(* Specific vector instrs *)
 
 (* Broadcast: replicate a single value across all lanes via set_slice *)
 Fixpoint broadcast_aux {opts : symbolic_options_computed_opt} {descr : description}
@@ -4871,8 +4802,8 @@ End SymbolicVector.
 
 
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
+Print SymbolicVector.SymexVectorBinOp.
 
-Print Z.of_nat.
 Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:description} (instr : NormalInstruction) : M unit :=
   let stack_addr_size : AddressSize := 64%N in
   let sa : AddressSize := 64%N in
@@ -4890,9 +4821,10 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
     v <- GetOperand (s:=64) src; (* gets the full register *)
     v <- (App ((slice 0 64), [v]));
     SetOperand (s:=64) dst v
+
   | vpaddq, [dst; src1; src2] => (* packed add of quadwords - no flags affected *)
-      SymbolicVector.SymexVectorOp dst src1 src2 vadd (add 64) 64%N
-  | vpsubq, [dst; src1; src2] => (* packed subtract quadwords *)
+    SymbolicVector.SymexVectorBinOp dst src1 src2 (add 64) 64
+  (* | vpsubq, [dst; src1; src2] => (* packed subtract quadwords *)
       SymbolicVector.SymexVectorOp dst src1 src2 vsub (sub 64) 64%N
   | vpandq, [dst; src1; src2] => (* packed bitwise AND quadwords *)
       SymbolicVector.SymexVectorBinOp dst src1 src2 (and 64) 64
@@ -4904,7 +4836,7 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
   | vpaddd, [dst; src1; src2] => (* packed add doublewords *)
       SymbolicVector.SymexVectorBinOp dst src1 src2 (add 32) 32
   | vpsubd, [dst; src1; src2] => (* packed subtract doublewords *)
-      SymbolicVector.SymexVectorOp dst src1 src2 vsub (sub 32) 32%N
+      SymbolicVector.SymexVectorOp dst src1 src2 vsub (sub 32) 32%N 
 
   | vpbroadcastq, [dst; src] => (* broadcast 64-bit value to all qword lanes *)
     v <- GetOperand (s:=64) src;
@@ -4998,7 +4930,7 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
     imm_c <- RevealConst imm_idx;
     let lane := Z.land imm_c 1 in
     result <- App (set_slice (Z.to_N lane * 128) 128, [v1; v2]);
-    SetOperand (s:=256%N) dst result
+    SetOperand (s:=256%N) dst result *)
 
   | xchg, [a; b] => (* Note: unbundle when switching from N to Z *)
     va <- GetOperand a;

@@ -99,7 +99,14 @@ Global Coercion bool_of_rip_relative_kind (x : rip_relative_kind) : bool :=
   | implicitly_rip_relative => true
   | not_rip_relative => false
   end.
-Record MEM := { mem_bits_access_size : option AccessSize ; mem_base_reg : option SREG ; mem_scale_reg : option (Z * SREG) ; mem_base_label : option string ; mem_offset : option Z ; rip_relative : rip_relative_kind }.
+Record MEM := { 
+  mem_bits_access_size : option AccessSize ; 
+  mem_base_reg : option SREG ; 
+  mem_scale_reg : option (Z * SREG) ; 
+  mem_base_label : option string ; 
+  mem_offset : option Z ; 
+  rip_relative : rip_relative_kind 
+}.
 
 Definition mem_of_reg (r : SREG) : MEM :=
   {| mem_base_reg := Some r ; mem_offset := None ; mem_scale_reg := None ; mem_bits_access_size := None ; mem_base_label := None ; rip_relative := not_rip_relative |}.
