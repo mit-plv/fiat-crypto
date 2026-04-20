@@ -326,7 +326,7 @@ jobs:
       run: etc/ci/describe-system-config.sh
     - run: opam update -y
     - name: Set up binaryen >= 118
-      uses: acifani/setup-tinygo@v2
+      uses: acifani/setup-tinygo@v3
       with:
         tinygo-version: '0.30.0'
         binaryen-version: '118'
