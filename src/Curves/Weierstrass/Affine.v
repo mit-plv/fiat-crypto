@@ -14,12 +14,15 @@ Module W.
     Local Notation "x ^ 2" := (x*x) (at level 30).
     Local Notation point := (@W.point F Feq Fadd Fmul a b).
 
-    Definition opp (P : point) : point. refine (exist _ (
+    Definition opp (P : point) : point.
+    Proof.
+      refine (exist _ (
       match W.coordinates P with
       | inl (x1, y1) => inl (x1, Fopp y1)
       | inr tt => inr tt
       end) _).
-    Proof. abstract (cbv [W.coordinates]; break_match; trivial; fsatz). Defined.
+      abstract (cbv [W.coordinates]; break_match; trivial; fsatz).
+    Defined.
 
     Global Instance Equivalence_eq : Equivalence (@W.eq _ Feq Fadd Fmul a b).
     Proof.
@@ -36,7 +39,9 @@ Module W.
 
     (*  Weierstraß Elliptic Curves and Side-Channel Attacks
         by Eric Brier and Marc Joye, 2002 *)
-    Definition add' (P1 P2 : point) : point. refine (exist _
+    Definition add' (P1 P2 : point) : point.
+    Proof.
+      refine (exist _
       match W.coordinates P1, W.coordinates P2 with
       | inl (x1, y1), inl (x2, y2) =>
         if dec (Feq y1 (Fopp y2)) then
@@ -53,7 +58,8 @@ Module W.
       | inr tt, _ => W.coordinates P2
       | _, inr tt => W.coordinates P1
       end _).
-    Proof. abstract (cbv [W.coordinates]; break_match; trivial; fsatz). Defined.
+      abstract (cbv [W.coordinates]; break_match; trivial; fsatz).
+    Defined.
 
     Lemma add'_correct char_ge_3 : forall P Q : point, W.eq (W.add' P Q) (W.add(char_ge_3:=char_ge_3) P Q).
     Proof. intros [ [[]|]?] [ [[]|]?]; cbv [W.coordinates W.add W.add' W.eq]; break_match; try split; try fsatz. Qed.

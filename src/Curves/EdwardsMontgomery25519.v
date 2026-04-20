@@ -29,7 +29,7 @@ Module M.
 Definition of_Edwards (P : Curve25519.E.point) : Curve25519.M.point :=
   @of_Edwards _ _ _ _ _  _ _ _ _ _ field _ char_ge_3 M.a M.b M.b_nonzero a' d' eq_refl eq_refl nonzero_a'
     (@E.point2_of_point1 _ _ _ _ _ _ _ _ _ _ field _ E.a E.d a' d' is_twist E.nonzero_a nonzero_a' r r_correct P).
-Lemma of_Edwards_B : M.eq M.B (of_Edwards E.B). Proof.
+Lemma of_Edwards_B : M.eq M.B (of_Edwards E.B).
 Proof. simple notypeclasses refine (@dec_bool _ _ _). apply Affine.M.Decidable_eq. vm_decide. Qed.
 End M.
 

@@ -137,6 +137,7 @@ Module Extended.
       Qed.
 
       Definition m1double (P : point) : point.
+      Proof.
         refine (exist _ (
         let '(X, Y, Z, _, _) := proj1_sig P in
           let trX := X^2 in
@@ -152,7 +153,8 @@ Module Extended.
           let Y3 := cY*cZ in
           let Z3 := cZ*cT in
           (X3, Y3, Z3, cX, cY)) _).
-      Proof. abstract (pose proof (to_affine_denom_nonzero P P); t). Defined.
+        abstract (pose proof (to_affine_denom_nonzero P P); t).
+      Defined.
 
       Lemma m1double_correct P : eq (m1double P) (m1add P P).
       Proof. intros; progress destruct_head' @point; cbv [m1add m1double]; t. Qed.
@@ -163,6 +165,7 @@ Module Extended.
 
     (* https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#doubling-double-2008-hwcd *)
     Definition double (P : point) : point.
+    Proof.
       refine (exist _ (
         let '(X, Y, Z, Ta, Tb) := proj1_sig P in
         let A := X^2 in
@@ -181,7 +184,8 @@ Module Extended.
         let Y3 := G*H in
         let Z3 := F*G in
         (X3, Y3, Z3, E, H)) _ ).
-      Proof. abstract (pose proof (to_affine_denom_nonzero P P); t). Defined.
+      abstract (pose proof (to_affine_denom_nonzero P P); t).
+    Defined.
 
     Lemma to_affine_double P : E.eq (to_affine (double P)) (affine_add (to_affine P) (to_affine P)).
     Proof.
