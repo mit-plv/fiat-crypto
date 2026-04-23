@@ -4,6 +4,7 @@
     ex_intro x y => _ end], rather than [match p with ex_intro _ x y
     => _ end]. *)
 Global Set Asymmetric Patterns.
+#[warning="-unknown-option"] Global Set Asymmetric Patterns No Implicits.
 
 (** Enforce uniform parameters *)
 Global Set Uniform Inductive Parameters.
