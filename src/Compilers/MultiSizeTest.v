@@ -4,6 +4,7 @@ Require Import Crypto.Compilers.SmartMap.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
+#[warning="-unknown-option"] Set Asymmetric Patterns No Implicits.
 
 (** * Preliminaries: bounded and unbounded number types *)
 
