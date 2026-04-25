@@ -1,9 +1,17 @@
 ; Batched AVX2 field addition for curve25519 (4 independent adds in parallel).
 ;
-; Uses the n=20 trick: fiat-crypto is told there are 20 limbs instead of 5.
-; The memory layout is structure-of-arrays: 4 field elements are interleaved
-; so that the same limb position across all 4 elements sits in consecutive
-; memory, fitting exactly into one 256-bit YMM register (4 x 64-bit lanes).
+; Spec: fiat_25519_batch_add from src/PushButtonSynthesis/SIMDUnsaturatedSolinas.v
+; (batched_addmod), exposed via the synthesis CLI as the operation `batch_add`.
+;
+; The spec takes two flat 20-element arrays (4 field elements x 5 limbs) and
+; returns a 20-element result. For unsaturated solinas at this point in the
+; pipeline `add` is just elementwise, so the spec reduces to 20 independent
+; uint64 adds with no cross-position interaction. This means the equivalence
+; checker is layout-agnostic for `batch_add`: any memory layout where the
+; same index `i` on each side maps to the same Z value works.
+;
+; Layout used here is structure-of-arrays so each YMM holds the same limb
+; position across all 4 elements, giving contiguous loads/stores:
 ;
 ;   Memory (20 uint64s):
 ;     [limb0_e0, limb0_e1, limb0_e2, limb0_e3,   <- ymm0 loads this (offset 0)
@@ -13,19 +21,18 @@
 ;      limb4_e0, limb4_e1, limb4_e2, limb4_e3]   <- ymm4 loads this (offset 128)
 ;
 ; Each of the 5 iterations does: load arg1 group, add arg2 group, store result.
-; Since add has no per-limb constants, every group is the same 3-instruction pattern.
 ;
 ; Calling convention (System V AMD64): rdi=out, rsi=arg1, rdx=arg2.
 ;
 ; Check with:
 ;   src/ExtractionOCaml/unsaturated_solinas --inline --static --use-value-barrier \
-;     25519 64 20 '2^255 - 19' add \
+;     25519 64 5 '2^255 - 19' batch_add \
 ;     --hints-file test-asm/batch_avx_add.asm -o /dev/null --output-asm /dev/null
 
 SECTION .text
-	GLOBAL fiat_25519_add
+	GLOBAL fiat_25519_batch_add
 
-fiat_25519_add:
+fiat_25519_batch_add:
 	; group 0: limb 0 of all 4 elements
 	vmovdqu ymm0, [rsi]		; ymm0 = arg1[0..3]
 	vpaddq ymm0, ymm0, [rdx]	; ymm0 += arg2[0..3]

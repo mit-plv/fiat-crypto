@@ -527,6 +527,9 @@ Definition widest_register_of_index (n : N) : REG
 Definition widest_reg_size_of (r : REG) : N :=
   reg_size (widest_register_of_index (reg_index r)).
 
+Definition widest_reg_size_of_index (rn : N) : N :=
+  reg_size (widest_register_of_index rn).
+
 Definition index_and_shift_and_bitcount_of_reg (r : REG) :=
   (reg_index r, reg_offset r, reg_size r).
 

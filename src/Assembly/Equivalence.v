@@ -1,4 +1,3 @@
-(* test edit *)
 From Coq Require Import String.
 From Coq Require Import List.
 From Coq Require Import ZArith.
@@ -1449,7 +1448,6 @@ Section check_equivalence.
   
   Local Notation map_err_None v := (ErrorT.map_error (fun e => (None, e)) v).
   Local Notation map_err_Some label v := (ErrorT.map_error (fun e => (Some label, e)) v).
-  Print assembly_calling_registers.
 
   Definition map_symex_asm (asm : list (string (* fname *) * Lines)) (inputs : list (idx + list idx)) (output_types : type_spec) (d : dag)
     : ErrorT
@@ -1472,7 +1470,6 @@ Section check_equivalence.
             (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
             (out_bounds : ZRange.type.base.option.interp (type.final_codomain t)).
 
-    Check map_err_None (simplify_input_type t arg_bounds).
     Definition check_equivalence : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) unit :=
       let d := dag.empty in
       input_types <- map_err_None (simplify_input_type t arg_bounds);
@@ -1522,52 +1519,5 @@ Section check_equivalence.
          | Error err => Error err
          end.
   End with_expr.
-(* 
-  Section with_asm2.
-    Context {t}
-            (asm1 : list (string (* fname *) * Lines))
-            (asm2 : list (string (* fname *) * Lines))
-            (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-            (out_bounds : ZRange.type.base.option.interp (type.final_codomain t)).
 
-    Print EquivalenceCheckingError.
-    Definition check_asm_equivalence : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) unit :=
-      let d := dag.empty in
-      input_types <- map_err_None (simplify_input_type t arg_bounds);
-      output_types <- map_err_None (simplify_base_type (type.final_codomain t) out_bounds);
-      let '(inputs, d) := build_inputs (descr:=Build_description "build_inputs" true) input_types d in
-
-      (* Execute first asm program *)
-      asm1_output <- map_symex_asm asm1 inputs output_types d;
-
-      (* For each result from asm1, execute asm2 on the resulting DAG *)
-      ls <-- (List.map (fun '(lbl1, (asm1_output, s1)) =>
-          let d := s1.(dag_state) in  (* DAG after asm1 execution *)
-          let first_new_idx_after_all_old_idxs : option idx := Some (dag.size d) in
-
-          (* Execute asm2 on the DAG from asm1 *)
-          asm2_results <- map_symex_asm asm2 inputs output_types d;
-          
-          (* Extract the single result from asm2 *)
-          match asm2_results with
-          | [(lbl2, (asm2_output, s2))] =>
-              let d := s2.(dag_state) in
-              let s := {| dag_state := d; 
-                          symbolic_reg_state := s1.(symbolic_reg_state); 
-                          symbolic_flag_state := s1.(symbolic_flag_state); 
-                          symbolic_mem_state := s1.(symbolic_mem_state) |} in
-              Success (lbl1, asm1_output, asm2_output, s, first_new_idx_after_all_old_idxs)
-          | _ => Error (None, Internal_error )
-          end)
-        asm1_output);
-
-      _ <-- List.map (fun '(lbl, asm1_output, asm2_output, s, first_new_idx_after_all_old_idxs) =>
-              if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm1_output asm2_output
-              then Success tt
-              else Error (Some lbl, Unable_to_unify asm1_output asm2_output first_new_idx_after_all_old_idxs s))
-            ls;
-      Success tt.
-
-
-  End with_asm2. *)
 End check_equivalence.

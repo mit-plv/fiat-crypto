@@ -63,13 +63,19 @@ Definition get_reg (st : reg_state) (r : REG) : Z
   let rv := Tuple.nth_default 0%Z (N.to_nat idx) st in
   Z.land (Z.shiftr rv (Z.of_N shift)) (Z.ones (Z.of_N bitcount)).
 
+(* Splice [v]'s low [bitcount] bits into [curv] at bit position [shift],
+  leaving other bits of [curv] untouched. Used by both [set_reg] and the
+  symbolic [set_slice] op so that proofs can match shapes. *)
+Definition bits_set_slice (curv v : Z) (shift bitcount : N) : Z := let v_low := (Z.shiftl (Z.land v (Z.ones (Z.of_N bitcount))) (Z.of_N shift)) in 
+let mask := (Z.shiftl (Z.ones (Z.of_N bitcount)) (Z.of_N shift)) in
+  Z.lor v_low (Z.ldiff curv mask).
+
 (* implicitly zeros the higher bits when v is smaller than bitcount.? *)
 Definition set_reg (st : reg_state) (r : REG) (v : Z) : reg_state
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
      Tuple.from_list_default 0%Z _ (ListUtil.update_nth
        (N.to_nat idx)
-       (fun curv => Z.lor (Z.shiftl (Z.land v (Z.ones (Z.of_N bitcount))) (Z.of_N shift))
-                          (Z.ldiff curv (Z.shiftl (Z.ones (Z.of_N bitcount)) (Z.of_N shift))))
+       (fun curv => bits_set_slice curv v shift bitcount)
        (Tuple.to_list _ st)).
 
 Definition annotate_reg_state (st : reg_state) : list (REG * Z)
@@ -127,6 +133,11 @@ Definition DenoteOperand (sa s : N) (st : machine_state) (a : ARG) : option Z :=
 Definition SetMem (st : machine_state) (addr : Z) (nbytes : nat) (v : Z) : option machine_state :=
   ms <- set_mem st addr nbytes v;
   Some (update_mem_with st (fun _ => ms)).
+
+(* N*8-byte aliases. Match the symbolic Load_of_idx / Store_of_idx layer
+   so the level-2 R-lemmas have a clean 1:1 target. Pure parsing notations. *)
+Notation SetMemN n st addr v := (SetMem st addr (8 * n)%nat v) (only parsing).
+Notation GetMemN n st addr   := (get_mem st addr (8 * n)%nat) (only parsing).
 
 Definition SetOperand (sa s : N) (st : machine_state) (a : ARG) (v : Z) : option machine_state :=
   match a with

@@ -4432,37 +4432,37 @@ Section MapM. (* map over a list in the state monad *)
 End MapM.
 Definition mapM_ {A B} (f: A -> M B) l : M unit := _ <- mapM f l; ret tt.
 
-Definition error_get_reg_of_reg_index ri : symbolic_state -> error
-  := error.get_reg (let r := widest_register_of_index ri in
-                    if (reg_index r =? ri)%N
-                    then inr r
-                    else inl ri).
 
 Definition GetFlag f : M idx :=
-  some_or (fun s => get_flag s f) (error.get_flag f).
+some_or (fun s => get_flag s f) (error.get_flag f).
+Definition SetFlag f i : M unit :=
+fun s => Success (tt, update_flag_with s (fun s => set_flag s f i)).
+Definition HavocFlags : M unit :=
+fun s => Success (tt, update_flag_with s (fun _ => Tuple.repeat None 6)).
+Definition PreserveFlag {T} (f : FLAG) (k : M T) : M T :=
+vf <- (fun s => Success (get_flag s f, s));
+x <- k;
+_ <- (fun s => Success (tt, update_flag_with s (fun s => set_flag_internal s f vf)));
+ret x.
+
+Definition error_get_reg_of_reg_index ri : symbolic_state -> error
+:= error.get_reg (let r := widest_register_of_index ri in
+                  if (reg_index r =? ri)%N
+                  then inr r
+                  else inl ri).
 Definition GetRegFull ri : M idx :=
-  some_or (fun st => get_reg st ri) (error_get_reg_of_reg_index ri).
+some_or (fun st => get_reg st ri) (error_get_reg_of_reg_index ri).
+Definition SetRegFull rn i : M unit :=
+fun s => Success (tt, update_reg_with s (fun s => set_reg s rn i)).
+Definition Remove64 (a : idx) : M idx
+:= fun s => let '(vs, m) := remove a s in
+match vs with
+| [] => Error (error.remove a s, s)
+| [v] => Success (v, update_mem_with s (fun _ => m))
+| vs => Error (error.remove_has_duplicates a vs s, s)
+end.
 Definition Load64 (a : idx) : M idx := 
   some_or (load a) (error.load a).
-Definition Remove64 (a : idx) : M idx
-  := fun s => let '(vs, m) := remove a s in
-              match vs with
-              | [] => Error (error.remove a s, s)
-              | [v] => Success (v, update_mem_with s (fun _ => m))
-              | vs => Error (error.remove_has_duplicates a vs s, s)
-              end.
-Definition SetFlag f i : M unit :=
-  fun s => Success (tt, update_flag_with s (fun s => set_flag s f i)).
-Definition HavocFlags : M unit :=
-  fun s => Success (tt, update_flag_with s (fun _ => Tuple.repeat None 6)).
-Definition PreserveFlag {T} (f : FLAG) (k : M T) : M T :=
-  vf <- (fun s => Success (get_flag s f, s));
-  x <- k;
-  _ <- (fun s => Success (tt, update_flag_with s (fun s => set_flag_internal s f vf)));
-  ret x.
-
-Definition SetRegFull rn i : M unit :=
-  fun s => Success (tt, update_reg_with s (fun s => set_reg s rn i)).
 Definition Store64 (a v : idx) : M unit :=
   ms <- some_or (store a v) (error.store a v);
   fun s => Success (tt, update_mem_with s (fun _ => ms)).
@@ -4485,16 +4485,32 @@ Definition GetReg {opts : symbolic_options_computed_opt} {descr:description} r :
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   v <- GetRegFull rn;
   App ((slice lo sz), [v]).
-Definition SetReg {opts : symbolic_options_computed_opt} {descr:description} 
+  
+(* Overwrite the entire underlying register slot. Use when r is the widest
+   register in its hierarchy (offset 0, size = widest); the old value is
+   discarded. *)
+Definition SetRegOverwrite {opts : symbolic_options_computed_opt} {descr:description}
+  r (v : idx) : M unit :=
+  let '(rn, _, sz) := index_and_shift_and_bitcount_of_reg r in
+  v <- App (slice 0 sz, [v]);
+  SetRegFull rn v.
+
+(* Write into a sub-window of the underlying register slot, preserving bits
+   outside the window. Use when r is narrower than the widest register in
+   its hierarchy. *)
+Definition SetRegSlice {opts : symbolic_options_computed_opt} {descr:description}
   r (v : idx) : M unit :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
-  (* check size against widest register in heirarchy *)
+  old <- GetRegFull rn;
+  v <- App (set_slice lo sz, [old; v]);
+  SetRegFull rn v.
+
+Definition SetReg {opts : symbolic_options_computed_opt} {descr:description}
+  r (v : idx) : M unit :=
+  let '(_, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   if (N.eqb lo 0) && (N.eqb sz (widest_reg_size_of r))
-  then v <- App (slice 0 sz, [v]);
-       SetRegFull rn v (* works if old value is unspecified *)
-  else old <- GetRegFull rn;
-       v <- App ((set_slice lo sz), [old; v]);
-       SetRegFull rn v.
+  then SetRegOverwrite r v
+  else SetRegSlice r v.
 
 Class AddressSize := address_size : OperationSize.
 Definition Address {opts : symbolic_options_computed_opt} {descr:description} {sa : AddressSize} (a : MEM) : M idx :=
@@ -4571,7 +4587,6 @@ Definition Load {opts : symbolic_options_computed_opt} {descr:description}
   else if (sz =? 256)%N then
     Load256_of_idx addr
   else err (error.unsupported_memory_access_size sz).
-
 
 (* Currently unused. Commented out until a caller needs it; at that point,
    refactor to mirror Load_of_idx / Store_of_idx. *)
@@ -4678,25 +4693,24 @@ Definition rcrcnt s cnt : Z :=
 Module SymbolicVector.
 (* === Vector instruction === *)
 Definition extract_lane {opts : symbolic_options_computed_opt} {descr : description}
-  (v : idx) (lane_idx : nat) (lane_width : Z) : M idx :=
-  let offset := Z.of_nat lane_idx * lane_width in
-  App (slice (Z.to_N offset) (Z.to_N lane_width), [v]).
+  (v : idx) (lane_idx : nat) (lane_width : N) : M idx :=
+  let offset := (N.of_nat lane_idx * lane_width)%N in
+  App (slice offset lane_width, [v]).
 
 Definition make_lane {opts : symbolic_options_computed_opt} {descr : description}
-  (v1 v2 : idx) (lane_op : op) (lane_idx : nat) (lane_width : Z) : M idx :=
-  let offset := Z.of_nat lane_idx * lane_width in
+  (v1 v2 : idx) (lane_op : op) (lane_idx : nat) (lane_width : N) : M idx :=
   l1 <- extract_lane v1 lane_idx lane_width;
   l2 <- extract_lane v2 lane_idx lane_width;
   App (lane_op, [l1; l2]).
 
 Definition insert_lane {opts : symbolic_options_computed_opt} {descr : description}
-  (acc lane_val : idx) (lane_idx : nat) (lane_width : Z) : M idx :=
-  let offset := Z.of_nat lane_idx * lane_width in
-  App (set_slice (Z.to_N offset) (Z.to_N lane_width), [acc; lane_val]).
+  (acc lane_val : idx) (lane_idx : nat) (lane_width : N) : M idx :=
+  let offset := (N.of_nat lane_idx * lane_width)%N in
+  App (set_slice offset lane_width, [acc; lane_val]).
 
 Fixpoint vector_binop_aux {opts : symbolic_options_computed_opt} {descr : description}
   (v1 v2 : idx) (lane_op : op) (lane_idx : nat) (num_remaining : nat)
-  (lane_width : Z) (acc : idx) : M idx :=
+  (lane_width : N) (acc : idx) : M idx :=
   match num_remaining with
   | O => ret acc
   | S n =>
@@ -4708,8 +4722,8 @@ Fixpoint vector_binop_aux {opts : symbolic_options_computed_opt} {descr : descri
 (* decompose into per-lane scalar ops. *)
 Definition SymexVectorBinOp {opts : symbolic_options_computed_opt} {descr : description}
   {s : OperationSize} {sa : AddressSize}
-  (dst src1 src2 : ARG) (lane_op : op) (lane_width : Z) : M unit :=
-  let num_lanes := N.to_nat (s / Z.to_N lane_width)%N in
+  (dst src1 src2 : ARG) (lane_op : op) (lane_width : N) : M unit :=
+  let num_lanes := N.to_nat (s / lane_width)%N in
   v1 <- GetOperand src1;
   v2 <- GetOperand src2;
   acc <- App (const 0, []);
