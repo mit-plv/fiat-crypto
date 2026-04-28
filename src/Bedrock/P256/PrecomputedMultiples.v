@@ -90,6 +90,7 @@ Definition p256_get_multiple := func! (p_out, p_table, k) {
 }.
 
 Definition p256_select_point_from_table := func! (p_out, p_table, idx) {
+  p256_point_set_zero(p_out);
   i = $0;
   while ($17 - i) {
     (* select condition is 0 iff i == idx *)
@@ -157,9 +158,10 @@ Qed.
   }.
 
 #[export] Instance spec_of_p256_select_point_from_table : spec_of "p256_select_point_from_table" :=
-  fnspec! "p256_select_point_from_table" p_out p_table idx / (out_old : point) (multiples : list point) R,
+  fnspec! "p256_select_point_from_table" p_out p_table idx / (out_old : list Byte.byte) (multiples : list point) R,
   { requires t m :=
       m =* (out_old)$@p_out * pointarray p_table multiples * R /\
+      length out_old = sizeof_point /\
       length multiples = 17%nat /\
       0 <= word.unsigned idx < 17;
     ensures t' m := t' = t /\
@@ -168,9 +170,10 @@ Qed.
   }.
 
 #[export] Instance spec_of_p256_get_multiple : spec_of "p256_get_multiple" :=
-  fnspec! "p256_get_multiple" p_out p_table k / (out_old P: point) (multiples : list point) R,
+  fnspec! "p256_get_multiple" p_out p_table k / (out_old : list Byte.byte) (P: point) (multiples : list point) R,
   { requires t m :=
       m =* out_old$@p_out * pointarray p_table multiples * R /\
+      length out_old = length P /\
       length multiples = 17%nat /\
       Forall2 W.eq (map to_affine multiples) (W.multiples 17 (to_affine P)) /\
       -17 < (word.signed k) < 17;
@@ -241,13 +244,19 @@ Lemma p256_select_point_from_table_ok : program_logic_goal_for_function! p256_se
 Proof.
   repeat straightline.
 
+  (* Put the zero into p_out. *)
+  straightline_call; ssplit.
+  { ecancel_assumption. }
+  { trivial. }
+  repeat straightline.
+
   refine ((Loops.tailrec
     HList.polymorphic_list.nil
     (["p_out"; "p_table"; "idx"; "i"]))
     (fun (v:nat) t m p_out p_table idx_cur i => PrimitivePair.pair.mk (
       let out := if idx <? v
           then nth_default (of_affine W.zero) multiples (Z.to_nat idx)
-          else out_old in
+          else (of_affine W.zero) in
       m =* out$@p_out * pointarray p_table multiples * R0 /\
       0 <= i <= 17 /\
       idx_cur = idx /\
@@ -336,7 +345,7 @@ Proof.
   repeat straightline.
   straightline_call; ssplit.
   { ecancel_assumption. }
-  1-3: solve_num.
+  1-4: solve_num.
   rename x into idx.
   let H := hyp_containing (eq (word.unsigned idx)) in rename H into Hidx.
 
