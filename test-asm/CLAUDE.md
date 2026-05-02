@@ -24,7 +24,7 @@ All tests are registered in `test-manifest.tsv` and run via `run-tests.sh` from 
 ./test-asm/run-tests.sh -n avx-xmm-add  # run single test
 ```
 
-The manifest tracks expected status (`pass`/`fail`/`skip`). When a previously-failing test starts passing (e.g., after adding a new instruction), the runner reports `XPASS` — update the manifest to `pass`.
+Every test in the manifest is run and reported as PASS, FAIL, or SKIP (if the binary isn't built or the asm file is missing).
 
 
 ## Files
@@ -32,7 +32,7 @@ The manifest tracks expected status (`pass`/`fail`/`skip`). When a previously-fa
 | File | Purpose |
 |------|---------|
 | `run-tests.sh` | Runs all equivalence check tests from the manifest, reports pass/fail summary. |
-| `test-manifest.tsv` | Registry of all tests with parameters and expected status. |
+| `test-manifest.tsv` | Registry of all tests with parameters. |
 
 
 ## Running individual equivalence checks

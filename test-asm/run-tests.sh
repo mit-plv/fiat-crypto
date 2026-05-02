@@ -45,11 +45,9 @@ fi
 total=0
 passed=0
 failed=0
-xfail=0
-xpass=0
 skipped=0
 
-while IFS='	' read -r name category expected binary curve_name bitwidth limbs prime operation asm_file extra_flags; do
+while IFS='	' read -r name category binary curve_name bitwidth limbs prime operation asm_file extra_flags; do
     # Skip comments and blank lines
     case "$name" in
         '#'*|'') continue ;;
@@ -64,13 +62,6 @@ while IFS='	' read -r name category expected binary curve_name bitwidth limbs pr
     fi
 
     total=$((total + 1))
-
-    # Handle skip
-    if [ "$expected" = "skip" ]; then
-        skipped=$((skipped + 1))
-        [ "$QUIET" -eq 0 ] && printf "SKIP   %s\n" "$name"
-        continue
-    fi
 
     # Check binary exists
     if [ ! -x "$binary" ]; then
@@ -94,21 +85,11 @@ while IFS='	' read -r name category expected binary curve_name bitwidth limbs pr
         -o /dev/null --output-asm /dev/null 2>&1) && rc=0 || rc=$?
 
     if [ $rc -eq 0 ]; then
-        if [ "$expected" = "pass" ]; then
-            passed=$((passed + 1))
-            [ "$QUIET" -eq 0 ] && printf "PASS   %s\n" "$name"
-        else
-            xpass=$((xpass + 1))
-            [ "$QUIET" -eq 0 ] && printf "XPASS  %s (unexpected pass!)\n" "$name"
-        fi
+        passed=$((passed + 1))
+        [ "$QUIET" -eq 0 ] && printf "PASS   %s\n" "$name"
     else
-        if [ "$expected" = "fail" ]; then
-            xfail=$((xfail + 1))
-            [ "$QUIET" -eq 0 ] && printf "XFAIL  %s\n" "$name"
-        else
-            failed=$((failed + 1))
-            [ "$QUIET" -eq 0 ] && printf "FAIL   %s\n" "$name"
-        fi
+        failed=$((failed + 1))
+        [ "$QUIET" -eq 0 ] && printf "FAIL   %s\n" "$name"
         if [ "$VERBOSE" -eq 1 ]; then
             echo "--- output (last 80 lines) ---"
             echo "$output" | tail -80
@@ -121,11 +102,10 @@ done < "$MANIFEST"
 
 # Summary
 echo "================================"
-printf "Total: %d  Passed: %d  Failed: %d\n" "$total" "$passed" "$failed"
-printf "Expected-fail: %d  Unexpected-pass: %d  Skipped: %d\n" "$xfail" "$xpass" "$skipped"
+printf "Total: %d  Passed: %d  Failed: %d  Skipped: %d\n" "$total" "$passed" "$failed" "$skipped"
 echo "================================"
 
-if [ "$failed" -gt 0 ] || [ "$xpass" -gt 0 ]; then
+if [ "$failed" -gt 0 ]; then
     exit 1
 fi
 exit 0

@@ -60,6 +60,16 @@ Section batched_ops.
     carrymod limbwidth_num limbwidth_den s c n idxs
       (firstn n (skipn (n+n+n) f)).
 
+  Definition batched_carry_addmod (a b : list Z) : list Z :=
+    carry_addmod limbwidth_num limbwidth_den s c n idxs
+      (firstn n a) (firstn n b) ++
+    carry_addmod limbwidth_num limbwidth_den s c n idxs
+      (firstn n (skipn n a)) (firstn n (skipn n b)) ++
+    carry_addmod limbwidth_num limbwidth_den s c n idxs
+      (firstn n (skipn (n+n) a)) (firstn n (skipn (n+n) b)) ++
+    carry_addmod limbwidth_num limbwidth_den s c n idxs
+      (firstn n (skipn (n+n+n) a)) (firstn n (skipn (n+n+n) b)).
+
   Context (balance : list Z).
 
   Definition batched_submod (a b : list Z) : list Z :=
@@ -71,6 +81,36 @@ Section batched_ops.
       (firstn n (skipn (n+n) a)) (firstn n (skipn (n+n) b)) ++
     submod limbwidth_num limbwidth_den n balance
       (firstn n (skipn (n+n+n) a)) (firstn n (skipn (n+n+n) b)).
+
+  Definition batched_oppmod (f : list Z) : list Z :=
+    oppmod limbwidth_num limbwidth_den n balance
+      (firstn n f) ++
+    oppmod limbwidth_num limbwidth_den n balance
+      (firstn n (skipn n f)) ++
+    oppmod limbwidth_num limbwidth_den n balance
+      (firstn n (skipn (n+n) f)) ++
+    oppmod limbwidth_num limbwidth_den n balance
+      (firstn n (skipn (n+n+n) f)).
+
+  Definition batched_carry_submod (a b : list Z) : list Z :=
+    carry_submod limbwidth_num limbwidth_den s c n idxs balance
+      (firstn n a) (firstn n b) ++
+    carry_submod limbwidth_num limbwidth_den s c n idxs balance
+      (firstn n (skipn n a)) (firstn n (skipn n b)) ++
+    carry_submod limbwidth_num limbwidth_den s c n idxs balance
+      (firstn n (skipn (n+n) a)) (firstn n (skipn (n+n) b)) ++
+    carry_submod limbwidth_num limbwidth_den s c n idxs balance
+      (firstn n (skipn (n+n+n) a)) (firstn n (skipn (n+n+n) b)).
+
+  Definition batched_carry_oppmod (f : list Z) : list Z :=
+    carry_oppmod limbwidth_num limbwidth_den s c n idxs balance
+      (firstn n f) ++
+    carry_oppmod limbwidth_num limbwidth_den s c n idxs balance
+      (firstn n (skipn n f)) ++
+    carry_oppmod limbwidth_num limbwidth_den s c n idxs balance
+      (firstn n (skipn (n+n) f)) ++
+    carry_oppmod limbwidth_num limbwidth_den s c n idxs balance
+      (firstn n (skipn (n+n+n) f)).
 End batched_ops.
 
 Derive reified_batched_carry_mul_gen
@@ -128,3 +168,59 @@ Hint Immediate reified_batched_carry_gen_correct_proj2 : wf_gen_cache.
 #[global]
 Hint Rewrite reified_batched_carry_gen_correct_proj1 : interp_gen_cache.
 Local Opaque reified_batched_carry_gen.
+
+Derive reified_batched_opp_gen
+       SuchThat (is_reification_of reified_batched_opp_gen batched_oppmod)
+       As reified_batched_opp_gen_correct.
+Proof. Time cache_reify (). Time Qed.
+Local Definition reified_batched_opp_gen_correct_proj1 := proj1 reified_batched_opp_gen_correct.
+Local Definition reified_batched_opp_gen_correct_proj2 := proj2 reified_batched_opp_gen_correct.
+#[global]
+Hint Extern 1 (_ = _) => apply_cached_reification batched_oppmod reified_batched_opp_gen_correct_proj1 : reify_cache_gen.
+#[global]
+Hint Immediate reified_batched_opp_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_batched_opp_gen_correct_proj1 : interp_gen_cache.
+Local Opaque reified_batched_opp_gen.
+
+Derive reified_batched_carry_add_gen
+       SuchThat (is_reification_of reified_batched_carry_add_gen batched_carry_addmod)
+       As reified_batched_carry_add_gen_correct.
+Proof. Time cache_reify (). Time Qed.
+Local Definition reified_batched_carry_add_gen_correct_proj1 := proj1 reified_batched_carry_add_gen_correct.
+Local Definition reified_batched_carry_add_gen_correct_proj2 := proj2 reified_batched_carry_add_gen_correct.
+#[global]
+Hint Extern 1 (_ = _) => apply_cached_reification batched_carry_addmod reified_batched_carry_add_gen_correct_proj1 : reify_cache_gen.
+#[global]
+Hint Immediate reified_batched_carry_add_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_batched_carry_add_gen_correct_proj1 : interp_gen_cache.
+Local Opaque reified_batched_carry_add_gen.
+
+Derive reified_batched_carry_sub_gen
+       SuchThat (is_reification_of reified_batched_carry_sub_gen batched_carry_submod)
+       As reified_batched_carry_sub_gen_correct.
+Proof. Time cache_reify (). Time Qed.
+Local Definition reified_batched_carry_sub_gen_correct_proj1 := proj1 reified_batched_carry_sub_gen_correct.
+Local Definition reified_batched_carry_sub_gen_correct_proj2 := proj2 reified_batched_carry_sub_gen_correct.
+#[global]
+Hint Extern 1 (_ = _) => apply_cached_reification batched_carry_submod reified_batched_carry_sub_gen_correct_proj1 : reify_cache_gen.
+#[global]
+Hint Immediate reified_batched_carry_sub_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_batched_carry_sub_gen_correct_proj1 : interp_gen_cache.
+Local Opaque reified_batched_carry_sub_gen.
+
+Derive reified_batched_carry_opp_gen
+       SuchThat (is_reification_of reified_batched_carry_opp_gen batched_carry_oppmod)
+       As reified_batched_carry_opp_gen_correct.
+Proof. Time cache_reify (). Time Qed.
+Local Definition reified_batched_carry_opp_gen_correct_proj1 := proj1 reified_batched_carry_opp_gen_correct.
+Local Definition reified_batched_carry_opp_gen_correct_proj2 := proj2 reified_batched_carry_opp_gen_correct.
+#[global]
+Hint Extern 1 (_ = _) => apply_cached_reification batched_carry_oppmod reified_batched_carry_opp_gen_correct_proj1 : reify_cache_gen.
+#[global]
+Hint Immediate reified_batched_carry_opp_gen_correct_proj2 : wf_gen_cache.
+#[global]
+Hint Rewrite reified_batched_carry_opp_gen_correct_proj1 : interp_gen_cache.
+Local Opaque reified_batched_carry_opp_gen.

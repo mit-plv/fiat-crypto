@@ -642,21 +642,6 @@ Section WithContext.
          | _ => None
          end.
 
-  (* Lane-parallel vector interpretation: applies a scalar binary operation
-     independently to each lane of two packed vectors, combining results. *)
-  Fixpoint interp_vector_binop (scalar_op : Z -> Z -> Z) (lane_width : Z)
-    (lane_idx num_remaining : nat) (a b : Z) : Z :=
-    match num_remaining with
-    | O => 0
-    | S n =>
-        let offset := Z.of_nat lane_idx * lane_width in
-        let keep x := Z.land x (Z.ones lane_width) in
-        let la := keep (Z.shiftr a offset) in
-        let lb := keep (Z.shiftr b offset) in
-        let result := keep (scalar_op la lb) in
-        Z.lor (Z.shiftl result offset)
-              (interp_vector_binop scalar_op lane_width (S lane_idx) n a b)
-    end%Z.
 
   (* defines what each op actually does in symbolic computation *)
   Definition interp_op o (args : list Z) : option Z :=
@@ -702,6 +687,9 @@ Section WithContext.
     | subborrowZ s, cons a args' => Some (- Z.shiftr (a - List.fold_right Z.add 0 args') (Z.of_N s))
     | _, _ => None
     end%Z.
+
+  Definition interprets_as_unaryop (o : op) (f : Z -> Z) : Prop :=
+    forall a, interp_op o [a] = Some (f a).
 
   Definition interprets_as_binop (o : op) (f : Z -> Z -> Z) : Prop :=
     forall a b, interp_op o [a; b] = Some (f a b).
@@ -2735,149 +2723,7 @@ Proof using Type.
   - cbn [interp_op]. f_equal. Z.bitblast.
 Qed.
 
-(* Bits of interp_vector_binop outside [lane_idx*lw, (lane_idx+nr)*lw) are zero. *)
-Lemma interp_vector_binop_bounded scalar_op lw lane_idx nr a b n :
-  (0 < lw)%Z -> (0 <= n)%Z ->
-  (n < Z.of_nat lane_idx * lw \/ n >= Z.of_nat (lane_idx + nr) * lw)%Z ->
-  Z.testbit (interp_vector_binop scalar_op lw lane_idx nr a b) n = false.
-Proof using Type.
-  revert lane_idx.
-  induction nr as [|nr' IH]; intros lane_idx Hlw Hn Hrange.
-  - simpl. apply Z.testbit_0_l.
-  - simpl interp_vector_binop.
-    rewrite Z.lor_spec.
-    match goal with |- context [Z.testbit (Z.shiftl ?x _) _] =>
-      assert (Hshiftl : Z.testbit (Z.shiftl x (Z.of_nat lane_idx * lw)) n = false)
-    end.
-    { rewrite Z.shiftl_spec' by lia.
-      rewrite Z.land_spec, Z.testbit_ones_nonneg' by lia.
-      destruct (Z.ltb_spec n 0); [lia |].
-      destruct (Z.ltb_spec (n - Z.of_nat lane_idx * lw) 0); [simpl; ring |].
-      destruct (Z.ltb_spec (n - Z.of_nat lane_idx * lw) lw);
-        [exfalso; lia | simpl; ring]. }
-    rewrite Hshiftl. simpl.
-    apply IH; [lia | lia |].
-    replace (S lane_idx + nr')%nat with (lane_idx + S nr')%nat by lia.
-    destruct Hrange; [left | right]; lia.
-Qed.
 
-(* All bits of interp_vector_binop in a given lane are zero when outside that lane's range. *)
-Lemma interp_vector_binop_zero scalar_op lw lane_idx nr k a b :
-  (0 < lw)%Z ->
-  (k < lane_idx \/ k >= lane_idx + nr)%nat ->
-  Z.land (Z.shiftr (interp_vector_binop scalar_op lw lane_idx nr a b) (Z.of_nat k * lw))
-         (Z.ones lw) = 0.
-Proof using Type.
-  intros Hlw Hrange.
-  apply Z.bits_inj'; intros i Hi.
-  rewrite Z.land_spec, Z.shiftr_spec, Z.testbit_ones_nonneg', Z.bits_0 by lia.
-  destruct (Z.ltb_spec i lw).
-  - rewrite (interp_vector_binop_bounded _ _ lane_idx nr _ _ _ Hlw) by nia.
-    reflexivity.
-  - destruct (Z.testbit _ _), (i <? 0)%Z; reflexivity.
-Qed.
-
-(* Extracting lane k from interp_vector_binop gives the scalar op on that lane. *)
-Lemma interp_vector_binop_extract scalar_op lw lane_idx nr k a b :
-  (0 < lw)%Z ->
-  (lane_idx <= k)%nat ->
-  (k < lane_idx + nr)%nat ->
-  Z.land (Z.shiftr (interp_vector_binop scalar_op lw lane_idx nr a b) (Z.of_nat k * lw))
-         (Z.ones lw)
-  = Z.land (scalar_op (Z.land (Z.shiftr a (Z.of_nat k * lw)) (Z.ones lw))
-                       (Z.land (Z.shiftr b (Z.of_nat k * lw)) (Z.ones lw)))
-           (Z.ones lw).
-Proof using Type.
-  revert lane_idx.
-  induction nr as [|nr' IH]; intros lane_idx Hlw Hle Hlt.
-  - lia.
-  - simpl interp_vector_binop.
-    destruct (Nat.eq_dec k lane_idx).
-    + (* k = lane_idx: this iteration produces the lane we want *)
-      subst k.
-      apply Z.bits_inj'; intros i Hi.
-      rewrite !Z.land_spec.
-      rewrite Z.shiftr_spec by lia.
-      rewrite Z.lor_spec, Z.shiftl_spec by lia.
-      rewrite Z.land_spec.
-      rewrite Z.testbit_ones_nonneg' by lia.
-      destruct (Z.ltb_spec i lw).
-      * (* i < lw: in the lane *)
-        rewrite (interp_vector_binop_bounded _ _ (S lane_idx) nr' _ _ _ Hlw) by nia.
-        destruct (i <? 0)%Z eqn:?; simpl; [lia |].
-        replace (i + Z.of_nat lane_idx * lw - Z.of_nat lane_idx * lw)%Z with i by lia. 
-				rewrite Z.testbit_ones. 2: lia. 
-				destruct (0 <=? i) eqn:?, (i <? lw) eqn:?; 
-				rewrite Heqb0. bool_simpl.
-				all: try lia. reflexivity.
-      * (* i >= lw: masked out *)
-        destruct (i <? 0)%Z eqn:?; simpl; [lia |]. 
-        destruct (Z.testbit _ _), (Z.testbit _ _);  bool_simpl. 
-				all: replace (Z.testbit (Z.ones lw) i) with false
-         by (symmetry; apply Z.ones_spec_high; lia);
-       bool_simpl; reflexivity.
-    + (* k > lane_idx: the lane is in the recursive part *)
-      assert (Hkgt : (lane_idx < k)%nat) by lia.
-      assert (Hshiftl_bit : forall i, 0 <= i ->
-        Z.testbit (Z.shiftl (Z.land (scalar_op (Z.land (Z.shiftr a (Z.of_nat lane_idx * lw)) (Z.ones lw))
-                                                (Z.land (Z.shiftr b (Z.of_nat lane_idx * lw)) (Z.ones lw)))
-                                     (Z.ones lw))
-                             (Z.of_nat lane_idx * lw)) (i + Z.of_nat k * lw) = false).
-      { intros j Hj. rewrite Z.shiftl_spec by lia. rewrite Z.land_spec.
-        rewrite Z.testbit_ones_nonneg' by lia.
-        destruct (Z.ltb_spec (j + Z.of_nat k * lw - Z.of_nat lane_idx * lw) lw);
-          [exfalso; nia |]. bool_simpl. reflexivity. }
-      apply Z.bits_inj'; intros i Hi.
-      rewrite !Z.land_spec.
-      rewrite Z.shiftr_spec by lia.
-      rewrite Z.lor_spec.
-      rewrite Hshiftl_bit by lia.
-      rewrite Z.testbit_ones_nonneg' by lia. bool_simpl. 
-      destruct (Z.ltb_spec i lw); [| destruct (i <? 0)%Z eqn:?; simpl; try reflexivity; try lia].
-      * simpl. destruct (i <? 0)%Z; bool_simpl; try lia. 
-				assert (HIHR := IH (S lane_idx) Hlw ltac:(lia) ltac:(lia)).
- 				 apply (f_equal (fun x => Z.testbit x i)) in HIHR.
-  			 rewrite Z.land_spec, Z.shiftr_spec, Z.testbit_ones_nonneg' in HIHR by lia.
-				   destruct (i <? lw) eqn:?; [| lia]. 
-					 rewrite Z.land_spec, Z.testbit_ones_nonneg' in HIHR by lia.
-					   destruct (i <? 0) eqn:?; [lia |].
-  destruct (i <? lw) eqn:?; [| lia].
-  bool_simpl. simpl in HIHR. rewrite HIHR. bool_simpl. reflexivity.
-Qed.
-
-
-(* Extracting lane k from a vector binop equals applying the scalar op to
-   the extracted lanes. Requires lo to be lane-aligned and in range. *)
-Lemma interp_vector_binop_slice_lane scalar_op lane_width lo sz a b num_lanes :
-  lane_width > 0 ->
-  sz = Z.to_N lane_width ->
-  (Z.of_N lo) mod lane_width = 0 ->
-  (lo + sz <= sz * num_lanes)%N ->
-  Z.land (scalar_op
-              (Z.land (Z.shiftr a (Z.of_N lo)) (Z.ones (Z.of_N sz)))
-              (Z.land (Z.shiftr b (Z.of_N lo)) (Z.ones (Z.of_N sz))))
-           (Z.ones (Z.of_N sz))
-  = Z.land (Z.shiftr (interp_vector_binop scalar_op lane_width 0 (N.to_nat num_lanes) a b) (Z.of_N lo))
-         (Z.ones (Z.of_N sz)).
-Proof using Type.
-  intros Hlw0 Hsz Hmod Hle.
-  (* Eliminate sz in favor of lane_width *)
-  rewrite Hsz in *. rewrite Z2N.id by lia.
-  (* lo is lane-aligned, so lo = lane_width * k for some k >= 0 *)
-  assert (Hdiv : (lane_width | Z.of_N lo)%Z) by (apply Z.mod_divide; lia).
-  destruct Hdiv as [k Hk].
-  assert (Hk0 : 0 <= k) by nia.
-  (* Rewrite lo in terms of k *)
-  replace (Z.of_N lo) with (Z.of_nat (Z.to_nat k) * lane_width)%Z by lia.
-  (* Apply the extract lemma *)
-  symmetry. apply interp_vector_binop_extract.
-  - lia.
-  - lia.
-  - (* k < num_lanes *)
-    assert (Z.of_N lo + lane_width <= lane_width * Z.of_N num_lanes)%Z by nia.
-    rewrite Hk in H. nia.
-Qed.
-	
 Definition set_slice_set_slice (d : dag) :=
   fun e => match e with
     ExprApp (set_slice lo1 s1, [ExprApp (set_slice lo2 s2, [x; e']); y]) =>
@@ -4697,6 +4543,11 @@ Definition extract_lane {opts : symbolic_options_computed_opt} {descr : descript
   let offset := (N.of_nat lane_idx * lane_width)%N in
   App (slice offset lane_width, [v]).
 
+Definition make_unary_lane {opts : symbolic_options_computed_opt} {descr : description}
+  (v : idx) (lane_op : op) (lane_idx : nat) (lane_width : N) : M idx :=
+  l <- extract_lane v lane_idx lane_width;
+  App (lane_op, [l]).
+
 Definition make_lane {opts : symbolic_options_computed_opt} {descr : description}
   (v1 v2 : idx) (lane_op : op) (lane_idx : nat) (lane_width : N) : M idx :=
   l1 <- extract_lane v1 lane_idx lane_width;
@@ -4730,6 +4581,25 @@ Definition SymexVectorBinOp {opts : symbolic_options_computed_opt} {descr : desc
   result <- vector_binop_aux v1 v2 lane_op 0 num_lanes lane_width acc;
   SetOperand dst result.
 
+Fixpoint vector_unaryop_aux {opts : symbolic_options_computed_opt} {descr : description}
+  (v : idx) (lane_op : op) (lane_idx : nat) (num_remaining : nat)
+  (lane_width : N) (acc : idx) : M idx :=
+  match num_remaining with
+  | O => ret acc
+  | S n =>
+      lane_val <- make_unary_lane v lane_op lane_idx lane_width;
+      new_acc <- insert_lane acc lane_val lane_idx lane_width;
+      vector_unaryop_aux v lane_op (S lane_idx) n lane_width new_acc
+  end.
+
+Definition SymexVectorUnaryOp {opts : symbolic_options_computed_opt} {descr : description}
+  {s : OperationSize} {sa : AddressSize}
+  (dst src : ARG) (lane_op : op) (lane_width : N) : M unit :=
+  let num_lanes := N.to_nat (s / lane_width)%N in
+  v <- GetOperand src;
+  acc <- App (const 0, []);
+  result <- vector_unaryop_aux v lane_op 0 num_lanes lane_width acc;
+  SetOperand dst result.
 
 (* Specific vector instrs *)
 
@@ -4742,6 +4612,11 @@ Fixpoint broadcast_aux {opts : symbolic_options_computed_opt} {descr : descripti
     new_acc <- App (set_slice (N.of_nat lane_idx * lane_width) lane_width, [acc; lane_val]);
     broadcast_aux lane_val (S lane_idx) n lane_width new_acc
   end.
+
+Definition broadcast {opts : symbolic_options_computed_opt} {descr : description}
+  (lane_val : idx) (num_lanes : nat) (lane_width : N) (acc : idx) : M idx :=
+	empty_acc <- App (const 0, []);
+	broadcast_aux lane_val 0 num_lanes lane_width empty_acc.
 
 (* Blend: for each lane, pick from v1 or v2 based on immediate mask bit *)
 Fixpoint blend_aux {opts : symbolic_options_computed_opt} {descr : description}
@@ -4777,16 +4652,6 @@ Fixpoint muludq_aux {opts : symbolic_options_computed_opt} {descr : description}
     muludq_aux v1 v2 (S lane_idx) n lane_width new_acc
   end.
 
-Definition SymexMuludq {opts : symbolic_options_computed_opt} {descr : description}
-  {s : OperationSize} {sa : AddressSize}
-  (dst src1 src2 : ARG) : M unit :=
-  let num_lanes := N.to_nat (s / 64)%N in
-  v1 <- GetOperand src1;
-  v2 <- GetOperand src2;
-  zero <- App (const 0, []);
-  result <- muludq_aux v1 v2 0 num_lanes 64%N zero;
-  SetOperand dst result.
-
 (* Vector shift by immediate: apply shift_op per lane with shared shift amount *)
 Fixpoint vector_shift_imm_aux {opts : symbolic_options_computed_opt} {descr : description}
   (v shift_amt : idx) (shift_op : op) (lane_idx num_remaining : nat)
@@ -4801,22 +4666,23 @@ Fixpoint vector_shift_imm_aux {opts : symbolic_options_computed_opt} {descr : de
     vector_shift_imm_aux v shift_amt shift_op (S lane_idx) n lane_width new_acc
   end.
 
-Definition SymexVectorShiftImm {opts : symbolic_options_computed_opt} {descr : description}
-  {s : OperationSize} {sa : AddressSize}
-  (dst src imm : ARG) (shift_op : op) : M unit :=
-  let num_lanes := N.to_nat (s / 64)%N in
-  v <- GetOperand src;
-  imm_idx <- GetOperand imm;
-  zero <- App (const 0, []);
-  result <- vector_shift_imm_aux v imm_idx shift_op 0 num_lanes 64%N zero;
-  SetOperand dst result.
+(* vpunpcklqdq: interleave low qwords from each 128-bit half *)
+Fixpoint unpcklqdq_aux {opts : symbolic_options_computed_opt} {descr : description}
+  (v1 v2 : idx) (half_idx num_remaining : nat) (acc : idx) : M idx :=
+  match num_remaining with
+  | O => ret acc
+  | S n =>
+    let base := (N.of_nat half_idx * 128)%N in
+    lo1 <- App (slice base 64, [v1]);
+    lo2 <- App (slice base 64, [v2]);
+    acc <- App (set_slice base 64, [acc; lo1]);
+    acc <- App (set_slice (base + 64) 64, [acc; lo2]);
+    unpcklqdq_aux v1 v2 (S half_idx) n acc
+  end.
 
 End SymbolicVector.
 
-
-
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
-Print SymbolicVector.SymexVectorBinOp.
 
 Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:description} (instr : NormalInstruction) : M unit :=
   let stack_addr_size : AddressSize := 64%N in
@@ -4830,17 +4696,18 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
     v <- GetOperand src;
     SetOperand dst v
 
-  | vmovq, [dst; src] => (* this is technically innacurate - we should be zeroing upper bits, but for now this is a starting point. *)
-    (* vmovq always operates on 64 bits *)
-    v <- GetOperand (s:=64) src; (* gets the full register *)
-    v <- (App ((slice 0 64), [v]));
-    SetOperand (s:=64) dst v
+		(* avx instrs *)
+  | vmovq, [dst; src] =>
+    v <- GetOperand (s:=64%N) src;
+    v <- App ((slice 0 64), [v]);
+    SetOperand (s:=64%N) dst v
 
   | vpaddq, [dst; src1; src2] => (* packed add of quadwords - no flags affected *)
     SymbolicVector.SymexVectorBinOp dst src1 src2 (add 64) 64
-  (* | vpsubq, [dst; src1; src2] => (* packed subtract quadwords *)
-      SymbolicVector.SymexVectorOp dst src1 src2 vsub (sub 64) 64%N
-  | vpandq, [dst; src1; src2] => (* packed bitwise AND quadwords *)
+  | vpsubq, [dst; src1; src2] => (* packed subtract quadwords *)
+    SymbolicVector.SymexVectorBinOp dst src1 src2 (sub 64) 64
+  
+	 | vpandq, [dst; src1; src2] => (* packed bitwise AND quadwords *)
       SymbolicVector.SymexVectorBinOp dst src1 src2 (and 64) 64
   | vporq, [dst; src1; src2] => (* packed bitwise OR quadwords *)
       SymbolicVector.SymexVectorBinOp dst src1 src2 (or 64) 64
@@ -4850,101 +4717,81 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
   | vpaddd, [dst; src1; src2] => (* packed add doublewords *)
       SymbolicVector.SymexVectorBinOp dst src1 src2 (add 32) 32
   | vpsubd, [dst; src1; src2] => (* packed subtract doublewords *)
-      SymbolicVector.SymexVectorOp dst src1 src2 vsub (sub 32) 32%N 
+      SymbolicVector.SymexVectorBinOp dst src1 src2 (sub 32) 32%N 
 
-  | vpbroadcastq, [dst; src] => (* broadcast 64-bit value to all qword lanes *)
-    v <- GetOperand (s:=64) src;
+  | vpbroadcastq, [dst; src] =>
+    v <- GetOperand (s:=64%N) src;
     lane <- App ((slice 0 64), [v]);
     let num_lanes := N.to_nat (s / 64)%N in
     zero <- App (const 0, []);
     result <- SymbolicVector.broadcast_aux lane 0 num_lanes 64%N zero;
     SetOperand dst result
 
-  | vpblendd, [dst; src1; src2; imm] => (* blend dwords by immediate mask *)
+  | vpblendd, [dst; src1; src2; imm] =>
     v1 <- GetOperand src1;
     v2 <- GetOperand src2;
-    imm_idx <- GetOperand imm;
-    imm_c <- RevealConst imm_idx;
-    let num_lanes := N.to_nat (s / 32)%N in
+    imm_val <- GetOperand imm;
+    mask <- RevealConst imm_val;
+		let num_dwords := N.to_nat (s / 32)%N in
     zero <- App (const 0, []);
-    result <- SymbolicVector.blend_aux v1 v2 imm_c 0 num_lanes 32%N zero;
+    result <- SymbolicVector.blend_aux v1 v2 mask 0 num_dwords 32%N zero;
     SetOperand dst result
 
-  | vpmuludq, [dst; src1; src2] => (* vector packed multiply unsigned dword to qword *)
-    SymbolicVector.SymexMuludq dst src1 src2
-  | vpsrlq, [dst; src; imm] => (* vector packed shift right logical qword *)
-    SymbolicVector.SymexVectorShiftImm dst src imm (shr 64)
-  | vpsllq, [dst; src; imm] => (* vector packed shift left logical qword *)
-    SymbolicVector.SymexVectorShiftImm dst src imm (shl 64)
+  | vpmuludq, [dst; src1; src2] => (* multiply low 32 bits of each 64-bit lane *)
+    let num_lanes := N.to_nat (s / 64)%N in
+ 		 v1 <- GetOperand src1;
+		 v2 <- GetOperand src2;	
+		 zero <- App (const 0, []);
+		 result <- SymbolicVector.muludq_aux v1 v2 0 num_lanes 64%N zero;
+  	 SetOperand dst result
 
-  | vpunpcklqdq, [dst; src1; src2] => (* interleave low qwords from each 128-bit half *)
-    v1 <- GetOperand src1;
-    v2 <- GetOperand src2;
-    let num_halves := N.to_nat (s / 128)%N in
-    zero <- App (const 0, []);
-    result <- (fix aux (half_idx remaining : nat) (acc : idx) {struct remaining} : M idx :=
-      match remaining with
-      | O => ret acc
-      | S n =>
-        (* low qword of each 128-bit half *)
-        let lo_offset := (N.of_nat half_idx * 128)%N in
-        lo1 <- App (slice lo_offset 64, [v1]);
-        lo2 <- App (slice lo_offset 64, [v2]);
-        (* place as [lo1, lo2] in the half_idx-th 128-bit group *)
-        let dst_lo := (N.of_nat half_idx * 128)%N in
-        let dst_hi := (N.of_nat half_idx * 128 + 64)%N in
-        acc' <- App (set_slice dst_lo 64, [acc; lo1]);
-        acc'' <- App (set_slice dst_hi 64, [acc'; lo2]);
-        aux (S half_idx) n acc''
-      end) 0%nat num_halves zero;
-    SetOperand dst result
+  | vpsrlq, [dst; src; imm] => (* shift right logical each 64-bit lane *)
+		let num_lanes := N.to_nat (s / 64)%N in
+		v <- GetOperand src;
+		imm_idx <- GetOperand imm;
+		zero <- App (const 0, []);
+		result <- SymbolicVector.vector_shift_imm_aux v imm_idx (shr 64) 0 num_lanes 64%N zero;
+		SetOperand dst result
 
-  | vpunpckhqdq, [dst; src1; src2] => (* interleave high qwords from each 128-bit half *)
+  | vpsllq, [dst; src; imm] => (* shift left logical each 64-bit lane *)
+		let num_lanes := N.to_nat (s / 64)%N in
+		v <- GetOperand src;
+		imm_idx <- GetOperand imm;
+		zero <- App (const 0, []);
+		result <- SymbolicVector.vector_shift_imm_aux v imm_idx (shl 64) 0 num_lanes 64%N zero;
+		SetOperand dst result
+
+  | vpunpcklqdq, [dst; src1; src2] =>
     v1 <- GetOperand src1;
     v2 <- GetOperand src2;
     let num_halves := N.to_nat (s / 128)%N in
     zero <- App (const 0, []);
-    result <- (fix aux (half_idx remaining : nat) (acc : idx) {struct remaining} : M idx :=
-      match remaining with
-      | O => ret acc
-      | S n =>
-        (* high qword of each 128-bit half *)
-        let hi_offset := (N.of_nat half_idx * 128 + 64)%N in
-        hi1 <- App (slice hi_offset 64, [v1]);
-        hi2 <- App (slice hi_offset 64, [v2]);
-        (* place as [hi1, hi2] in the half_idx-th 128-bit group *)
-        let dst_lo := (N.of_nat half_idx * 128)%N in
-        let dst_hi := (N.of_nat half_idx * 128 + 64)%N in
-        acc' <- App (set_slice dst_lo 64, [acc; hi1]);
-        acc'' <- App (set_slice dst_hi 64, [acc'; hi2]);
-        aux (S half_idx) n acc''
-      end) 0%nat num_halves zero;
+    result <- SymbolicVector.unpcklqdq_aux v1 v2 0 num_halves zero;
     SetOperand dst result
 
-  | vpextrq, [dst; src; imm] => (* extract 64-bit lane from XMM *)
+  | vpextrq, [dst; src; imm] =>
     v <- GetOperand (s:=128%N) src;
-    imm_idx <- GetOperand imm;
-    imm_c <- RevealConst imm_idx;
-    let lane := Z.land imm_c 1 in
-    result <- App (slice (Z.to_N lane * 64) 64, [v]);
+    imm_val <- GetOperand imm;
+    lane <- RevealConst imm_val;
+    result <- App (slice (Z.to_N lane * 64)%N 64, [v]);
     SetOperand (s:=64%N) dst result
 
-  | vextracti128, [dst; src; imm] => (* extract 128-bit lane from YMM *)
+  | vextracti128, [dst; src; imm] =>
     v <- GetOperand (s:=256%N) src;
-    imm_idx <- GetOperand imm;
-    imm_c <- RevealConst imm_idx;
-    let lane := Z.land imm_c 1 in
-    result <- App (slice (Z.to_N lane * 128) 128, [v]);
+    imm_val <- GetOperand imm;
+    half <- RevealConst imm_val;
+    result <- App (slice (Z.to_N half * 128)%N 128, [v]);
     SetOperand (s:=128%N) dst result
 
-  | vinserti128, [dst; src1; src2; imm] => (* insert 128-bit into YMM *)
+  | vinserti128, [dst; src1; src2; imm] =>
     v1 <- GetOperand (s:=256%N) src1;
     v2 <- GetOperand (s:=128%N) src2;
-    imm_idx <- GetOperand imm;
-    imm_c <- RevealConst imm_idx;
-    let lane := Z.land imm_c 1 in
-    result <- App (set_slice (Z.to_N lane * 128) 128, [v1; v2]);
-    SetOperand (s:=256%N) dst result *)
+    imm_val <- GetOperand imm;
+    half <- RevealConst imm_val;
+    result <- App (set_slice (Z.to_N half * 128)%N 128, [v1; v2]);
+    SetOperand (s:=256%N) dst result
+
+(* end vector instrs *) 
 
   | xchg, [a; b] => (* Note: unbundle when switching from N to Z *)
     va <- GetOperand a;

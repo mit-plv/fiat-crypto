@@ -88,6 +88,32 @@ Module Z.
     reflexivity.
   Qed.
 
+
+Lemma mod_pow2_add_low (a c : Z) (k : nat) :
+  0 <= a < 2^8 ->
+  (a + c * 2^8) mod 2^(8 + 8 * Z.of_nat k) =
+  a + (c mod 2^(8 * Z.of_nat k)) * 2^8.
+Proof.
+  intros Ha.
+  rewrite Z.pow_add_r by lia.
+  rewrite Z.mul_comm with (n := 2^8) (m := 2^(8 * Z.of_nat k)).
+  (* now goal is (a + c * 2^8) mod (2^(8*k) * 2^8) = a + c mod 2^(8*k) * 2^8 *)
+  apply (Z.mod_small a (2^8)) in Ha.
+  assert (H8 : 0 < 2 ^ 8) by (apply Z.pow_pos_nonneg; lia).
+  assert (Hk : 0 < 2 ^ (8 * Z.of_nat k)) by (apply Z.pow_pos_nonneg; lia).
+  pose proof (Z.mod_pos_bound a (2 ^ 8) H8) as [Ha1 Ha2].
+  rewrite Ha in Ha1, Ha2.
+  pose proof (Z.mod_pos_bound c (2 ^ (8 * Z.of_nat k)) Hk) as [Hc1 Hc2].
+  rewrite (Z_div_mod_eq_full c (2 ^ (8 * Z.of_nat k))) at 1.
+  replace ((2 ^ (8 * Z.of_nat k) * (c / 2 ^ (8 * Z.of_nat k)) +
+            c mod 2 ^ (8 * Z.of_nat k)) * 2 ^ 8)
+    with (c mod 2 ^ (8 * Z.of_nat k) * 2 ^ 8 +
+          c / 2 ^ (8 * Z.of_nat k) * (2 ^ (8 * Z.of_nat k) * 2 ^ 8))
+    by ring.
+  rewrite Z.add_assoc, Z_mod_plus_full.
+  apply Z.mod_small. nia.
+Qed.
+
   Lemma mod_to_nat x m (Hm:(0 < m)%Z) (Hx:(0 <= x)%Z) : (Z.to_nat x mod Z.to_nat m = Z.to_nat (x mod m))%nat.
     pose proof Nat2Z.inj_mod (Z.to_nat x) (Z.to_nat m) as H;
       rewrite !Z2Nat.id in H by lia.

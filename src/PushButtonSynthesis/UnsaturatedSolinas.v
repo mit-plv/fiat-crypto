@@ -423,6 +423,70 @@ Section __.
           machine_wordsize prefix "batch_carry" batch_carry
           (fun fname _ _ => [text_before_function_name ++ fname ++ " performs 4 independent field carry reductions."]%string).
 
+  Definition batch_opp
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         possible_values
+         (reified_batched_opp_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n @ GallinaReify.Reify balance)
+         (Some batch_tight_bounds, tt)
+         (Some batch_loose_bounds).
+
+  Definition sbatch_opp (prefix : string)
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "batch_opp" batch_opp
+          (fun fname _ _ => [text_before_function_name ++ fname ++ " performs 4 independent field negations."]%string).
+
+  Definition batch_carry_add
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         possible_values
+         (reified_batched_carry_add_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
+         (Some batch_tight_bounds, (Some batch_tight_bounds, tt))
+         (Some batch_tight_bounds).
+
+  Definition sbatch_carry_add (prefix : string)
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "batch_carry_add" batch_carry_add
+          (fun fname _ _ => [text_before_function_name ++ fname ++ " performs 4 independent field additions with carry reduction."]%string).
+
+  Definition batch_carry_sub
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         possible_values
+         (reified_batched_carry_sub_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify balance)
+         (Some batch_tight_bounds, (Some batch_tight_bounds, tt))
+         (Some batch_tight_bounds).
+
+  Definition sbatch_carry_sub (prefix : string)
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "batch_carry_sub" batch_carry_sub
+          (fun fname _ _ => [text_before_function_name ++ fname ++ " performs 4 independent field subtractions with carry reduction."]%string).
+
+  Definition batch_carry_opp
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         possible_values
+         (reified_batched_carry_opp_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify balance)
+         (Some batch_tight_bounds, tt)
+         (Some batch_tight_bounds).
+
+  Definition sbatch_carry_opp (prefix : string)
+    : string * (Pipeline.M (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "batch_carry_opp" batch_carry_opp
+          (fun fname _ _ => [text_before_function_name ++ fname ++ " performs 4 independent field negations with carry reduction."]%string).
+
   Definition carry_square
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -1025,6 +1089,10 @@ Section __.
             ("batch_add", wrap_s sbatch_add);
             ("batch_sub", wrap_s sbatch_sub);
             ("batch_carry", wrap_s sbatch_carry);
+            ("batch_opp", wrap_s sbatch_opp);
+            ("batch_carry_add", wrap_s sbatch_carry_add);
+            ("batch_carry_sub", wrap_s sbatch_carry_sub);
+            ("batch_carry_opp", wrap_s sbatch_carry_opp);
             ("carry_square", wrap_s scarry_square);
             ("carry", wrap_s scarry);
             ("add", wrap_s sadd);

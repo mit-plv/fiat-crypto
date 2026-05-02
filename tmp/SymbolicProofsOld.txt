@@ -46,7 +46,7 @@ Section Memory.
       repeat (destruct_one_match; trivial).
     epose proof proj1 (List.nth_error_Some bs1 (BinInt.Z.to_nat (word.unsigned (word.sub k a)))) ltac:(congruence).
     rewrite H in H0.
-   	 eapply List.nth_error_Some in E; intuition idtac.
+    eapply List.nth_error_Some in E; intuition idtac.
   Qed.
 
   (* not sure where to put this since depends on sep *)
@@ -293,7 +293,6 @@ Section WithCtx1'.
 Context (G : symbol -> option Z).
 Local Notation eval := (Symbolic.eval G).
 Local Notation interp_op := (Symbolic.interp_op G).
-Local Notation interprets_as_unaryop := (Symbolic.interprets_as_unaryop G).
 Local Notation interprets_as_binop := (Symbolic.interprets_as_binop G).
 Local Notation gensym_dag_ok := (Symbolic.gensym_dag_ok G).
 Local Notation R_reg := (R_reg G).
@@ -1030,20 +1029,6 @@ Proof using Type.
   { eapply GetReg_R in H; intuition eauto. }
   { eapply Load_R in H; intuition eauto. }    
   {step_symex; repeat (eauto||econstructor). }
-Qed.
-
-Lemma DenoteOperand_nonneg sa s m arg v :
-  DenoteOperand sa s m arg = Some v -> 0 <= v.
-Proof.
-  unfold DenoteOperand. destruct arg; try discriminate.
-  - (* reg *) inversion 1; subst. unfold get_reg.
-    destruct (index_and_shift_and_bitcount_of_reg r) as [[? ?] ?].
-    apply Z.land_nonneg. right. apply Z.ones_nonneg. lia.
-  - (* mem *) unfold get_mem. intros H.
-    destruct (load_bytes _ _ _) eqn:E; [| discriminate].
-    inversion H; subst. apply le_combine_bound.
-  - (* const *) inversion 1; subst. unfold DenoteConst.
-    apply Z.land_nonneg. right. apply Z.ones_nonneg. lia.
 Qed.
 
 Ltac step_GetOperand :=
@@ -1795,6 +1780,288 @@ Ltac step_SetOperand :=
   end.
 
 
+(* === Correspondence lemmas for SymbolicVector general helpers. ===
+   Each lemma links a [Symbolic.*] step with its [SemanticVector.*] counterpart.
+   Proofs deferred. *)
+Section SymbolicVectorProofs.
+  (* Extracts lane [lane_idx] of width [lane_width] from [v]. *)
+  Lemma extract_lane_R {opts : symbolic_options_computed_opt} {descr : description}
+    s m (HR : R s m)
+    (i : idx) (v : Z) (Hv : eval s i v)
+    (lane_idx : nat) (lane_width : N) (Hlw : (lane_width > 0)%N)
+    res s'
+    (H : SymbolicVector.extract_lane i lane_idx lane_width s = Success (res, s'))
+    : R s' m /\ s :< s' /\
+      eval s' res (SemanticVector.extract_lane v lane_idx (Z.of_N lane_width)).
+  Proof using Type.
+    unfold SymbolicVector.extract_lane, SemanticVector.extract_lane in *. 
+    eapply (App_R s m) in H as (HR' & Hsubs & Heval_res).
+    2: { exact HR. }
+    2: { repeat (econstructor; eauto). }
+    split; [exact HR' | split; [solve_subsumed| ]].
+    replace (Z.of_N (N.of_nat lane_idx * lane_width)) with (Z.of_nat lane_idx * Z.of_N lane_width) in Heval_res by lia.
+    exact Heval_res.
+  Qed.
+
+  (* Computes one lane of a binop: lane_op(lane i of v1, lane i of v2). *)
+  Lemma make_lane_R {opts : symbolic_options_computed_opt} {descr : description}
+    s m (HR : R s m)
+    (i1 i2 : idx) (v1 v2 : Z)
+    (Hv1 : eval s i1 v1) (Hv2 : eval s i2 v2)
+    (lane_op : op) (binop : Z -> Z -> Z)
+    (Hop : interprets_as_binop lane_op binop)
+    (lane_idx : nat) (lane_width : N) (Hlw : (lane_width > 0)%N)
+    res s'
+    (H : SymbolicVector.make_lane i1 i2 lane_op lane_idx lane_width s
+        = Success (res, s'))
+    : R s' m /\ s :< s' /\
+      eval s' res (SemanticVector.make_lane v1 v2 binop lane_idx (Z.of_N lane_width)).
+  Proof using Type. 
+    unfold SymbolicVector.make_lane, SemanticVector.make_lane in *. repeat step_symex; cbv [fst snd] in *. 
+    eapply extract_lane_R in HSl1 as (HR1 & Hsubs1 & Heval_lane1); try eassumption.
+    eapply extract_lane_R in HSl2 as (HR2 & Hsubs2 & Heval_lane2); try eassumption.
+    eapply (App_R s1 m) in H as (HR' & Hsubs' & Heval_res); [| exact HR2 |].
+    2: { 
+      econstructor.
+      - constructor; [eapply Hsubs2; exact Heval_lane1
+                    | constructor; [exact Heval_lane2 | constructor]].
+      - cbn [interp_op]. apply Hop.
+    }
+    split; [exact HR' | split; [solve_subsumed| ]].
+    exact Heval_res. eauto. 
+  Qed.
+
+  Lemma insert_lane_ldiff_lor acc_val lane_val lane_width lane_idx :
+    lane_width > 0 ->
+    Z.shiftr acc_val (Z.of_nat lane_idx * lane_width) = 0 ->
+    Z.lor
+      (SemanticVector.insert_lane lane_val lane_idx lane_width)
+      (Z.ldiff acc_val
+        (Z.shiftl (Z.ones lane_width)
+        (Z.of_nat lane_idx * lane_width)))
+    = Z.lor acc_val (SemanticVector.insert_lane lane_val lane_idx lane_width).
+  Proof. intros. 
+    rewrite Z.lor_comm.
+    f_equal. bitblast.Z.bitblast. assert (Hbit : Z.testbit acc_val i = false).
+    { replace i with ((i - (Z.of_nat lane_idx * lane_width)) + (Z.of_nat lane_idx * lane_width)) by lia.
+      rewrite <- Z.shiftr_spec by lia.
+      rewrite H0. apply Z.bits_0. }
+    rewrite Hbit. reflexivity.
+  Qed.
+
+  (* Writes [lane_val] into lane [lane_idx] of accumulator [acc]. *)
+  Lemma insert_lane_R {opts : symbolic_options_computed_opt} {descr : description}
+    s m (HR : R s m)
+    (acc lane : idx) (acc_val lane_val : Z)
+    (Hacc : eval s acc acc_val) (Hlane : eval s lane lane_val)
+    (lane_idx : nat) (lane_width : N) (Hlw : (lane_width > 0)%N)
+    res s'
+    (H : SymbolicVector.insert_lane acc lane lane_idx lane_width s
+        = Success (res, s'))
+    : R s' m /\ s :< s' /\
+      eval s' res
+        (Z.lor (SemanticVector.insert_lane lane_val lane_idx (Z.of_N lane_width))
+              (Z.ldiff acc_val
+                  (Z.shiftl (Z.ones (Z.of_N lane_width))
+                            (Z.of_nat lane_idx * Z.of_N lane_width)))).
+  Proof using Type. 
+    cbv [SymbolicVector.insert_lane SemanticVector.insert_lane] in *. 
+    eapply (App_R s m) in H as (HR' & Hsubs' & Heval_res). 
+    split; [|split]; try eauto. exact HR. repeat (eauto || econstructor). cbn [interp_op]. 
+    replace (Z.of_N (N.of_nat lane_idx * lane_width)) with (Z.of_nat lane_idx * Z.of_N lane_width) by lia.
+    reflexivity.
+  Qed.
+
+  (* inductive case of vector_binop_aux_R *)
+  Lemma vector_binop_aux_S_lane_idx
+    {opts : symbolic_options_computed_opt} {descr : description}
+    (i1 i2 : idx) (lane_op : op)
+    (lane_idx n : nat) (lane_width : N) (acc : idx) s res s'
+    (H : SymbolicVector.vector_binop_aux i1 i2 lane_op lane_idx (S n)
+          lane_width acc s = Success (res, s'))
+    : exists lane_val new_acc s1 s2,
+        SymbolicVector.make_lane i1 i2 lane_op lane_idx lane_width s
+          = Success (lane_val, s1)
+    /\ SymbolicVector.insert_lane acc lane_val lane_idx lane_width s1
+          = Success (new_acc, s2)
+    /\ SymbolicVector.vector_binop_aux i1 i2 lane_op (S lane_idx) n lane_width
+          new_acc s2 = Success (res, s').
+  Proof. simpl SymbolicVector.vector_binop_aux in *. repeat step_symex; cbv [fst snd] in *. 
+    exists lane_val, new_acc, s0, s1. split; [| split]; eassumption.
+  Qed.
+
+  Lemma acc_range_preserved : forall (acc_val lane_res lane_width : Z) (lane_idx : nat),
+    lane_width > 0 ->
+    Z.shiftr acc_val (Z.of_nat lane_idx * lane_width) = 0 ->
+    let new_acc_val := Z.lor
+        (Z.shiftl (Z.land lane_res (Z.ones lane_width)) (Z.of_nat lane_idx * lane_width))
+        (Z.ldiff acc_val (Z.shiftl (Z.ones lane_width) (Z.of_nat lane_idx * lane_width)))
+    in
+    Z.shiftr new_acc_val (Z.of_nat (S lane_idx) * lane_width) = 0.
+  Proof.
+      intros. 
+    apply Z.bits_inj_iff'; intros i Hi.
+    rewrite Z.shiftr_spec by lia.
+    rewrite Z.bits_0. subst new_acc_val.
+    rewrite Z.lor_spec.
+    (* Show both parts of the lor are 0 at position (S lane_idx) * lane_width + i *)
+    rewrite Z.shiftl_spec by lia.
+    rewrite Z.ldiff_spec.
+    (* The inserted lane occupies [lane_idx * lw, (lane_idx+1) * lw) *)
+    (* Position we're checking: (S lane_idx) * lw + i = (lane_idx + 1) * lw + i *)
+    (* This is >= (lane_idx + 1) * lw, so above the inserted lane *)
+    assert (Hins : Z.testbit (Z.land lane_res (Z.ones lane_width))
+                  (i + Z.of_nat (S lane_idx) * lane_width - Z.of_nat lane_idx * lane_width) = false).
+    { rewrite Z.land_spec, Z.testbit_ones_nonneg by lia.
+      destruct (_ <? _) eqn:E. 
+      apply Z.ltb_lt in E. lia. rewrite Bool.andb_false_r. reflexivity. }
+    rewrite Hins. 
+    (* Now show acc_val bit is 0 *)
+    assert (Hacc_bit : Z.testbit acc_val (Z.of_nat (S lane_idx) * lane_width + i) = false).
+    { 
+    set (lo := Z.of_nat lane_idx * lane_width) in *.
+    replace (Z.of_nat (S lane_idx) * lane_width + i) with (lane_width + i + lo) by (unfold lo; lia).
+    rewrite <- (Z.shiftr_spec acc_val lo (lane_width + i)) by lia.
+    rewrite H0, Z.bits_0. reflexivity.
+    }
+    rewrite Bool.orb_false_l.
+    replace (i + Z.of_nat (S lane_idx) * lane_width) with (Z.of_nat (S lane_idx) * lane_width + i) by lia.
+    rewrite Hacc_bit. reflexivity.
+  Qed.
+
+  (* Iterates [num_remaining] lanes starting at [lane_idx], folding each into [acc]. *)
+  Lemma vector_binop_aux_R {opts : symbolic_options_computed_opt} {descr : description}
+        s m (HR : R s m)
+        (i1 i2 : idx) (v1 v2 : Z)
+        (Hv1 : eval s i1 v1) (Hv2 : eval s i2 v2)
+        (lane_op : op) (binop : Z -> Z -> Z)
+        (Hop : interprets_as_binop lane_op binop)
+        (lane_idx num_remaining : nat)
+        (lane_width : N) (Hlw : (lane_width > 0)%N)
+        (acc : idx) (acc_val : Z) (Hacc : eval s acc acc_val)
+        (Hacc_hi : Z.shiftr acc_val (Z.of_nat lane_idx * Z.of_N lane_width) = 0)
+        res s'
+        (H : SymbolicVector.vector_binop_aux i1 i2 lane_op lane_idx num_remaining
+                                              lane_width acc s
+            = Success (res, s'))
+    : R s' m /\ s :< s' /\
+      eval s' res
+        (Z.lor acc_val
+          (SemanticVector.vector_binop_aux v1 v2 binop lane_idx num_remaining (Z.of_N lane_width))).
+  Proof using Type.
+    revert lane_idx s HR acc acc_val Hacc Hacc_hi res s' H Hv1 Hv2; induction num_remaining as [|n IH]; intros.
+    { cbv [SemanticVector.vector_binop_aux SymbolicVector.vector_binop_aux] in *. 
+      rewrite Z.lor_0_r. inversion H. subst. eauto. }
+    {
+      destruct (vector_binop_aux_S_lane_idx _ _ _ _ _ _ _ _ _ _ H)
+        as (lane_val & new_acc & s1 & s2 & Hlane & Hins & Hrest).
+      eapply make_lane_R in Hlane as (HR1 & Hsubs1 & Heval1); eauto.
+      eapply insert_lane_R in Hins as (HR2 & Hsubs2 & Heval2); eauto.
+      eapply IH in Hrest as (HR3 & Hsubs3 & Heval3); eauto; clear IH.
+
+      (* Goal 2 first since you need it closed before discharging IH *)
+      2: { unfold SemanticVector.insert_lane.
+      apply acc_range_preserved; [lia | exact Hacc_hi]. }
+
+      (* Goal 1: combine subsumptions + massage Heval3 *)
+      split; [exact HR3|].
+      split. solve_subsumed.
+      rewrite insert_lane_ldiff_lor in Heval3 by (lia || exact Hacc_hi).
+      rewrite <- Z.lor_assoc in Heval3. apply Heval3.
+    }
+  Qed.
+    
+  Lemma SymexVectorBinOp_R {opts : symbolic_options_computed_opt} {descr : description}
+    s m (HR : R s m)
+    (s_op : OperationSize) (sa : AddressSize) (Hsa : sa = 64%N)
+    (dst src1 src2 : ARG)
+    (lane_op : op) (binop : Z -> Z -> Z)
+    (Hop : interprets_as_binop lane_op binop)
+    (lane_width : N) (Hlw : (lane_width > 0)%N)
+    _tt s'
+    (H : @SymbolicVector.SymexVectorBinOp _ _ s_op sa dst src1 src2 lane_op lane_width s
+        = Success (_tt, s'))
+    : exists m',
+        SemanticVector.DenoteVectorBinOp sa s_op m dst src1 src2 binop
+          (N.to_nat (s_op / lane_width)%N) (Z.of_N lane_width) = Some m'
+        /\ R s' m' /\ s :< s'.
+  Proof using Type.
+    cbv [SymbolicVector.SymexVectorBinOp] in H. repeat step_symex. cbv [fst snd] in *.
+    rename v1 into i1, v2 into i2, HSv1 into Hget1, HSv2 into Hget2.
+    eapply (GetOperand_R s m) in Hget1 as (HR0 & Hsubs0 & Heval1); eauto.
+    eapply (GetOperand_R s0 m) in Hget2 as (HR1 & Hsubs1 & Heval2); eauto.
+    destruct Heval1 as (v1 & Heval1 & Hdenote1); destruct Heval2 as (v2 & Heval2 & Hdenote2).
+    
+    eapply App_R in HSacc as (HR2 & Hsubs2 & Heval_acc); try eauto. 2: repeat econstructor.
+    eapply vector_binop_aux_R in HSresult as (HR3 & Hsubs3 & Heval_res); eauto. rewrite Z.lor_0_l in Heval_res. 
+    step_SetOperand. exact Hsa.
+    eexists. split; [|split]. 
+    { cbv [SemanticVector.DenoteVectorBinOp Crypto.Util.Option.bind].
+      rewrite Hdenote1, Hdenote2. exact Hm0. }
+    { exact Hs'. }
+    { solve_subsumed. }
+  Qed.
+
+  Lemma mapM_fold_left_R {A} {opts : symbolic_options_computed_opt} {descr : description}
+  (f_sym : A -> M unit)
+  (f_sem : machine_state -> A -> machine_state)
+  (Hstep : forall a s m s',
+    R s m -> f_sym a s = Success (tt, s') ->
+    R s' (f_sem m a) /\ s :< s')
+  : forall l s m s',
+    R s m ->
+    Symbolic.mapM_ f_sym l s = Success (tt, s') ->
+    R s' (fold_left f_sem l m) /\ s :< s'.
+  Proof using Type.
+    induction l as [|a l IH]; intros s0 m0 s_final HR0 Hsym.
+    - cbv [Symbolic.mapM_ Symbolic.mapM] in Hsym.
+			step_symex; cbv [fst snd] in *; unfold ret in *.
+ 			inversion_ErrorT; Prod.inversion_prod; subst.
+
+      cbn [fold_left]. split; [exact HR0 | solve_subsumed].
+    - cbn [fold_left].
+      cbv [Symbolic.mapM_] in Hsym.
+			step_symex.
+      cbn [Symbolic.mapM] in HSx.
+			repeat step_symex; cbv [fst snd] in *.
+			cbv [ret] in HSx, Hsym.
+ 			inversion_ErrorT; Prod.inversion_prod; subst.
+			destruct b. 
+			edestruct (Hstep _ _ _ _ HR0 HSb) as [HR1 Hsub1].
+			assert (HSbs' : mapM_ f_sym l s1 = Success (tt, s_final)).
+			{ cbv [mapM_ bind ret]. rewrite HSbs. reflexivity. }
+			edestruct (IH _ _ _ HR1 HSbs') as [HR2 Hsub2].
+			split; [exact HR2 | solve_subsumed].
+Qed.
+
+  Lemma vzeroupper_step_R {opts : symbolic_options_computed_opt} {descr : description}
+    (yr : VREG) (s : symbolic_state) (m : machine_state) (s' : symbolic_state)
+    (HR : R s m)
+    (H : (v <- GetReg (VReg yr);
+          lo <- Symbolic.App (slice 0 128, [v]);
+          SetReg (VReg yr) lo)%x86symex s = Success (tt, s'))
+  : R s' (update_reg_with m
+            (fun rs => set_reg rs (VReg yr)
+                          (Z.land (get_reg m (VReg yr)) (Z.ones 128))))
+    /\ s :< s'.
+  Proof using Type.
+    repeat step_symex. step_GetReg. step_App; cbv [fst snd] in *. 
+		{ repeat (econstructor; eauto). }
+		eapply R_SetReg in H; eauto.
+		destruct H as (m' & Hm' & HR' & Hsub'). 
+		Option.inversion_option. subst.
+  	split; [exact HR' | solve_subsumed].
+Qed.
+	
+
+  Lemma interprets_as_add s : interprets_as_binop (add s) (fun a b => Z.land (a + b) (Z.ones (Z.of_N s))).
+    Proof. intros a b. cbn [interp_op fold_right]. rewrite Z.add_0_r. reflexivity. Qed.
+
+  Lemma interprets_as_sub s : interprets_as_binop (sub s) (fun a b => Z.land (a - b) (Z.ones (Z.of_N s))).
+    Proof. intros a b. cbn [interp_op fold_right].  reflexivity. Qed.
+
+End SymbolicVectorProofs.
+
 
 Lemma set_reg_get_reg (rs : reg_state) (r : REG) :
   set_reg rs r (get_reg rs r) = rs.
@@ -1821,7 +2088,7 @@ Lemma set_mem_get_mem (m : mem_state) addr n v :
 Proof.
   cbv [get_mem set_mem Crypto.Util.Option.bind].
   destruct (load_bytes m (word.of_Z addr) n) as [bs|] eqn:Hl; [|discriminate].
-  intro H. Option.inversion_option_step. subst.
+  intro H. step. subst v. 
   pose proof (length_load_bytes _ _ _ _ Hl) as Hlen.
   rewrite <- Hlen, split_le_combine.
   cbv [store_bytes]. rewrite Hlen, Hl. f_equal.
@@ -1879,873 +2146,6 @@ Ltac step_HavocFlags :=
 
 Ltac step_symex5 := first [step_symex4 | step_GetOperand | step_SetOperand | step_HavocFlags ].
 Ltac step_symex ::= step_symex5.
-
-
-(* === Correspondence lemmas for SymbolicVector general helpers. ===
-   Each lemma links a [Symbolic.*] step with its [SemanticVector.*] counterpart.
-   Proofs deferred. *)
-Section SymbolicVectorProofs.
-
-(* redefining all tactics here in the better way... but changing the tactics used in SymexNormalInstruction_R breaks everything, so im not fucking with that. a full refactor would be great at some point *)
-
-#[local] Hint Extern 5 (eval _ _ _) =>
-    match goal with
-    | H : eval _ _ _ |- _ =>
-      rewrite ?nat_N_Z, ?N2Z.inj_mul in H |- *; exact H
-    end : core.
-
-Ltac solve_subsumed ::=
-solve [ eassumption
-      | apply subsumed_refl
-      | repeat (eapply subsumed_trans; [eassumption|]); eapply subsumed_refl ].
-
-
-(* Ltac step_GetFlag ::= *)
-(*   match goal with *)
-(*   | H : GetFlag ?f ?s = Success (?i0, _) |- _ => *)
-(*     let v := fresh "v" f in let Hv := fresh "H" v in let Hvf := fresh "Hv" f in *)
-(*     let Hi := fresh "H" i0 in let Heq := fresh H "eq" in *)
-(*     case (GetFlag_R s _ ltac:(eassumption) _ _ _ H) as (v&Hi&Hvf&Heq); clear H; *)
-(*     (let i := fresh "i" f in try rename i0 into i); *)
-(*     (try match type of Heq with _ = ?s' => subst s' end) *)
-(*   end. *)
-
-(* Ltac step_Merge := *)
-(*   match goal with *)
-(*   | H : Merge ?e ?s = Success (?i, ?s') |- _ => *)
-(*     let v := open_constr:(_) in let Hi := fresh "H" i in *)
-(*     let Hs' := fresh "H" s' in let Hl := fresh "Hl" s' in *)
-(*     let t := open_constr:(fun A B => Merge_R s _ A e v B _ _ H) in *)
-(*     unshelve (edestruct t as (Hs'&Hl&Hi); clear H); shelve_unifiable; *)
-(*     [eassumption|..] *)
-(*   end. *)
-
-Ltac step_App ::=
-    match goal with
-    | H : Symbolic.App ?n ?s = Success (?i, ?s') |- _ =>
-      let Hi := fresh "H" i in
-      let Hl := fresh "Hl" s' in let Hs' := fresh "H" s' in
-      let t := open_constr:(fun A B => App_R s _ A n _ B _ _ H) in
-      unshelve (edestruct t as (Hs'&Hl&Hi); clear H); shelve_unifiable;
-      [eassumption|..]
-    end.
-
-Ltac solve_eval_node :=
-    match goal with
-    | |- eval_node _ _ _ _ => solve [repeat (econstructor; eauto)]
-    end.
-
-Ltac step_Address ::=
-  match goal with HSa: context[Address] |- _ =>
-      eapply Address_R in HSa; [|eassumption];
-          destruct HSa as (?&?&?&?&?)
-  end.
-
-(* Ltac step_SetFlag := *)
-(*   match goal with *)
-(*   | H : Symbolic.SetFlag ?f ?i ?s = Success (?_tt, ?s') |- _ => *)
-(*     let i := open_constr:(_) in let b := open_constr:(_) in *)
-(*     let Hs' := fresh "H" s' in let Hlt := fresh "He" s' in *)
-(*     let t := open_constr:(fun A B => SetFlag_R s _ f A i b B _ _ H) in *)
-(*     unshelve (edestruct t as (Hs'&Hlt); clear H); shelve_unifiable; *)
-(*     [eassumption|..|clear H] *)
-(*   end. *)
-
-Ltac step_GetOperand ::=
-  match goal with
-  | H : GetOperand ?a ?s = Success (?i0, ?s') |- _ =>
-    let v := fresh "v" in let Hv := fresh "H" v
-    in let Hi := fresh "H" i0 in let Heq := fresh H "eq" in
-    let Hs' := fresh "H" s' in let Hl := fresh "Hl" s' in
-    case (GetOperand_R s _ ltac:(eassumption) _ _ ltac:(reflexivity) _ _ _ H) as (Hs'&Hl&(v&Hi&Hv)); clear H
-  end.
-
-Ltac step_SetOperand ::=
-  match goal with
-  | H : Symbolic.SetOperand ?a ?i ?s = Success (?_tt, ?s') |- _ =>
-      let m := fresh "m" in let Hm := fresh "H" m in
-      let HR := fresh "H" s' in let Hl := fresh "Hl" s' in
-      case (R_SetOperand s _ ltac:(eassumption) _ _ _ _ _ _ H _ ltac:(eauto 99 with nocore))
-        as (m&?Hm&HR&Hl); clear H; try lia
-  end.
-
-(* Ltac step_HavocFlags := *)
-(*   match goal with *)
-(*   | H : Symbolic.HavocFlags ?s = Success (_, ?s') |- _ => *)
-(*     let Hs' := fresh "H" s' in *)
-(*     let Hl := fresh "Hlt" s'  in *)
-(*     let t := open_constr:(fun A => HavocFlags_R _ _ A _ _ H) in *)
-(*     unshelve (edestruct t as (Hs'&Hl); clear H); shelve_unifiable; *)
-(*     [eassumption|] *)
-(*   end. *)
-
-Ltac step_GetReg ::=
-  match goal with
-  | H : Symbolic.GetReg ?r ?s = Success (?v, ?s') |- _ =>
-    let Hs' := fresh "H" s' in let Hlt := fresh "He" s' in let Hv := fresh "Hv" s' in
-    let t := open_constr:(fun A => GetReg_R s _ A r v s' H) in
-    unshelve (edestruct t as (Hs'&Hlt&Hv); clear H); shelve_unifiable;
-    [eassumption|..|clear H]
-  end.
-
-Ltac step_SetReg :=
-    match goal with
-    | H : Symbolic.SetReg ?r ?i ?s = Success (?_tt, ?s') |- _ =>
-			 idtac "matched";
-        let m := fresh "m" in let Hm := fresh "H" m in
-        let HR := fresh "H" s' in let Hl := fresh "Hl" s' in
-        case (R_SetReg s _ ltac:(eassumption) _ _ _ _ H _ ltac:(eauto 99 with nocore))
-          as (m&?Hm&HR&Hl); clear H; Option.inversion_option
-    end.
-
-	Ltac step_bind :=
-     match goal with
-      | H : (x <- ?v; ?k)%x86symex ?s = _ |- _  =>
-        rewrite !bind_assoc in H
-      | H : (x <- ?v; ?k)%x86symex ?s = Success _ |- _  =>
-        rewrite unfold_bind in H;
-        match type of H with
-        | match _ with _ => _ end = Success _ =>
-          let x := fresh x in
-          let HH := fresh "HS" x in
-          destruct v as [[x ?]|] eqn:HH in H;
-            [|solve[exfalso;clear-H;inversion H]]
-        | _ => idtac
-        end
-      end.
-                   
- Ltac normalize_NZ :=
-    repeat first
-      [ rewrite N2Z.inj_mul in *
-      | rewrite N2Z.inj_add in *
-      | rewrite nat_N_Z in *
-      | rewrite N2Z.id in *
-      | rewrite Z2N.id in * by lia
-      | rewrite Nat2Z.inj_mul in *
-      | rewrite Nat2Z.inj_add in *
-      | rewrite Nat2Z.inj_succ in *
-      | progress cbn [Z.of_N Pos.of_succ_nat] in *
-      | progress (rewrite ?Z.add_0_l, ?Z.add_0_r,
-                          ?Z.mul_0_l, ?Z.mul_0_r,
-                          ?Z.mul_1_l, ?Z.mul_1_r,
-                          ?Z.mul_succ_l, ?Z.mul_succ_r in *)
-      | progress (rewrite ?Z.lor_0_l, ?Z.lor_0_r,
-                          ?Z.land_0_l, ?Z.land_0_r,
-                          ?Z.lxor_0_l, ?Z.lxor_0_r,
-                          ?Z.ldiff_0_l, ?Z.ldiff_0_r,
-                          ?Z.shiftl_0_l, ?Z.shiftl_0_r,
-                          ?Z.shiftr_0_l, ?Z.shiftr_0_r in *)
-      | progress (rewrite ?Z.lor_assoc, ?Z.land_assoc in *)
-      | progress (rewrite ?Z.land_same_r, ?Z.land_diag, ?Z.lor_diag in *)
-      ].
-      
-Ltac cleanup :=
-    repeat (first
-      [ progress cbv [fst snd] in *
-      | progress normalize_NZ
-      | progress unfold ret in *
-      | progress Option.inversion_option_step
-      | progress inversion_ErrorT_step
-			| progress Prod.inversion_prod
-			| progress solve_eval_node
-      ]).
-
-Ltac step_symex ::=
-		 first 
-		 [ step_bind
-		 | step_App
-		 | step_Address 
-		 | step_GetOperand
-		 | step_SetOperand
-		 | step_GetReg
-		 | step_SetReg
-		 ]; repeat cleanup.
-
-Ltac solve_R_subgoals :=
-    repeat split;
-    try assumption;
-    try solve_subsumed;
-    try eassumption.
-
-  (* Extracts lane [lane_idx] of width [lane_width] from [v]. *)
-  Lemma extract_lane_R {opts : symbolic_options_computed_opt} {descr : description}
-    s m (HR : R s m)
-    (i : idx) (v : Z) (Hv : eval s i v)
-    (lane_idx : nat) (lane_width : N) (Hlw : (lane_width > 0)%N)
-    res s'
-    (H : SymbolicVector.extract_lane i lane_idx lane_width s = Success (res, s'))
-    : R s' m /\ s :< s' /\
-      eval s' res (SemanticVector.extract_lane v lane_idx (Z.of_N lane_width)).
-  Proof using Type.
-    unfold SymbolicVector.extract_lane, SemanticVector.extract_lane in *. 
-		step_symex. solve_R_subgoals.
-  Qed.
-
-  (* Computes one lane of a binop: lane_op(lane i of v1, lane i of v2). *)
-  Lemma make_lane_R {opts : symbolic_options_computed_opt} {descr : description}
-    s m (HR : R s m)
-    (i1 i2 : idx) (v1 v2 : Z)
-    (Hv1 : eval s i1 v1) (Hv2 : eval s i2 v2)
-    (lane_op : op) (binop : Z -> Z -> Z)
-    (Hop : interprets_as_binop lane_op binop)
-    (lane_idx : nat) (lane_width : N) (Hlw : (lane_width > 0)%N)
-    res s'
-    (H : SymbolicVector.make_lane i1 i2 lane_op lane_idx lane_width s
-        = Success (res, s'))
-    : R s' m /\ s :< s' /\
-      eval s' res (SemanticVector.make_lane v1 v2 binop lane_idx (Z.of_N lane_width)).
-  Proof using Type. 
-    unfold SymbolicVector.make_lane, SemanticVector.make_lane in *.
-		repeat step_symex.
-    eapply extract_lane_R in HSl1 as (HR1 & Hsubs1 & Heval_lane1); try eassumption.
-    eapply extract_lane_R in HSl2 as (HR2 & Hsubs2 & Heval_lane2); try eassumption.
-		step_symex. solve_R_subgoals.
-   	eauto. 
-  Qed.
-
-  (* Writes [lane_val] into lane [lane_idx] of accumulator [acc]. *)
-  Lemma insert_lane_R {opts : symbolic_options_computed_opt} {descr : description}
-    s m (HR : R s m)
-    (acc lane : idx) (acc_val lane_val : Z)
-    (Hacc : eval s acc acc_val) (Hlane : eval s lane lane_val)
-    (lane_idx : nat) (lane_width : N) (Hlw : (lane_width > 0)%N)
-    res s'
-    (H : SymbolicVector.insert_lane acc lane lane_idx lane_width s
-        = Success (res, s'))
-    : R s' m /\ s :< s' /\
-      eval s' res
-        (Z.lor (SemanticVector.insert_lane lane_val lane_idx (Z.of_N lane_width))
-              (Z.ldiff acc_val
-                  (Z.shiftl (Z.ones (Z.of_N lane_width))
-                            (Z.of_nat lane_idx * Z.of_N lane_width)))).
-  Proof using Type. 
-    cbv [SymbolicVector.insert_lane SemanticVector.insert_lane] in *. 
-		step_symex. solve_R_subgoals.
-  Qed.
-
-  (* inductive case of vector_binop_aux_R *)
-  Lemma vector_binop_aux_S_lane_idx
-    {opts : symbolic_options_computed_opt} {descr : description}
-    (i1 i2 : idx) (lane_op : op)
-    (lane_idx n : nat) (lane_width : N) (acc : idx) s res s'
-    (H : SymbolicVector.vector_binop_aux i1 i2 lane_op lane_idx (S n)
-          lane_width acc s = Success (res, s'))
-    : exists lane_val new_acc s1 s2,
-        SymbolicVector.make_lane i1 i2 lane_op lane_idx lane_width s
-          = Success (lane_val, s1)
-    /\ SymbolicVector.insert_lane acc lane_val lane_idx lane_width s1
-          = Success (new_acc, s2)
-    /\ SymbolicVector.vector_binop_aux i1 i2 lane_op (S lane_idx) n lane_width
-          new_acc s2 = Success (res, s').
-  Proof. simpl SymbolicVector.vector_binop_aux in *. repeat step_symex.
-    exists lane_val, new_acc, s0, s1. solve_R_subgoals.
-  Qed.
-  
-  Lemma set_slice_ldiff_lor acc_val lane_val lane_width base :
-      lane_width > 0 ->
-      Z.shiftr acc_val base = 0 ->
-      Z.lor (Z.shiftl (Z.land lane_val (Z.ones lane_width)) base)
-            (Z.ldiff acc_val (Z.shiftl (Z.ones lane_width) base))
-      = Z.lor acc_val (Z.shiftl (Z.land lane_val (Z.ones lane_width))
-  base).
-   Proof. intros. 
-    rewrite Z.lor_comm.
-    f_equal. bitblast.Z.bitblast. assert (Hbit : Z.testbit acc_val i = false).
-    { replace i with ((i - base) + base) by lia.
-      rewrite <- Z.shiftr_spec by lia.
-      rewrite H0. apply Z.bits_0. }
-    rewrite Hbit. reflexivity.
-  Qed.
-  
-  (* Single insertion: writing a [lane_width]-bit value at lane [lane_idx]
-   preserves the invariant that bits at or above lane [lane_idx + 1] are zero. *)
-Lemma acc_range_preserved :
-  forall (acc lane_val lane_width base : Z),
-    lane_width > 0 ->
-    base >= 0 ->
-    Z.shiftr acc base = 0 ->
-    let acc'     := Z.lor (Z.shiftl (Z.land lane_val (Z.ones lane_width)) base)
-                          (Z.ldiff acc (Z.shiftl (Z.ones lane_width) base)) in
-    Z.shiftr acc' (base + lane_width) = 0.
- Proof. 
- intros. subst acc'. rewrite set_slice_ldiff_lor.  rewrite Z.shiftr_lor.
- 				rewrite <- Z.shiftr_shiftr. rewrite H1.  bitblast.Z.bitblast.  all: lia.
-				Qed.
-				
-
-  (* Iterates [num_remaining] lanes starting at [lane_idx], folding each into [acc]. *)
-  Lemma vector_binop_aux_R {opts : symbolic_options_computed_opt} {descr : description}
-        s m (HR : R s m)
-        (i1 i2 : idx) (v1 v2 : Z)
-        (Hv1 : eval s i1 v1) (Hv2 : eval s i2 v2)
-        (lane_op : op) (binop : Z -> Z -> Z)
-        (Hop : interprets_as_binop lane_op binop)
-        (lane_idx num_remaining : nat)
-        (lane_width : N) (Hlw : (lane_width > 0)%N)
-        (acc : idx) (acc_val : Z) (Hacc : eval s acc acc_val)
-        (Hacc_hi : Z.shiftr acc_val (Z.of_nat lane_idx * Z.of_N lane_width) = 0)
-        res s'
-        (H : SymbolicVector.vector_binop_aux i1 i2 lane_op lane_idx num_remaining
-                                              lane_width acc s
-            = Success (res, s'))
-    : R s' m /\ s :< s' /\
-      eval s' res
-        (Z.lor acc_val
-          (SemanticVector.vector_binop_aux v1 v2 binop lane_idx num_remaining (Z.of_N lane_width))).
-  Proof using Type.
-    revert lane_idx s HR acc acc_val Hacc Hacc_hi res s' H Hv1 Hv2; induction num_remaining as [|n IH]; intros.
-    { cbv [SemanticVector.vector_binop_aux SymbolicVector.vector_binop_aux] in *. 
-      rewrite Z.lor_0_r. inversion H. subst. eauto. }
-    {
-      destruct (vector_binop_aux_S_lane_idx _ _ _ _ _ _ _ _ _ _ H)
-        as (lane_val & new_acc & s1 & s2 & Hlane & Hins & Hrest).
-      eapply make_lane_R in Hlane as (HR1 & Hsubs1 & Heval1); eauto.
-      eapply insert_lane_R in Hins as (HR2 & Hsubs2 & Heval2); eauto.
-      eapply IH in Hrest as (HR3 & Hsubs3 & Heval3); eauto; clear IH.
-
-      (* Goal 2 first since you need it closed before discharging IH *)
-      2: { unfold SemanticVector.insert_lane. normalize_NZ.
-      apply acc_range_preserved; [lia|lia | exact Hacc_hi]. }
-
-      (* Goal 1: combine subsumptions + massage Heval3 *)
-      split; [exact HR3|].
-      split. solve_subsumed. unfold SemanticVector.insert_lane in Heval3.
-      rewrite set_slice_ldiff_lor in Heval3 by (lia || exact Hacc_hi).
-      rewrite <- Z.lor_assoc in Heval3. apply Heval3.
-    }
-  Qed.
-    
-  Lemma SymexVectorBinOp_R {opts : symbolic_options_computed_opt} {descr : description}
-    s m _tt s' 
-		(HR : R s m)
-    (s_op : OperationSize) (sa : AddressSize) (Hsa : sa = 64%N)
-    (dst src1 src2 : ARG)
-    (lane_op : op) (binop : Z -> Z -> Z)
-    (Hop : interprets_as_binop lane_op binop)
-    (lane_width : N) (Hlw : (lane_width > 0)%N) 
-    (H : SymbolicVector.SymexVectorBinOp dst src1 src2 lane_op lane_width s = Success (_tt, s'))
-    : exists m',
-        SemanticVector.DenoteVectorBinOp sa s_op m dst src1 src2 binop
-          (N.to_nat (s_op / lane_width)%N) (Z.of_N lane_width) = Some m'
-        /\ R s' m' /\ s :< s'.
-  Proof using Type.
-    cbv [SymbolicVector.SymexVectorBinOp] in H. repeat step_symex. cbv [fst snd] in *.
-    rename v1 into i1, v2 into i2, HSv1 into Hget1, HSv2 into Hget2.
-    eapply (GetOperand_R s m) in Hget1 as (HR0 & Hsubs0 & Heval1); eauto.
-    eapply (GetOperand_R s0 m) in Hget2 as (HR1 & Hsubs1 & Heval2); eauto.
-    destruct Heval1 as (v1 & Heval1 & Hdenote1); destruct Heval2 as (v2 & Heval2 & Hdenote2).
-    
-    eapply App_R in HSacc as (HR2 & Hsubs2 & Heval_acc); try eauto. 2: repeat econstructor.
-    eapply vector_binop_aux_R in HSresult as (HR3 & Hsubs3 & Heval_res); eauto. rewrite Z.lor_0_l in Heval_res. 
-    step_SetOperand.
-    eexists. split; [|split]. 
-    { cbv [SemanticVector.DenoteVectorBinOp Crypto.Util.Option.bind].
-      rewrite Hdenote1, Hdenote2. exact Hm0. }
-    { exact Hs'. }
-    { solve_subsumed. }
-  Qed.
-
-  (* === Unary vector op lemmas === *)
-
-  Lemma make_unary_lane_R {opts : symbolic_options_computed_opt} {descr : description}
-    s m (HR : R s m)
-    (i : idx) (v : Z)
-    (Hv : eval s i v)
-    (lane_op : op) (unaryop : Z -> Z)
-    (Hop : interprets_as_unaryop lane_op unaryop)
-    (lane_idx : nat) (lane_width : N) (Hlw : (lane_width > 0)%N)
-    res s'
-    (H : SymbolicVector.make_unary_lane i lane_op lane_idx lane_width s
-        = Success (res, s'))
-    : R s' m /\ s :< s' /\
-      eval s' res (SemanticVector.make_unary_lane v unaryop lane_idx (Z.of_N lane_width)).
-  Proof using Type.
-    unfold SymbolicVector.make_unary_lane, SemanticVector.make_unary_lane in *.
-		repeat step_symex.
-    eapply extract_lane_R in HSl as (HR1 & Hsubs1 & Heval_lane); try eassumption.
-		step_symex. solve_R_subgoals.
-  Qed.
-
-  Lemma vector_unaryop_aux_S_lane_idx
-    {opts : symbolic_options_computed_opt} {descr : description}
-    (i : idx) (lane_op : op)
-    (lane_idx n : nat) (lane_width : N) (acc : idx) s res s'
-    (H : SymbolicVector.vector_unaryop_aux i lane_op lane_idx (S n)
-          lane_width acc s = Success (res, s'))
-    : exists lane_val new_acc s1 s2,
-        SymbolicVector.make_unary_lane i lane_op lane_idx lane_width s
-          = Success (lane_val, s1)
-    /\ SymbolicVector.insert_lane acc lane_val lane_idx lane_width s1
-          = Success (new_acc, s2)
-    /\ SymbolicVector.vector_unaryop_aux i lane_op (S lane_idx) n lane_width
-          new_acc s2 = Success (res, s').
-  Proof. simpl SymbolicVector.vector_unaryop_aux in *. repeat step_symex.
-    exists lane_val, new_acc, s0, s1. solve_R_subgoals.
-  Qed.
-
-  Lemma vector_unaryop_aux_R {opts : symbolic_options_computed_opt} {descr : description}
-        s m (HR : R s m)
-        (i : idx) (v : Z)
-        (Hv : eval s i v)
-        (lane_op : op) (unaryop : Z -> Z)
-        (Hop : interprets_as_unaryop lane_op unaryop)
-        (lane_idx num_remaining : nat)
-        (lane_width : N) (Hlw : (lane_width > 0)%N)
-        (acc : idx) (acc_val : Z) (Hacc : eval s acc acc_val)
-        (Hacc_hi : Z.shiftr acc_val (Z.of_nat lane_idx * Z.of_N lane_width) = 0)
-        res s'
-        (H : SymbolicVector.vector_unaryop_aux i lane_op lane_idx num_remaining
-                                              lane_width acc s
-            = Success (res, s'))
-    : R s' m /\ s :< s' /\
-      eval s' res
-        (Z.lor acc_val
-          (SemanticVector.vector_unaryop_aux v unaryop lane_idx num_remaining (Z.of_N lane_width))).
-  Proof using Type.
-    revert lane_idx s HR acc acc_val Hacc Hacc_hi res s' H Hv; induction num_remaining as [|n IH]; intros.
-    { cbv [SemanticVector.vector_unaryop_aux SymbolicVector.vector_unaryop_aux] in *.
-      rewrite Z.lor_0_r. inversion H. subst. eauto. }
-    {
-      destruct (vector_unaryop_aux_S_lane_idx _ _ _ _ _ _ _ _ _ H)
-        as (lane_val & new_acc & s1 & s2 & Hlane & Hins & Hrest).
-      eapply make_unary_lane_R in Hlane as (HR1 & Hsubs1 & Heval1); eauto.
-      eapply insert_lane_R in Hins as (HR2 & Hsubs2 & Heval2); eauto.
-      eapply IH in Hrest as (HR3 & Hsubs3 & Heval3); eauto; clear IH.
-
-      2: { unfold SemanticVector.insert_lane. normalize_NZ.
-      apply acc_range_preserved; [lia | lia| exact Hacc_hi]. }
-
-      split; [exact HR3|].
-      split. solve_subsumed. unfold SemanticVector.insert_lane in Heval3.
-      rewrite set_slice_ldiff_lor in Heval3 by (lia || exact Hacc_hi).
-      rewrite <- Z.lor_assoc in Heval3. apply Heval3.
-    }
-  Qed.
-
-  Lemma SymexVectorUnaryOp_R {opts : symbolic_options_computed_opt} {descr : description}
-    s m _tt s'
-    (HR : R s m)
-    (s_op : OperationSize) (sa : AddressSize) (Hsa : sa = 64%N)
-    (dst src : ARG)
-    (lane_op : op) (unaryop : Z -> Z)
-    (Hop : interprets_as_unaryop lane_op unaryop)
-    (lane_width : N) (Hlw : (lane_width > 0)%N)
-    (H : @SymbolicVector.SymexVectorUnaryOp _ _ s_op sa dst src lane_op lane_width s = Success (_tt, s'))
-    : exists m',
-        SemanticVector.DenoteVectorUnaryOp sa s_op m dst src unaryop
-          (N.to_nat (s_op / lane_width)%N) (Z.of_N lane_width) = Some m'
-        /\ R s' m' /\ s :< s'.
-  Proof using Type.
-    cbv [SymbolicVector.SymexVectorUnaryOp] in H. repeat step_symex. cbv [fst snd] in *.
-    rename v into i1, HSv into Hget1.
-    eapply (GetOperand_R s m) in Hget1 as (HR0 & Hsubs0 & Heval1); eauto.
-    destruct Heval1 as (v1 & Heval1 & Hdenote1).
-    eapply App_R in HSacc as (HR2 & Hsubs2 & Heval_acc); try eauto. 2: repeat econstructor.
-    eapply vector_unaryop_aux_R in HSresult as (HR3 & Hsubs3 & Heval_res); eauto. rewrite Z.lor_0_l in Heval_res.
-    step_SetOperand.
-    eexists. split; [|split].
-    { cbv [SemanticVector.DenoteVectorUnaryOp Crypto.Util.Option.bind].
-      rewrite Hdenote1. exact Hm0. }
-    { exact Hs'. }
-    { solve_subsumed. }
-  Qed.
-
-  (* === Broadcast lemmas === *)
-
-  Lemma broadcast_aux_R {opts : symbolic_options_computed_opt} {descr : description}
-        s m (HR : R s m)
-        (lane_val_idx : idx) (lane_val : Z)
-        (Hv : eval s lane_val_idx lane_val)
-         (lane_idx num_remaining : nat)
-        (lane_width : N) (Hlw : (lane_width > 0)%N)
-        (acc : idx) (acc_val : Z) (Hacc : eval s acc acc_val)
-        (Hacc_hi : Z.shiftr acc_val (Z.of_nat lane_idx * Z.of_N lane_width) = 0)
-        res s'
-        (H : SymbolicVector.broadcast_aux lane_val_idx lane_idx num_remaining
-                                          lane_width acc s
-            = Success (res, s'))
-    : R s' m /\ s :< s' /\
-      eval s' res
-        (Z.lor acc_val
-          (SemanticVector.broadcast_aux lane_val lane_idx num_remaining (Z.of_N lane_width))).
-  Proof using Type.
-		revert lane_idx s HR acc acc_val Hacc Hacc_hi res s' H Hv;
-		induction num_remaining as [|n IH]; intros.
-		{ simpl in *. repeat cleanup. subst. solve_R_subgoals. }
-    {
-			simpl in H. 
-			repeat step_symex.
-			eapply IH in H as (HR1 & Hsub1 & Heval1); eauto.
-			{ solve_R_subgoals.
-			simpl SemanticVector.broadcast_aux.
-		 rewrite set_slice_ldiff_lor in Heval1 by (lia || exact Hacc_hi).
-			rewrite Z.lor_assoc. assumption. }
-			{ normalize_NZ. eapply acc_range_preserved; [lia| lia | exact Hacc_hi]. }
-			}
-	Qed.
-			
-			
-Lemma blend_aux_R {opts : symbolic_options_computed_opt} {descr : description}
-          s m (HR : R s m)
-          (i1 i2 : idx) (v1 v2 : Z)
-          (Hv1 : eval s i1 v1) (Hv2 : eval s i2 v2)
-          (mask : Z)
-          (lane_idx num_remaining : nat)
-          (lane_width : N) (Hlw : (lane_width > 0)%N)
-          (acc : idx) (acc_val : Z) (Hacc : eval s acc acc_val)
-          (Hacc_hi : Z.shiftr acc_val (Z.of_nat lane_idx * Z.of_N lane_width) = 0)
-          res s'
-          (H : SymbolicVector.blend_aux i1 i2 mask lane_idx num_remaining
-                                         lane_width acc s
-              = Success (res, s'))
-      : R s' m /\ s :< s' /\
-        eval s' res
-          (Z.lor acc_val
-            (SemanticVector.blend_aux v1 v2 mask lane_idx num_remaining (Z.of_N
-  lane_width))).
-    Proof using Type.
-			revert lane_idx s HR acc acc_val Hacc Hacc_hi res s' H Hv1 Hv2;
-  induction num_remaining as [|n IH]; intros.
-  { simpl in *. repeat cleanup. subst. solve_R_subgoals. }
-  {
-    simpl in H. destruct (Z.testbit mask (Z.of_nat lane_idx)) eqn:Htestbit;
-    repeat step_symex;
-		
-    eapply IH in H as (HR1 & Hsub1 & Heval1); eauto; normalize_NZ; [|eapply acc_range_preserved; [lia|lia | exact Hacc_hi]| |eapply acc_range_preserved;  [lia|lia | exact Hacc_hi]];
-		 rewrite set_slice_ldiff_lor in Heval1 by (lia || exact Hacc_hi);    
-    simpl SemanticVector.blend_aux; rewrite Htestbit;
-		unfold SemanticVector.extract_lane; unfold SemanticVector.insert_lane;
-    normalize_NZ;
-    solve_R_subgoals.
-    }
-  Qed.
-				
-
-Lemma mapM_to_mapM_ {A B} (f : A -> M B) (l : list A) s bs s' :
-    mapM f l s = Success (bs, s') ->
-    mapM_ f l s = Success (tt, s').
-  Proof.
-    unfold mapM_. unfold bind. intros H. rewrite H. reflexivity.
-  Qed.
-
-  Lemma mapM_fold_left_R {A} {opts : symbolic_options_computed_opt} {descr : description}
-  (f_sym : A -> M unit)
-  (f_sem : machine_state -> A -> machine_state)
-  (Hstep : forall a s m s',
-    R s m -> f_sym a s = Success (tt, s') ->
-    R s' (f_sem m a) /\ s :< s')
-  : forall l s m s',
-    R s m ->
-    Symbolic.mapM_ f_sym l s = Success (tt, s') ->
-    R s' (fold_left f_sem l m) /\ s :< s'.
-  Proof using Type.
-    induction l as [|a l IH]; intros s0 m0 s_final HR0 Hsym.
-    - cbv [Symbolic.mapM_ Symbolic.mapM] in Hsym.
-			step_symex. subst.
-      cbn [fold_left]. split; [exact HR0 | solve_subsumed].
-    - cbn [fold_left].
-      cbv [Symbolic.mapM_] in Hsym.
-			step_symex.
-      cbn [Symbolic.mapM] in HSx.
-			repeat step_symex. subst. destruct b.
-			apply Hstep with (m:= m0) in HSb as (HRs1 & Hsubs1); [|assumption].
-			apply mapM_to_mapM_ in HSbs.
-			 eapply IH in HSbs as (HR & Hsubs); [| eassumption].
-			solve_R_subgoals.	
-Qed.
-
-	Lemma vzeroupper_step_R {opts : symbolic_options_computed_opt} {descr : description}
-    (yr : VREG) (s : symbolic_state) (m : machine_state) (s' : symbolic_state)
-    (HR : R s m)
-    (H : (v <- GetReg (VReg yr);
-          lo <- Symbolic.App (slice 0 128, [v]);
-          SetReg (VReg yr) lo)%x86symex s = Success (tt, s'))
-  : R s' (update_reg_with m
-            (fun rs => set_reg rs (VReg yr)
-                          (Z.land (get_reg m (VReg yr)) (Z.ones 128))))
-    /\ s :< s'.
-  Proof using Type. 
-			repeat step_symex. subst. solve_R_subgoals.
-	Qed.
-
-	Lemma land_ones_mul_32_64 a b :
-    Z.land (Z.land a (Z.ones 32) * Z.land b (Z.ones 32)) (Z.ones 64) =
-    Z.land a (Z.ones 32) * Z.land b (Z.ones 32).
-  Proof. bitblast.Z.bitblast.
-				 rewrite Bool.andb_false_r. rewrite Z.land_ones; try lia. rewrite Z.land_ones; try lia.
-  rewrite <- (Z.mod_small _ (2^i)). symmetry.
-  { apply Z.mod_pow2_bits_high. lia. }
-  { split.
-  	apply Z.mul_nonneg_nonneg; apply Z.mod_pos_bound; lia.
-  	assert (0 <= a mod 2^32 < 2^32) by (apply Z.mod_pos_bound; lia).
-    assert (0 <= b mod 2^32 < 2^32) by (apply Z.mod_pos_bound; lia).
-    assert (2^64 <= 2^i) by (apply Z.pow_le_mono_r; lia).
-    nia. }
-	Qed.
-	
-	Lemma make_muludq_lane_R {opts : symbolic_options_computed_opt} {descr : description}
-          s m (HR : R s m)
-          (i1 i2 : idx) (v1 v2 : Z)
-          (Hv1 : eval s i1 v1) (Hv2 : eval s i2 v2)
-          (lane_idx : nat) 
-          res s'
-          (H : SymbolicVector.make_muludq_lane i1 i2 lane_idx 64 s
-              = Success (res, s'))
-      : R s' m /\ s :< s' /\
-        eval s' res
-          (let a := Z.land (Z.shiftr v1 (Z.of_nat lane_idx * Z.of_N 64)) (Z.ones 32) in
-           let b := Z.land (Z.shiftr v2 (Z.of_nat lane_idx * Z.of_N 64)) (Z.ones 32) in
-           a * b).
-    Proof using Type.
-			unfold SymbolicVector.make_muludq_lane in *.
-			repeat step_symex.
-			cbv [fold_right] in Hres. rewrite Z.mul_1_r in Hres.
-			rewrite !Z.land_ones_land_ones in Hres by lia.
-  simpl Z.min in Hres.
-			rewrite land_ones_mul_32_64 in Hres.
-			solve_R_subgoals.
-	Qed.
-
-	 Lemma muludq_aux_R {opts : symbolic_options_computed_opt} {descr : description}
-          s m (HR : R s m)
-          (i1 i2 : idx) (v1 v2 : Z)
-          (Hv1 : eval s i1 v1) (Hv2 : eval s i2 v2)
-          (lane_idx num_remaining : nat)
-          (acc : idx) (acc_val : Z) (Hacc : eval s acc acc_val)
-          (Hacc_hi : Z.shiftr acc_val (Z.of_nat lane_idx * 64) = 0)
-          res s'
-          (H : SymbolicVector.muludq_aux i1 i2 lane_idx num_remaining
-                                          64 acc s
-              = Success (res, s'))
-      : R s' m /\ s :< s' /\
-        eval s' res
-          (Z.lor acc_val
-            (SemanticVector.muludq_aux v1 v2 lane_idx num_remaining)).
-    Proof using Type.
-			revert lane_idx s HR acc acc_val Hacc Hacc_hi res s' H Hv1 Hv2;
-  induction num_remaining as [|n IH]; intros.
-  { simpl in *. repeat cleanup. subst. solve_R_subgoals. }
-  {
-    simpl in H. repeat step_symex.
-		eapply make_muludq_lane_R in HSlane_val as (HR0 & Hsubs & Heval); eauto.
-		repeat step_symex.
-		eapply IH in H as (HR1 & Hsub1 & Heval1); eauto; normalize_NZ;
-    [| eapply acc_range_preserved; [lia|lia | exact Hacc_hi]].
-    simpl SemanticVector.muludq_aux in *.
-		rewrite set_slice_ldiff_lor in Heval1 by (lia || exact Hacc_hi).
-	unfold SemanticVector.insert_lane in Heval1. rewrite land_ones_mul_32_64 in Heval1.
-	normalize_NZ.
-    solve_R_subgoals. 
-  }
-  Qed.
-  
-  Lemma vector_shift_imm_aux_R {opts : symbolic_options_computed_opt} {descr : description}
-          s m (HR : R s m)
-          (iv ishift : idx) (v shift_amt : Z)
-          (Hv : eval s iv v) (Hshift : eval s ishift shift_amt)
-          (shift_op : op) (binop : Z -> Z -> Z)
-          (Hop : interprets_as_binop shift_op binop)
-          (lane_idx num_remaining : nat)
-          (lane_width : N) (Hlw : (lane_width > 0)%N)
-          (acc : idx) (acc_val : Z) (Hacc : eval s acc acc_val)
-          (Hacc_hi : Z.shiftr acc_val (Z.of_nat lane_idx * Z.of_N lane_width) = 0)
-          res s'
-          (H : SymbolicVector.vector_shift_imm_aux iv ishift shift_op lane_idx num_remaining
-                                                    lane_width acc s
-              = Success (res, s'))
-      : R s' m /\ s :< s' /\
-        eval s' res
-          (Z.lor acc_val
-            (SemanticVector.vector_unaryop_aux v (fun lane => binop lane shift_amt)
-              lane_idx num_remaining (Z.of_N lane_width))).
-    Proof using Type. 
-    			revert lane_idx s HR acc acc_val Hacc Hacc_hi res s' H Hv Hshift.
-    			induction num_remaining as [|n IH]; intros.
-    			{ simpl in *. cleanup. subst. solve_R_subgoals. }
-    			{	simpl in H. repeat step_symex.
-        eapply IH in H as (HR1 & Hsub1 & Heval1); eauto; normalize_NZ;
-          [| eapply acc_range_preserved; [lia |lia| exact Hacc_hi]].
-        rewrite set_slice_ldiff_lor in Heval1 by (lia || exact Hacc_hi).
-        simpl SemanticVector.vector_unaryop_aux.
-        unfold SemanticVector.make_unary_lane, SemanticVector.extract_lane.        
-        normalize_NZ.
-        solve_R_subgoals.
-      }
-    Qed.
-    			
-   Lemma unpcklqdq_aux_R {opts : symbolic_options_computed_opt} {descr : description}
-          s m (HR : R s m)
-          (i1 i2 : idx) (v1 v2 : Z)
-          (Hv1 : eval s i1 v1) (Hv2 : eval s i2 v2)
-          (half_idx num_remaining : nat)
-          (acc : idx) (acc_val : Z) (Hacc : eval s acc acc_val)
-          (Hacc_hi : Z.shiftr acc_val (Z.of_nat half_idx * 128) = 0)
-          res s'
-          (H : SymbolicVector.unpcklqdq_aux i1 i2 half_idx num_remaining acc s
-              = Success (res, s'))
-      : R s' m /\ s :< s' /\
-        eval s' res
-          (Z.lor acc_val
-            (SemanticVector.unpcklqdq_aux v1 v2 half_idx num_remaining)).
-    Proof using Type.
-    revert half_idx s HR acc acc_val Hacc Hacc_hi res s' H Hv1 Hv2;
-    induction num_remaining as [|n IH]; intros.
-    { simpl in *. cleanup. subst. solve_R_subgoals. }
-    {
-      simpl in H. repeat step_symex.
-      eapply IH in H as (HR1 & Hsub1 & Heval1); eauto; normalize_NZ; change 128 with (64 + 64).
-      2: {
-      replace (Z.of_nat half_idx * (64 + 64) + (64 + 64)) with ((Z.of_nat half_idx * (64 + 64) + 64) + 64) by lia.
-        do 2 (eapply acc_range_preserved; try lia). assumption. }
-      simpl SemanticVector.unpcklqdq_aux. normalize_NZ.
-      do 2 (erewrite set_slice_ldiff_lor in Heval1; eauto; try lia). normalize_NZ.
-			 solve_R_subgoals. all: (eapply acc_range_preserved; lia).
-    }
-  Qed.
-
-  Lemma interprets_as_add s : interprets_as_binop (add s) (fun a b => Z.land (a + b) (Z.ones (Z.of_N s))).
-    Proof. intros a b. cbn [interp_op fold_right]. rewrite Z.add_0_r. reflexivity. Qed.
-
-  Lemma interprets_as_sub s : interprets_as_binop (sub s) (fun a b => Z.land (a - b) (Z.ones (Z.of_N s))).
-    Proof. intros a b. cbn [interp_op fold_right].  reflexivity. Qed. 
-
-	Lemma interprets_as_and s : interprets_as_binop (and s) (fun a b => Z.land (Z.land a b) (Z.ones (Z.of_N s))).
-    Proof. intros a b. cbn [interp_op fold_right]. f_equal. bitblast.Z.bitblast. Qed.
-
-	Lemma interprets_as_or s : interprets_as_binop (or s) (fun a b => Z.land (Z.lor a b) (Z.ones (Z.of_N s))).
-    Proof. intros a b. cbn [interp_op fold_right]. f_equal. bitblast.Z.bitblast. Qed.
-
-  Lemma interprets_as_xor s : interprets_as_binop (xor s) (fun a b => Z.land (Z.lxor a b) (Z.ones (Z.of_N s))).
-    Proof. intros a b. cbn [interp_op fold_right]. f_equal. bitblast.Z.bitblast. Qed.
-    
- Lemma interprets_as_shr s : interprets_as_binop (shr s) (fun a b => Z.land (Z.shiftr a b)
-  (Z.ones (Z.of_N s))).
-  Proof. intros a b. cbn [interp_op]. reflexivity. Qed.
-  
-   Lemma interprets_as_shl s : interprets_as_binop (shl s) (fun a b => Z.land (Z.shiftl a b)
-  (Z.ones (Z.of_N s))).
-  Proof. intros a b. cbn [interp_op]. reflexivity. Qed.
-
-End SymbolicVectorProofs.
-
-
-Ltac normalize_NZ :=
-    repeat first [ rewrite N2Z.inj_mul in * | rewrite nat_N_Z in * | rewrite N2Z.id in * | rewrite Z2N.id in * by lia ].
-
-Ltac simplify_Z :=
-    repeat rewrite ?Z.lor_0_l, ?Z.lor_0_r,
-                   ?Z.land_0_l, ?Z.land_0_r,
-                   ?Z.lxor_0_l, ?Z.lxor_0_r,
-                   ?Z.shiftl_0_r, ?Z.shiftr_0_r,
-                   ?Z.shiftl_0_l, ?Z.shiftr_0_l,
-                   ?Z.ldiff_0_l, ?Z.ldiff_0_r,
-                   ?Z.add_0_l, ?Z.add_0_r,
-                   ?Z.mul_0_l, ?Z.mul_0_r,
-                   ?Z.mul_1_l, ?Z.mul_1_r in *.
-
-Ltac solve_eval_node :=
-    match goal with
-    | |- eval_node _ _ _ _ => solve [repeat (econstructor; eauto)]
-    end.                
-       
-Ltac cleanup :=
-  repeat (first
-   [ progress cbv[fst snd] in *
-   | progress normalize_NZ
-   | progress simplify_Z
-   | progress unfold ret in *
-   | progress Option.inversion_option_step
-   | progress inversion_ErrorT_step
-   | progress Prod.inversion_prod ]); try solve_eval_node; try solve [lia].
-
-Ltac solve_R_subgoals :=
-    repeat split;
-    try assumption;
-    try solve_subsumed;
-    try eassumption.
-
-Ltac step_broadcast :=
-	match goal with
-	| H : SymbolicVector.broadcast_aux ?lane ?start ?n ?lw ?zero ?s = Success
-(?result, ?s') |- _ =>
-			let HR := fresh "H" s' in let Hl := fresh "Hl" s' in let Heval := fresh
-"Heval" result in
-			destruct (broadcast_aux_R s _ ltac:(eassumption)
-									lane _ ltac:(eauto 99 with nocore)
-									start n lw ltac:(lia)
-									zero _ ltac:(eauto 99 with nocore)
-									ltac:(try reflexivity; try (simpl; reflexivity))
-									result s' H)
-			as (HR & Hl & Heval); clear H
-	end.
-
-Ltac step_blend :=
-	match goal with
-	| H : SymbolicVector.blend_aux ?v1 ?v2 ?mask ?start ?n ?lw ?zero ?s = Success
-(?result, ?s') |- _ =>
-			let HR := fresh "H" s' in let Hl := fresh "Hl" s' in let Heval := fresh
-"Heval" result in
-			destruct (blend_aux_R s _ ltac:(eassumption)
-									v1 v2 _ _ ltac:(eauto 99 with nocore) ltac:(eauto 99 with
-nocore)
-									mask
-									start n lw ltac:(lia)
-									zero _ ltac:(eauto 99 with nocore)
-									ltac:(try reflexivity; try (simpl; reflexivity))
-									result s' H)
-				as (HR & Hl & Heval); clear H
-	end.
-
-
-Ltac step_muludq :=
-	match goal with
-	| H : SymbolicVector.muludq_aux ?v1 ?v2 ?start ?n ?lw ?zero ?s = Success
-(?result, ?s') |- _ =>
-			let HR := fresh "H" s' in let Hl := fresh "Hl" s' in let Heval := fresh
-"Heval" result in
-			destruct (muludq_aux_R s _ ltac:(eassumption)
-									v1 v2 _ _ ltac:(eauto 99 with nocore) ltac:(eauto 99 with nocore)
-									start n
-									zero _ ltac:(eauto 99 with nocore)
-									ltac:(try reflexivity; try (simpl; reflexivity))
-									result s' H)
-				as (HR & Hl & Heval); clear H
-	end.
-
-Ltac step_shift_imm :=
-      match goal with
-      | H : SymbolicVector.vector_shift_imm_aux ?v ?sh ?sop ?start ?n ?lw ?zero ?s = Success
-    (?result, ?s') |- _ =>
-          let HR := fresh "H" s' in let Hl := fresh "Hl" s' in let Heval := fresh
-    "Heval" result in
-          let hop := lazymatch sop with
-            | shr ?w => constr:(interprets_as_shr w)
-            | shl ?w => constr:(interprets_as_shl w)
-            end in
-          destruct (vector_shift_imm_aux_R s _ ltac:(eassumption)
-                      v sh _ _ ltac:(eauto 99 with nocore) ltac:(eauto 99 with nocore)
-                      sop _ hop
-                      start n lw ltac:(lia)
-                      zero _ ltac:(eauto 99 with nocore)
-                      ltac:(try reflexivity; try (simpl; reflexivity))
-                      result s' H)
-            as (HR & Hl & Heval); clear H
-      end.
-      
-Ltac step_unpcklqdq :=
-      match goal with
-      | H : SymbolicVector.unpcklqdq_aux ?v1 ?v2 ?start ?n ?zero ?s = Success
-    (?result, ?s') |- _ =>
-          let HR := fresh "H" s' in let Hl := fresh "Hl" s' in let Heval := fresh
-    "Heval" result in
-          destruct (unpcklqdq_aux_R s _ ltac:(eassumption)
-                      v1 v2 _ _ ltac:(eauto 99 with nocore) ltac:(eauto 99 with nocore)
-                      start n
-                      zero _ ltac:(eauto 99 with nocore)
-                      ltac:(try reflexivity; try (simpl; reflexivity))
-                      result s' H)
-            as (HR & Hl & Heval); clear H
-      end.
 
 Ltac him :=
   match goal with
@@ -2939,14 +2339,7 @@ Ltac step :=
 Ltac step1 := step; (eassumption||trivial); [].
 Ltac step01 := solve [step] || step1.
 
-Ltac is_vector_goal :=
-    match goal with
-   	| H: context[Syntax.vzeroupper] |- _ => idtac
-    end.
 
-Create HintDb interprets_as.
-Hint Resolve interprets_as_add interprets_as_sub interprets_as_and
-  interprets_as_or interprets_as_xor : interprets_as.
 
 (* Executing instruction in state s gives state s' *)
 (* exists a machine state correponding to s' s.t.  *)
@@ -2960,20 +2353,34 @@ Proof using Type.
 	(* fully decompose symbolic side *)
   cbv [SymexNormalInstruction OperationSize] in H.
   repeat (repeat destruct_one_match_hyp; repeat step01).
-	
+	(* 1: 54 goals 
+all look like
+exists m' : machine_state,
+    DenoteNormalInstruction m {| prefix := op; Syntax.op := adc; args := [a; a0] |} = Some m' /\ R s' m' /\ s :< s'
+*)
+
 (* 2 *)
  all : repeat
   match goal with
   | |- eval_node _ _ (?op, ?args) ?e =>
-      solve [repeat (eauto 99 with nocore || econstructor)]
+      idtac "eval_node"; solve [repeat (eauto 99 with nocore || econstructor)]
   | |- eval _ (ExprApp (?op, ?args)) ?e =>
-      solve [repeat (eauto 99 with nocore || econstructor)]
-  | _ => step
-  | |- eval _ (ExprRef ?v) ?e => eval_same_expr_goal; try
+      idtac "ExprApp"; solve [repeat (eauto 99 with nocore || econstructor)]
+  | _ => idtac "step"; step
+  | |- eval _ (ExprRef ?v) ?e => idtac "eval_same"; eval_same_expr_goal; try
   solve [
       exact eq_refl || rewrite Z.bit0_mod; trivial; rewrite Z.mod_small;
   trivial; Lia.lia]
-  end.
+  end; try lia.
+	(* 2: 98 goals
+step fires first on everything. the eval branches are just for cleanup. 
+a few goals look like 
+goal 37 (ID 125676) is:
+ Z.b2z ?b0 = Z.land (Z.shiftr v (Z.of_N 0)) (Z.ones (Z.of_N 1))
+but most are still
+exists m' : machine_state,
+   DenoteNormalInstruction m {| prefix := op; Syntax.op := Syntax.sar; args := [a; a0] |} = Some m' /\ R s' m' /\ s :< s'
+*)
 
 	(* fully decompose semantic side *)
   all: cbv beta delta [DenoteNormalInstruction];
@@ -2990,6 +2397,19 @@ Proof using Type.
   | |- exists _, None   = Some _ /\ _ => exfalso
   | |- _ /\ _ :< _ => split; [|solve[eauto 99 with nocore] ]
   end.
+	(* 3: 148 goals 
+lots of Z arith goals, e.g.  
+Z.land (fold_right Z.add 0 [v; v0; Z.b2z vCF]) (Z.ones (Z.of_N n)) = Z.land (v3 + v4 + Z.b2z vCF1) (Z.ones (Z.of_N n))
+Some like 
+R s'
+   (SetFlag
+      (SetFlag (HavocFlagsFromResult n m0 (Z.land (fold_right Z.add 0 [v; v0; Z.b2z vCF]) (Z.ones (Z.of_N n)))) CF
+         (Z.odd (Z.shiftr (v3 + v4 + Z.b2z vCF1) (Z.of_N n))))
+      OF
+      (negb
+         (Z.signed n (Z.land (fold_right Z.add 0 [v; v0; Z.b2z vCF]) (Z.ones (Z.of_N n))) =?
+          Z.signed n v3 + Z.signed n v4 + Z.signed n (Z.b2z vCF1))))
+*)
 
 	(* const operands *)
   all: repeat first [ match goal with
@@ -2997,6 +2417,7 @@ Proof using Type.
                       end
                     | progress Option.inversion_option
                     | progress subst ].
+	(* 4: still 148... no visible cahnge? *)
 
 	(* bashing Z goals *)
   all : cbn [fold_right map]; rewrite ?N2Z.id, ?Z.add_0_r, ?Z.add_assoc, ?Z.mul_1_r, ?Z.land_m1_r, ?Z.lxor_0_r, ?Z.lor_0_r;
@@ -3005,7 +2426,9 @@ Proof using Type.
   all: rewrite ?(fun x => Z.land_ones_low_alt (x / 8) x) by now split; try (eapply Z.le_lt_trans; [ | apply Zpow_facts.Zpower2_lt_lin ]); try lia; Z.to_euclidean_division_equations; nia.
   all: try exact eq_refl.
   all : try solve [rewrite Z.land_ones, Z.bit0_mod by Lia.lia; exact eq_refl].
-	(* 5: 40 goals *)
+	(* 5: 40 goals 
+	mostly R _ SetFlag or exists m :
+*)
 
   all: try solve[ (* bash flags weakening *)
   match goal with H : R ?s' _ |- R ?s' ?m' =>
@@ -3023,52 +2446,9 @@ Proof using Type.
              end; rewrite ?Z.add_0_r, ?Z.odd_opp; eauto; try Lia.lia
   end
   ].
-
-
-	(* SPECIFIC INSTRUCITONS *) 
-	
-	(* all binops *)
-	Unshelve. all: match goal with H : context[SymbolicVector.SymexVectorBinOp] |- _ => idtac | _ => shelve end.
-	all: eapply SymexVectorBinOp_R; try (eassumption || lia); auto with interprets_as. 
-
-  Unshelve. all : match goal with H : context[Syntax.vzeroupper] |- _ => idtac | _ => shelve end; shelve_unifiable.  
-  { (* vzeroupper: each YMM gets slice 0 128, matching Z.land _ (Z.ones 128) *)
-		eapply mapM_fold_left_R in H. exact H. intros. apply vzeroupper_step_R; assumption. exact HR.
-  }
-
-  (* vpbroadcastq *)
-  Unshelve. all : match goal with H : context[Syntax.vpbroadcastq] |- _ => idtac | _ => shelve end; shelve_unifiable.
-  { step_broadcast. step_symex. cleanup. exists m0. solve_R_subgoals. }
-	
-  (* vpblendd *)
-  Unshelve. all : match goal with H : context[Syntax.vpblendd] |- _ => idtac | _ => shelve end; shelve_unifiable.
-  { step_blend. step_symex. cleanup. exists m0. solve_R_subgoals. }
-
-  (* vpmuludq *)
-  Unshelve. all : match goal with H : context[Syntax.vpmuludq] |- _ => idtac | _ => shelve end; shelve_unifiable.
-  { step_muludq. step_symex. cleanup. exists m0. solve_R_subgoals. }
-
-	(* vpsrlq / vpsllq *)
-  Unshelve. all : match goal with 
-  					H : context[Syntax.vpsrlq] |- _ => idtac 
-  				| H :	context[Syntax.vpsllq] |- _ => idtac 
-  				| _ => shelve end; shelve_unifiable.
-    all: step_shift_imm; step_symex; cleanup; exists m0; unfold
-  SemanticVector.DenoteVectorUnaryOp; rewrite Hv0; solve_R_subgoals.
-
-  (* vpunpcklqdq *)
-  Unshelve. all : match goal with H : context[Syntax.vpunpcklqdq] |- _ => idtac | _ => shelve end; shelve_unifiable.
-  { step_unpcklqdq. step_symex; cleanup. exists m0. solve_R_subgoals. }
-
-  Unshelve. all : match goal with 
-  					H : context[Syntax.vpextrq] |- _ => idtac 
-  				| H :	context[Syntax.vextracti128] |- _ => idtac 
-  				| H :	context[Syntax.vinserti128] |- _ => idtac 
-  				| _ => shelve end; shelve_unifiable.
-  all: normalize_NZ; rewrite Z2N.id in *; try solve [eapply DenoteOperand_nonneg; eassumption]; bitblast.Z.bitblast.
-  
-(* Scalar instrs *) 
-
+(* 6:25 goals 
+Some R _ SetFLag goals left, some other misc
+*)
 
   Unshelve. all : match goal with H : context[Syntax.sub] |- _ => idtac | _ => shelve end.
   { cbn; repeat (rewrite ?Z.land_ones, ?Z.add_opp_r by Lia.lia).
@@ -3262,7 +2642,22 @@ Proof using Type.
   Unshelve. all : match goal with H : context[push] |- _ => idtac | H : context[pop] |- _ => idtac | _ => shelve end; shelve_unifiable.
   all: rewrite !Z.land_ones by lia; push_Zmod; pull_Zmod; f_equal; lia.
 
+  Unshelve. all : match goal with H : context[Syntax.vzeroupper] |- _ => idtac | _ => shelve end; shelve_unifiable.  
+  { (* vzeroupper: each YMM gets slice 0 128, matching Z.land _ (Z.ones 128) *)
+    eapply mapM_fold_left_R in H. exact H. intros. apply vzeroupper_step_R; assumption. exact HR.
+  }
+
+  (* vpaddq *)
+  Unshelve. all : match goal with H : context[Syntax.vpaddq] |- _ => idtac | _ => shelve end; shelve_unifiable.
+  { eapply SymexVectorBinOp_R with
+      (sa := 64%N) (lane_width := 64%N) (lane_op := add 64%N)
+      (binop := fun a b => Z.land (a + b) (Z.ones 64))
+      in H; try (eassumption || lia).
+    apply interprets_as_add.
+  }
+
   Unshelve. all: shelve_unifiable.
+	(* cbn. repeat rewrite Z.land_same_r. autorewrite with zsimplify push_Zshift. clear.  cbn.  *)
 	
   all: fail_if_goals_remain ().
 (* Qed here hangs until the kernel crashes. Admitting until it can be sped up *)

@@ -1,0 +1,294 @@
+**Goals:**
+```
+40 goals (ID 145439)
+  
+  frame : mem_state -> Prop
+  G : symbol -> option Z
+  opts : symbolic_options_computed_opt
+  descr : description
+  s : symbolic_state
+  m : machine_state
+  HR : R s m
+  op : option OpPrefix
+  s' : symbolic_state
+  n : N
+  a, a0 : ARG
+  E : Syntax.operation_size {| prefix := op; Syntax.op := adc; args := [a; a0] |} = Some n
+  E0 : prefix {| prefix := op; Syntax.op := adc; args := [a; a0] |} = None
+  x : idx
+  s0 : symbolic_state
+  x0 : idx
+  s1 : symbolic_state
+  iCF, y : idx
+  s3 : symbolic_state
+  x2 : idx
+  s4 : symbolic_state
+  x3 : idx
+  s5 : symbolic_state
+  iCF0, y0 : idx
+  s7 : symbolic_state
+  x5 : idx
+  s8 : symbolic_state
+  x6 : idx
+  s9 : symbolic_state
+  iCF1, y1 : idx
+  s11 : symbolic_state
+  x8 : unit
+  s12 : symbolic_state
+  x9 : unit
+  s13 : symbolic_state
+  x10 : unit
+  s14 : symbolic_state
+  Hs0 : R s0 m
+  Hls0 : s :< s0
+  v : Z
+  Hx : eval s0 x v
+  Hv : DenoteOperand 64 n m a = Some v
+  Hs1 : R s1 m
+  Hls1 : s0 :< s1
+  v0 : Z
+  Hx0 : eval s1 x0 v0
+  Hv0 : DenoteOperand 64 n m a0 = Some v0
+  vCF : bool
+  Hx1 : eval s1 iCF (Z.b2z vCF)
+  HvCF0 : get_flag m CF = Some vCF
+  Hs3 : R s3 m
+  Hls3 : s1 :< s3
+  Hy : eval s3 y (Z.land (fold_right Z.add 0 [v; v0; Z.b2z vCF]) (Z.ones (Z.of_N n)))
+  Hs4 : R s4 m
+  Hls4 : s3 :< s4
+  v1 : Z
+  Hx2 : eval s4 x2 v1
+  Hv1 : DenoteOperand 64 n m a = Some v1
+  Hs5 : R s5 m
+  Hls5 : s4 :< s5
+  v2 : Z
+  Hx3 : eval s5 x3 v2
+  Hv2 : DenoteOperand 64 n m a0 = Some v2
+  vCF0 : bool
+  Hx4 : eval s5 iCF0 (Z.b2z vCF0)
+  HvCF : get_flag m CF = Some vCF0
+  Hs7 : R s7 m
+  Hls7 : s5 :< s7
+  Hy0 : eval s7 y0 (Z.shiftr (fold_right Z.add 0 [v1; v2; Z.b2z vCF0]) (Z.of_N n) mod 2)
+  Hs8 : R s8 m
+  Hls8 : s7 :< s8
+  v3 : Z
+  Hx5 : eval s8 x5 v3
+  Hv3 : DenoteOperand 64 n m a = Some v3
+  Hs9 : R s9 m
+  Hls9 : s8 :< s9
+  v4 : Z
+  Hx6 : eval s9 x6 v4
+  Hv4 : DenoteOperand 64 n m a0 = Some v4
+  vCF1 : bool
+  Hx7 : eval s9 iCF1 (Z.b2z vCF1)
+  HvCF2 : get_flag m CF = Some vCF1
+  Hs11 : R s11 m
+  Hls11 : s9 :< s11
+  Hy1 :
+    eval s11 y1
+      (Z.b2z
+         (negb
+            (Z.signed n (Z.land (fold_right Z.add 0 [v3; v4; Z.b2z vCF1]) (Z.ones (Z.of_N n))) =?
+             fold_right Z.add 0 (map (Z.signed n) [v3; v4; Z.b2z vCF1]))))
+  m0 : machine_state
+  Hm0 : SetOperand 64 n m a (Z.land (fold_right Z.add 0 [v; v0; Z.b2z vCF]) (Z.ones (Z.of_N n))) = Some m0
+  Hs12 : R s12 m0
+  Hls12 : s11 :< s12
+  Hs13 : R s13 (HavocFlags m0)
+  Hlts13 : s12 :< s13
+  Hs14 : R s14 (SetFlag (HavocFlags m0) CF (Z.testbit (Z.shiftr (fold_right Z.add 0 [v1; v2; Z.b2z vCF0]) (Z.of_N n)) 0))
+  Hes14 : s13 :< s14
+  Hs' :
+    R s'
+      (SetFlag (SetFlag (HavocFlags m0) CF (Z.testbit (Z.shiftr (fold_right Z.add 0 [v1; v2; Z.b2z vCF0]) (Z.of_N n)) 0)) OF
+         (negb
+            (Z.signed n (Z.land (fold_right Z.add 0 [v3; v4; Z.b2z vCF1]) (Z.ones (Z.of_N n))) =?
+             fold_right Z.add 0 (map (Z.signed n) [v3; v4; Z.b2z vCF1]))))
+  Hes' : s14 :< s'
+  ============================
+  R s'
+    (SetFlag
+       (SetFlag (HavocFlagsFromResult n m0 (Z.land (v + v0 + Z.b2z vCF) (Z.ones (Z.of_N n)))) CF
+          (Z.odd (Z.shiftr (v3 + v4 + Z.b2z vCF1) (Z.of_N n))))
+       OF
+       (negb
+          (Z.signed n (Z.land (v + v0 + Z.b2z vCF) (Z.ones (Z.of_N n))) =? Z.signed n v3 + Z.signed n v4 + Z.signed n (Z.b2z vCF1))))
+
+goal 2 (ID 145293) is:
+ R s' (SetFlag m0 CF (Z.odd (Z.shiftr (v1 + v2 + Z.b2z vCF0) (Z.of_N n))))
+goal 3 (ID 145445) is:
+ R s'
+   (SetFlag (SetFlag (HavocFlagsFromResult n m0 (Z.land (v + v0) (Z.ones (Z.of_N n)))) CF (Z.odd (Z.shiftr (v3 + v4) (Z.of_N n))))
+      OF (negb (Z.signed n (Z.land (v + v0) (Z.ones (Z.of_N n))) =? Z.signed n v3 + Z.signed n v4 + Z.signed n (Z.b2z false))))
+goal 4 (ID 145299) is:
+ R s' (SetFlag m0 OF (Z.odd (Z.shiftr (v1 + v2 + Z.b2z vOF0) (Z.of_N n))))
+goal 5 (ID 145449) is:
+ R s' (HavocFlag (SetFlag (SetFlag (HavocFlagsFromResult n m0 (Z.land v v0)) CF false) OF false) AF)
+goal 6 (ID 145451) is:
+ R s'
+   (SetFlag
+      (SetFlag (HavocFlagsFromResult n m0 (Z.land v0 (Z.ones (Z.land v (Z.ones 8))))) CF
+         (Z.of_N (operand_size a0 n) - 1 <? Z.land v0 (Z.ones (Z.land v (Z.ones 8)))))
+      OF false)
+goal 7 (ID 145308) is:
+ exists m' : machine_state, (if vCF then SetOperand 64 n m a v0 else Some m) = Some m' /\ R s' m' /\ s :< s'
+goal 8 (ID 145310) is:
+ exists m' : machine_state, (if vCF then SetOperand 64 n m a v0 else Some m) = Some m' /\ R s' m' /\ s :< s'
+goal 9 (ID 145312) is:
+ exists m' : machine_state, (if negb vZF then SetOperand 64 n m a v else Some m) = Some m' /\ R s' m' /\ s :< s'
+goal 10 (ID 145314) is:
+ exists m' : machine_state, (if vOF then SetOperand 64 n m a v0 else Some m) = Some m' /\ R s' m' /\ s :< s'
+goal 11 (ID 145452) is:
+ Z.land (v + Z.land (-1) (Z.ones (Z.of_N n))) (Z.ones (Z.of_N n)) = Z.land (v1 - 1) (Z.ones (Z.of_N n))
+goal 12 (ID 145453) is:
+ R s'
+   (SetFlag
+      (update_flag_with (HavocFlagsFromResult n m0 (Z.land (v + Z.land (-1) (Z.ones (Z.of_N n))) (Z.ones (Z.of_N n))))
+         (fun fs : flag_state => set_flag_internal fs CF (get_flag m0 CF)))
+      OF (negb (Z.signed n (Z.land (v + Z.land (-1) (Z.ones (Z.of_N n))) (Z.ones (Z.of_N n))) =? Z.signed n v1 - 1))) /\
+ s :< s'
+goal 13 (ID 145459) is:
+ R s'
+   (SetFlag (SetFlag (HavocFlags m0) CF (negb (v * v0 =? Z.land (v * v0) (Z.ones (Z.of_N n))))) OF
+      (negb (v * v0 =? Z.land (v * v0) (Z.ones (Z.of_N n)))))
+goal 14 (ID 145461) is:
+ R s'
+   (SetFlag (SetFlag (HavocFlags m0) CF (negb (v * v0 =? Z.land (v * v0) (Z.ones (Z.of_N n))))) OF
+      (negb (v * v0 =? Z.land (v * v0) (Z.ones (Z.of_N n)))))
+goal 15 (ID 145462) is:
+ Z.land (v + Z.land 1 (Z.ones (Z.of_N n))) (Z.ones (Z.of_N n)) = Z.land (v1 + 1) (Z.ones (Z.of_N n))
+goal 16 (ID 145463) is:
+ R s'
+   (SetFlag
+      (update_flag_with (HavocFlagsFromResult n m0 (Z.land (v + Z.land 1 (Z.ones (Z.of_N n))) (Z.ones (Z.of_N n))))
+         (fun fs : flag_state => set_flag_internal fs CF (get_flag m0 CF)))
+      OF (negb (Z.signed n (Z.land (v + Z.land 1 (Z.ones (Z.of_N n))) (Z.ones (Z.of_N n))) =? Z.signed n v1 + 1))) /\
+ s :< s'
+goal 17 (ID 145337) is:
+ R s' (update_reg_with m (fun rs : reg_state => set_reg rs r (DenoteAddress 64 m m0)))
+goal 18 (ID 145471) is:
+ R s' (HavocFlag (SetFlag (SetFlag (HavocFlagsFromResult n m0 (Z.lor v v0)) CF false) OF false) AF)
+goal 19 (ID 145472) is:
+ Z.land (v1 + Z.land (Z.of_N n / 8) (Z.ones (Z.of_N 64))) (Z.ones (Z.of_N 64)) = Z.land (v1 + Z.of_N n / 8) (Z.ones (Z.of_N 64))
+goal 20 (ID 145473) is:
+ Z.land (v1 + Z.land (- (Z.of_N n / 8)) (Z.ones (Z.of_N 64))) (Z.ones (Z.of_N 64)) = Z.land (v1 - Z.of_N n / 8) (Z.ones (Z.of_N 64))
+goal 21 (ID 145386) is:
+ R s'
+   (if rcrcnt n v0 =? 0
+    then m0
+    else
+     if rcrcnt n v0 =? 1
+     then
+      SetFlag (SetFlag m0 CF (Z.testbit (Z.lor v (Z.shiftl (Z.b2z vCF) (Z.of_N n))) (rcrcnt n v0 - 1))) OF
+        (xorb
+           (Z.testbit
+              (Z.land
+                 (Z.shiftr (Z.lor (Z.lor v (Z.shiftl (Z.b2z vCF) (Z.of_N n))) (Z.shiftl v (1 + Z.of_N n))) (Symbolic.rcrcnt n v0))
+                 (Z.ones (Z.of_N n)))
+              (Z.of_N n - 1))
+           (Z.testbit
+              (Z.land
+                 (Z.shiftr (Z.lor (Z.lor v (Z.shiftl (Z.b2z vCF) (Z.of_N n))) (Z.shiftl v (1 + Z.of_N n))) (Symbolic.rcrcnt n v0))
+                 (Z.ones (Z.of_N n)))
+              (Z.of_N n - 2)))
+     else SetFlag m0 CF (Z.testbit (Z.lor v (Z.shiftl (Z.b2z vCF) (Z.of_N n))) (rcrcnt n v0 - 1)))
+goal 22 (ID 145389) is:
+ R s'
+   (if rcrcnt n v0 =? 0
+    then m0
+    else
+     if rcrcnt n v0 =? 1
+     then
+      SetFlag (SetFlag m0 CF (Z.testbit (Z.lor v (Z.shiftl (Z.b2z vCF) (Z.of_N n))) (rcrcnt n v0 - 1))) OF
+        (xorb
+           (Z.testbit
+              (Z.land
+                 (Z.shiftr (Z.lor (Z.lor v (Z.shiftl (Z.b2z vCF) (Z.of_N n))) (Z.shiftl v (1 + Z.of_N n))) (Symbolic.rcrcnt n v0))
+                 (Z.ones (Z.of_N n)))
+              (Z.of_N n - 1))
+           (Z.testbit
+              (Z.land
+                 (Z.shiftr (Z.lor (Z.lor v (Z.shiftl (Z.b2z vCF) (Z.of_N n))) (Z.shiftl v (1 + Z.of_N n))) (Symbolic.rcrcnt n v0))
+                 (Z.ones (Z.of_N n)))
+              (Z.of_N n - 2)))
+     else SetFlag m0 CF (Z.testbit (Z.lor v (Z.shiftl (Z.b2z vCF) (Z.of_N n))) (rcrcnt n v0 - 1)))
+goal 23 (ID 145393) is:
+ R s' (if Z.land v0 (Z.of_N n - 1) =? 0 then m0 else HavocFlag st0 AF)
+goal 24 (ID 145396) is:
+ R s' (if Z.land v0 (Z.of_N n - 1) =? 0 then m0 else HavocFlag st0 AF)
+goal 25 (ID 145477) is:
+ Z.land (v + Z.land (- v0) (Z.ones (Z.of_N n)) + Z.land (- Z.b2z vCF) (Z.ones (Z.of_N n))) (Z.ones (Z.of_N n)) =
+ Z.land (v1 - (v2 + Z.b2z vCF0)) (Z.ones (Z.of_N n))
+goal 26 (ID 145479) is:
+ R s'
+   (SetFlag
+      (SetFlag
+         (HavocFlagsFromResult n m0
+            (Z.land (v + Z.land (- v0) (Z.ones (Z.of_N n)) + Z.land (- Z.b2z vCF) (Z.ones (Z.of_N n))) (Z.ones (Z.of_N n))))
+         CF (Z.odd (Z.shiftr (v1 - (v2 + Z.b2z vCF0)) (Z.of_N n))))
+      OF
+      (negb
+         (Z.signed n (Z.land (v + Z.land (- v0) (Z.ones (Z.of_N n)) + Z.land (- Z.b2z vCF) (Z.ones (Z.of_N n))) (Z.ones (Z.of_N n))) =?
+          Z.signed n v1 - (Z.signed n v2 + Z.b2z vCF0))))
+goal 27 (ID 145406) is:
+ R s' (if v0 =? 0 then m0 else HavocFlag st0 AF)
+goal 28 (ID 145481) is:
+ Z.land (Z.shiftl v0 (Z.land (Z.land v (Z.ones (Z.of_N n))) (Z.of_N n - 1))) (Z.ones (Z.of_N n)) =
+ Z.land (Z.shiftl v0 (Z.land v (Z.of_N n - 1))) (Z.ones (Z.of_N n))
+goal 29 (ID 145484) is:
+ Z.land
+   (Z.lor (Z.land (Z.shiftr v (Z.land (Z.of_N n) (Z.ones (Z.of_N n)) + - Z.land v1 (Z.of_N n - 1))) (Z.ones (Z.of_N n)))
+      (Z.land (Z.shiftl v2 (Z.land v3 (Z.of_N n - 1))) (Z.ones (Z.of_N n))))
+   (Z.ones (Z.of_N n)) =
+ Z.land (Z.shiftr (Z.shiftl (Z.lor v (Z.shiftl v2 (Z.of_N n))) (Z.land v3 (Z.of_N n - 1))) (Z.of_N n)) (Z.ones (Z.of_N n))
+goal 30 (ID 145412) is:
+ R s'
+   (if v3 =? 0 then m0 else if Z.of_N n <? v3 then HavocFlags m0 else HavocFlag (SetFlag st CF (Z.testbit v2 (Z.of_N n - v3))) AF)
+goal 31 (ID 145415) is:
+ R s' (if v0 =? 0 then m0 else HavocFlag st0 AF)
+goal 32 (ID 145488) is:
+ Z.land
+   (Z.lor (Z.land (Z.shiftr v (Z.land v0 (Z.of_N n - 1))) (Z.ones (Z.of_N n)))
+      (Z.land (Z.shiftl v1 (Z.land (Z.of_N n) (Z.ones (Z.of_N n)) + - Z.land v3 (Z.of_N n - 1))) (Z.ones (Z.of_N n))))
+   (Z.ones (Z.of_N n)) =
+ Z.land (Z.shiftr (Z.lor v (Z.shiftl v1 (Z.of_N n))) (Z.land v3 (Z.of_N n - 1))) (Z.ones (Z.of_N n))
+goal 33 (ID 145418) is:
+ R s'
+   (if v3 =? 0
+    then m0
+    else
+     if Z.of_N n <? v3 then HavocFlags m0 else HavocFlag (SetFlag st CF (Z.testbit (Z.lor v (Z.shiftl v1 (Z.of_N n))) (v3 - 1))) AF)
+goal 34 (ID 145490) is:
+ Z.land (v + Z.land (- v0) (Z.ones (Z.of_N n))) (Z.ones (Z.of_N n)) = Z.land (v1 - v2) (Z.ones (Z.of_N n))
+goal 35 (ID 145493) is:
+ R s'
+   (SetFlag
+      (SetFlag (HavocFlagsFromResult n m0 (Z.land (v + Z.land (- v0) (Z.ones (Z.of_N n))) (Z.ones (Z.of_N n)))) CF
+         (Z.odd (Z.shiftr (v1 - v2) (Z.of_N n))))
+      OF (negb (Z.signed n (Z.land (v + Z.land (- v0) (Z.ones (Z.of_N n))) (Z.ones (Z.of_N n))) =? Z.signed n v1 - Z.signed n v2)))
+goal 36 (ID 145422) is:
+ R s' (HavocFlag (SetFlag (SetFlag (HavocFlagsFromResult n m (Z.land v v0)) CF false) OF false) AF)
+goal 37 (ID 145423) is:
+ R s' (HavocFlag (SetFlag (SetFlag (HavocFlagsFromResult n m (Z.land v v0)) CF false) OF false) AF)
+goal 38 (ID 145495) is:
+ R s' (HavocFlag (SetFlag (SetFlag (HavocFlagsFromResult n m0 (Z.lxor v v0)) CF false) OF false) AF)
+goal 39 (ID 145429) is:
+ exists m' : machine_state,
+   SemanticVector.DenoteVectorBinOp 64 n m a a0 a1 (fun a2 b : Z => Z.land (a2 + b) (Z.ones 64)) (N.to_nat (n / 64)) 64 = Some m' /\
+   R s' m' /\ s :< s'
+goal 40 (ID 145435) is:
+ R s'
+   (fold_left
+      (fun (acc : machine_state) (yr : VREG) =>
+       update_reg_with acc (fun rs : reg_state => set_reg rs (VReg yr) (Z.land (get_reg acc (VReg yr)) (Z.ones 128))))
+      [ymm0; ymm1; ymm2; ymm3; ymm4; ymm5; ymm6; ymm7; ymm8; ymm9; ymm10; ymm11; ymm12; ymm13; ymm14; ymm15] m) /\
+ s :< s'
+
+```
+
+**Response:**
+```
+
+```
