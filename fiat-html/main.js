@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Create a container for each output file
         const fileEntries = Object.entries(files);
-        
+
         // Add or remove 'hidden' class based on whether there are files
         if (fileEntries.length > 0) {
             // Create HTML for each file
@@ -242,6 +242,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 } else {
                     errorMessage += "<br>Consider using WASM or opening this page in <a href=\"https://www.apple.com/safari/\">Safari</a> instead.";
                 }
+            } else {
+                errorMessage += "<br>Consider using WASM instead.";
             }
         }
 
