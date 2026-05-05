@@ -118,9 +118,11 @@ Module Jacobian.
       | inr _ => (0, 0, 0)
       end.
 
-    Definition of_affine (P : Wpoint) : point. refine (
-      exist _ (of_affine_impl (proj1_sig P)) _).
-    Proof. abstract (cbv [of_affine_impl]; t). Defined.
+    Definition of_affine (P : Wpoint) : point.
+    Proof.
+      refine (exist _ (of_affine_impl (proj1_sig P)) _).
+      abstract (cbv [of_affine_impl]; t).
+    Defined.
 
     Definition to_affine_impl (P : F*F*F) : F*F+unit :=
       match P return F*F+_ with
@@ -129,9 +131,11 @@ Module Jacobian.
         else inl (X/Z^2, Y/Z^3)
       end.
 
-    Definition to_affine (P:point) : Wpoint. refine (exist _ (
-      to_affine_impl (proj1_sig P)) _).
-    Proof. abstract (cbv [to_affine_impl]; t). Defined.
+    Definition to_affine (P:point) : Wpoint.
+    Proof.
+      refine (exist _ (to_affine_impl (proj1_sig P)) _).
+      abstract (cbv [to_affine_impl]; t).
+    Defined.
 
     Hint Unfold to_affine_impl to_affine of_affine_impl of_affine : points_as_coordinates.
 
@@ -155,11 +159,14 @@ Module Jacobian.
     Lemma iszero_iff P : iszero P <-> W.eq (to_affine P) W.zero.
     Proof. cbv [iszero W.zero]; t. Qed.
 
-    Definition opp (P:point) : point. refine (exist _ (
-      match proj1_sig P return F*F*F with
-      | (X, Y, Z) => (X, Fopp Y, Z)
-      end) _).
-    Proof. abstract t. Defined.
+    Definition opp (P:point) : point.
+    Proof.
+      refine (exist _ (
+        match proj1_sig P return F*F*F with
+        | (X, Y, Z) => (X, Fopp Y, Z)
+        end) _).
+      abstract t.
+    Defined.
 
     Hint Unfold opp W.opp : points_as_coordinates.
 
@@ -205,9 +212,11 @@ Module Jacobian.
       let y_out := y_out - yyyy in
       (x_out, y_out, z_out).
 
-    Definition double (P : point) : point. refine (exist _ (
-      double_impl (proj1_sig P)) _).
-    Proof. abstract (cbv [double_impl]; t). Defined.
+    Definition double (P : point) : point.
+    Proof.
+      refine (exist _ (double_impl (proj1_sig P)) _).
+      abstract (cbv [double_impl]; t).
+    Defined.
 
     Local Ltac clear_neq :=
       repeat match goal with
@@ -550,9 +559,11 @@ Module Jacobian.
       else (x3, y3, z3).
     Hint Unfold add_impl : points_as_coordinates.
 
-    Definition add_nz_nz (P Q : point) : point. refine (
-      exist _ (add_impl (proj1_sig P) (proj1_sig Q) false) _).
-    Proof. abstract faster_t_noclear. Defined.
+    Definition add_nz_nz (P Q : point) : point.
+    Proof.
+      refine (exist _ (add_impl (proj1_sig P) (proj1_sig Q) false) _).
+      abstract faster_t_noclear.
+    Defined.
     Hint Unfold add_nz_nz : points_as_coordinates.
 
     Hint Unfold W.add' : points_as_coordinates.
@@ -613,13 +624,18 @@ Module Jacobian.
 
     Hint Unfold add_inequal_impl : points_as_coordinates.
 
-    Definition add_inequal_nz_nz (P Q : point) (_ : ~ eq P Q) : point. refine (exist _ (
-      fst (add_inequal_impl (proj1_sig P) (proj1_sig Q) false)) _).
-    Proof. abstract faster_t_noclear. Defined.
+    Definition add_inequal_nz_nz (P Q : point) (_ : ~ eq P Q) : point.
+    Proof.
+      refine (exist _ (fst (add_inequal_impl (proj1_sig P) (proj1_sig Q) false)) _).
+      abstract faster_t_noclear.
+    Defined.
 
-    Definition add_affine_inequal_nz_nz (P : point) (Q : Wpoint) (_ : ~ eq P (of_affine Q)) : point. refine (exist _ (
-      fst (add_inequal_impl (proj1_sig P) (proj1_sig (of_affine Q)) false)) _).
-    Proof. abstract faster_t_noclear. Defined.
+    Definition add_affine_inequal_nz_nz (P : point) (Q : Wpoint) (_ : ~ eq P (of_affine Q)) : point.
+    Proof.
+      refine (exist _ (
+        fst (add_inequal_impl (proj1_sig P) (proj1_sig (of_affine Q)) false)) _).
+      abstract faster_t_noclear.
+    Defined.
 
     Hint Unfold add_inequal_impl add_inequal_nz_nz add_affine_inequal_nz_nz : points_as_coordinates.
 
@@ -716,10 +732,11 @@ Module Jacobian.
 
       Hint Unfold Fsquare Ftriple Fhalve double_minus3_impl : points_as_coordinates.
 
-      Definition double_minus_3 (P : point) : point. refine (exist _
-        (double_minus3_impl (proj1_sig P))
-        _).
-      Proof. abstract faster_t. Defined.
+      Definition double_minus_3 (P : point) : point.
+      Proof.
+        refine (exist _ (double_minus3_impl (proj1_sig P)) _).
+        abstract faster_t.
+      Defined.
 
       Hint Unfold double_minus_3 : points_as_coordinates.
 
@@ -756,10 +773,13 @@ Module Jacobian.
 
       Hint Unfold double_minus3_without_halving_impl : points_as_coordinates.
 
-      Definition double_minus3_without_halving (P : point) : point. refine (exist _
-        (double_minus3_without_halving_impl (proj1_sig P))
-        _).
-      Proof. abstract faster_t. Defined.
+      Definition double_minus3_without_halving (P : point) : point.
+      Proof.
+        refine (exist _
+          (double_minus3_without_halving_impl (proj1_sig P))
+          _).
+        abstract faster_t.
+      Defined.
 
       Hint Unfold double_minus3_without_halving : points_as_coordinates.
 
