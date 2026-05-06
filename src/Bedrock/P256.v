@@ -148,6 +148,7 @@ Proof.
   pose_correctness p256_point_add_nz_nz_neq_ok.
 
   pose_correctness p256_point_add_vartime_if_doubling_ok.
+  pose_correctness p256_point_add_constant_time_ok.
 
   pose_correctness p256_point_add_affine_nz_nz_neq_ok.
   pose_correctness p256_point_add_affinenz_conditional_vartime_if_doubling_ok.

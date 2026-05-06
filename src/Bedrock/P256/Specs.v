@@ -313,12 +313,30 @@ Context {ext_spec : Semantics.ExtSpec}.
       m =* out$@p_out * P$@p_P * R
   }%sep.
 
-#[export] Instance spec_of_p256_point_add_vartime_if_doubling : spec_of "p256_point_add_vartime_if_doubling" :=
-  fnspec! "p256_point_add_vartime_if_doubling" p_out p_P p_Q / out (P Q : point),
-  { requires t m := m =* out$@p_out * P$@p_P * Q$@p_Q /\ length out = length P;
+(* Two specs exist as Definitions for p256_point_add_vartime_if_doubling:
+     1. General: Variable-time, supports equal points.
+     2. Constant-time: Requires points equal only if both are zero.
+     Select the constant-time spec to enforce its preconditions. Note:
+     This ensures conditional safety, not a proof of constant-time execution. *)
+
+#[global] Definition spec_of_p256_point_add_vartime_if_doubling : spec_of "p256_point_add_vartime_if_doubling" :=
+  fnspec! "p256_point_add_vartime_if_doubling" p_out p_P p_Q / out (P Q : point) R,
+  { requires t m := m =* out$@p_out * P$@p_P * Q$@p_Q * R /\ length out = length P;
     ensures t' m := t' = t /\ exists out : point,
-      m =* out$@p_out * P$@p_P * Q$@p_Q /\ Jacobian.eq out (Jacobian.add P Q)
+      m =* out$@p_out * P$@p_P * Q$@p_Q * R /\ Jacobian.eq out (Jacobian.add P Q)
   }%sep.
+
+#[global] Definition spec_of_p256_point_add_constant_time : spec_of "p256_point_add_vartime_if_doubling" :=
+  fnspec! "p256_point_add_vartime_if_doubling" p_out p_P p_Q / out (P Q : point) R,
+  { requires t m :=
+      m =* out$@p_out * P$@p_P * Q$@p_Q * R /\
+      length out = length P /\
+      (~ (W.eq (Jacobian.to_affine P) W.zero /\ W.eq (Jacobian.to_affine Q) W.zero) ->
+        ~ W.eq (Jacobian.to_affine P) (Jacobian.to_affine Q));
+    ensures T M := T = t /\ exists (out : point),
+      M =* out$@p_out * P$@p_P * Q$@p_Q * R /\
+      Jacobian.eq out (Jacobian.add P Q)
+  }.
 
 #[export] Instance spec_of_p256_point_add_affine_nz_nz_neq : spec_of "p256_point_add_affine_nz_nz_neq" :=
   fnspec! "p256_point_add_affine_nz_nz_neq" p_out p_P p_Q / out (P : point) (Q : affine_point) R ~> ok,

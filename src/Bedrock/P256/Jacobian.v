@@ -41,7 +41,6 @@ Local Open Scope list_scope.
 
 Import (notations) coqutil.Map.Memory.
 
-
 Import Coq.micromega.Lia.
 Import coqutil.Tactics.Tactics.
 
@@ -305,8 +304,6 @@ rewrite ?app_length, ?length_coord in *.
     trivial. }
 Qed.
 
-Import coqutil.Tactics.Tactics.
-
 Definition p256_point_add_vartime_if_doubling := func!(p_out, p_P, p_Q) {
   unpack! zeroP = p256_point_iszero(p_P);
   unpack! zeroQ = p256_point_iszero(p_Q);
@@ -322,66 +319,72 @@ Definition p256_point_add_vartime_if_doubling := func!(p_out, p_P, p_Q) {
   br_memcpy(p_out, p_sel, $(3*32))
 }.
 
+#[local] Ltac ensure_map m := lazymatch type of m with | @Interface.map.rep _ _ _ => true | _ => false end.
+#[local] Ltac newest_memory_hyp := match goal with | H: ?G ?m |- _ =>
+match (ensure_map m) with true => H | false => fail end end.
+
 Import memcpy.
-Lemma p256_point_add_vartime_if_doubling_ok : program_logic_goal_for_function! p256_point_add_vartime_if_doubling.
+Lemma p256_point_add_vartime_if_doubling_ok :
+  let spec := spec_of_p256_point_add_vartime_if_doubling in
+  program_logic_goal_for_function! p256_point_add_vartime_if_doubling.
 Proof.
   cbv [spec_of_p256_point_add_vartime_if_doubling].
   repeat straightline.
+  pose proof (length_point P) as HlengthP. pose proof (length_point Q) as HlengthQ.
   straightline_call; repeat straightline. (*iszero*)
-  { letexists. ecancel_assumption. }
+  { eexists. ecancel_assumption. }
   straightline_call; repeat straightline. (*iszero*)
-  { letexists. ecancel_assumption. }
+  { eexists. ecancel_assumption. }
   (* stackalloc *)
-  seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H9 ltac:(lia).
+  seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) ltac:(newest_memory_hyp) ltac:(lia).
   straightline_call; ssplit. (*add*)
   { ecancel_assumption. }
-  { rewrite length_point; lia. }
+  { lia. }
   repeat straightline.
   straightline_call; repeat straightline (* br_declassify *).
   (* stackalloc *)
-  seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H17 ltac:(lia).
+  seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) ltac:(newest_memory_hyp) ltac:(lia).
   straightline_call; ssplit. (* memset *)
   { ecancel_assumption. }
-  { ZnWords.ZnWords. }
+  { ZnWords. }
   repeat straightline.
   straightline_call; repeat straightline; ssplit (* memcxor *).
   { ecancel_assumption. }
   { rewrite ?repeat_length; trivial. }
-  { rewrite H18, length_point; trivial. }
+  { ZnWords. }
   straightline_call; repeat straightline; ssplit (* memcxor *).
   { ecancel_assumption. }
   { rewrite ?repeat_length; trivial. }
-  { rewrite length_point; trivial. }
+  { ZnWords. }
   straightline_call; repeat straightline; ssplit (* memcxor *).
   { ecancel_assumption. }
   { rewrite ?repeat_length; trivial. }
-  { rewrite length_point; trivial. }
-
+  { ZnWords. }
   subst x x0 x3.
-  letexists; ssplit; repeat straightline; subst v (* if ok *).
+  eexists; ssplit; repeat straightline. (* if ok *)
   { straightline_call; repeat straightline; ssplit (* memcpy *).
     { ecancel_assumption. }
-    { rewrite H10, length_point; trivial. }
+    { ZnWords. }
     { trivial. }
-    { clear; ZnWords.ZnWords. }
+    { clear; ZnWords. }
     repeat straightline.
     (* stackdealloc *)
-    progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) H42 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
-    progress repeat match type of H42 with context [Array.array ptsto _ _ (point.to_bytes ?x)] =>
-    unique pose proof (length_point x) end.
+    progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) ltac:(newest_memory_hyp)
+        ltac:(rewrite ?length_point in *; lia || ZnWords).
     assert (Datatypes.length x6 = 96%nat) by ZnWords.ZnWords.
     repeat straightline.
-    progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H42 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
-
-    rewrite <-word.unsigned_of_Z_0, !word.unsigned_inj_iff in H27 by exact _.
-    rewrite !word.lor_0_iff, !word.broadcast_0_iff in H27.
+    progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at)
+        ltac:(newest_memory_hyp) ltac:(lia || ZnWords.ZnWords).
+    let Hzero := match goal with H: _ <> 0 |- _ => H end in
+      rewrite <-word.unsigned_of_Z_0, !word.unsigned_inj_iff in Hzero by exact _;
+      rewrite !word.lor_0_iff, !word.broadcast_0_iff in Hzero.
     destruct (iszero P) eqn:HP, (iszero Q) eqn:HQ in *; try intuition discriminate;
       repeat match goal with
              | H : _ = _ -> _ |- _ => specialize (H eq_refl)
              | H : ?x = ?y -> _ |- _ => assert (x = y -> False) as _ by inversion 1; clear H
              end;
       subst x4; subst x5; subst x6;
-      rewrite ?Byte.map_xor_0_l in * by (rewrite ?length_point; ZnWords.ZnWords).
+      rewrite ?Byte.map_xor_0_l in * by (ZnWords).
     { (* 0 + 0 *)
       eexists (exist _ (0,0,0)%F I); split.
       { use_sep_assumption; cancel. reflexivity. }
@@ -393,7 +396,6 @@ Proof.
       eexists; split. { ecancel_assumption. }
       apply Decidable.dec_bool, Jacobian.iszero_iff in HP.
       rewrite Jacobian.eq_iff, Jacobian.to_affine_add, HP.
-Import Curves.Weierstrass.AffineProofs.
       symmetry.
       eapply Hierarchy.left_identity. }
     { (* P + 0 *)
@@ -406,7 +408,8 @@ Import Curves.Weierstrass.AffineProofs.
       rewrite <-Bool.not_true_iff_false in HP, HQ.
       (* Decidable.dec_iff? *)
       cbv [iszero] in HP, HQ; case Decidable.dec in HP; case Decidable.dec in HQ; try congruence.
-      destruct (H19 ltac:(trivial) ltac:(trivial)) as [HE|]; [|intuition fail].
+      match goal with H : ~ Jacobian.iszero ?P -> _ |- _ =>
+        destruct (H ltac:(trivial) ltac:(trivial)) as [HE|]; [|intuition fail] end.
       case HE as [_ (?&HE)].
       repeat straightline_cleanup.
       eexists; split; [ecancel_assumption|].
@@ -428,7 +431,7 @@ Import Curves.Weierstrass.AffineProofs.
     straightline_call; repeat straightline.
     { split. { ecancel_assumption. }
       rewrite ?map_length, ?combine_length, ?repeat_length.
-      rewrite H18, length_point. clear; ZnWords.ZnWords. }
+      rewrite H18, length_point. clear; reflexivity. }
 
     straightline_call; repeat straightline; ssplit (* memcpy *).
     { ecancel_assumption. }
@@ -437,16 +440,32 @@ Import Curves.Weierstrass.AffineProofs.
     { clear; ZnWords.ZnWords. }
     repeat straightline.
     (* stackdealloc *)
-    progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) H31 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
+    progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at)
+        ltac:(newest_memory_hyp) ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
     progress repeat match type of H31 with context [Array.array ptsto _ _ (point.to_bytes ?x)] =>
     unique pose proof (length_point x) end.
     repeat straightline.
-    progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H31 ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
+    progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at)
+        ltac:(newest_memory_hyp) ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
 
     eexists; ssplit. { ecancel_assumption. }
     rewrite <-HE, <-Jacobian.double_minus_3_eq_double.
     rewrite Jacobian.eq_iff, Jacobian.to_affine_double, Jacobian.to_affine_add.
     reflexivity. }
+Qed.
+
+Lemma p256_point_add_constant_time_ok :
+  let spec := spec_of_p256_point_add_constant_time in
+  program_logic_goal_for_function! p256_point_add_vartime_if_doubling.
+Proof.
+  unfold spec_of_p256_point_add_constant_time.
+  pose proof p256_point_add_vartime_if_doubling_ok as Hvartime.
+  unfold spec_of_p256_point_add_vartime_if_doubling in Hvartime.
+  cbv [program_logic_goal_for] in *.
+  do 21 intros ?. intros (?, (?, ?)).
+  eapply Semantics.weaken_call.
+  { eapply Hvartime; try trivial. split; eassumption. }
+  cbv [id]. intros. assumption.
 Qed.
 
 Definition p256_point_double := func!(out, in1) {

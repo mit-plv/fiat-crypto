@@ -79,6 +79,7 @@ Proof.
 Qed.
 
 Lemma p256_mul_mod_n (a b : Z) (P : Wpoint) :
+  ~ W.eq P W.zero ->
   W.eq (W.mul a P) (W.mul b P) <->
   a mod p256_group_order = b mod p256_group_order.
 Proof. Admitted.

@@ -58,12 +58,11 @@ Definition p256_precompute_multiples := func! (p_table, p_P) {
   i = $2;
   while ($17 - i) {
     if (i & $1) {
-      unpack! ok = p256_point_add_nz_nz_neq(
+      p256_point_add_vartime_if_doubling(
         p_table + ($sizeof_point * i),
         p_table + ($sizeof_point * (i - $1)),
         p_P
-      );
-      $(cmd.unset "ok")
+      )
     } else {
       p256_point_double(
         p_table + ($sizeof_point * i),
@@ -142,8 +141,7 @@ Qed.
   fnspec! "p256_precompute_multiples" p_table p_P / out (P : point) R,
   { requires t m :=
       m =* out$@p_table * P$@p_P * R /\
-      length out = (sizeof_point * 17)%nat /\
-      ~ Jacobian.iszero P;
+      length out = (sizeof_point * 17)%nat;
     ensures t' m := t' = t /\ exists out,
       m =* pointarray p_table out * P$@p_P * R /\
       List.Forall2 W.eq (map to_affine out) (W.multiples 17 (to_affine P))
@@ -421,7 +419,8 @@ Proof.
   { etransitivity; [eassumption|]. repeat Morphisms.f_equiv. lia. }
 Qed.
 
-Lemma p256_precompute_multiples_ok : program_logic_goal_for_function! p256_precompute_multiples.
+Lemma p256_precompute_multiples_ok :
+  let spec := spec_of_p256_point_add_constant_time in program_logic_goal_for_function! p256_precompute_multiples.
 Proof.
   repeat straightline.
 
@@ -489,7 +488,7 @@ Proof.
     rewrite ?map.of_list_word_nil in *.
     seprewrite_in @sepclause_of_map_empty ltac:(hyp_containing m0).
     eexists; ssplit; [ecancel_assumption|].
-    eqapply H12. f_equal. ZnWords.
+    eqapply H11. f_equal. ZnWords.
   }
 
   (* Loop invariant is preserved. *)
@@ -530,7 +529,7 @@ Proof.
       eapply ListUtil.Forall2_forall_iff'; [solve_num|assumption|solve_num].
     }
 
-    (* p256_point_add_nz_nz_neq *)
+    (* Point addition in constant time. *)
     straightline_call; ssplit.
     { use_sep_assumption; cancel.
       (* Set Ltac Profiling. *)
@@ -538,30 +537,18 @@ Proof.
       cancel_seps_at_indices 1%nat 0%nat; [match_up_pointers; exact eq_refl|]. (* 0.5s *)
       cbv [seps]; ecancel. }
     { solve_num. }
+    { rewrite <-(ScalarMult.scalarmult_1_l (eq:=W.eq) (to_affine P)).
+      rewrite Hvm1P. intros Hzero.
+      rewrite p256_mul_mod_n. {
+      cbv [p256_group_order]; PreOmega.Z.div_mod_to_equations. lia. }
+      { intros HPzero. apply Hzero. rewrite HPzero.
+        rewrite ScalarMult.scalarmult_zero_r, ScalarMult.scalarmult_1_l.
+        split; reflexivity. } }
 
     repeat straightline.
 
-    let h := hyp_containing @Forall2 in rename h into Hf2.
-
-    unshelve (match goal with H : ~ Jacobian.iszero ?P -> _ |- _ =>
-        repeat (let HH := fresh in assert (~ Jacobian.iszero P);
-        [shelve|specialize (H HH)]); trivial;
-        rename H into Hadd end).
-    { rewrite Jacobian.iszero_iff. rewrite Hvm1P.
-       rewrite <- (ScalarMult.scalarmult_0_l (eq:=W.eq) (Jacobian.to_affine P)), p256_mul_mod_n.
-        cbv [p256_group_order]; PreOmega.Z.div_mod_to_equations; lia. }
-
-    destruct Hadd as [(?&?&?)|[? Hadd] ]; trivial; [|contradict Hadd]; cycle 1.
-    { (* no doubling *)
-      rewrite Jacobian.eq_iff. rewrite Hvm1P.
-        rewrite <- (ScalarMult.scalarmult_1_l (eq:=W.eq) (to_affine P)) at 2.
-        rewrite p256_mul_mod_n.
-        cbv [p256_group_order]; PreOmega.Z.div_mod_to_equations; lia. }
-
-    repeat straightline.
-
-     eexists (S v); split.
-    { subst i. subst x0.
+    eexists (S v); split.
+    { subst i.
       eexists (multiples ++ [_]), (skipn sizeof_point todo); ssplit.
       { rewrite (pointlist_firstn_nth_skipn multiples (v - 1)) by solve_num.
         repeat seprewrite @array_append; repeat seprewrite @array_cons;
@@ -575,7 +562,8 @@ Proof.
         apply Forall2_app.
         { assumption. }
         repeat constructor.
-        rewrite Jacobian.to_affine_add_inequal_nz_nz by assumption.
+        let H := hyp_containing (add vm1P P) in rewrite H.
+        rewrite Jacobian.to_affine_add.
         rewrite Hvm1P.
         rewrite <- (ScalarMult.scalarmult_1_l (mul:=W.mul) (eq:=W.eq) (Jacobian.to_affine P)) at 2.
         rewrite <-ScalarMult.scalarmult_add_l.
