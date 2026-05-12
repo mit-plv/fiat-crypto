@@ -1,4 +1,4 @@
-From Stdlib Require Import
+From Coq Require Import
   BinInt
   String
   Lists.List.
