@@ -1,6 +1,11 @@
-Require Import Lists.List.
+From Stdlib Require Import
+  BinInt
+  String
+  Lists.List.
+
 From coqutil Require Import
   Byte
+  Datatypes.List
   Word.LittleEndianList.
 
 From bedrock2 Require Import
@@ -14,7 +19,7 @@ From Crypto Require Import
   ListUtil
   Util.ZUtil.
 
-Import BinInt String ListNotations.
+Import ListNotations.
 Import ProgramLogic.Coercions.
 
 #[local] Open Scope string_scope.
