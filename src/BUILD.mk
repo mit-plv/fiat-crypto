@@ -1,5 +1,5 @@
 FIATCRYPTO_DIR := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
-FIATCRYPTO_VFILES := $(call rwildcard,$(FIATCRYPTO_DIR),*.v)
+FIATCRYPTO_VFILES := $(call rwildcard,$(FIATCRYPTO_DIR),*.v) $(FIATCRYPTO_DIR)/Everything.v 
 FIATCRYPTO_COQDEPFLAGS := -R $(FIATCRYPTO_DIR) Crypto
 FIATCRYPTO_REQUIREFLAGS := -Q $(O)/$(FIATCRYPTO_DIR) Crypto
 
@@ -8,3 +8,5 @@ $(O)/$(FIATCRYPTO_DIR)/%.vo: private COQFLAGS += $(FIATCRYPTO_COQFLAGS)
 $(O)/$(FIATCRYPTO_DIR)/%.vos: private COQFLAGS += $(FIATCRYPTO_COQFLAGS)
 $(O)/$(FIATCRYPTO_DIR)/%.vok: private COQFLAGS += $(FIATCRYPTO_COQFLAGS)
 $(FIATCRYPTO_DIR)/_CoqProject: private COQFLAGS += $(FIATCRYPTO_COQFLAGS)
+
+include $(FIATCRYPTO_DIR)/Everything.v.mk
