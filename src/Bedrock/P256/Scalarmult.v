@@ -28,6 +28,7 @@ From Crypto Require Import
   Curves.Weierstrass.Affine
   Curves.Weierstrass.AffineProofs
   Curves.Weierstrass.Jacobian.Jacobian
+  ListUtil
   ModInv
   PrimeFieldTheorems
   Spec.WeierstrassCurve

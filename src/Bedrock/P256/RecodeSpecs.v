@@ -10,7 +10,9 @@ From bedrock2 Require Import
   Syntax
   BasicC64Semantics.
 
-Require Import Crypto.Util.ZUtil.
+From Crypto Require Import
+  ListUtil
+  Util.ZUtil.
 
 Import BinInt String ListNotations.
 Import ProgramLogic.Coercions.
