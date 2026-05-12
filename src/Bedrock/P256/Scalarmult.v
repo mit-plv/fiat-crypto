@@ -66,15 +66,15 @@ Existing Instance AffineProofs.W.commutative_group.
 
 #[local] Notation "xs $@ a" := (map.of_list_word_at a xs) (at level 10, format "xs $@ a").
 
-#[local] Abbreviation sizeof_point := 96%nat.
-#[local] Abbreviation bytearray := (Array.array ptsto (word.of_Z 1)).
-#[local] Abbreviation pointarray := (Array.array (fun (p : word.rep) (Q : point) =>
+#[local] Notation sizeof_point := 96%nat.
+#[local] Notation bytearray := (Array.array ptsto (word.of_Z 1)).
+#[local] Notation pointarray := (Array.array (fun (p : word.rep) (Q : point) =>
   ((to_bytes Q)$@p)) (word.of_Z (Z.of_nat sizeof_point))).
 (* w is limb size (nonzero). *)
-#[local] Abbreviation w := 5.
+#[local] Notation w := 5.
 (* Is it helpful that these ar nat? *)
-#[local] Abbreviation num_bits := 256%nat.
-#[local] Abbreviation num_limbs := 52%nat. (* log2 p256_group_order / w + 1*)
+#[local] Notation num_bits := 256%nat.
+#[local] Notation num_limbs := 52%nat. (* log2 p256_group_order / w + 1*)
 
 (* Loads the byte at address p_b interpreted as signed integer. *)
 Definition load1_sext :=
