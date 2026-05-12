@@ -76,7 +76,7 @@ Definition w := 5.
 Definition num_bits := Eval cbv in Z.log2_up p256_group_order.
 Definition num_limbs := Eval cbv in num_bits / w + 1.
 #[local] Ltac Zify.zify_pre_hook ::=
-  cbv delta [w num_bits num_limbs] in *;
+  cbv delta [w num_bits num_limbs p256_group_order] in *;
   repeat rewrite ?length_point, ?length_app, ?length_cons, ?length_nil in *.
 
 (* Loads the byte at address p_b interpreted as signed integer. *)
@@ -436,13 +436,13 @@ Proof.
       rewrite !ScalarMult.scalarmult_zero_r. split; reflexivity.
     }
     let H := ltac:(hyp_containing (Logic.eq (word.signed k))) in rewrite H.
-    eapply (fixed_window_no_doubling') with (xs := (map byte.signed remaining_limbs')); cbv [p256_group_order] in *.
+    eapply (fixed_window_no_doubling') with (xs := (map byte.signed remaining_limbs')).
     all: try ZnWords.
     { apply Forall_map. apply HForallRem. }
     { apply Forall_map. apply HForallProc. }
     { intros [?N1 ?N2].
       match goal with H: ~ (_ /\ _) |- _ => apply H end; split.
-      { cbv [positional_signed_bytes positional] in *.
+      { cbv delta [positional_signed_bytes positional] in *.
         subst_weq.
         rewrite N2.
         rewrite ScalarMult.scalarmult_0_l, ScalarMult.scalarmult_zero_r.
@@ -492,7 +492,7 @@ Proof.
       rewrite ScalarMult.scalarmult_assoc.
       rewrite <-ScalarMult.scalarmult_add_l.
       rewrite word.unsigned_of_Z_nowrap by lia.
-      cbv [positional_signed_bytes].
+      cbv delta [positional_signed_bytes].
       Morphisms.f_equiv.
       rewrite map_cons.
       rewrite positional_cons.
@@ -516,7 +516,7 @@ Proof.
   change (2^5) with (2^w); cbv [positional_signed_bytes];
     repeat rewrite ?map_app, ?map_cons, ?ListUtil.List.map_nil,
       ?positional_app, ?positional_cons, ?positional_nil, ?length_map.
-  rewrite ?Z.pow_mul_r, ?Znat.Nat2Z.inj_add, ?Z.pow_add_r; lia.
+  rewrite ?Z.pow_mul_r, ?Znat.Nat2Z.inj_add, ?Z.pow_add_r; (try (clear; lia); lia).
 Qed.
 
 Lemma p256_point_mul_ok : program_logic_goal_for_function! p256_point_mul.
@@ -526,26 +526,22 @@ Proof.
   let H:= ltac:(newest_memory_hyp) in rename H into Hmem.
   rewrite <-(firstn_skipn (Z.to_nat num_limbs) stack) in Hmem.
   seprewrite_in Array.bytearray_append Hmem.
-  set (sscalar := ListDef.firstn (Z.to_nat num_limbs) stack) in *.
-  set (padding := ListDef.skipn (Z.to_nat num_limbs) stack) in *.
+  set (sscalar := firstn (Z.to_nat num_limbs) stack) in *.
+  set (padding := skipn (Z.to_nat num_limbs) stack) in *.
   assert (length sscalar = (Z.to_nat num_limbs)) as Hsscalar.
   { subst sscalar; rewrite length_firstn. lia. }
   rewrite Hsscalar in *.
   straightline_call. (* call limbs_unpack *)
   { (* Solve limbs_unpack assumptions. *)
     ssplit; try ecancel_assumption; try ZnWords.
-    rewrite word.unsigned_of_Z_nowrap by lia.
-    cbv [p256_group_order] in *.
-    lia. }
+    rewrite word.unsigned_of_Z_nowrap; lia. }
   repeat straightline.
   straightline_call. (* call recode_wrap *)
   { (* Solve recode_wrap assumptions. *)
     ssplit; try ecancel_assumption; trivial.
     { ZnWords. }
     { let H := (hyp_containing (le_combine scalar)) in rewrite H.
-      rewrite word.unsigned_of_Z_nowrap by lia.
-      cbv [p256_group_order] in *.
-      lia. }
+      rewrite word.unsigned_of_Z_nowrap; lia. }
     { Decidable.vm_decide. } }
   repeat straightline.
   straightline_call. (* call p256_point_mul_signed *)
