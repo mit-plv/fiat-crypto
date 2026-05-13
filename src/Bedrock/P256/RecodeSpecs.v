@@ -1,6 +1,11 @@
-Require Import Lists.List.
+From Coq Require Import
+  BinInt
+  String
+  Lists.List.
+
 From coqutil Require Import
   Byte
+  Datatypes.List
   Word.LittleEndianList.
 
 From bedrock2 Require Import
@@ -10,7 +15,11 @@ From bedrock2 Require Import
   Syntax
   BasicC64Semantics.
 
-Import BinInt String ListNotations.
+From Crypto Require Import
+  ListUtil
+  Util.ZUtil.
+
+Import ListNotations.
 Import ProgramLogic.Coercions.
 
 #[local] Open Scope string_scope.
@@ -81,6 +90,36 @@ Proof. reflexivity. Qed.
 Lemma positional_cons h t :
   positional (h :: t) = h + B*(positional t).
 Proof. reflexivity. Qed.
+
+Lemma positional_app l1 l2 :
+  positional (l1 ++ l2) = positional l1 + B ^ length l1 * positional l2.
+Proof.
+  induction l1 as [|? ? Hyp].
+  { cbn [positional fold_right app length].
+    Lia.lia. }
+  { rewrite <-app_comm_cons.
+    rewrite !positional_cons.
+    rewrite Hyp.
+    rewrite length_cons.
+    rewrite Z.mul_add_distr_l.
+    rewrite Z.mul_assoc.
+    rewrite Pow.Z.pow_mul_base by Lia.lia.
+    Lia.lia. }
+Qed.
+
+Lemma positional_app_cons l1 a l2 :
+  positional (l1 ++ [a] ++ l2) =
+  positional l2 * B ^ (S (length l1)) + a * B ^ (length l1) + positional l1.
+Proof.
+  rewrite !positional_app.
+  rewrite length_cons, length_nil.
+  cbn [positional fold_right].
+  rewrite Z.pow_1_r, Z.mul_0_r, Z.add_0_r.
+  rewrite Z.mul_add_distr_l, Z.mul_assoc, Z.add_assoc.
+  rewrite <-(Z.mul_comm B).
+  rewrite <-Z.pow_succ_r by Lia.lia.
+  Lia.lia.
+Qed.
 
 Definition positional_bytes l :=
   positional (map byte.unsigned l).
