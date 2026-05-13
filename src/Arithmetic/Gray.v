@@ -27,7 +27,6 @@ Qed.
 
 Definition gray n := Z.lxor n (Z.shiftr n 1).
 
-Require AdmitAxiom.
 Lemma xor_gray_pred_same_r n :
   Z.lxor (gray n) (gray (Z.pred n)) = Z.land n (-n).
 Proof.
