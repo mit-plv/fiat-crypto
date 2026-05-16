@@ -1,2 +1,0 @@
-textual>=0.60
-rich>=13

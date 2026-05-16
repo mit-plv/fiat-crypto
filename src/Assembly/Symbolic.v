@@ -741,7 +741,7 @@ Section bound_node_via_PHOAS.
   Definition op_to_PHOAS_binop (o : op) : option _
     := match o with
        | add _ => Some ident.Z_add
-			 | sub _ => Some ident.Z_sub
+       | sub _ => Some ident.Z_sub
        | shl _ => Some ident.Z_shiftl
        | shr _ => Some ident.Z_shiftr
        | and _ => Some ident.Z_land
@@ -4057,16 +4057,7 @@ Definition simplify {opts : symbolic_options_computed_opt} (dag : dag) (e : node
 
 Lemma eval_simplify {opts : symbolic_options_computed_opt} G d n v : gensym_dag_ok G d -> eval_node G d n v -> eval G d (simplify d n) v.
 Proof using Type. eauto using Rewrite.eval_expr, eval_node_reveal_node_at_least. Qed.
-Locate widest_registers.
 
-
-Compute (List.length widest_registers).
-Locate compute.
-Check List.length.
-Definition ThreeTup : Type := (compute! (Tuple.tuple nat 3)).
-Print ThreeTup.
-
-Check (compute! (List.length [1; 2])).
 Definition reg_state := Tuple.tuple (option idx) (compute! (List.length widest_registers)).
 Definition flag_state := Tuple.tuple (option idx) 6.
 Definition mem_state := list (idx * idx).
@@ -4326,7 +4317,6 @@ Definition RevealConst (i : idx) : M Z :=
   | _ => err (error.expected_const i x)
   end.
 
-(* M idx is the idx of the result of reading and slicing the register value, along with threaded symbolic state including the DAG itself *)
 Definition GetReg {opts : symbolic_options_computed_opt} {descr:description} r : M idx :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   v <- GetRegFull rn;
@@ -4434,8 +4424,7 @@ Definition Load {opts : symbolic_options_computed_opt} {descr:description}
     Load256_of_idx addr
   else err (error.unsupported_memory_access_size sz).
 
-(* Currently unused. Commented out until a caller needs it; at that point,
-   refactor to mirror Load_of_idx / Store_of_idx. *)
+(* Currently unused, but was here originally and might be needed in future. Commented out until a caller needs it; at that point, refactor to mirror Load_of_idx / Store_of_idx. *)
 (*
 Definition Remove {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   let sz := Syntax.operand_size a s in
@@ -4494,8 +4483,6 @@ Definition GetOperand {opts : symbolic_options_computed_opt} {descr:description}
   | label l => err (error.unsupported_label_argument l)
   end.
 
-(* for destination (mem, reg, label) o, set dst to the value represented by idx i *)
-(* returns the state but unit instead of idx, since the doesnt actually compute a value *) 
 Definition SetOperand {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
   match o with
   | Syntax.const a => err (error.set_const a v)

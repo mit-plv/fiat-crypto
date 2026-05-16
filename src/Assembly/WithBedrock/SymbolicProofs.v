@@ -247,14 +247,11 @@ Qed.
 Lemma R_reg_subsumed d s m w (HR : R_reg d s m w) d' (Hlt : d :< d')
   : R_reg' d' s m w.
 Proof using Type. cbv [R_reg] in *; intuition eauto. Qed.
-Check R_reg_subsumed.
-
-Check Tuple.fieldwise_Proper.
 
 Lemma R_regs_subsumed d s m (HR : R_regs d s m) d' (Hlt : d :< d')
   : R_regs' d' s m.
 Proof using Type.
-  unfold R_regs, R_regs' in *. Search Forall2. Check Forall2_impl. Print Forall2.
+  unfold R_regs, R_regs' in *.
   eapply Forall2_impl; [| exact HR].
   intros. destruct b as [x v].
   eapply R_reg_subsumed; eauto. 
@@ -401,6 +398,10 @@ Lemma unfold_bind {A B} ma amb s :
   @bind A B ma amb s = ltac:(let t := eval unfold bind, ErrorT.bind in ( @bind A B ma amb s) in exact t).
 Proof using Type. exact eq_refl. Qed.
 
+Lemma unfold_some_or {A} x y :
+  @some_or A x y = ltac:(let t := eval unfold some_or in (@some_or A x y) in exact t).
+Proof using Type. exact eq_refl. Qed.
+
 Local Hint Resolve gensym_dag_ok_of_R : core.
 
 Ltac step_symex0 :=
@@ -527,9 +528,7 @@ Ltac step_SetFlag :=
     [eassumption|..|clear H]
   end.
 
-(* ----------------------------------------------*)
 (* GETTING OPERATIONS *)
-(* ----------------------------------------------*)
 
 Lemma GetRegFull_R s m (HR : R s m) rn i s'
   (H : GetRegFull rn s = Success (i, s'))
@@ -1055,9 +1054,8 @@ Ltac step_GetOperand :=
     case (GetOperand_R s _ ltac:(eassumption) _ _ ltac:(reflexivity) _ _ _ H) as (Hs'&Hl&(v&Hi&Hv)); clear H
   end.
 
-(* ----------------------------------------------*)
+
 (* SETTING OPERATIONS *)
-(* ----------------------------------------------*)
 
 Lemma interp_op_set_slice lo sz a b :
   interp_op (set_slice lo sz) [a; b] = Some (bits_set_slice a b lo sz).
@@ -2927,7 +2925,7 @@ Ltac step :=
   first
   [ lift_let_goal
   | resolve_match_using_hyp
-  | progress (cbn beta iota delta [fst snd Syntax.op Syntax.args] in *; cbv beta iota delta [Reveal RevealConst Crypto.Util.Option.bind Symbolic.ret Symbolic.err Symeval mapM PreserveFlag some_or] in *; subst)
+  | progress (cbn beta iota delta [fst snd Syntax.op Syntax.args] in *; repeat rewrite unfold_some_or in *; cbv beta iota delta [Reveal RevealConst Crypto.Util.Option.bind Symbolic.ret Symbolic.err Symeval mapM PreserveFlag] in *; repeat rewrite unfold_some_or in *; subst)
   | Prod.inversion_prod_step
   | inversion_ErrorT_step
   | Option.inversion_option_step
@@ -2960,7 +2958,7 @@ Proof using Type.
 	(* fully decompose symbolic side *)
   cbv [SymexNormalInstruction OperationSize] in H.
   repeat (repeat destruct_one_match_hyp; repeat step01).
-	
+
 (* 2 *)
  all : repeat
   match goal with
@@ -3026,7 +3024,7 @@ Proof using Type.
 
 
 	(* SPECIFIC INSTRUCITONS *) 
-	
+
 	(* all binops *)
 	Unshelve. all: match goal with H : context[SymbolicVector.SymexVectorBinOp] |- _ => idtac | _ => shelve end.
 	all: eapply SymexVectorBinOp_R; try (eassumption || lia); auto with interprets_as. 
@@ -3039,7 +3037,7 @@ Proof using Type.
   (* vpbroadcastq *)
   Unshelve. all : match goal with H : context[Syntax.vpbroadcastq] |- _ => idtac | _ => shelve end; shelve_unifiable.
   { step_broadcast. step_symex. cleanup. exists m0. solve_R_subgoals. }
-	
+
   (* vpblendd *)
   Unshelve. all : match goal with H : context[Syntax.vpblendd] |- _ => idtac | _ => shelve end; shelve_unifiable.
   { step_blend. step_symex. cleanup. exists m0. solve_R_subgoals. }
@@ -3066,7 +3064,7 @@ Proof using Type.
   				| H :	context[Syntax.vinserti128] |- _ => idtac 
   				| _ => shelve end; shelve_unifiable.
   all: normalize_NZ; rewrite Z2N.id in *; try solve [eapply DenoteOperand_nonneg; eassumption]; bitblast.Z.bitblast.
-  
+
 (* Scalar instrs *) 
 
 
@@ -3258,14 +3256,13 @@ Proof using Type.
   { rewrite <- Z.land_assoc.
     f_equal; f_equal; [].
     pose_operation_size_cases; intuition subst; reflexivity. }
-  
+
   Unshelve. all : match goal with H : context[push] |- _ => idtac | H : context[pop] |- _ => idtac | _ => shelve end; shelve_unifiable.
   all: rewrite !Z.land_ones by lia; push_Zmod; pull_Zmod; f_equal; lia.
 
   Unshelve. all: shelve_unifiable.
-	
+
   all: fail_if_goals_remain ().
-(* Qed here hangs until the kernel crashes. Admitting until it can be sped up *)
 Qed.
 
 
