@@ -1119,11 +1119,11 @@ Module Import ListWSfun_gen_proofs.
       Proof using Type.
         clear.
         cbv [MapsTo find].
-        destruct m as [m' pf]; cbn [proj1_sig]; clear m pf.
+        destruct (m) as [m' pf]; cbn [proj1_sig]; clear m pf.
         revert x y m'.
-        induction x as [|x' xs IH], y as [|y' ys], m' as [m|]; clear x y m';
+        induction x as [|x' xs IH], y as [|y' ys], m' as [m|]; try clear x y m';
           try specialize (IH ys);
-          try (induction m as [d m'] using (t_case (elt:=elt)); clear m).
+          try (induction m as [d m'] using (t_case (elt:=elt)); try clear m).
         all: t.
         all: pose_MapsTo_as_find M.MapsTo_1.
         all: repeat match goal with
@@ -1157,7 +1157,7 @@ Module Import ListWSfun_gen_proofs.
         cbv [elements elements_with_key_prefix_and fold'].
         rewrite <- rev_alt; destruct m0 as [m'|]; [ | rewrite rev_involutive; reflexivity ].
         revert i k_prefix.
-        induction m' as [d m pf IH] using (t_ind (elt:=elt)); clear m'; intros.
+        induction m' as [d m pf IH] using (t_ind (elt:=elt)); try clear m'; intros.
         repeat (autounfold with trie_db; autorewrite with trie_db).
         destruct m; try (now destruct d; cbn [List.rev]; rewrite rev_involutive); [].
         rewrite !M.fold_1.
@@ -1190,7 +1190,7 @@ Module Import ListWSfun_gen_proofs.
         destruct m0 as [m'|]; [ | now rewrite ?app_nil_r ].
         generalize (List.rev prefix); clear prefix; intro prefix.
         revert prefix k_prefix.
-        induction m' as [d m pf IH] using (t_ind (elt:=elt)); clear m'; intros.
+        induction m' as [d m pf IH] using (t_ind (elt:=elt)); try clear m'; intros.
         repeat (autounfold with trie_db; autorewrite with trie_db).
         destruct m; try (now destruct d; rewrite ?app_nil_r, ?app_nil_l); [].
         rewrite !M.fold_1.
@@ -1250,7 +1250,7 @@ Module Import ListWSfun_gen_proofs.
         rewrite elements_alt_1.
         cbv [fold'].
         destruct m0 as [m'|]; [ | now rewrite ?app_nil_r ].
-        induction m' as [d m pf] using (t_case (elt:=elt)); clear m'.
+        induction m' as [d m pf] using (t_case (elt:=elt)); try clear m'.
         repeat (autounfold with trie_db; autorewrite with trie_db).
         destruct m as [m'|]; [ | break_innermost_match; cbn; now rewrite ?app_nil_r ].
         cbn [List.app].
@@ -1288,7 +1288,7 @@ Module Import ListWSfun_gen_proofs.
         clearbody i k_prefix'.
         clear.
         revert k_prefix k_prefix'.
-        induction m' as [d m pf IH] using (t_ind (elt:=elt)); clear m'; intros.
+        induction m' as [d m pf IH] using (t_ind (elt:=elt)); try clear m'; intros.
         repeat (autounfold with trie_db; autorewrite with trie_db).
         destruct m as [m'|]; [ | break_innermost_match; cbn; now rewrite ?app_nil_r ].
         rewrite map_app.
@@ -1331,7 +1331,7 @@ Module Import ListWSfun_gen_proofs.
         change (@nil ?A) with (List.rev (@nil A)) at 2.
         rewrite elements_with_key_prefix_alt; cbn -[elements'].
         destruct m0 as [m'|]; [ | reflexivity ].
-        induction m' as [d m pf] using (t_case (elt:=elt)); clear m'.
+        induction m' as [d m pf] using (t_case (elt:=elt)); try clear m'.
         repeat (autounfold with trie_db; autorewrite with trie_db).
         repeat (f_equiv; []; repeat intro).
         break_innermost_match.
@@ -1348,7 +1348,7 @@ Module Import ListWSfun_gen_proofs.
         destruct m as [[m'|] pf']; clear m; [ | reflexivity ].
         cbn [proj1_sig] in *; clear pf'.
         revert f i.
-        induction m' as [d m pf IH] using (t_ind (elt:=elt)); clear m'; intros.
+        induction m' as [d m pf IH] using (t_ind (elt:=elt)); try clear m'; intros.
         rewrite elements'_alt.
         repeat (autounfold with trie_db; autorewrite with trie_db).
         destruct m as [m'|]; [ | now break_innermost_match ].
@@ -1369,7 +1369,7 @@ Module Import ListWSfun_gen_proofs.
         revert x' y' m0.
         induction x' as [|x xs IH], y' as [|y ys], m0 as [m|];
           first [ specialize (IH ys) | try clear IH ];
-          try (induction m as [d m'] using (t_case (elt:=elt)); clear m).
+          try (induction m as [d m'] using (t_case (elt:=elt)); try clear m).
         all: repeat first [ progress invlist eqlistA
                           | progress cbn [find' add' Option.bind]
                           | progress cbv [not] in *
@@ -1398,7 +1398,7 @@ Module Import ListWSfun_gen_proofs.
         revert x' y' m0.
         induction x' as [|x xs IH], y' as [|y ys], m0 as [m|];
           first [ specialize (IH ys) | try clear IH ];
-          try (induction m as [d m'] using (t_case (elt:=elt)); clear m).
+          try (induction m as [d m'] using (t_case (elt:=elt)); try clear m).
         all: repeat first [ progress intros
                           | progress subst
                           | progress inversion_option
@@ -1457,7 +1457,7 @@ Module Import ListWSfun_gen_proofs.
         cbv [find elements proj1_sig]; clear pf; rename m' into m.
         revert m; induction x as [|?? IH];
           (intros [m'|];
-           [ induction m' as [d m pf] using (t_case (elt:=elt)); clear m'
+           [ induction m' as [d m pf] using (t_case (elt:=elt)); try clear m'
            | now rewrite elements'_alt; destruct x; cbn; split; intros; inversion_option; firstorder ]).
         all: rewrite elements'_alt.
         all: repeat (autounfold with trie_db; autorewrite with trie_db).
@@ -1511,7 +1511,7 @@ Module Import ListWSfun_gen_proofs.
         clear.
         cbv [elements proj1_sig]; destruct m as [[m'|] _]; clear m;
           [ | now constructor ].
-        induction m' as [d m pf IH] using (t_ind (elt:=elt)); clear m'.
+        induction m' as [d m pf IH] using (t_ind (elt:=elt)); try clear m'.
         rewrite elements'_alt.
         repeat (autounfold with trie_db; autorewrite with trie_db).
         apply NoDupA_app; try exact _; break_innermost_match; repeat constructor;
