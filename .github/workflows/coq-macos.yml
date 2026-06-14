@@ -65,12 +65,29 @@ jobs:
       run: etc/ci/describe-system-config-macos.sh
     - name: deps
       run: opam exec -- etc/ci/github-actions-make.sh -j2 deps
-    - name: all-except-js-of-ocaml
-      run: opam exec -- etc/ci/github-actions-make.sh -j2 all-except-js-of-ocaml
-    - name: pre-standalone-extracted
-      run: opam exec -- etc/ci/github-actions-make.sh -j2 pre-standalone-extracted
-    - name: all
-      run: opam exec -- etc/ci/github-actions-make.sh -j2 all
+    # The x86_64 macOS runners are roughly 3x slower than the arm64 ones and
+    # were hitting the 6h job limit on the full `all` target.  Mirror the
+    # Windows workflow and build the leaner set of targets instead: produce the
+    # standalone binary first, then check the proofs, and use
+    # `c-files lite-generated-files` rather than the full `generated-files`
+    # (which regenerates and diff-checks every curve in every backend language
+    # and is architecture-independent work already covered by the Linux CI).
+    - name: standalone-ocaml
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 standalone-ocaml
+    - name: install-standalone-unified-ocaml
+      run: opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
+    - name: coq
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 coq
+    - name: all-except-generated-and-js-of-ocaml
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 all-except-generated-and-js-of-ocaml
+    - name: standalone-js-of-ocaml
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 standalone-js-of-ocaml
+    - name: install-standalone-js-of-ocaml
+      run: opam exec -- etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
+    - name: c-files lite-generated-files
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 c-files lite-generated-files
+    - name: only-test-amd64-files-lite
+      run: opam exec -- etc/ci/github-actions-make.sh -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
     - run: find . -name "*.timing" | xargs tar -czvf timing-files.tgz
       if: failure()
     - name: upload generated timing files
@@ -79,12 +96,6 @@ jobs:
         name: timing-files-${{ matrix.os.runs-on }}
         path: timing-files.tgz
       if: failure()
-    - name: install-standalone-unified-ocaml
-      run: opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
-    - name: install-standalone-js-of-ocaml
-      run: opam exec -- etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
-    - name: only-test-amd64-files-lite
-      run: opam exec -- etc/ci/github-actions-make.sh -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
 
     - name: upload OCaml files
       uses: actions/upload-artifact@v7
