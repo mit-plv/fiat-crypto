@@ -250,7 +250,7 @@ Context {ext_spec : Semantics.ExtSpec}.
   { requires t m := m =* x$@p * R;
     ensures t' m' := t' = t /\ let x_opp := F.opp x in m' =* x_opp$@p * R }.
 
-#[export] Instance spec_of_p256_coord_selectznz  : spec_of "p256_coord_select_znz" :=
+#[export] Instance spec_of_p256_coord_select_znz  : spec_of "p256_coord_select_znz" :=
     fnspec! "p256_coord_select_znz" (p_out c p_z p_nz : word) / out (z nz : coord) R,
     { requires t m := m =* (out$@p_out * R) /\ m =*> nz$@p_nz /\ m =*> z$@p_z /\ length out = length z;
       ensures t' m' := t' = t /\ let out := if Z.eqb c 0 then z else nz in (out$@p_out * R)%sep m' }.

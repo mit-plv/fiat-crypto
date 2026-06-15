@@ -32,7 +32,7 @@ Import ProgramLogic.Coercions.
 (* Limb size (nonzero). *)
 #[local] Notation w := 5.
 
-Lemma ctime_ltu_ok : program_logic_goal_for_function! ctime_ltu.
+Lemma br_ltu_ok : program_logic_goal_for_function! br_ltu.
 Proof.
   repeat straightline.
   straightline_call.
@@ -144,7 +144,7 @@ Proof.
     repeat match goal with |- context [Z.testbit ?a ?b] => rewrite (Z.testbit_neg_r a b) by ZnWords end).
 Qed.
 
-Lemma extract_limb_at_bit_ok : program_logic_goal_for_function! extract_limb_at_bit.
+Lemma fiat_extract_limb_at_bit_ok : program_logic_goal_for_function! fiat_extract_limb_at_bit.
 Proof.
   repeat (straightline || apply WeakestPreconditionProperties.dexpr_expr).
   (* First byte load. *)
@@ -186,7 +186,7 @@ Proof.
   ZnWords.
 Qed.
 
-Lemma decompose_to_limbs_ok : program_logic_goal_for_function! decompose_to_limbs.
+Lemma fiat_decompose_to_limbs_ok : program_logic_goal_for_function! fiat_decompose_to_limbs.
 Proof.
   repeat straightline.
   refine ((Loops.tailrec
@@ -281,7 +281,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma signed_recode_carry_ok : program_logic_goal_for_function! signed_recode_carry.
+Lemma fiat_signed_recode_carry_ok : program_logic_goal_for_function! fiat_signed_recode_carry.
 Proof.
   repeat straightline.
   refine ((Loops.tailrec
@@ -405,7 +405,7 @@ Proof.
     lia. }
 Qed.
 
-Lemma signed_recode_ok : program_logic_goal_for_function! signed_recode.
+Lemma fiat_signed_recode_ok : program_logic_goal_for_function! fiat_signed_recode.
 Proof.
   repeat straightline.
   straightline_call. (* call signed_recode_carry *)

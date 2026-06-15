@@ -73,7 +73,7 @@ Definition p256_precompute_multiples := func! (p_table, p_P) {
   }
 }.
 
-Definition p256_get_multiple := func! (p_out, p_table, k) {
+Definition p256_select_multiple := func! (p_out, p_table, k) {
   unpack! sign = br_broadcast_negative(k);
   unpack! idx = br_abs(k, sign);
 
@@ -167,8 +167,8 @@ Qed.
           pointarray p_table multiples * R
   }.
 
-#[export] Instance spec_of_p256_get_multiple : spec_of "p256_get_multiple" :=
-  fnspec! "p256_get_multiple" p_out p_table k / (out_old : list Byte.byte) (P: point) (multiples : list point) R,
+#[export] Instance spec_of_p256_select_multiple : spec_of "p256_select_multiple" :=
+  fnspec! "p256_select_multiple" p_out p_table k / (out_old : list Byte.byte) (P: point) (multiples : list point) R,
   { requires t m :=
       m =* out_old$@p_out * pointarray p_table multiples * R /\
       length out_old = length P /\
@@ -322,7 +322,7 @@ Proof.
   all: use_sep_assumption; cancel; repeat Morphisms.f_equiv; solve_num.
 Qed.
 
-Lemma p256_get_multiple_ok : program_logic_goal_for_function! p256_get_multiple.
+Lemma p256_select_multiple_ok : program_logic_goal_for_function! p256_select_multiple.
 Proof.
   repeat straightline.
   straightline_call; trivial; repeat straightline.
