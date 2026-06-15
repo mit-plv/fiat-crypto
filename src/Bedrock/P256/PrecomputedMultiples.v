@@ -100,9 +100,14 @@ Definition p256_select_point_from_table := func! (p_out, p_table, idx) {
 
 (* Puts p_z into p_out if c is zero. *)
 Definition p256_point_cmov := func! (p_out, c, p_z) {
+  (* try out xor  here.. *)
+
+  br_memcxor(p_out, p_z, $(3*32), c); (*TODO continue here, check if this can be proven (and then remove redirection)*)
+  (*
   p256_coord_select_znz(p_out,       c, p_z,       p_out);
   p256_coord_select_znz(p_out + $32, c, p_z + $32, p_out + $32);
   p256_coord_select_znz(p_out + $64, c, p_z + $64, p_out + $64)
+  *)
 }.
 
 Module W.
