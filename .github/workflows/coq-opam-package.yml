@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        coq-version: ['dev', '8.20.0']
+        coq-version: ['dev', '9.0.0']
         os: [{name: 'Ubuntu',
               runs-on: 'ubuntu-latest',
               ocaml-compiler: '4.14.0',
@@ -51,7 +51,7 @@ jobs:
         brew unlink pkgconf
         brew link pkg-config
       if: ${{ runner.os == 'macOS' }}
-        
+
     - name: Set up OCaml
       uses: ocaml/setup-ocaml@v3
       with:
@@ -122,7 +122,7 @@ jobs:
     - run: opam update
     - run: opam pin add ocamlfind '${{ matrix.os.ocamlfind-pin }}'
       if: matrix.os.ocamlfind-pin != ''
-    - run: opam pin --kind=version add coq ${{ matrix.coq-version }} --verbose 
+    - run: opam pin --kind=version add coq ${{ matrix.coq-version }} --verbose
 
     - name: echo more build params
       run: |
