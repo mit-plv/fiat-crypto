@@ -1,5 +1,5 @@
 From Crypto.Bedrock.P256 Require Import Specs Platform Coord Jacobian JacobianAffine
-PrecomputedMultiples.
+PrecomputedMultiples RecodeSpecs RecodeProofs Scalarmult.
 
 Import Specs.NotationsCustomEntry Specs.coord Specs.point.
 
@@ -43,12 +43,21 @@ Import bedrock2.ToCString.
 Import Macros.WithBaseName.
 Import String List. Local Open Scope string_scope. Local Open Scope list_scope.
 
+(* These come from different primitve pipelines so we need to assume their correctness here.
+TODO: Establish a formal connection between pipeline generated specs and P256 specs to ensure the specs match up. *)
 
 Axiom p256_coord_sqr : Syntax.func.
 Axiom p256_coord_sqr_ok : forall functions, map.get functions "p256_coord_sqr" = Some p256_coord_sqr -> spec_of_p256_coord_sqr functions.
 
 Axiom p256_coord_mul : Syntax.func.
 Axiom p256_coord_mul_ok : forall functions, map.get functions "p256_coord_mul" = Some p256_coord_mul -> spec_of_p256_coord_mul functions.
+
+Axiom p256_coord_select_znz : Syntax.func.
+Axiom p256_coord_select_znz_ok : forall functions, map.get functions "p256_coord_select_znz" = Some p256_coord_select_znz -> spec_of_p256_coord_select_znz functions.
+
+Axiom p256_coord_opp : Syntax.func.
+Axiom p256_coord_opp_ok : forall functions, map.get functions "p256_coord_opp" =
+  Some p256_coord_opp -> spec_of_p256_coord_opp functions.
 
 Import memcpy shrd full_sub full_add full_mul memmove.
 
@@ -57,7 +66,7 @@ Definition platform := &[,
   br_value_barrier; br_declassify; br_broadcast_negative; br_broadcast_nonzero; br_broadcast_odd; br_cmov;  br_memcxor
   ].
 
-Definition libc := &[, memmove; br_memcpy;  br_memset].
+Definition libc := &[, memmove; br_memcpy;  br_memset; br_abs; br_ltu; br_load1_sext].
 
 Local Definition c_func f : string := "static inline "++ c_func f.
 
@@ -72,11 +81,23 @@ Definition jacobian := &[,
  p256_point_double;
  p256_point_add_nz_nz_neq;
  p256_point_add_vartime_if_doubling;
+ p256_point_cmov;
 
  p256_point_add_affine_nz_nz_neq;
  p256_point_add_affinenz_conditional_vartime_if_doubling;
 
- p256_precompute_multiples
+ p256_precompute_multiples;
+ p256_select_point_from_table;
+ p256_select_multiple;
+
+ fiat_extract_limb_at_bit;
+ fiat_decompose_to_limbs;
+ fiat_signed_recode_carry;
+ fiat_signed_recode;
+
+ p256_point_mul_by_pow2;
+ p256_point_mul_signed;
+ p256_point_mul
  ].
 
 Compute String.concat LF (List.map c_func jacobian).
@@ -90,7 +111,7 @@ Compute String.concat LF (List.map c_func jacobian).
  fe_set_1;
   *)
 
-Definition asm := &[, p256_coord_sqr; p256_coord_mul
+Definition asm := &[, p256_coord_sqr; p256_coord_mul; p256_coord_select_znz; p256_coord_opp
  ].
 
 Definition funcs := Eval cbv [List.app] in (jacobian ++ coord64 ++ asm ++ platform ++ libc)%list.
@@ -110,7 +131,7 @@ Ltac pose_correctness lem :=
 Local Existing Instance memmove.spec_of_memmove.
 #[export] Instance spec_of_memmove : spec_of "memmove". apply memmove.spec_of_memmove. Defined.
 
-Lemma link_jacobian  : spec_of_p256_point_add_vartime_if_doubling (map.of_list funcs).
+Lemma link_jacobian  : spec_of_p256_point_mul (map.of_list funcs).
 Proof.
   pose_correctness full_add_ok.
   pose_correctness full_sub_ok.
@@ -121,6 +142,7 @@ Proof.
   pose_correctness br_broadcast_nonzero_ok.
   pose_correctness br_cmov_ok.
   pose_correctness br_broadcast_odd_ok.
+  pose_correctness br_abs_ok.
 
   pose_correctness memmove.memmove_ok.
   match goal with H : _ |- _ =>
@@ -140,6 +162,8 @@ Proof.
 
   pose_correctness p256_coord_sqr_ok.
   pose_correctness p256_coord_mul_ok.
+  pose_correctness p256_coord_select_znz_ok.
+  pose_correctness p256_coord_opp_ok.
 
   pose_correctness p256_point_set_zero_ok.
   pose_correctness p256_point_iszero_ok.
@@ -154,6 +178,21 @@ Proof.
   pose_correctness p256_point_add_affinenz_conditional_vartime_if_doubling_ok.
 
   pose_correctness p256_precompute_multiples_ok.
+
+  pose_correctness p256_point_cmov_ok.
+  pose_correctness p256_select_point_from_table_ok.
+  pose_correctness p256_select_multiple_ok.
+
+  pose_correctness fiat_extract_limb_at_bit_ok.
+  pose_correctness fiat_decompose_to_limbs_ok.
+  pose_correctness br_ltu_ok.
+  pose_correctness fiat_signed_recode_carry_ok.
+  pose_correctness fiat_signed_recode_ok.
+
+  pose_correctness br_load1_sext_ok.
+  pose_correctness p256_point_mul_by_pow2_ok.
+  pose_correctness p256_point_mul_signed_ok.
+  pose_correctness p256_point_mul_ok.
   trivial.
 Qed.
 

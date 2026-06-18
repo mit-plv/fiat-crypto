@@ -80,13 +80,13 @@ Definition num_limbs := Eval cbv in num_bits / w + 1.
   repeat rewrite ?length_point, ?length_app, ?length_cons, ?length_nil in *.
 
 (* Loads the byte at address p_b interpreted as signed integer. *)
-Definition load1_sext :=
+Definition br_load1_sext :=
   func! (p_b) ~> r {
     r = (load1(p_b) << ($wsize - $8)) .>> ($wsize - $8)
   }.
 
 (* Computes 2^n * P. *)
-Definition p256_mul_by_pow2 :=
+Definition p256_point_mul_by_pow2 :=
   func! (p_P, n) {
     while n {
       stackalloc sizeof_point as p_dP; (* Temporary point dP. *)
@@ -107,9 +107,9 @@ Definition p256_point_mul_signed :=
     while ($num_limbs - i) {
       stackalloc sizeof_point as p_kP; (* Temporary point kP = [k]P. *)
       stackalloc sizeof_point as p_tmp; (* Temporary point for addition. *)
-      p256_mul_by_pow2(p_out, $w); (* OUT = [2^w]OUT *)
-      unpack! k = load1_sext(p_sscalar + ($num_limbs - i - $1)); (* k is the next recoded signed scalar limb. *)
-      p256_get_multiple(p_kP, p_table, k); (* kP = [k]P *)
+      p256_point_mul_by_pow2(p_out, $w); (* OUT = [2^w]OUT *)
+      unpack! k = br_load1_sext(p_sscalar + ($num_limbs - i - $1)); (* k is the next recoded signed scalar limb. *)
+      p256_select_multiple(p_kP, p_table, k); (* kP = [k]P *)
       p256_point_add_vartime_if_doubling(p_tmp, p_out, p_kP); (* TMP = OUT + kP *)
       br_memcpy(p_out, p_tmp, $sizeof_point); (* OUT = TMP *)
       i = i + $1;
@@ -129,13 +129,13 @@ Definition align x a := align_mask x (a - 1).
 Definition p256_point_mul :=
   func! (p_out, p_scalar, p_P) {
     stackalloc (align num_limbs 8) as p_sscalar; (* Space for limbs of unpacked and recoded scalar. *)
-    decompose_to_limbs(p_sscalar, p_scalar, $num_bits); (* Unpack scalar into unsigned w-bit limbs. *)
-    signed_recode(p_sscalar, $num_limbs); (* Recode scalar into signed w-bit limbs. *)
+    fiat_decompose_to_limbs(p_sscalar, p_scalar, $num_bits); (* Unpack scalar into unsigned w-bit limbs. *)
+    fiat_signed_recode(p_sscalar, $num_limbs); (* Recode scalar into signed w-bit limbs. *)
     p256_point_mul_signed(p_out, p_sscalar, p_P) (* Multiply using signed multiplication. *)
   }.
 
-#[export] Instance spec_of_load1_sext : spec_of "load1_sext" :=
-  fnspec! "load1_sext" p_b / b R ~> r,
+#[export] Instance spec_of_br_load1_sext : spec_of "br_load1_sext" :=
+  fnspec! "br_load1_sext" p_b / b R ~> r,
   { requires t m :=
     m =* ptsto p_b b * R;
     ensures T M :=
@@ -143,8 +143,8 @@ Definition p256_point_mul :=
     word.signed r = byte.signed b
   }.
 
-#[export] Instance spec_of_p256_mul_by_pow2 : spec_of "p256_mul_by_pow2" :=
-  fnspec! "p256_mul_by_pow2" p_P n / (P : point) R,
+#[export] Instance spec_of_p256_point_mul_by_pow2 : spec_of "p256_point_mul_by_pow2" :=
+  fnspec! "p256_point_mul_by_pow2" p_P n / (P : point) R,
   { requires t m :=
     m =* P$@p_P * R;
     ensures T M := exists (Q : point),
@@ -179,7 +179,7 @@ Definition p256_point_mul :=
       T = t
   }.
 
-Lemma load1_sext_ok : program_logic_goal_for_function! load1_sext.
+Lemma br_load1_sext_ok : program_logic_goal_for_function! br_load1_sext.
 Proof.
   repeat straightline.
   ssplit; try ecancel_assumption; trivial.
@@ -209,7 +209,7 @@ Local Ltac subst_weq :=
     end
   end.
 
-Lemma p256_mul_by_pow2_ok : program_logic_goal_for_function! p256_mul_by_pow2.
+Lemma p256_point_mul_by_pow2_ok : program_logic_goal_for_function! p256_point_mul_by_pow2.
 Proof.
   repeat straightline.
   refine ((Loops.tailrec
