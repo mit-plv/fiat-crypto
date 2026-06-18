@@ -44,7 +44,8 @@ Definition default_assembly_labels_fuzzy_prefixes : assembly_labels_fuzzy_prefix
 Class assembly_calling_registers_opt := assembly_calling_registers' : option (list REG).
 #[global]
 Typeclasses Opaque assembly_calling_registers_opt.
-Definition default_assembly_calling_registers := [rdi;rsi;rdx;rcx;r8;r9].
+Definition default_assembly_calling_registers := List.map SReg [rdi;rsi;rdx;rcx;r8;r9].
+
 Definition assembly_calling_registers {v : assembly_calling_registers_opt} : list REG
   := Option.value v default_assembly_calling_registers.
 (** List of callee-saved / non-volatile registers *)
@@ -57,12 +58,12 @@ The registers RBX, RBP, RDI, RSI, RSP, R12, R13, R14, and R15 are considered non
 
 -----
 [22] https://docs.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170&viewFallbackFrom=vs-2019#callercallee-saved-registers *)
-Definition microsoft_x64_assembly_callee_saved_registers := [rbx;rbp;rdi;rsi;rsp;r12;r13;r14;r15].
+Definition microsoft_x64_assembly_callee_saved_registers := List.map SReg [rbx;rbp;rdi;rsi;rsp;r12;r13;r14;r15].
 (* https://en.wikipedia.org/wiki/X86_calling_conventions#System_V_AMD64_ABI *)
 (* If the callee wishes to use registers RBX, RSP, RBP, and R12–R15, it must restore their original values before returning control to the caller. All other registers must be saved by the caller if it wishes to preserve their values.[25]: 16
 
 [25] Michael Matz; Jan Hubička; Andreas Jaeger; et al., eds. (2018-01-28). "System V Application Binary Interface: AMD64 Architecture Processor Supplement (With LP64 and ILP32 Programming Models) Version 1.0" (PDF). 1.0. https://github.com/hjl-tools/x86-psABI/wiki/x86-64-psABI-1.0.pdf *)
-Definition system_v_amd64_assembly_callee_saved_registers := [rbx;rsp;rbp;r12;r13;r14;r15].
+Definition system_v_amd64_assembly_callee_saved_registers := List.map SReg [rbx;rsp;rbp;r12;r13;r14;r15].
 Definition default_assembly_callee_saved_registers := System_V_AMD64.
 Definition assembly_callee_saved_registers {v : assembly_callee_saved_registers_opt} : list REG
   := match v with
@@ -91,7 +92,7 @@ Fixpoint assembly_stack_size_at (cur_stack_size : Z) (asm : _) : list Z
      | [] => []
      | l :: asm
        => let cng := match l.(rawline) with
-                     | INSTR {| Syntax.op := sub ; args := [reg rsp; Syntax.const n] |}
+                     | INSTR {| Syntax.op := Syntax.sub ; args := [reg rsp; Syntax.const n] |}
                        => n
                      | INSTR {| Syntax.op := Syntax.add ; args := [reg rsp; Syntax.const n] |}
                        => -n
@@ -1430,42 +1431,44 @@ Section check_equivalence.
           {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}.
 
+  
+  Definition strip_ret (asm : Lines) :=
+    let isinstr := fun l => match l.(rawline) with INSTR _ => true | _ => false end in
+    let notret := fun l => match l.(rawline) with
+                            | INSTR {| Syntax.op := Syntax.ret ; Syntax.args := nil |} => false
+                            | _ => true
+                            end in
+    match dropWhile notret asm with
+    | nil => Error Missing_ret
+    | cons _r trailer =>
+        if List.existsb isinstr trailer then Error (Code_after_ret (List.filter isinstr trailer) trailer)
+        else Success (takeWhile notret asm)
+    end.
+
+  
+  Local Notation map_err_None v := (ErrorT.map_error (fun e => (None, e)) v).
+  Local Notation map_err_Some label v := (ErrorT.map_error (fun e => (Some label, e)) v).
+
+  Definition map_symex_asm (asm : list (string (* fname *) * Lines)) (inputs : list (idx + list idx)) (output_types : type_spec) (d : dag)
+    : ErrorT
+        (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError)
+        (list ((string (* fname *) * Lines (* asm lines *)) * (list (idx + list idx) * symbolic_state))) :=
+    let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
+    (ls <-- (List.map
+             (fun '((fname, asm) as label)
+              => (asm <- map_err_Some label (strip_ret asm);
+                  let stack_size : nat := N.to_nat (assembly_stack_size asm) in
+                  symevaled_asm <- map_err_Some label (symex_asm_func (dereference_output_scalars:=false) d assembly_callee_saved_registers output_types stack_size inputs reg_available asm);
+                  Success (label, symevaled_asm)))
+             asm);
+    Success ls)%error.
+
   Section with_expr.
     Context {t}
             (asm : list (string (* fname *) * Lines))
             (expr : API.Expr t)
             (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
             (out_bounds : ZRange.type.base.option.interp (type.final_codomain t)).
-
-    Definition strip_ret (asm : Lines) :=
-      let isinstr := fun l => match l.(rawline) with INSTR _ => true | _ => false end in
-      let notret := fun l => match l.(rawline) with
-                             | INSTR {| Syntax.op := Syntax.ret ; Syntax.args := nil |} => false
-                             | _ => true
-                             end in
-      match dropWhile notret asm with
-      | nil => Error Missing_ret
-      | cons _r trailer =>
-          if List.existsb isinstr trailer then Error (Code_after_ret (List.filter isinstr trailer) trailer)
-          else Success (takeWhile notret asm)
-      end.
-
-    Local Notation map_err_None v := (ErrorT.map_error (fun e => (None, e)) v).
-    Local Notation map_err_Some label v := (ErrorT.map_error (fun e => (Some label, e)) v).
-
-    Definition map_symex_asm (inputs : list (idx + list idx)) (output_types : type_spec) (d : dag)
-      : ErrorT
-          (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError)
-          (list ((string (* fname *) * Lines (* asm lines *)) * (list (idx + list idx) * symbolic_state))) :=
-      let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
-      (ls <-- (List.map
-               (fun '((fname, asm) as label)
-                => (asm <- map_err_Some label (strip_ret asm);
-                    let stack_size : nat := N.to_nat (assembly_stack_size asm) in
-                    symevaled_asm <- map_err_Some label (symex_asm_func (dereference_output_scalars:=false) d assembly_callee_saved_registers output_types stack_size inputs reg_available asm);
-                    Success (label, symevaled_asm)))
-               asm);
-      Success ls)%error.
 
     Definition check_equivalence : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) unit :=
       let d := dag.empty in
@@ -1480,12 +1483,12 @@ Section check_equivalence.
 
           let first_new_idx_after_all_old_idxs : option idx := Some (dag.size d) in
 
-          asm_output <- map_symex_asm inputs output_types d;
+          asm_output <- map_symex_asm asm inputs output_types d;
 
           let ls := List.map (fun '(lbl, (asm_output, s)) => (lbl, asm_output, PHOAS_output, s, first_new_idx_after_all_old_idxs)) asm_output in
           Success ls
         ) else ( (* debug version, do asm first *)
-          asm_output <- map_symex_asm inputs output_types d;
+          asm_output <- map_symex_asm asm inputs output_types d;
 
           ls <-- (List.map (fun '(lbl, (asm_output, s)) =>
               let d := s.(dag_state) in
@@ -1516,4 +1519,5 @@ Section check_equivalence.
          | Error err => Error err
          end.
   End with_expr.
+
 End check_equivalence.
