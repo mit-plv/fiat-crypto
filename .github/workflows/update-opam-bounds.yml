@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     name: check-opam-bounds (${{ github.event_name }})
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
         fetch-depth: 0
@@ -37,7 +37,7 @@ jobs:
       with:
         app-id: ${{ vars.VERSION_BUMPER_APPID }}
         private-key: ${{ secrets.VERSION_BUMPER_SECRET }}
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
         fetch-depth: 0
