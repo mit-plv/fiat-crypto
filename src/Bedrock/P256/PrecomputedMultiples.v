@@ -261,8 +261,8 @@ Proof.
 
   (* constant time select of the point *)
   straightline_call; ssplit; trivial.
+  match goal with H : context [word.broadcast (negb _)] |- _ => destruct H as [ineq ?] end.
   repeat straightline.
-  rename x into ineq.
 
   straightline_call; ssplit.
   { use_sep_assumption. cancel.
@@ -282,7 +282,7 @@ Proof.
   rewrite word.unsigned_xor_nowrap, ? word.not_broadcast in H).
 
   destruct (Z.eqb_spec (Z.lxor i0 idx) 0); rewrite Z.lxor_eq_0_iff in *;
-  match goal with H: _ -> ?a = _ |- _ => specialize (H eq_refl) end.
+  match goal with H : word.broadcast _ = _ -> _ |- _ => specialize (H eq_refl) end.
   (* v == idx -> select point *)
   { destruct (Z.ltb_spec idx v); case Z.ltb_spec; intros; try lia.
     { use_sep_assumption. cancel.
