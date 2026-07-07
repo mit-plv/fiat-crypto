@@ -207,7 +207,28 @@ Section WithParameters.
         - ecancel_assumption.
         - rewrite word.unsigned_of_Z_0. Lia.lia. }
 
-      { repeat straightline. eexists. split. { repeat straightline. } repeat straightline. split.
+      { repeat straightline.
+        (* Backwards compatibility: on Rocq < 9.3 (before rocq-prover/rocq#22182),
+           [repeat straightline] cannot make progress on the loop-invariant goal
+           [Markers.unique (Markers.left _)] (its [unshelve]-based case fails when
+           an evar on the shelf gets restricted), so we do the corresponding steps
+           manually.  On Rocq >= 9.3 the automation already went past this goal,
+           making this a no-op; it can be removed once Rocq < 9.3 support is
+           dropped. *)
+        all: try lazymatch goal with
+             | |- Markers.unique (Markers.left _) =>
+               eexists; split; [ repeat straightline | repeat straightline; split ]
+             end.
+        (* On Rocq >= 9.3 (rocq-prover/rocq#22182), the loop-condition witness is
+           introduced by [letexists] (inside [straightline]) as a context-local
+           definition [br := if word.ltu ... then ... else ...] which hypotheses
+           mention by name, whereas on Rocq < 9.3 it is a plain evar whose
+           instantiation leaves the conditional inlined in the hypotheses.  The
+           [destruct (word.ltu ...)]/[rewrite ... in H*] steps below need the
+           inlined form, so inline the definition; no-op on Rocq < 9.3. *)
+        all: try match goal with
+             | br := (if word.ltu _ _ then _ else _) |- _ => unfold br in *; try clear br
+             end.
 
         (*loop exits properly*)
         2: {
@@ -371,7 +392,19 @@ Section WithParameters.
 
           }
 
-          { repeat straightline. eexists. split. { repeat straightline. } repeat straightline. split.
+          { repeat straightline.
+            (* Same two compatibility steps as in the first loop above:
+               the [lazymatch] is a no-op on Rocq >= 9.3 (rocq-prover/rocq#22182)
+               and can be removed once Rocq < 9.3 support is dropped; the
+               [match] inlining the [br := if word.ltu ...] local definition is
+               a no-op on Rocq < 9.3. *)
+            all: try lazymatch goal with
+                 | |- Markers.unique (Markers.left _) =>
+                   eexists; split; [ repeat straightline | repeat straightline; split ]
+                 end.
+            all: try match goal with
+                 | br := (if word.ltu _ _ then _ else _) |- _ => unfold br in *; try clear br
+                 end.
 
             (*loop exits properly*)
             2: {
@@ -386,7 +419,14 @@ Section WithParameters.
             }
 
             (*loop body good*)
-            repeat (repeat eexists; straightline).
+            (* This was [repeat (repeat eexists; straightline)], which is not
+               robust: [t1; t2] is discarded entirely when [t2] fails on any goal
+               produced by [t1], and on Rocq >= 9.3 (rocq-prover/rocq#22182) this
+               point is reached with [straightline] already at a fixpoint, so
+               [straightline] fails on the [call ...] goal produced by
+               [repeat eexists] and the whole loop was a no-op.  Decoupling the
+               two keeps the [repeat eexists] progress on all versions. *)
+            repeat eexists. all: repeat straightline.
 
             - eapply load_word_of_sep. seprewrite_in @array_address_inbounds H6.
 
@@ -554,12 +594,11 @@ Section WithParameters.
           - symmetry. subst aval. subst bval. trivial.
         }
         Unshelve.
-   - eauto.
-   - eauto.
-   - eauto.
-   - eauto.
-   - eauto.
-   - eauto.
+        (* Positional bullets here would depend on the shelf order, which changes
+           in Rocq 9.3 (rocq-prover/rocq#22182: a restricted shelved evar now
+           keeps its position instead of moving to the end), so solve these
+           order-independently. *)
+        all: eauto.
    - exact String.HelloWorld.
    - exact " :) ".
 
