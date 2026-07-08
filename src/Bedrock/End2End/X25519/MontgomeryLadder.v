@@ -28,6 +28,7 @@ Require Import Crypto.Bedrock.End2End.X25519.clamp.
 Local Open Scope string_scope.
 Import ListNotations.
 
+Local Existing Instance field_parameters.
 Local Existing Instance frep25519.
 Local Existing Instance frep25519_ok.
 Derive ladderstep SuchThat (ladderstep = ladderstep_body) As ladderstep_defn.
