@@ -32,7 +32,7 @@ jobs:
       cancel-in-progress: true
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: echo host build params
@@ -228,7 +228,7 @@ jobs:
     needs: build
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Restore cached Docker image ${{ needs.build.outputs.coq_image_name }}
@@ -266,7 +266,7 @@ jobs:
       group: ${{ github.workflow }}-build-js-of-ocaml-${{ matrix.coq-version }}-${{ matrix.ocaml-compiler }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Set up OCaml
@@ -315,7 +315,7 @@ jobs:
       group: ${{ github.workflow }}-build-wasm-of-ocaml-${{ matrix.coq-version }}-${{ matrix.ocaml-compiler }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Set up OCaml
@@ -364,7 +364,7 @@ jobs:
       group: ${{ github.workflow }}-deploy-js-wasm-of-ocaml-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
         fetch-depth: 0 # Fetch all history for all tags and branches, for fiat-html/version.js
@@ -417,7 +417,7 @@ jobs:
       group: ${{ github.workflow }}-generated-files-${{ matrix.coq-version }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
         # fetch-depth: 0 is required to checkout a new branch from the PR's head.
@@ -521,7 +521,7 @@ jobs:
       group: ${{ github.workflow }}-standalone-haskell-${{ matrix.coq-version }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Download a Build Artifact
@@ -550,7 +550,7 @@ jobs:
 
     steps:
     - name: checkout repo
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Download a Build Artifact
@@ -577,7 +577,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Download standalone Docker
       uses: actions/download-artifact@v8
       with:
@@ -619,7 +619,7 @@ jobs:
 #    permissions:
 #      contents: write  # IMPORTANT: mandatory for making GitHub Releases
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
