@@ -92,17 +92,11 @@ Definition p256_select_point_from_table := func! (p_out, p_table, idx) {
   p256_point_set_zero(p_out);
   i = $0;
   while ($17 - i) {
-    (* select condition is 0 iff i == idx *)
-    p256_point_cmov(p_out, i ^ idx, p_table + ($sizeof_point * i));
-    i = i + $1
+    unpack! ineq = br_broadcast_nonzero(i ^ idx);
+    br_memcxor(p_out, p_table + ($sizeof_point * i), $sizeof_point, ~ineq);
+    i = i + $1;
+    $(cmd.unset "ineq")
   }
-}.
-
-(* Puts p_z into p_out if c is zero. *)
-Definition p256_point_cmov := func! (p_out, c, p_z) {
-  p256_coord_select_znz(p_out,       c, p_z,       p_out);
-  p256_coord_select_znz(p_out + $32, c, p_z + $32, p_out + $32);
-  p256_coord_select_znz(p_out + $64, c, p_z + $64, p_out + $64)
 }.
 
 Module W.
@@ -146,13 +140,6 @@ Qed.
     ensures t' m := t' = t /\ exists out,
       m =* pointarray p_table out * P$@p_P * R /\
       List.Forall2 W.eq (map to_affine out) (W.multiples 17 (to_affine P))
-  }.
-
-#[export] Instance spec_of_p256_point_cmov : spec_of "p256_point_cmov" :=
-  fnspec! "p256_point_cmov" (p_out c p_z : word) / (out z : point) R,
-  { requires t m := m =* out$@p_out * z$@p_z * R;
-    ensures t' m' := t' = t /\
-      let r := if Z.eqb c 0 then z else out in (r$@p_out * z$@p_z* R)%sep m'
   }.
 
 #[export] Instance spec_of_p256_select_point_from_table : spec_of "p256_select_point_from_table" :=
@@ -210,33 +197,6 @@ Proof.
 Qed.
 
 #[local] Ltac hyp_containing a := match goal with H : context[a] |- _ => H end.
-
-Lemma p256_point_cmov_ok : program_logic_goal_for_function! p256_point_cmov.
-Proof.
-  repeat straightline.
-
-  destruct z as (((?z_x & ?z_y) & ?z_z) & ?).
-  destruct out as (((?nz_x & ?nz_y) & ?nz_z) & ?).
-  cbv [proj1_sig proj2_sig fst snd point.to_bytes] in * |-.
-
-  repeat (let H := hyp_containing m in seprewrite_in Array.sep_eq_of_list_word_at_app H;
-    [reflexivity|solve_num|];
-  rewrite ?length_coord in H).
-  bottom_up_simpl_in_hyps.
-
-  straightline_call; ssplit; repeat straightline.
-  2,3: eexists. 1-3: ecancel_assumption. 1: solve_num.
-  straightline_call; ssplit; repeat straightline.
-  2,3: eexists. 1-3: ecancel_assumption. 1: solve_num.
-  straightline_call; ssplit; repeat straightline.
-  2,3: eexists. 1-3: ecancel_assumption. 1: solve_num.
-
-  cbv [point.to_bytes fst snd proj1_sig].
-  repeat (seprewrite Array.sep_eq_of_list_word_at_app; [reflexivity|solve_num|]).
-  rewrite !length_coord.
-  bottom_up_simpl_in_goal.
-  destruct (Z.eqb_spec c1 0); ecancel_assumption.
-Qed.
 
 Lemma p256_select_point_from_table_ok : program_logic_goal_for_function! p256_select_point_from_table.
 Proof.
@@ -300,26 +260,42 @@ Proof.
         ltac:(hyp_containing (m0)) solve_num.
 
   (* constant time select of the point *)
+  straightline_call; ssplit; trivial.
+  match goal with H : context [word.broadcast (negb _)] |- _ => destruct H as [ineq ?] end.
+  repeat straightline.
+
   straightline_call; ssplit.
   { use_sep_assumption. cancel.
     cancel_seps_at_indices 1%nat 1%nat. { repeat f_equal. solve_num. }
     cbv [seps]; ecancel. }
+  { case Z.ltb_spec; intros; solve_num. }
+  { solve_num. }
   repeat straightline.
   exists (S v). split; ssplit; trivial; try solve_num.
   2:{ split; [solve_num|]. repeat straightline. assumption. }
 
-  rewrite word.unsigned_xor_nowrap in *.
   seprewrite_by (pointarray_split_nth p_table0 multiples (Z.to_nat (word.unsigned i0))) solve_num.
-  destruct (Z.eqb_spec (Z.lxor i0 idx) 0); rewrite Z.lxor_eq_0_iff in *.
+
+  cbv [Semantics.interp_op1] in *.
+  subst ineq.
+  repeat (let H := hyp_containing (word.xor) in
+  rewrite word.unsigned_xor_nowrap, ? word.not_broadcast in H).
+
+  destruct (Z.eqb_spec (Z.lxor i0 idx) 0); rewrite Z.lxor_eq_0_iff in *;
+  match goal with H : word.broadcast _ = _ -> _ |- _ => specialize (H eq_refl) end.
   (* v == idx -> select point *)
   { destruct (Z.ltb_spec idx v); case Z.ltb_spec; intros; try lia.
     { use_sep_assumption. cancel.
-      cancel_seps_at_indices 0%nat 1%nat. { repeat f_equal. solve_num. }
+      cancel_seps_at_indices 0%nat 1%nat. { repeat f_equal.
+
+      change (to_bytes (of_affine (W.zero))) with (repeat Byte.x00 sizeof_point) in *.
+      rewrite Byte.map_xor_0_l in * by solve_num. congruence. }
       repeat Morphisms.f_equiv. solve_num. }
   }
   (* v <> idx *)
-  destruct (Z.ltb_spec idx v); case Z.ltb_spec; intros; try lia.
-  all: use_sep_assumption; cancel; repeat Morphisms.f_equiv; solve_num.
+  use_sep_assumption; cancel. cancel_seps_at_indices 1%nat 0%nat;
+  Morphisms.f_equiv; repeat f_equal; try solve_num.
+  destruct (Z.ltb_spec idx v); case Z.ltb_spec; intros; try lia; assumption.
 Qed.
 
 Lemma p256_get_multiple_ok : program_logic_goal_for_function! p256_get_multiple.
