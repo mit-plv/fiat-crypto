@@ -325,11 +325,28 @@ jobs:
     - name: echo build params
       run: etc/ci/describe-system-config.sh
     - run: opam update -y
-    - name: Set up binaryen >= 118
+    - name: Determine binaryen version required by wasm_of_ocaml-compiler
+      id: binaryen
+      run: |
+        version=""
+        src="$(mktemp -d)/src"
+        # wasm_of_ocaml checks the binaryen version at build time via
+        # `let min_version = NNN` in runtime/wasm/check_binaryen.ml, so
+        # extract the requirement from the sources before installing.
+        if opam source wasm_of_ocaml-compiler --dir="$src"; then
+          version="$(find "$src" -name check_binaryen.ml -exec grep -hoE 'min_version *= *[0-9]+' {} + | grep -oE '[0-9]+' | head -1)"
+        fi
+        if [ -z "$version" ]; then
+          version=119
+          echo "::warning::Could not determine required binaryen version from wasm_of_ocaml-compiler sources; falling back to ${version} (if this is too old, the install step below will say so)"
+        fi
+        echo "wasm_of_ocaml-compiler requires binaryen >= ${version}"
+        echo "version=${version}" | tee -a "$GITHUB_OUTPUT"
+    - name: Set up binaryen ${{ steps.binaryen.outputs.version }}
       uses: acifani/setup-tinygo@v3
       with:
         tinygo-version: '0.30.0'
-        binaryen-version: '118'
+        binaryen-version: ${{ steps.binaryen.outputs.version }}
     - name: install wasm_of_ocaml
       run: opam install -y wasm_of_ocaml-compiler ocamlfind
     - name: echo build params
