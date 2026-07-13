@@ -58,7 +58,6 @@ jobs:
         brew link pkg-config
     - name: Install system dependencies
       run: brew install gnu-time gnu-sed coreutils grep
-    - run: opam update
     - run: opam pin add coq ${COQ_VERSION}
     - run: opam install js_of_ocaml
     - name: echo build params
