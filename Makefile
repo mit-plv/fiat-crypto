@@ -22,7 +22,7 @@ SKIP_INCLUDE?=
 SKIP_COQSCRIPTS_INCLUDE?=
 ifneq ($(SKIP_INCLUDE),1)
 # this include must be before all: and validate: which are overriden below
--include Makefile.coq
+include Makefile.composed
 ifneq ($(SKIP_COQSCRIPTS_INCLUDE),1)
 include etc/coq-scripts/Makefile.vo_closure
 endif
@@ -242,8 +242,6 @@ DEPFLAGS_NL :=
 ifneq ($(EXTERNAL_REWRITER),1)
 DEPFLAGS_NL:=-Q ${CURDIR_SAFE}/$(REWRITER_SRC)/$(REWRITER_NAME) $(REWRITER_NAME)\n-I ${CURDIR_SAFE}/$(REWRITER_SRC)/$(REWRITER_NAME)/Util/plugins\n$(DEPFLAGS_NL)
 deps: rewriter
-$(VOFILES): | rewriter
-$(ALLDFILES): | rewriter
 cleanall:: clean-rewriter
 install: install-rewriter
 endif
@@ -252,8 +250,6 @@ ifneq ($(SKIP_BEDROCK2),1)
 ifneq ($(EXTERNAL_BEDROCK2),1)
 DEPFLAGS_NL:=-Q ${CURDIR_SAFE}/$(RUPICOLA_SRC)/$(RUPICOLA_NAME) $(RUPICOLA_NAME) \n-Q ${CURDIR_SAFE}/$(BEDROCK2_SRC)/$(BEDROCK2_NAME) $(BEDROCK2_NAME)\n-Q ${CURDIR_SAFE}/$(BEDROCK2_EXAMPLES_SRC)/$(BEDROCK2_EXAMPLES_NAME) $(BEDROCK2_EXAMPLES_NAME)\n-Q ${CURDIR_SAFE}/$(BEDROCK2_COMPILER_SRC)/$(BEDROCK2_COMPILER_NAME) $(BEDROCK2_COMPILER_NAME)\n-Q ${CURDIR_SAFE}/$(RISCV_SRC)/$(RISCV_NAME) $(RISCV_NAME)\n$(DEPFLAGS_NL)
 deps: bedrock2 bedrock2-compiler rupicola
-$(VOFILES): | bedrock2 bedrock2-compiler rupicola
-$(ALLDFILES): | bedrock2 bedrock2-compiler rupicola
 cleanall:: clean-bedrock2 clean-bedrock2-compiler clean-rupicola
 install: install-bedrock2 install-bedrock2-compiler install-rupicola
 endif
@@ -262,8 +258,6 @@ endif
 ifneq ($(EXTERNAL_COQUTIL),1)
 DEPFLAGS_NL:=-Q ${CURDIR_SAFE}/$(COQUTIL_SRC)/$(COQUTIL_NAME) $(COQUTIL_NAME)\n$(DEPFLAGS_NL)
 deps: coqutil
-$(VOFILES): | coqutil
-$(ALLDFILES): | coqutil
 cleanall:: clean-coqutil
 install: install-coqutil
 endif
@@ -271,76 +265,65 @@ endif
 ifneq ($(EXTERNAL_COQPRIME),1)
 DEPFLAGS_NL:=-Q ${CURDIR_SAFE}/$(COQPRIME_SRC)/$(COQPRIME_NAME) $(COQPRIME_NAME)\n$(DEPFLAGS_NL)
 deps: coqprime
-$(VOFILES): | coqprime
-$(ALLDFILES): | coqprime
 cleanall:: clean-coqprime
 install: install-coqprime
 endif
 
 DEPFLAGS:=$(subst \n, ,$(DEPFLAGS_NL))
 
-coqprime:
-	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) src/Coqprime/PrimalityTest/Zp.vo src/Coqprime/PrimalityTest/PocklingtonCertificat.vo
+coqprime: $(COQPRIME_VOFILES)
 
 coqprime-all: coqprime
-	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER)
 
 clean-coqprime:
-	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) clean
+	rm -f $(COQPRIME_VOFILES) $(COQPRIME_VOFILES:.vo=.vos) $(COQPRIME_VOFILES:.vo=.vok) $(COQPRIME_VOFILES:.vo=.glob)
 
 install-coqprime:
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) install
 
-rewriter:
-	$(MAKE) --no-print-directory -C $(REWRITER_FOLDER)
+rewriter: $(REWRITER_VOFILES)
 
 clean-rewriter:
-	$(MAKE) --no-print-directory -C $(REWRITER_FOLDER) clean
+	rm -f $(REWRITER_VOFILES) $(REWRITER_VOFILES:.vo=.vos) $(REWRITER_VOFILES:.vo=.vok) $(REWRITER_VOFILES:.vo=.glob)
 
 install-rewriter:
 	$(MAKE) --no-print-directory -C $(REWRITER_FOLDER) install
 
-coqutil:
-	$(MAKE) --no-print-directory -C $(COQUTIL_FOLDER)
+coqutil: $(COQUTIL_VOFILES)
 
 clean-coqutil:
-	$(MAKE) --no-print-directory -C $(COQUTIL_FOLDER) clean
+	rm -f $(COQUTIL_VOFILES) $(COQUTIL_VOFILES:.vo=.vos) $(COQUTIL_VOFILES:.vo=.vok) $(COQUTIL_VOFILES:.vo=.glob)
 
 install-coqutil:
 	$(MAKE) --no-print-directory -C $(COQUTIL_FOLDER) install
 
-bedrock2: coqutil
-	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) bedrock2_ex
+bedrock2: coqutil $(BEDROCK_VOFILES) $(BEDROCK_EXAMPLES_VOFILES)
 
 clean-bedrock2:
-	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) clean_bedrock2
+	rm -f $(BEDROCK_VOFILES) $(BEDROCK_VOFILES:.vo=.vos) $(BEDROCK_VOFILES:.vo=.vok) $(BEDROCK_VOFILES:.vo=.glob)
+	rm -f $(BEDROCK_EXAMPLES_VOFILES) $(BEDROCK_EXAMPLES_VOFILES:.vo=.vos) $(BEDROCK_EXAMPLES_VOFILES:.vo=.vok) $(BEDROCK_EXAMPLES_VOFILES:.vo=.glob)
 
 install-bedrock2:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) install_bedrock2
 
-bedrock2-compiler: bedrock2
-	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) compiler_noex
+bedrock2-compiler: bedrock2 $(BEDROCK_COMPILER_VOFILES)
 
 clean-bedrock2-compiler:
-	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) clean_deps
-	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) clean_compiler
+	rm -f $(BEDROCK_COMPILER_VOFILES) $(BEDROCK_COMPILER_VOFILES:.vo=.vos) $(BEDROCK_COMPILER_VOFILES:.vo=.vok) $(BEDROCK_COMPILER_VOFILES:.vo=.glob)
 
 install-bedrock2-compiler:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) install_compiler
 
-rupicola: bedrock2 | bedrock2-compiler
-	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) all
+rupicola: bedrock2 bedrock2-compiler $(RUPICOLA_VOFILES)
 
 clean-rupicola:
-	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) clean
+	rm -f $(RUPICOLA_VOFILES) $(RUPICOLA_VOFILES:.vo=.vos) $(RUPICOLA_VOFILES:.vo=.vok) $(RUPICOLA_VOFILES:.vo=.glob)
 
 install-rupicola:
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) install_lib
 endif
 
-Makefile.coq: Makefile _CoqProject
-	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
-	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o $@
+
 
 include Makefile.examples
 include Makefile.standalone
@@ -354,6 +337,10 @@ $(BEDROCK2_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Bedrock/Standalone/Stan
 $(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml): src/StandaloneJsOfOCamlMain.vo
 $(BEDROCK2_STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml): src/Bedrock/Standalone/StandaloneJsOfOCamlMain.vo
 # $(PERF_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Rewriter/PerfTesting/StandaloneHaskellMain.vo
+
+src/ExtractionOCaml/%.ml : private COQLIBS += $(FIATCRYPTO_COQFLAGS)
+src/ExtractionJsOfOCaml/%.ml : private COQLIBS += $(FIATCRYPTO_COQFLAGS)
+src/ExtractionHaskell/%.hs : private COQLIBS += $(FIATCRYPTO_COQFLAGS)
 
 pre-standalone-extracted: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) $(STANDALONE_JS_OF_OCAML:%=src/ExtractionJsOfOCaml/%.ml) $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs)
 
@@ -491,8 +478,7 @@ $(ACCEPT_OUTPUTS) : accept-% :
 	$(SHOW)'ACCEPT $*.out'
 	$(HIDE)cp -f $*.out output-tests/$*.expected
 
-clean::
-	rm -f Makefile.coq
+
 
 cleanall:: clean
 	rm -rf src/Rewriter/PerfTesting/Specific/generated
@@ -536,25 +522,4 @@ printdeps::
 printreversedeps::
 	$(HIDE)$(foreach vo,$(filter %.vo,$(MAKECMDGOALS)),echo '$(vo): $(call vo_reverse_closure,$(VOFILES),$(vo))'; )
 
-REGULAR_WITH_BEDROCK2_LIBS := $(sort $(subst /,.,$(patsubst src/%.vo,Crypto/%,$(filter-out src/Bedrock/Everything.vo src/Everything.vo $(AFTER_EVERYTHING_VOFILES),$(REGULAR_WITH_BEDROCK2_VOFILES)))))
-REGULAR_EXCEPT_BEDROCK2_LIBS := $(sort $(subst /,.,$(patsubst src/%.vo,Crypto/%,$(filter-out src/Bedrock/Everything.vo src/Everything.vo $(AFTER_EVERYTHING_VOFILES),$(REGULAR_EXCEPT_BEDROCK2_VOFILES)))))
-make_Everything_v_cmd_gen = { printf 'Require Import\n'; printf '%s\n' $(1); printf '.\n'; }
-make_Everything_v_cmd := $(call make_Everything_v_cmd_gen,$(REGULAR_EXCEPT_BEDROCK2_LIBS))
-make_Bedrock_Everything_v_cmd := $(call make_Everything_v_cmd_gen,$(REGULAR_WITH_BEDROCK2_LIBS))
-EXISTING_EVERYTHING_V_CONTENTS:=$(shell cat src/Everything.v 2>&1)
-EXISTING_BEDROCK_EVERYTHING_V_CONTENTS:=$(shell cat src/Bedrock/Everything.v 2>&1)
-NEW_EVERYTHING_V_CONTENTS:=$(shell $(make_Everything_v_cmd))
-NEW_BEDROCK_EVERYTHING_V_CONTENTS:=$(shell $(make_Bedrock_Everything_v_cmd))
-ifneq ($(EXISTING_EVERYTHING_V_CONTENTS),$(NEW_EVERYTHING_V_CONTENTS))
-.PHONY: src/Everything.v
-src/Everything.v:
-	$(SHOW)'ECHO > $@'
-	$(HIDE)$(make_Everything_v_cmd) > $@
-endif
 
-ifneq ($(EXISTING_BEDROCK_EVERYTHING_V_CONTENTS),$(NEW_BEDROCK_EVERYTHING_V_CONTENTS))
-.PHONY: src/Bedrock/Everything.v
-src/Bedrock/Everything.v:
-	$(SHOW)'ECHO > $@'
-	$(HIDE)$(make_Bedrock_Everything_v_cmd) > $@
-endif
