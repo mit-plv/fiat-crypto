@@ -435,7 +435,8 @@ Section language.
                                                      | gen_expr c => Op (Opp TZ TZ) c
                                                      end,
                                                      x, y)%expr)
-                                                (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
+                                                (fun '(v, c) => (@Var base_type op var TZ v,
+                                                                 Op (Opp TZ TZ) (@Var base_type op var TZ c))%expr)
                            | Some c, _ => LetIn (Op (SubWithGetBorrow bw TZ TZ TZ TZ TZ)
                                                     (c,
                                                      x,
@@ -444,7 +445,8 @@ Section language.
                                                      | neg_expr y => y
                                                      | gen_expr y => Op (Opp TZ TZ) y
                                                      end)%expr)
-                                                (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
+                                                (fun '(v, c) => (@Var base_type op var TZ v,
+                                                                 Op (Opp TZ TZ) (@Var base_type op var TZ c))%expr)
                            | None, None => Op opc args
                            end
                       | Some (c, const_of x, y)
@@ -470,7 +472,8 @@ Section language.
                                                      | gen_expr c => Op (Opp TZ TZ) c
                                                      end,
                                                      Op (OpConst x) TT, y)%expr)
-                                                (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
+                                                (fun '(v, c) => (@Var base_type op var TZ v,
+                                                                 Op (Opp TZ TZ) (@Var base_type op var TZ c))%expr)
                            | Some c, _ => LetIn (Op (SubWithGetBorrow bw TZ TZ TZ TZ TZ)
                                                     (c,
                                                      Op (OpConst x) TT,
@@ -479,7 +482,8 @@ Section language.
                                                      | neg_expr y => y
                                                      | gen_expr y => Op (Opp TZ TZ) y
                                                      end)%expr)
-                                                (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
+                                                (fun '(v, c) => (@Var base_type op var TZ v,
+                                                                 Op (Opp TZ TZ) (@Var base_type op var TZ c))%expr)
                            | None, None => Op opc args
                            end
                       | _ => Op opc args
@@ -489,7 +493,12 @@ Section language.
            => fun args
               => let pass0
                      := if ((0 <=? bw)%Z && (2^Z.of_nat (2^bw1) + 2^Z.of_nat (2^bw2) + 2^Z.of_nat (2^bw3) - 3 <=? 2^bw - 1)%Z)%nat%bool
-                        then Some (Pair (LetIn args (fun '(a, b, c) => Op (Add _ _ _) (Pair (Op (Add _ _ Tout) (Pair (Var a) (Var b))) (Var c))))
+                        then Some (Pair (LetIn args (fun '(a, b, c) =>
+                                                       Op (Add _ _ _)
+                                                          (Pair (Op (Add _ _ Tout)
+                                                                    (Pair (@Var base_type op var (TWord bw1) a)
+                                                                          (@Var base_type op var (TWord bw2) b)))
+                                                                (@Var base_type op var (TWord bw3) c))))
                                         (Op (OpConst 0) TT))
                         else None
                  in
@@ -581,7 +590,8 @@ Section language.
                                                   | gen_expr c => Op (Opp TZ TZ) c
                                                   end,
                                                   x, y)%expr)
-                                             (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
+                                             (fun '(v, c) => (@Var base_type op var TZ v,
+                                                              Op (Opp TZ TZ) (@Var base_type op var TZ c))%expr)
                            | None => Op opc args
                            end
                       | _ => Op opc args
