@@ -60,6 +60,11 @@ Then run:
 
     make
 
+If the build exhausts the process stack on your system, raise the soft stack limit before running `make`. For example, on shells that support `ulimit`:
+
+    ulimit -S -s 1000000
+    make
+
 You can check out [our CI](https://github.com/mit-plv/fiat-crypto/actions?query=branch%3Amaster+workflow%3A%22CI+%28Coq%29%22) to see how long the build should take; as of the last update to this line in the README, it takes about 1h10m to run `make -j2` on Coq 8.11.1.
 
 If you want to build only the command-line binaries used for generating code, you can save a bit of time by making only the `standalone-unified-ocaml` target with
