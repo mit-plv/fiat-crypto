@@ -1,0 +1,14 @@
+# name	category	binary	curve_name	bitwidth	limbs	prime	operation	asm_file	extra_flags
+avx-xmm-add	xmm	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	add	test-avx/simple_avx_add.asm
+avx-ymm-add	ymm	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	add	test-avx/simple_avx_add_ymm.asm
+avx-xmm-sub	xmm	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	sub	test-avx/simple_avx_sub.asm
+avx-ymm-sub	ymm	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	sub	test-avx/simple_avx_sub_ymm.asm
+batch-avx-add	batch	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	batch_add	test-avx/batch_avx_add.asm
+batch-avx-sub	batch	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	batch_sub	test-avx/batch_avx_sub.asm
+batch-carry-mul	batch	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	batch_carry_mul	test-avx/batch_scalar_carry_mul.asm	--no-wide-int --shiftr-avoid-uint1 --tight-bounds-mul-by 1.000001
+batch-scalar-carry	batch	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	batch_carry	test-avx/batch_scalar_carry.asm	--shiftr-avoid-uint1 --tight-bounds-mul-by 1.000001
+batch-avx-carry	batch	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	batch_carry	test-avx/batch_avx_carry.asm	--shiftr-avoid-uint1 --tight-bounds-mul-by 1.000001
+batch-avx-opp	batch	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	batch_opp	test-avx/batch_avx_opp.asm
+batch-avx-carry-add	batch	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	batch_carry_add	test-avx/batch_avx_carry_add.asm	--shiftr-avoid-uint1 --tight-bounds-mul-by 1.000001
+batch-avx-carry-sub	batch	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	batch_carry_sub	test-avx/batch_avx_carry_sub.asm	--shiftr-avoid-uint1 --tight-bounds-mul-by 1.000001
+batch-avx-carry-opp	batch	src/ExtractionOCaml/unsaturated_solinas	25519	64	(auto)	2^255 - 19	batch_carry_opp	test-avx/batch_avx_carry_opp.asm	--shiftr-avoid-uint1 --tight-bounds-mul-by 1.000001
