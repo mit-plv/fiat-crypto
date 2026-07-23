@@ -37,8 +37,6 @@ Definition u320_sub := func! (p_r, p_x, p_y) ~> b {
     store(p_r + $8 + $8 + $8 + $8, d4)
 }.
 
-Local Existing Instance spec_of_full_sub.
-
 Local Ltac lists_into_elements := repeat match goal with
   | H : length ?l = ?n |- _ =>  constr_eq true ltac:(isnatcst n);
   let x := fresh l "0" in destruct l as [|x l]; inversion H; clear H end.
