@@ -1,4 +1,4 @@
-From Stdlib Require Import BinInt String List InitialRing.
+From Coq Require Import BinInt String List InitialRing.
 From bedrock2 Require Import BasicC64Semantics WeakestPrecondition ProgramLogic NotationsCustomEntry ZnWords.
 Import ListNotations ProgramLogic.Coercions SeparationLogic Array Scalars.
 Require Import bedrock2Examples.full_sub.
