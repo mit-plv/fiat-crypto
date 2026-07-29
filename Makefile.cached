@@ -1,2 +1,2 @@
-COQC := $(CURDIR)/etc/coqccache.sh $(CURDIR)/.coqdep.mk coqc
+COQC := $(CURDIR)/etc/coqccache.sh $(CURDIR)/.coqdep.mk $(COQBIN)coqc
 include Makefile.composed
