@@ -42,6 +42,9 @@ jobs:
     - name: chroot build params
       shell: alpine.sh {0}
       run: etc/ci/describe-system-config.sh
+    - name: make -f Makefile.composed
+      shell: alpine.sh {0}
+      run: etc/ci/github-actions-make.sh -f Makefile.composed
     - name: etc/ci/github-actions-make.sh deps
       shell: alpine.sh {0}
       run: etc/ci/github-actions-make.sh -j2 deps
