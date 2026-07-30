@@ -41,7 +41,7 @@ jobs:
     name: ${{ matrix.os.name }} (${{ matrix.os.arch }})
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Set up OCaml
@@ -142,7 +142,7 @@ jobs:
     runs-on: macos-latest
     needs: build
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Download standalone MacOS x86_64
       uses: actions/download-artifact@v8
       with:
@@ -175,7 +175,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: [build, combine-standalone]
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Download standalone MacOS${{ matrix.arch }}
       uses: actions/download-artifact@v8
       with:
@@ -207,7 +207,7 @@ jobs:
     permissions:
       contents: write  # IMPORTANT: mandatory for making GitHub Releases
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0 # Fetch all history for all tags and branches
         tags: true     # Fetch all tags as well, `fetch-depth: 0` might be sufficient depending on Git version
