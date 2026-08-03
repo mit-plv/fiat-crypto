@@ -9,7 +9,7 @@ jobs:
   publish-rust-crate:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Login to crates.io
       run: cargo login $CRATES_IO_TOKEN
       env:
@@ -35,7 +35,7 @@ jobs:
       with:
         app-id: ${{ vars.VERSION_BUMPER_APPID }}
         private-key: ${{ secrets.VERSION_BUMPER_SECRET }}
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
         token: ${{ steps.app-token.outputs.token }}
