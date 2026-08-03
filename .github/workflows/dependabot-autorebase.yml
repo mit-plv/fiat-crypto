@@ -39,6 +39,18 @@ jobs:
           git fetch --prune origin +refs/heads/*:refs/remotes/origin/*
           FAILED_PRS=()
 
+          # If a PR cannot be updated, ask dependabot to recreate it instead;
+          # the PR only counts as failed if commenting fails as well.
+          ask_dependabot_to_recreate() {
+            echo "  Commenting '@dependabot recreate' on PR #$PR_NUMBER..."
+            if OUTPUT=$(gh pr comment "$PR_NUMBER" --body "@dependabot recreate" 2>&1); then
+              echo "  ✅ Asked dependabot to recreate PR #$PR_NUMBER"
+            else
+              echo "  ❌ Failed to comment on PR #$PR_NUMBER: $OUTPUT"
+              FAILED_PRS+=("$PR_NUMBER")
+            fi
+          }
+
           while read -r pr; do
             [ -z "$pr" ] && continue
             PR_NUMBER=$(echo "$pr" | jq -r '.number')
@@ -82,8 +94,8 @@ jobs:
 
             # Skip if conflicting
             if [ "$MERGEABLE" = "CONFLICTING" ]; then
-              echo "  ❌ PR #$PR_NUMBER has conflicts. Manual intervention required."
-              FAILED_PRS+=("$PR_NUMBER")
+              echo "  ❌ PR #$PR_NUMBER has conflicts."
+              ask_dependabot_to_recreate
               continue
             fi
 
@@ -112,14 +124,14 @@ jobs:
             fi
 
             echo "  ❌ Merge also failed: $OUTPUT"
-            FAILED_PRS+=("$PR_NUMBER")
+            ask_dependabot_to_recreate
 
           done <<< "$DEPENDABOT_PRS"
 
           echo ""
           echo "========================================"
           if [ ${#FAILED_PRS[@]} -gt 0 ]; then
-            echo "❌ Failed to update the following PRs: ${FAILED_PRS[*]}"
+            echo "❌ Failed to update or ask dependabot to recreate the following PRs: ${FAILED_PRS[*]}"
             exit 1
           else
             echo "✅ All PRs processed successfully"
