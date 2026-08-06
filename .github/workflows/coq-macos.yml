@@ -83,10 +83,16 @@ jobs:
       run: opam exec -- etc/ci/github-actions-make.sh -j2 standalone-js-of-ocaml
     - name: install-standalone-js-of-ocaml
       run: opam exec -- etc/ci/github-actions-make.sh install-standalone-js-of-ocaml
+    # The x86_64 runners are back over the 6h job limit (~5h56m used before
+    # these steps even start), so skip the file-generation and amd64-asm test
+    # steps there; they are architecture-independent and still covered by the
+    # arm64 macOS job as well as the Linux and Windows CI.
     - name: c-files lite-generated-files
       run: opam exec -- etc/ci/github-actions-make.sh -j2 c-files lite-generated-files
+      if: matrix.os.arch != 'x86_64'
     - name: only-test-amd64-files-lite
       run: opam exec -- etc/ci/github-actions-make.sh -j2 only-test-amd64-files-lite SLOWEST_FIRST=1
+      if: matrix.os.arch != 'x86_64'
     - run: find . -name "*.timing" | xargs tar -czvf timing-files.tgz
       if: failure()
     - name: upload generated timing files
