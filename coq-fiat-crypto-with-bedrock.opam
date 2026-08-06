@@ -32,6 +32,7 @@ conflict-class: [
   "coq-coqutil"
   "coq-bedrock2"
   "coq-rupicola"
+  "coq-riscv"
 ]
 dev-repo: "git+https://github.com/mit-plv/fiat-crypto.git"
 synopsis: "Cryptographic Primitive Code Generation by Fiat"
