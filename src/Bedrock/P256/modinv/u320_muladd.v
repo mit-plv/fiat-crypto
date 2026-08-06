@@ -61,9 +61,6 @@ Definition u320_muladd := func! (p_v, p_m, c_prime) ~> c {
 
 (** * Proof *)
 
-Local Existing Instance spec_of_full_add.
-Local Existing Instance spec_of_full_mul.
-
 Local Ltac lists_into_elements := repeat match goal with
   | H : length ?l = ?n |- _ =>  constr_eq true ltac:(isnatcst n);
   let x := fresh l "0" in destruct l as [(*nil*)|x l]; inversion H; clear H end.
