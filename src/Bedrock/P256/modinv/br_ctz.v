@@ -124,6 +124,7 @@ Section FunctionalCtz.
 
     Lemma testbit_xO_2 (p : positive) (z : Z) : 
         Z.testbit (Z.pos (p~0)) z = Z.testbit (Z.pos p) (Z.pred z).
+    Proof.
         rewrite Pos2Z.pos_xO, Z.double_bits. eauto.
     Qed.
 
@@ -189,73 +190,70 @@ Section FunctionalCtz.
         intros Hz Hzmod.
         apply lctz_pos_testbit_2; eauto.
         split.
-        - destruct z; inversion Hz.
-          rewrite <-Z.mod_pow2_bits_low with (n := n).
-          { 
-            eapply lctz_pos_testbit_eq.
-            assert (0 <= Z.pos p mod 2^n) by (eapply Z_mod_lt; lia). lia.
-          }
-          {
-            eapply lctz_pos_lt.
-            assert (0 <= Z.pos p mod 2^n) by (eapply Z_mod_lt; lia); split; try lia.
-            eapply Z_mod_lt; lia.
-          }
-        - intros i H. 
-          assert (i < n).
-          { 
-            eapply (Z.lt_trans _ _ _ H).
-            eapply lctz_pos_lt.
-            assert (0 <= z mod 2^n) by (eapply Z_mod_lt; lia); split; try lia.
-            eapply Z_mod_lt; lia.
-          }
-          rewrite <-Z.mod_pow2_bits_low with (n := n); eauto.
-          eapply lctz_pos_testbit_lt; eauto.
-          assert (0 <= z mod 2^n).
-          { eapply Z_mod_lt; lia. }
-          lia.
-    Qed.
-
-    Lemma lctz_word_64 (w : word) : (w > 0) -> lctz 64 ((w * 2) mod 2^64) = 1 + lctz 64 w.
-    Proof.
-        intros H.
-        ZnWords_pre.
-        remember ((w0 * 2) mod 2^64) as a.
-        destruct (Z.eq_dec a 0).
         { 
-            subst. rewrite e.
-            apply Z_div_exact_full_2 in e; try lia.
-            assert (w0 * 2 / 2^64 <= 1).
-            {
-                apply Zlt_succ_le.
-                replace (2^64) with (2^63 * 2 ^1) by (rewrite <- Z.pow_add_r; lia).
-                replace (2^1) with 2 by lia.
-                rewrite Zdiv_mult_cancel_r by lia.
-                eapply Z.div_lt_upper_bound; lia.
+            destruct z; inversion Hz.
+            rewrite <-Z.mod_pow2_bits_low with (n := n).
+            { 
+                eapply lctz_pos_testbit_eq.
+                assert (0 <= Z.pos p mod 2^n) by (eapply Z_mod_lt; lia). lia.
             }
-            assert (0 < w0 * 2 / 2^64).
             {
-                eapply Z.div_str_pos; split; lia.
+                eapply lctz_pos_lt.
+                assert (0 <= Z.pos p mod 2^n) by (eapply Z_mod_lt; lia); split; try lia.
+                eapply Z_mod_lt; lia.
             }
-            assert (w0 * 2 / 2^64 = 1) by lia.
-            rewrite H4 in e.
-            assert (w0 = 2^63%nat) by lia.
-            rewrite H5. eauto.
         }
-        { subst. replace 64 with (Z.of_nat 64%nat) by lia.
-          assert (w0 > 0).
-          { destruct (Z.eq_dec w0 0).
-            { subst. rewrite Z.mul_0_l, Z.mod_0_l in n; lia. } 
-            { lia. }}
-            rewrite lctz_pos_modpow2 by lia.
-            rewrite Z.mul_comm, lctz_pos_double; lia.
+        { 
+            intros i H. 
+            assert (i < n).
+            { 
+                eapply (Z.lt_trans _ _ _ H).
+                eapply lctz_pos_lt.
+                assert (0 <= z mod 2^n) by (eapply Z_mod_lt; lia); split; try lia.
+                eapply Z_mod_lt; lia.
+            }
+            rewrite <-Z.mod_pow2_bits_low with (n := n); eauto.
+            eapply lctz_pos_testbit_lt; eauto.
+            assert (0 <= z mod 2^n).
+            { eapply Z_mod_lt; lia. }
+            lia.
         }
     Qed.
 
 End FunctionalCtz.
 
 
-(** * Specification *)
+Lemma lctz_word_slu (w : word) : (w > 0) -> lctz 64 (word.slu w (word.of_Z 1)) = 1 + lctz 64 w.
+Proof.
+    intros H. ZnWords_pre.
+    replace (2^1) with 2 by lia.
+    remember ((w0 * 2) mod 2^64) as a.
+    destruct (Z.eq_dec a 0) as [e | ne]; subst.
+    { 
+        rewrite e. apply Z_div_exact_full_2 in e; try lia.
+        assert (w0 * 2 / 2^64 <= 1).
+        {
+            apply Zlt_succ_le.
+            replace (2^64) with (2^63 * 2 ^1) by (rewrite <- Z.pow_add_r; lia).
+            replace (2^1) with 2 by lia.
+            rewrite Zdiv_mult_cancel_r by lia.
+            eapply Z.div_lt_upper_bound; lia.
+        }
+        assert (0 < w0 * 2 / 2^64) by (eapply Z.div_str_pos; split; lia).
+        replace (w0 * 2 / 2^64) with 1 in e by lia.
+        replace w0 with (2^63%nat) by lia.
+        eauto.
+    }
+    { 
+        subst. replace 64 with (Z.of_nat 64%nat) by lia.
+        assert (w0 > 0) by (destruct (Z.eq_dec w0 0); lia).
+        rewrite lctz_pos_modpow2 by lia.
+        rewrite Z.mul_comm, lctz_pos_double; lia.
+    }
+Qed.
 
+
+(** * Specification *)
 
 #[export] Instance spec_of_br_ctz : spec_of "br_ctz" := 
     fnspec! "br_ctz" (value : word) ~> count,
@@ -301,43 +299,28 @@ Proof.
     { 
         repeat straightline; try eexists _;
         repeat straightline; ssplit; try split;
-        repeat straightline;
-        try (erewrite H0 in H2); eauto.
+        repeat straightline; 
+        try match goal with 
+            | [H1 : ?x = 0 , H2 : lctz 64 ?x = _ |- _ ] => erewrite H1 in H2
+            end; eauto; try ZnWords.
+        all: assert (Htmp : lctz 64 tmp = lctz 64 x1 + 1) by (cbv [tmp]; rewrite lctz_word_slu; ZnWords).
+        all: assert (x0 < 64) by
+        (
+            assert (0 <= lctz 64 x1 < 64%nat) by (eapply lctz_pos_lt; ZnWords);
+            assert (0 <= lctz 64 x < 64%nat) by (eapply lctz_pos_lt; ZnWords);
+            ZnWords
+        ).
+        all: try ZnWords.
         { 
             ZnWords_pre.
-            assert (Hw2 : w2 < 64).
-            {
-                replace 64 with (Z.of_nat 64%nat) in * by lia.
-                assert (0 <= lctz 64%nat w0 < 64%nat) by (eapply lctz_pos_lt; lia).
-                assert (0 <= lctz 64%nat w1 < 64%nat) by (eapply lctz_pos_lt; lia).
-                lia.
-            }
-            rewrite H1. rewrite Z.mul_mod_idemp_l by ZnWords.
-            rewrite !(Z.mod_small (w2 + 1)) by ZnWords.
+            match goal with 
+            | [H1 : ?a = (?b * 2^?c) mod ?d |- _] => rewrite H1 by ZnWords
+            end.
+            rewrite Z.mul_mod_idemp_l by ZnWords.
+            match goal with 
+            | [H : ?x < 64 |- _ ] => try rewrite !(Z.mod_small (x + 1)) by ZnWords
+            end.
             rewrite Z.pow_add_r by ZnWords.
-            ZnWords.
-        }
-        {
-            assert (lctz 64 ((x1 * 2 ^ 1) mod 2^64) = 1 + lctz 64 x1).
-            { eapply lctz_word_64; ZnWords. }
-            ZnWords_pre. 
-            assert (Hw2 : w2 < 64).
-            {
-                replace 64 with (Z.of_nat 64%nat) in * by lia.
-                assert (0 <= lctz 64%nat w0 < 64%nat) by (eapply lctz_pos_lt; lia).
-                assert (0 <= lctz 64%nat w1 < 64%nat) by (eapply lctz_pos_lt; lia).
-                lia.
-            }
-            ZnWords.
-        }
-        { ZnWords_pre. 
-            assert (Hw2 : w2 < 64).
-            {
-                replace 64 with (Z.of_nat 64%nat) in * by lia.
-                assert (0 <= lctz 64%nat w0 < 64%nat) by (eapply lctz_pos_lt; lia).
-                assert (0 <= lctz 64%nat w1 < 64%nat) by (eapply lctz_pos_lt; lia).
-                lia.
-            }
             ZnWords.
         }
     }
