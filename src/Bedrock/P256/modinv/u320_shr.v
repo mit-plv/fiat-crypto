@@ -1,5 +1,6 @@
 From Coq Require Import BinInt String List InitialRing.
 From bedrock2 Require Import BasicC64Semantics WeakestPrecondition ProgramLogic.
+Require Import bedrock2.NotationsCustomEntry bedrock2.ZnWords Coq.ZArith.ZArith Lia.
 From coqutil Require Import WithBaseName.
 Import ListNotations ProgramLogic.Coercions SeparationLogic Array Scalars.
 Local Open Scope string_scope. Local Open Scope Z_scope.
@@ -10,20 +11,19 @@ Local Notation eval := (fold_right (fun (a : word) (s : Z) => a + 2^64*s) 0).
 Local Notation eval_bool := (fold_right (fun (a : word) (s : Z) => Z.lor a (Z.shiftl s 64)) 0).
 Local Notation array := (array scalar (word.of_Z 8)).
 
-Local Instance spec_of_u320_shr : spec_of "u320_shr" := 
+#[export] Instance spec_of_u320_shr : spec_of "u320_shr" := 
 fnspec! "u320_shr" (p_x carry shift : word) / (x r : list word) (s : word) R,
 {
     requires t m := 
         m =* array p_x x ⋆ R /\
             length x = 5%nat /\ length r = 5%nat /\ 
-            shift < 64%nat /\ 0%nat < shift /\ carry < 2^1;
+            0%nat < shift < 64%nat /\ carry < 2;
     ensures T M := 
         T = t /\ exists (r : list word) , M =* array p_x r ⋆ R /\
             length r = 5%nat /\ eval r = Z.shiftr (eval (x ++ [carry])) shift
 }.
 
 (** * Implementation *)
-Require Import bedrock2.NotationsCustomEntry bedrock2.ZnWords Coq.ZArith.ZArith Lia.
 
 Definition u320_shr := func! (p_x, carry, shift) 
 {
@@ -100,9 +100,3 @@ Proof.
     repeat match goal with |- context [Z.testbit ?a ?b] => rewrite (@prove_Zeq_bitwise.testbit_above 64 a) by ZnWords end;
     repeat match goal with |- context [Z.testbit ?a ?b] => rewrite (@prove_Zeq_bitwise.testbit_above 1 a) by ZnWords end).
 Qed.
-
-(** * Linking Proof *)
-Definition u320_shr_funcs := &[, u320_shr].
-
-Lemma link_u320_shr : spec_of_u320_shr (Interface.map.of_list u320_shr_funcs).
-Proof. apply u320_shr_correct; trivial. Qed.
