@@ -99,15 +99,14 @@ Proof.
         all: assert (0 <= lctz 64 x1 < 64%nat) by (eapply lctz_range; ZnWords).
         all: assert (0 <= lctz 64 x < 64%nat) by (eapply lctz_range; ZnWords).
         all: try ZnWords.
-        { 
-            ZnWords_pre.
-            match goal with 
-            | [H1 : ?a = (?b * 2^?c) mod ?d |- _] => rewrite H1 by ZnWords
-            end.
-            rewrite Z.mul_mod_idemp_l by ZnWords.
-            f_equal. rewrite_strat bottomup Z.mod_small. 
-            all: idtac + rewrite ?Z.pow_add_r; ZnWords.
-        }
+        ZnWords_pre.
+        match goal with 
+        | [H1 : ?a = (?b * 2^?c) mod ?d |- _] => rewrite H1 by ZnWords
+        end.
+        rewrite Z.mul_mod_idemp_l by ZnWords.
+        f_equal. rewrite_strat bottomup Z.mod_small. 
+        all: idtac + rewrite ?Z.pow_add_r; ZnWords.
     }
     { repeat straightline. pose proof (word_lctz_range value). ZnWords. }
 Qed.
+
