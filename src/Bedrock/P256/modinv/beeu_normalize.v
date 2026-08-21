@@ -2,6 +2,7 @@ From Coq Require Import BinInt String List InitialRing.
 From bedrock2 Require Import BasicC64Semantics WeakestPrecondition ProgramLogic NotationsCustomEntry ZnWords ArrayCasts.
 Import ListNotations ProgramLogic.Coercions SeparationLogic Array Scalars.
 From coqutil Require Import Tactics.Tactics WithBaseName Map.SeparationLogic.
+Require Import bedrock2Examples.full_sub.
 Require Import Util.ZRange.
 Require Import P256.modinv.u320_sub.
 From Coq Require Import Zmod ZArith.
@@ -194,3 +195,11 @@ Proof.
         cbv [fold_right length] in *; eauto; ZnWords.
     }
 Qed.
+
+(* Linking Proof *)
+(** * Linking Proof *)
+Definition beeu_normalize_funcs := &[, beeu_normalize; u320_set; u320_sub; br_full_sub].
+
+Lemma link_beeu_normalize : spec_of_beeu_normalize (Interface.map.of_list beeu_normalize_funcs).
+Proof. apply beeu_normalize_ok; try apply u320_set_ok; try apply u320_sub_correct; try apply full_sub_ok; trivial. Qed.
+
