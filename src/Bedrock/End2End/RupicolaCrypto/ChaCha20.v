@@ -9,7 +9,7 @@ Import coqutil.Word.LittleEndianList (le_combine, le_split).
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
-Require coqutil.Word.Naive.
+Require Import coqutil.Word.Naive.
 Require Import bedrock2.FE310CSemantics.
 Require Import coqutil.Map.SortedListWord.
 Import Syntax.Coercions ProgramLogic.Coercions.
@@ -19,6 +19,8 @@ Import Lists.List.
 Import Loops.
 Import LoopCompiler.
 
+#[local] Hint Extern 0 (Interface.word _) => exact (Naive.word 32%Z) : typeclass_instances.
+#[local] Hint Extern 0 (word.ok _) => exact word32_ok : typeclass_instances. 
 Notation word := (Naive.word 32).
 Notation locals := (FE310CSemantics.locals (word:=word)).
 Notation mem :=(@SortedListWord.map 32 (Naive.word 32) Naive.word32_ok Init.Byte.byte).
@@ -279,9 +281,9 @@ Definition quarter_gallina a b c d : \<< word, word, word, word \>> :=
   let/n c := c + d in  let/n b := b ^ c in  let/n b := b <<< word.of_Z 7 in
                                             \< a, b, c, d \>.
 
-Hint Rewrite word.Z_land_ones_rotate using (split; reflexivity) : quarter.
-Hint Rewrite <- word.unsigned_xor_nowrap : quarter.
-Hint Rewrite word.Z_land_ones_word_add : quarter.
+Hint Rewrite (word.Z_land_ones_rotate (word := word)) using (split; reflexivity) : quarter.
+Hint Rewrite <- (word.unsigned_xor_nowrap (word := word)) : quarter.
+Hint Rewrite (word.Z_land_ones_word_add (word:=word)) : quarter.
 
 Lemma quarter_ok0 a b c d:
   Spec.quarter (word.unsigned a, word.unsigned b, word.unsigned c, word.unsigned d) =
@@ -1320,7 +1322,7 @@ Proof.
       eauto.
     }
     eexists; split; eauto.
-    seprewrite_in words_of_bytes H.
+    seprewrite_in @words_of_bytes H.
     { rewrite H1.
       rewrite Nat.mul_comm.
       apply Nat.mod_mul.
@@ -1353,7 +1355,7 @@ Proof.
     replace (Z.of_nat n + 1) with (Z.of_nat (n+1)) by lia.
     intros.
     eapply IHlst with (n := (n + 1)%nat); eauto.
-    seprewrite words_of_bytes; cycle 1.
+    seprewrite @words_of_bytes; cycle 1.
     {
       unfold scalar.
       unfold bs2ws, zs2ws, bs2zs in *.

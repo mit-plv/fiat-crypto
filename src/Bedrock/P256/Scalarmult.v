@@ -244,7 +244,7 @@ Proof.
       { ssplit; [ecancel_assumption | | | ]; ZnWords. }
       repeat straightline.
       (* Deallocate stack. *)
-      seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ _ _ _ _ a) ltac:(newest_memory_hyp) lia.
+      seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ _ (Byte.byte) _ _ a) ltac:(newest_memory_hyp) lia.
       pose proof (length_point (Jacobian.Jacobian.double_minus_3 eq_refl kP)).
       (* Restore loop invariant. *)
       repeat straightline.
@@ -295,7 +295,7 @@ Proof.
   repeat straightline.
   rename R0 into R.
   straightline_call. (* call p256_precompute_multiples *)
-  { seprewrite_in_by (Array.array1_iff_eq_of_list_word_at a) ltac:(newest_memory_hyp) ltac:(lia).
+  { seprewrite_in_by (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) a) ltac:(newest_memory_hyp) ltac:(lia).
     ssplit; try ecancel_assumption; trivial. }
   repeat straightline.
   straightline_call. (* call p256_point_set_zero *)
@@ -413,7 +413,7 @@ Proof.
   straightline_call. (* call p256_get_multiple *)
   { split; [|split; [|split; [|split]]].
     4: eassumption.
-    { seprewrite_in_by (Array.array1_iff_eq_of_list_word_at p_kP) ltac:(newest_memory_hyp) ltac:(lia).
+    { seprewrite_in_by (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) p_kP) ltac:(newest_memory_hyp) ltac:(lia).
       ecancel_assumption. }
     { rewrite length_point. ZnWords. }
     { rewrite <-(length_map to_affine).
@@ -424,7 +424,7 @@ Proof.
   rename x0 into kP.
 
   straightline_call. (* call p256_point_add_vartime_if_doubling *)
-  { seprewrite_in_by (Array.array1_iff_eq_of_list_word_at a3) ltac:(newest_memory_hyp) ltac:(lia).
+  { seprewrite_in_by (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) a3) ltac:(newest_memory_hyp) ltac:(lia).
     ssplit; try ecancel_assumption; trivial.
     intros Hnotbothzero.
     subst_weq.
@@ -462,10 +462,10 @@ Proof.
   repeat straightline.
 
   (* Deallocate stack. *)
-  seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ _ _ _ _ p_kP)
+  seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ _ (Byte.byte) _ _ p_kP)
       ltac:(newest_memory_hyp) lia.
   assert (length (to_bytes kP) = sizeof_point) by (rewrite length_point; trivial).
-  seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ _ _ _ _ a3)
+  seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ _ (Byte.byte) _ _ a3)
       ltac:(newest_memory_hyp) lia.
   assert (length (to_bytes curr_out_new) = sizeof_point%nat) by (rewrite length_point; trivial).
 

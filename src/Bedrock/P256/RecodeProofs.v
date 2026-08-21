@@ -277,8 +277,7 @@ Proof.
   ssplit; try ecancel_assumption; auto.
   subst i.
   match goal with H: _ = ?x |- context [?x] => rewrite <-H end.
-  rewrite word.unsigned_of_Z_0, Z.pow_0_r, Z.div_1_r.
-  reflexivity.
+  cbn. apply Z.div_1_r.
 Qed.
 
 Lemma signed_recode_carry_ok : program_logic_goal_for_function! signed_recode_carry.

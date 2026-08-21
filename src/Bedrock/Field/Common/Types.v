@@ -48,10 +48,10 @@ Section WithParameters.
   Class ok {parameters_sentinel : parameters} :=
     {
       (* semantics_ok : Semantics.parameters_ok semantics *)
-      #[global] word_ok :: word.ok word;
-      #[global] mem_ok :: map.ok mem;
-      #[global] locals_ok :: map.ok locals;
-      #[global] ext_spec_ok :: Semantics.ext_spec.ok ext_spec;
+      #[export] word_ok :: word.ok word;
+      #[export] mem_ok :: map.ok mem;
+      #[export] locals_ok :: map.ok locals;
+      #[export] ext_spec_ok :: Semantics.ext_spec.ok ext_spec;
 
       varname_gen_unique :
         forall i j : nat, varname_gen i = varname_gen j <-> i = j;
