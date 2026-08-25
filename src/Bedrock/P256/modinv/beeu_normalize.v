@@ -7,7 +7,6 @@ Require Import Util.ZRange.
 Require Import P256.modinv.u320_sub.
 From Coq Require Import Zmod ZArith.
 Local Open Scope string_scope. Local Open Scope Z_scope.
-Require Import Setoid.
 
 Local Notation eval := (fold_right (fun (a : word) (s : Z) => a + 2^64*s) 0).
 Local Notation array := (array scalar (word.of_Z 8)).
@@ -24,10 +23,9 @@ From Coq Require Import ZArith Lia.
             M =* array p_y r ⋆ array p_m MOD ⋆ R /\ length r = 5%nat /\ 
                 Zmod.of_Z (eval MOD) (eval y) = Zmod.of_Z (eval MOD) (eval r) 
                 /\ 0%nat <= (eval r) < (eval MOD)
-    }
-.
+    }.
 
-#[export] Instance spec_of_u320_set : spec_of "u320_set" := fnspec! "u320_set" (p_x p_y : word) / (x y : list word) R, 
+#[local] Instance spec_of_u320_set : spec_of "u320_set" := fnspec! "u320_set" (p_x p_y : word) / (x y : list word) R, 
     {
         requires t m := 
             m =* array p_x x ⋆ array p_y y ⋆ R /\ 
