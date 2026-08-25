@@ -68,6 +68,7 @@ Local Set Keyed Unification.
 Import Map.Interface Map.Separation. (* for coercions *)
 Require Import bedrock2.Array.
 Require Import bedrock2.ZnWords.
+Require Import coqutil.Word.Naive.
 Require Import Rupicola.Lib.Tactics. (* for sepsimpl *)
 Import LittleEndianList.
 Import coqutil.Word.Interface.

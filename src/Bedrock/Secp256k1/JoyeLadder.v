@@ -449,7 +449,7 @@ Section WithParameters.
     eexists ?[b]; ssplit.
     eexists; split; [apply map.get_put_same|].
     eapply Core.WeakestPrecondition_dexpr_expr; [|apply ExprCompiler.expr_compile_Z_literal].
-    cbn. rewrite <- Core.word.morph_ltu by lia.
+    cbn [interp_binop]. rewrite <- Core.word.morph_ltu by lia.
     reflexivity.
     all: pose proof Zlt_cases vi scalarbitsz;
          intros Hnz; destruct (vi <? scalarbitsz);

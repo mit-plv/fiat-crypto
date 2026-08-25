@@ -45,6 +45,8 @@ Section Field.
   Definition to_mont_string := prefix ++ "to_mont".
   Definition from_mont_string := prefix ++ "from_mont".
 
+  Require Import bedrock2.BasicC32Semantics.
+
   (* Call fiat-crypto pipeline on all field operations *)
   Instance p224_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m machine_wordsize) m.
   Proof using Type. Time constructor; make_computed_op. Defined.

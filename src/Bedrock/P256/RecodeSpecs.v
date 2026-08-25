@@ -1,4 +1,5 @@
 From Coq Require Import
+  Init.Byte
   BinInt
   String
   Lists.List.

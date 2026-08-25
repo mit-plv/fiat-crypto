@@ -115,8 +115,7 @@ Proof.
   eapply sep_and_l_fwd in Hm; case Hm as [Hm Hm'].
 
   letexists; split.
-  { cbn. repeat straightline. eexists; split; [|reflexivity].
-    cbv [coord.to_bytes] in Hm.
+  { cbv [coord.to_bytes] in Hm.
     rewrite <-(firstn_skipn 8 (le_split _ _)), List.firstn_le_split, skipn_le_split, ?Z.shiftr_shiftr in Hm by lia.
     seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_le_split; trivial; lia).
     seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split; lia).

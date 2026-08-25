@@ -226,7 +226,7 @@ Proof.
     ))
     (fun v' v => v < v' <= 17)%nat
     _ _ _ _ _); Loops.loop_simpl.
-  { cbv [Loops.enforce]; cbn. split; exact eq_refl. }
+  { cbv [Loops.enforce]; cbn -[word.of_Z]. split; exact eq_refl. }
   { apply PeanoNat.Nat.gt_wf. }
 
   (* Initial state matches invariant. *)
@@ -234,7 +234,7 @@ Proof.
     ssplit; cycle -1.
     { rewrite Znat.Z2Nat.id; [exact eq_refl|ZnWords]. }
     { case Z.ltb_spec0; try (intros; ecancel_assumption).
-      subst i. bottom_up_simpl_in_goal; lia. }
+      intros Hl. cbn in Hl. lia. }
     { ZnWords. }
     { ZnWords. }
     { trivial. }
@@ -374,7 +374,7 @@ Proof.
   (* Dealloc of a. Prep ptsto and length so straightline processes. *)
   Require Import coqutil.Macros.symmetry.
   pose proof (length_coord (F.opp y)).
-  seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at a)) ltac:(hyp_containing a) lia.
+  seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at (value:=Byte.byte)a)) ltac:(hyp_containing a) lia.
 
   repeat straightline.
 
@@ -442,7 +442,7 @@ Proof.
               Forall2 W.eq (map to_affine multiples) ((W.multiples 17 (Jacobian.to_affine P)))))
       (fun v' v => v < v' <= 17)%nat
       _ _ _ _ _); Loops.loop_simpl.
-  { cbv [Loops.enforce]; cbn. split; exact eq_refl. }
+  { cbv [Loops.enforce]; cbn -[word.of_Z]. split; exact eq_refl. }
   { apply Nat.gt_wf. }
   { repeat straightline.
     eexists [(Jacobian.of_affine W.zero); P], _; ssplit.

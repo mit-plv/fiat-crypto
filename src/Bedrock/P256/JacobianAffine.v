@@ -173,12 +173,12 @@ Proof.
   (* postcondition *)
 
   cbv [proj1_sig proj2_sig fst snd point.to_bytes ].
-  seprewrite_in_by (Array.list_word_at_app_of_adjacent_eq(p_Q)(p_Q.+32)) Hm ltac:(length_tac_rewrites; listZnWords).
-  seprewrite_in_by (Array.list_word_at_app_of_adjacent_eq(p_Q)(p_Q.+32.+32)) Hm ltac:(length_tac_rewrites; listZnWords).
-  seprewrite_in_by (Array.list_word_at_app_of_adjacent_eq(p_P)(p_P.+32)) Hm ltac:(length_tac_rewrites; listZnWords).
-  seprewrite_in_by (Array.list_word_at_app_of_adjacent_eq(p_P)(p_P.+32.+32)) Hm ltac:(length_tac_rewrites; listZnWords).
-  seprewrite_in_by (Array.list_word_at_app_of_adjacent_eq(p_out)(p_out.+32)) Hm ltac:(length_tac_rewrites; listZnWords).
-  seprewrite_in_by (Array.list_word_at_app_of_adjacent_eq(p_out)(p_out.+32.+32)) Hm ltac:(length_tac_rewrites; listZnWords).
+  seprewrite_in_by (Array.list_word_at_app_of_adjacent_eq(value:=byte)(p_Q)(p_Q.+32)) Hm ltac:(length_tac_rewrites; listZnWords).
+  seprewrite_in_by (Array.list_word_at_app_of_adjacent_eq(value:=byte)(p_Q)(p_Q.+32.+32)) Hm ltac:(length_tac_rewrites; listZnWords).
+  seprewrite_in_by (Array.list_word_at_app_of_adjacent_eq(value:=byte)(p_P)(p_P.+32)) Hm ltac:(length_tac_rewrites; listZnWords).
+  seprewrite_in_by (Array.list_word_at_app_of_adjacent_eq(value:=byte)(p_P)(p_P.+32.+32)) Hm ltac:(length_tac_rewrites; listZnWords).
+  seprewrite_in_by (Array.list_word_at_app_of_adjacent_eq(value:=byte)(p_out)(p_out.+32)) Hm ltac:(length_tac_rewrites; listZnWords).
+  seprewrite_in_by (Array.list_word_at_app_of_adjacent_eq(value:=byte)(p_out)(p_out.+32.+32)) Hm ltac:(length_tac_rewrites; listZnWords).
   eexists; ssplit.
   { use_sep_assumption. cancel. repeat ecancel_step. Morphisms.f_equiv. }
   { length_tac. }
@@ -286,8 +286,8 @@ assert (word__and_broadcast : forall a b, word.and (word.broadcast a) (word.broa
     { clear; ZnWords.ZnWords. }
     clear_nongoal_sephyps.
     (* stackdealloc *)
-    progress repeat seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at a)) Hm ltac:(length_tac_rewrites; listZnWords).
-    progress repeat seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at a0)) Hm ltac:(length_tac_rewrites; listZnWords).
+    seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) a)) Hm ltac:(length_tac_rewrites; listZnWords).
+    progress repeat seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) a0)) Hm ltac:(length_tac_rewrites; listZnWords).
     assert (Datatypes.length x6 = 96%nat) by (length_tac_rewrites; listZnWords).
     assert (Datatypes.length x2 = 96%nat) by (length_tac_rewrites; listZnWords).
     repeat straightline; clear_nongoal_sephyps.
@@ -339,8 +339,8 @@ assert (word__and_broadcast : forall a b, word.and (word.broadcast a) (word.broa
     repeat straightline.
     (* stackdealloc *)
     clear_nongoal_sephyps.
-    progress repeat seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at a)) Hm ltac:(length_tac_rewrites; listZnWords).
-    progress repeat seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at a0)) Hm ltac:(length_tac_rewrites; listZnWords).
+    progress repeat seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) a)) Hm ltac:(length_tac_rewrites; listZnWords).
+    progress repeat seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) a0)) Hm ltac:(length_tac_rewrites; listZnWords).
     assert (Datatypes.length x6 = 96%nat) by (length_tac_rewrites; listZnWords).
     assert (Datatypes.length ((to_bytes (Jacobian.double_minus_3 eq_refl P))) = 96%nat) by (length_tac_rewrites; listZnWords).
     repeat straightline; clear_nongoal_sephyps.

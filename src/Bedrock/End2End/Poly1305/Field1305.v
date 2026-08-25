@@ -18,6 +18,7 @@ Section Field.
 
   Existing Instances Bitwidth32.BW32
     Defaults32.default_parameters Defaults32.default_parameters_ok.
+  Import bedrock2.BasicC32Semantics.
   Definition prefix : string := "fe1305_"%string.
 
   (* Define Poly1305 field *)

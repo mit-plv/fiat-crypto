@@ -160,7 +160,7 @@ Proof.
       try (case Z.ltb_spec; intros); try div_mod_lia.
       all: rewrite Z.land_comm, Z.land_ones_low by (lia || cbv; trivial).
       all: rewrite Z.lxor_comm, <- word.unsigned_not_nowrap, word.unsigned_not;
-        rewrite Zbitwise.Z.lnot_eq_pred_opp; cbn.
+        rewrite Zbitwise.Z.lnot_eq_pred_opp.
       all: unfold word.wrap;
         rewrite opp_sub_opp_add, Modulo.Z.mod_opp_small by ZnWords.ZnWords.
       all: div_mod_lia. }
