@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        coq-version: ['dev', '8.20.0']
+        coq-version: ['dev', '9.0.0', '9.1.0', '9.2.0']
         os: [{name: 'Ubuntu',
               runs-on: 'ubuntu-latest',
               ocaml-compiler: '4.14.0',
@@ -129,14 +129,14 @@ jobs:
         echo ::group::opam list
         opam list
         echo ::endgroup::
-        echo ::group::coqc --config
-        opam exec -- coqc --config
+        echo ::group::rocq --config
+        opam exec -- rocq --config
         echo ::endgroup::
-        echo ::group::coqc --version
-        opam exec -- coqc --version
+        echo ::group::rocq --version
+        opam exec -- rocq --version
         echo ::endgroup::
-        echo ::group::echo ~ coqtop
-        echo "" | opam exec -- coqtop
+        echo ::group::echo ~ rocq top
+        echo "" | opam exec -- rocq top
         echo ::endgroup::
 
     - run: opam install coq-fiat-crypto --with-test ${{ matrix.os.opam-jobs-flag }}

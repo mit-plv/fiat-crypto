@@ -34,8 +34,8 @@ ifneq (,$(COQBIN))
 COQBIN:=$(COQBIN)/
 endif
 
-COQC     ?= "$(COQBIN)coqc"
-COQ_VERSION:=$(shell $(COQC) --print-version | cut -d " " -f 1)
+COQC     ?= "$(COQBIN)rocq"
+COQ_VERSION:=$(shell $(COQC) --print-version 2>/dev/null | cut -d " " -f 1)
 
 endif
 endif
@@ -340,7 +340,7 @@ endif
 
 Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
-	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o $@
+	$(HIDE)"$(COQBIN)rocq" makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o $@
 
 include Makefile.examples
 include Makefile.standalone
@@ -519,7 +519,7 @@ print_DEPFLAGS:
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 EXISTING_COQPROJECT_CONTENTS_SORTED:=$(shell cat _CoqProject 2>&1 | $(SORT_COQPROJECT))
 WARNINGS_PLUS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+unexpected-implicit-declaration,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive,+undeclared-scope,+deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality,+deprecated-typeclasses-transparency-without-locality,+fragile-hint-constr
-WARNINGS := $(WARNINGS_PLUS),-deprecated-since-9.0,-deprecated-since-8.20,-deprecated-from-Coq
+WARNINGS := $(WARNINGS_PLUS),-deprecated-since-9.2,-deprecated-since-9.1,-deprecated-since-9.0,-deprecated-from-Coq
 COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; printf -- '$(DEPFLAGS_NL)'; echo '-arg -w -arg $(WARNINGS)'; echo '-arg -native-compiler -arg ondemand'; echo 'src/Everything.v'; echo 'src/Bedrock/Everything.v'; find src -type f -name '*.v' | $(GREP_EXCLUDE_SPECIAL) | $(GREP_EXCLUDE_GENERATED) | $(SORT_COQPROJECT))
 NEW_COQPROJECT_CONTENTS_SORTED:=$(shell $(COQPROJECT_CMD) | $(SORT_COQPROJECT))
 

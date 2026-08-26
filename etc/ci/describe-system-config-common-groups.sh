@@ -15,9 +15,9 @@ group gcc --version
 group gcc -v
 group js_of_ocaml --version
 group wasm_of_ocaml --version
-group coqc --config
-group coqc --version
-group coqtop </dev/null
+group rocq --config
+group rocq --version
+group rocq top </dev/null
 group ocamlc -config
 group ocamlc -where
 group opam switch

@@ -52,7 +52,7 @@ jobs:
         coq_version: ${{ matrix.env.DOCKER_COQ_VERSION }}
         ocaml_version: ${{ matrix.env.DOCKER_OCAML_VERSION }}
         export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
-        custom_script: etc/ci/github-actions-docker-make.sh COQBIN="$(dirname "$(which coqc)")/" -j2 deps
+        custom_script: etc/ci/github-actions-docker-make.sh COQBIN="$(dirname "$(which rocq)")/" -j2 deps
     - name: all-except-generated-and-js-of-ocaml
       uses: coq-community/docker-coq-action@v1
       with:
@@ -125,7 +125,7 @@ jobs:
         export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
         custom_script: |
           sudo git config --global --add safe.directory "*"
-          sudo make EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 COQBIN="$(dirname "$(which coqc)")/" install install-standalone-ocaml
+          sudo make EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 COQBIN="$(dirname "$(which rocq)")/" install install-standalone-ocaml
     - name: install-without-bedrock2
       uses: coq-community/docker-coq-action@v1
       with:
@@ -134,7 +134,7 @@ jobs:
         export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
         custom_script: |
           sudo git config --global --add safe.directory "*"
-          sudo make EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 COQBIN="$(dirname "$(which coqc)")/" install-without-bedrock2 install-standalone-ocaml
+          sudo make EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 COQBIN="$(dirname "$(which rocq)")/" install-without-bedrock2 install-standalone-ocaml
     - name: install-dev
       uses: coq-community/docker-coq-action@v1
       with:
@@ -143,7 +143,7 @@ jobs:
         export: CI ALLOW_DIFF COQCHKEXTRAFLAGS GITHUB_STEP_SUMMARY
         custom_script: |
           sudo git config --global --add safe.directory "*"
-          sudo make EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 COQBIN="$(dirname "$(which coqc)")/" install install-standalone-ocaml
+          sudo make EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 COQBIN="$(dirname "$(which rocq)")/" install install-standalone-ocaml
     - name: display timing info
       run: cat time-of-build-pretty.log
     - name: display per-line timing info

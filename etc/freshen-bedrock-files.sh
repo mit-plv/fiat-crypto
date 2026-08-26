@@ -8,7 +8,7 @@ cd "$ROOT_DIR"
 
 FILES="$(git grep --name-only "Bedrock\.")"
 
-COQLIB="$(${COQBIN}coqc -config | grep 'COQLIB=' | sed s'/^COQLIB=//g')"
+COQLIB="$(${COQBIN}rocq --config | grep 'COQLIB=' | sed s'/^COQLIB=//g')"
 
 MYCOQPATH="$COQPATH${COQPATH:+:}$COQLIB"
 

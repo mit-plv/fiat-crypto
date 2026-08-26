@@ -21,9 +21,9 @@ Print-Group -name "git config --global -l" -command { opam exec -- git config --
 # Using opam and OCaml tools
 Print-Group -name "opam list" -command { opam list }
 Print-Group -name "ocamlc -config" -command { opam exec -- ocamlc -config }
-Print-Group -name "coqc --config" -command { opam exec -- coqc --config }
-Print-Group -name "coqc --version" -command { opam exec -- coqc --version }
-Print-Group -name "coqtop version" -command { "" | opam exec -- coqtop }
+Print-Group -name "rocq --config" -command { opam exec -- rocq --config }
+Print-Group -name "rocq --version" -command { opam exec -- rocq --version }
+Print-Group -name "rocq top version" -command { "" | opam exec -- rocq top }
 
 # gcc
 Print-Group -name "gcc -v" -command { opam exec -- gcc -v }

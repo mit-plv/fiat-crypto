@@ -21,7 +21,7 @@ if [ "$1" == "--warnings" ]; then
     shift
 fi
 if [ ! -z "${reportify}" ]; then
-    reportify="COQC=$(pwd)/etc/coq-scripts/github/reportify-coq.sh${reportify} ${COQBIN}coqc"
+    reportify="COQC=$(pwd)/etc/coq-scripts/github/reportify-coq.sh${reportify} ${COQBIN}rocq compile"
 fi
 
 if [ -z "${SED+x}" ]; then

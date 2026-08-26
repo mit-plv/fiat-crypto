@@ -26,7 +26,7 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "8.20.0"
+      COQ_VERSION: "9.1.0"
       COQEXTRAFLAGS: "-async-proofs-j 1"
       COQCHKEXTRAFLAGS: ""
       OPAMYES: "true"
@@ -43,7 +43,7 @@ jobs:
     - name: Set up OCaml
       uses: ocaml/setup-ocaml@v3
       with:
-        ocaml-compiler: 4.13.1
+        ocaml-compiler: 4.14.0
     - run: opam install conf-time conf-gcc
     - run: opam install 'ocamlfind>=1.9.7'
     - run: opam pin add --kind=version coq ${{ env.COQ_VERSION }}
