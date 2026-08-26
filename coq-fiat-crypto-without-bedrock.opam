@@ -21,9 +21,10 @@ install: [
 ]
 depends: [
   "conf-findutils" {build}
-  "ocaml" {build & >= "4.08~"}
+  "ocaml" {build & >= "4.14.0"}
   "ocamlfind" {build}
-  "coq" {>= "8.18~"}
+  "coq" {>= "9.0~"}
+  "rocq-stdlib" {>= "9.1~"}
   "coq-coqprime"
   "coq-rewriter"
   "coq-coqutil"

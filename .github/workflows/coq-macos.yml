@@ -20,7 +20,7 @@ jobs:
         # macOS 12, 13, 14-large, 15-large are x86_64; macOS 14, 14-xlarge, 15, 15-xlarge are arm64
         include:
         - os: { name: 'macOS 15', arch: 'x86_64', runs-on: 'macos-15-intel' }
-          ocaml-compiler: '4.13.0'
+          ocaml-compiler: '4.14.2'
         - os: { name: 'macOS 14', arch: 'arm64' , runs-on: 'macos-14' }
           ocaml-compiler: '4.14.2'
 
@@ -32,7 +32,7 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "8.20.0"
+      COQ_VERSION: "9.1.0"
       COQCHKEXTRAFLAGS: ""
       SKIP_BEDROCK2: "0"
       OPAMYES: "true"

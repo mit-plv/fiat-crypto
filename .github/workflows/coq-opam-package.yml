@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        coq-version: ['dev', '8.20.0']
+        coq-version: ['dev', '9.0.0', '9.1.0', '9.2.0']
         os: [{name: 'Ubuntu',
               runs-on: 'ubuntu-latest',
               ocaml-compiler: '4.14.0',
