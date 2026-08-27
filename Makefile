@@ -258,9 +258,9 @@ $(VOFILES): | bedrock2 bedrock2-compiler rupicola
 $(ALLDFILES): | bedrock2 bedrock2-compiler rupicola
 cleanall:: clean-bedrock2 clean-bedrock2-compiler clean-rupicola
 install: install-bedrock2 install-bedrock2-compiler install-rupicola
-endif
 ifneq ($(EXTERNAL_RISCV_COQ),1)
 install: install-riscv-coq
+endif
 endif
 endif
 
