@@ -335,10 +335,6 @@ install-bedrock2-compiler:
 
 install-riscv-coq:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) install_riscv-coq
-
-install-bedrock2-all:
-	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) install
-
 rupicola: bedrock2 | bedrock2-compiler
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) all
 
