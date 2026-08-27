@@ -6,6 +6,7 @@
 	install-coqprime clean-coqprime coqprime coqprime-all \
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
 	bedrock2-compiler clean-bedrock2-compiler install-bedrock2-compiler \
+	install-riscv-coq \
 	rupicola clean-rupicola install-rupicola \
 	util all-except-generated all all-except-generated-and-js-of-ocaml all-except-js-of-ocaml \
 	bedrock2-backend \
@@ -208,6 +209,7 @@ EXTERNAL_BEDROCK2?=
 EXTERNAL_COQUTIL?=
 EXTERNAL_REWRITER?=
 EXTERNAL_COQPRIME?=
+EXTERNAL_RISCV_COQ?=
 
 ifneq ($(EXTERNAL_DEPENDENCIES),1)
 
@@ -256,6 +258,9 @@ $(VOFILES): | bedrock2 bedrock2-compiler rupicola
 $(ALLDFILES): | bedrock2 bedrock2-compiler rupicola
 cleanall:: clean-bedrock2 clean-bedrock2-compiler clean-rupicola
 install: install-bedrock2 install-bedrock2-compiler install-rupicola
+ifneq ($(EXTERNAL_RISCV_COQ),1)
+install: install-riscv-coq
+endif
 endif
 endif
 
@@ -327,6 +332,9 @@ clean-bedrock2-compiler:
 
 install-bedrock2-compiler:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) install_compiler
+
+install-riscv-coq:
+	$(MAKE) --no-print-directory -C $(BEDROCK2_ROOT_FOLDER) install_riscv-coq
 
 rupicola: bedrock2 | bedrock2-compiler
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) all
