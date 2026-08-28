@@ -120,11 +120,12 @@ Declare Scope MEM_scope.
 Delimit Scope MEM_scope with MEM.
 Bind Scope MEM_scope with MEM.
 
+(* mem_base_reg is always an SREG *)
 Definition MEM_beq (x y : MEM) : bool
   := ((option_beq AccessSize_beq x.(mem_bits_access_size) y.(mem_bits_access_size))
       && option_beq String.eqb x.(mem_base_label) y.(mem_base_label)
-      && (option_beq REG_beq x.(mem_base_reg) y.(mem_base_reg))
-      && (option_beq (prod_beq _ _ Z.eqb REG_beq) x.(mem_scale_reg) y.(mem_scale_reg))
+      && (option_beq SREG_beq x.(mem_base_reg) y.(mem_base_reg))
+      && (option_beq (prod_beq _ _ Z.eqb SREG_beq) x.(mem_scale_reg) y.(mem_scale_reg))
       && (option_beq Z.eqb x.(mem_offset) y.(mem_offset))
       && (rip_relative_kind_beq x.(rip_relative) y.(rip_relative)))%bool.
 Global Arguments MEM_beq !_ !_ / .

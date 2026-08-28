@@ -23,8 +23,17 @@ Local Open Scope list_scope.
 Local Open Scope string_scope.
 Local Open Scope parse_scope.
 
-Global Instance show_REG : Show REG.
+Global Instance show_SREG : Show SREG.
 Proof. prove_Show_enum (). Defined.
+
+Global Instance show_VREG : Show VREG.
+Proof. prove_Show_enum (). Defined.
+
+Global Instance show_REG : Show REG :=
+  fun r => match r with
+  | SReg sr => show sr
+  | VReg vr => show vr
+  end.
 Global Instance show_lvl_REG : ShowLevel REG := show_REG.
 
 Global Instance show_FLAG : Show FLAG.
@@ -47,6 +56,15 @@ Definition parse_REG_list : list (string * REG)
 
 Definition parse_REG : ParserAction REG
   := parse_strs parse_REG_list.
+
+Definition parse_SREG_list : list (string * SREG)
+:= Eval vm_compute in
+    List.map
+      (fun r => (show r, r))
+      (list_all SREG).
+
+Definition parse_SREG : ParserAction SREG :=
+ parse_strs parse_SREG_list.
 
 Definition parse_FLAG_list : list (string * FLAG)
   := Eval vm_compute in
@@ -98,9 +116,9 @@ Definition parse_MEM {opts : assembly_program_options} : ParserAction MEM
            | None, None as lbl =>
                Some
                 {| mem_bits_access_size := access_size:option AccessSize
-                ; mem_base_reg := br:option REG
+                ; mem_base_reg := br:option SREG
                 ; mem_base_label := lbl
-                ; mem_scale_reg := sr:option (Z * REG)
+                ; mem_scale_reg := sr:option (Z * SREG)
                 ; mem_offset := offset:option Z
                 ; rip_relative := rip_relative:rip_relative_kind |}
           end)
@@ -109,7 +127,7 @@ Definition parse_MEM {opts : assembly_program_options} : ParserAction MEM
         (parse_option_list_map
            (fun '(offset, vars)
             => (vars <-- List.map (fun '(c, (v, e), vs) => match vs, e with [], 1%Z => Some (c, v) | _, _ => None end) vars;
-                let regs : list (Z * (REG + rip_relative_kind)) := Option.List.map (fun '(c, v) => match v with inl v => Some (c, v) | inr _ => None end) vars in
+                let regs : list (Z * (SREG + rip_relative_kind)) := Option.List.map (fun '(c, v) => match v with inl v => Some (c, v) | inr _ => None end) vars in
                 let labels : list (Z * string) := Option.List.map (fun '(c, v) => match v with inr v => Some (c, v) | inl _ => None end) vars in
                 base_label <- match labels with
                               | [] => Some None
@@ -130,7 +148,7 @@ Definition parse_MEM {opts : assembly_program_options} : ParserAction MEM
                 let rip_relative := match br with Some (inr k) => k | _ => if default_rel then implicitly_rip_relative else not_rip_relative end in
                 let br := (br <- br; match br with inl br => Some br | inr _ => None end)%option in
                 Some (br (*base reg*), sr (*scale reg, including z *), offset, base_label, rip_relative))%option)
-           ("[" ;;R parse_Z_poly_strict (sum_beq _ _ (sum_beq _ _ REG_beq rip_relative_kind_beq) String.eqb) (parse_or_else_gen (fun x => x) (parse_or_else_gen (fun x => x) parse_REG parse_rip_relative_kind) parse_label) ;;L "]"))).
+           ("[" ;;R parse_Z_poly_strict (sum_beq _ _ (sum_beq _ _ SREG_beq rip_relative_kind_beq) String.eqb) (parse_or_else_gen (fun x => x) (parse_or_else_gen (fun x => x) parse_SREG parse_rip_relative_kind) parse_label) ;;L "]"))).
 
 Definition parse_CONST (const_keyword : bool) : ParserAction CONST
   := if const_keyword
@@ -354,16 +372,16 @@ Global Instance show_lvl_MEM : ShowLevel MEM
            => let is_explict_rip_relative := match m.(rip_relative) with explicitly_rip_relative => true | _ => false end in
               let base_reg_str :=
                 match is_explict_rip_relative, m.(mem_base_reg) with
-                | false, Some br => Some (show_REG br)
+                | false, Some br => Some (show_SREG br)
                 | false, None => None
                 | true, None => Some "rip"
-                | true, Some br => Some ("rip + " ++ show_REG br) (* but this should not happen *)
+                | true, Some br => Some ("rip + " ++ show_SREG br) (* but this should not happen *)
                 end in
               let reg_part
                 := (match base_reg_str, m.(mem_scale_reg) with
                     | (*"[Reg]"          *) Some br, None         => br
-                    | (*"[Reg + Z * Reg]"*) Some br, Some (z, sr) => br ++ " + " ++ Decimal.show_Z z ++ " * " ++ show_REG sr (*only matching '+' here, because there cannot be a negative scale. *)
-                    | (*"[      Z * Reg]"*) None,    Some (z, sr) =>                Decimal.show_Z z ++ " * " ++ show_REG sr
+                    | (*"[Reg + Z * Reg]"*) Some br, Some (z, sr) => br ++ " + " ++ Decimal.show_Z z ++ " * " ++ show_SREG sr (*only matching '+' here, because there cannot be a negative scale. *)
+                    | (*"[      Z * Reg]"*) None,    Some (z, sr) =>                Decimal.show_Z z ++ " * " ++ show_SREG sr
                     | (*"[             ]"*) None,    None         => "" (* impossible, because only offset is invalid, but we seem to need it for coq because both are option's*)
                     end%Z) in
               let offset_part

@@ -60,6 +60,30 @@ Module Z.
     rewrite Z.land_ones_low; auto with zarith.
   Qed.
 
+	Lemma land_ones_ones a b :
+		   0 <= a -> 0 <= b ->
+		Z.land (Z.ones a) (Z.ones b) = Z.ones (Z.min a b).
+	Proof. intros.
+		apply Z.bits_inj'; intros n Hn.
+		rewrite Z.land_spec.
+  rewrite !Z.testbit_ones_nonneg by (try assumption; apply Z.le_min_r || apply Z.min_glb; assumption).
+  (* Goal now: (n <? a) && (n <? b) = (n <? Z.min a b) *)
+  destruct (Z.ltb_spec n a), (Z.ltb_spec n b), (Z.ltb_spec n (Z.min a b));
+    rewrite ?Z.min_glb_lt_iff in *;
+    try reflexivity;
+    try lia.
+	Qed.
+
+  Lemma land_ones_land_ones x a b :
+    0 <= a -> 0 <= b ->
+    Z.land (Z.land x (Z.ones a)) (Z.ones b) = Z.land x (Z.ones (Z.min a b)).
+  Proof.
+    intros Ha Hb.
+  rewrite <- Z.land_assoc.
+  rewrite land_ones_ones by assumption.
+  reflexivity.
+  Qed.
+
   Lemma land_pow2 x n :
     0 <= n ->
     Z.land x (2^n-1) = x mod 2^n.
