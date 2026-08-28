@@ -11,18 +11,18 @@ Local Notation array := (array scalar (word.of_Z 8)).
 (** * Specification *)
 
 #[export] Instance spec_of_u320_sub : spec_of "u320_sub" := 
-    fnspec! "u320_sub" (p_r p_x p_y : word) / (x y r : list word) R ~> b,
+    fnspec! "u320_sub" (p_x p_y : word) / (x y : list word) R ~> b,
     {
         requires t m := 
-            m =* array p_x x ⋆ array p_y y ⋆ array p_r r ⋆ R /\
-            length x = 5%nat /\ length y = 5%nat /\ length r = 5%nat;
+            m =* array p_x x ⋆ array p_y y ⋆ R /\
+            length x = 5%nat /\ length y = 5%nat;
         ensures T M := T = t /\ exists (r : list word), 
-            M =* array p_x x ⋆ array p_y y ⋆ array p_r r ⋆ R /\
+            M =* array p_x r ⋆ array p_y y ⋆ R /\
             length r = 5%nat /\ eval r - 2^320*b = eval x - eval y
     }.
 
 (** * Implementation *)
-Definition u320_sub := func! (p_r, p_x, p_y) ~> b {
+Definition u320_sub := func! (p_x, p_y) ~> b {
     b = $0;
     unpack! d0, b = br_full_sub(load(p_x) , load(p_y), b);
     unpack! d1, b = br_full_sub(load(p_x + $8), load(p_y + $8) , b);
@@ -30,11 +30,11 @@ Definition u320_sub := func! (p_r, p_x, p_y) ~> b {
     unpack! d3, b = br_full_sub(load(p_x + $8 + $8 + $8) , load(p_y + $8 + $8 + $8) , b);
     unpack! d4, b = br_full_sub(load(p_x + $8 + $8 + $8 + $8) , load(p_y + $8 + $8 + $8 + $8) , b);
 
-    store(p_r, d0);
-    store(p_r + $8, d1);
-    store(p_r + $8 + $8, d2);
-    store(p_r + $8 + $8 + $8, d3);
-    store(p_r + $8 + $8 + $8 + $8, d4)
+    store(p_x, d0);
+    store(p_x + $8, d1);
+    store(p_x + $8 + $8, d2);
+    store(p_x + $8 + $8 + $8, d3);
+    store(p_x + $8 + $8 + $8 + $8, d4)
 }.
 
 Local Ltac lists_into_elements := repeat match goal with
