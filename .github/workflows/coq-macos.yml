@@ -21,8 +21,10 @@ jobs:
         include:
         - os: { name: 'macOS 15', arch: 'x86_64', runs-on: 'macos-15-intel' }
           ocaml-compiler: '4.13.0'
+          proofs: 'skip'
         - os: { name: 'macOS 14', arch: 'arm64' , runs-on: 'macos-14' }
           ocaml-compiler: '4.14.2'
+          proofs: 'full'
 
     runs-on: ${{ matrix.os.runs-on }}
 
@@ -64,21 +66,42 @@ jobs:
       run: etc/ci/describe-system-config-macos.sh
     - name: deps
       run: opam exec -- etc/ci/github-actions-make.sh -j2 deps
-    # The x86_64 macOS runners are roughly 3x slower than the arm64 ones and
+    # The x86_64 macOS runners are roughly 2-3x slower than the arm64 ones and
     # were hitting the 6h job limit on the full `all` target.  Mirror the
     # Windows workflow and build the leaner set of targets instead: produce the
     # standalone binary first, then check the proofs, and use
     # `c-files lite-generated-files` rather than the full `generated-files`
     # (which regenerates and diff-checks every curve in every backend language
     # and is architecture-independent work already covered by the Linux CI).
+    #
+    # That was still not enough: the x86_64 leg kept hitting the 6h limit
+    # inside the `coq` step alone.  On the last timed-out run, setup + `deps` +
+    # `standalone-ocaml` consumed 2h04 before `coq` even started, and `coq` was
+    # still running when the job was killed 3h56 later, so every step after it
+    # was skipped and the leg produced nothing at all.
+    #
+    # So on x86_64 we now skip proof checking entirely (`proofs: 'skip'`).
+    # Proof checking is architecture-independent and is already covered by the
+    # Linux CI and by the arm64 macOS leg; what this leg uniquely provides is
+    # the x86_64 macOS binary that `combine-standalone` lipo's into the
+    # universal binary, plus native x86_64 execution of the generated amd64
+    # assembly tests.  Those are exactly the steps that are kept.
+    #
+    # Note that trimming has to skip whole steps rather than swap `coq` for a
+    # lighter target: `all-except-compiled` and `install` both list `coq` as a
+    # prerequisite (Makefile), so building e.g. `lite` in the `coq` step and
+    # leaving those steps in place would rebuild every skipped file anyway and
+    # save nothing.
     - name: standalone-ocaml
       run: opam exec -- etc/ci/github-actions-make.sh -j2 standalone-ocaml
     - name: install-standalone-unified-ocaml
       run: opam exec -- etc/ci/github-actions-make.sh install-standalone-unified-ocaml BINDIR=dist
     - name: coq
       run: opam exec -- etc/ci/github-actions-make.sh -j2 coq
+      if: matrix.proofs == 'full'
     - name: all-except-generated-and-js-of-ocaml
       run: opam exec -- etc/ci/github-actions-make.sh -j2 all-except-generated-and-js-of-ocaml
+      if: matrix.proofs == 'full'
     - name: standalone-js-of-ocaml
       run: opam exec -- etc/ci/github-actions-make.sh -j2 standalone-js-of-ocaml
     - name: install-standalone-js-of-ocaml
@@ -116,12 +139,18 @@ jobs:
       with:
         name: standalone-html-macos-${{ matrix.os.arch }}
         path: fiat-html
+    # `install` depends on the `coq` target, so these are skipped wherever
+    # proof checking is skipped; otherwise they would rebuild the whole
+    # development that the `coq` step above deliberately did not build.
     - name: install
       run: opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_COQSCRIPTS_INCLUDE=1 install install-standalone-ocaml
+      if: matrix.proofs == 'full'
     - name: install-without-bedrock2
       run: opam exec -- etc/ci/github-actions-make.sh EXTERNAL_DEPENDENCIES=1 SKIP_BEDROCK2=1 install-without-bedrock2 install-standalone-ocaml
+      if: matrix.proofs == 'full'
     - name: install-dev
       run: opam exec -- etc/ci/github-actions-make.sh EXTERNAL_REWRITER=1 EXTERNAL_COQPRIME=1 install install-standalone-ocaml
+      if: matrix.proofs == 'full'
     - name: display timing info
       run: cat time-of-build-pretty.log
     - name: display per-line timing info
