@@ -3,6 +3,7 @@ From bedrock2 Require Import BasicC64Semantics WeakestPrecondition ProgramLogic 
 Import ListNotations ProgramLogic.Coercions SeparationLogic Array Scalars.
 From coqutil Require Import Tactics.Tactics WithBaseName.
 From coqutil Require Import CountTrailingZeros.
+From bedrock2Examples Require Import full_add full_mul.
 
 Require Import br_ctz u320_shr u256_shr u320_muladd.
 Local Open Scope string_scope. Local Open Scope Z_scope.
@@ -292,5 +293,18 @@ Proof.
             rewrite Z.min_l by lia;
             try f_equal; lia.
     }
+Qed.
+
+(** * Linking Proof *)
+Definition beeu_shrtz_funcs := &[, beeu_shrtz; u320_muladd; u320_shr; u256_shr; br_ctz; br_full_add; br_full_mul].
+
+Lemma link_full_beeu_shrtz :
+    spec_of_beeu_shrtz (Interface.map.of_list beeu_shrtz_funcs).
+Proof.
+    apply beeu_shrtz_ok;
+    try (apply br_ctz_ok || apply u256_shr_correct ||
+        apply u320_muladd_correct || apply u320_shr_correct);
+    try (apply full_mul_ok || apply full_add_ok);
+    trivial.
 Qed.
 
