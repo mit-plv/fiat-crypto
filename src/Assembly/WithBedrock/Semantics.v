@@ -474,7 +474,6 @@ Definition DenoteRawLine (st : machine_state) (rawline : RawLine) : option machi
   | EMPTY
   | LABEL _
   | DIRECTIVE _
-  | ASCII_ _ _
     => Some st
   | INSTR instr
     => DenoteNormalInstruction st instr
@@ -482,6 +481,8 @@ Definition DenoteRawLine (st : machine_state) (rawline : RawLine) : option machi
   | GLOBAL _
   | ALIGN _
   | DEFAULT_REL
+  (* ASCII directives emit their payload into the instruction stream. *)
+  | ASCII_ _ _
     => None
   end.
 
