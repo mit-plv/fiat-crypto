@@ -1,6 +1,12 @@
 SECTION .text
 	GLOBAL fiat_secp256k1_dettman_square
 fiat_secp256k1_dettman_square:
+push qword [ rsi + 0x20 ]
+push qword [ rsi + 0x18 ]
+push qword [ rsi + 0x10 ]
+push qword [ rsi + 0x8 ]
+push qword [ rsi + 0x0 ]
+mov rsi, rsp
 mov rax, [ rsi + 0x8 ]; load m64 arg1[1] to register64
 lea r10, [rax + rax]; x3 <- arg1[1] * 2 
 mov rdx, [ rsi + 0x20 ]; arg1[4] to rdx
@@ -146,6 +152,7 @@ mov r12, [ rsp - 0x70 ]; pop
 mov r13, [ rsp - 0x68 ]; pop
 mov r14, [ rsp - 0x60 ]; pop
 mov r15, [ rsp - 0x58 ]; pop
+add rsp, 40
 ret
 ; cpu 13th Gen Intel(R) Core(TM) i9-13900KF
 ; ratio 1.2004
