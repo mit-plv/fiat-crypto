@@ -708,13 +708,41 @@ Module WordByWordMontgomery.
                  (twos_complement_eval g),
                  ((twos_complement_eval g) - (twos_complement_eval f)) / 2,
                  (2 * (eval (from_montgomery r))) mod m,
-                 ((eval (from_montgomery v)) - (eval (from_montgomery v))) mod m)
+                 ((eval (from_montgomery r)) - (eval (from_montgomery v))) mod m)
            else (1 + d,
                  (twos_complement_eval f),
                  ((twos_complement_eval g) + (twos_complement_eval g mod 2) * (twos_complement_eval f)) / 2,
                  (2 * (eval (from_montgomery v))) mod m,
                  ((eval (from_montgomery r)) + (twos_complement_eval g mod 2) * (eval (from_montgomery v))) mod m)))
-         /\ valid r1 /\ valid r1 /\ valid f1 /\ valid g1).
+         /\ valid r1 /\ valid v1 /\ valid f1 /\ valid g1).
+
+    Lemma divstep_correct_matches_arithmetic_spec divstep
+          (Hcorrect : divstep_correct divstep) :
+      forall (d : Z) f g v r,
+        valid v -> valid r ->
+        let '(d1,f1,g1,v1,r1) := divstep d f g v r in
+        (((d1,
+           twos_complement_eval f1,
+           twos_complement_eval g1,
+           eval (from_montgomery v1) mod m,
+           eval (from_montgomery r1) mod m) =
+          divstep_spec_full
+            m d
+            (twos_complement_eval f)
+            (twos_complement_eval g)
+            (eval (from_montgomery v))
+            (eval (from_montgomery r)))
+         /\ valid v1 /\ valid r1 /\ valid f1 /\ valid g1).
+    Proof using bitwidth from_montgomery m n valid.
+      clear bytes_valid to_montgomery prime_bound.
+      intros d f g v r Hv Hr.
+      specialize (Hcorrect d f g v r Hv Hr).
+      destruct (divstep d f g v r) as [[[[d1 f1] g1] v1] r1].
+      cbn in Hcorrect |- *.
+      unfold divstep_spec_full.
+      destruct ((0 <? d) && Z.odd (twos_complement_eval g));
+        cbn in Hcorrect |- *; tauto.
+    Qed.
 
     Section ring.
       Context mul     (Hmul     :     mul_correct mul)

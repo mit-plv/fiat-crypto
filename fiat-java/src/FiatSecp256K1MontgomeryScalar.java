@@ -5199,9 +5199,9 @@ public static void fiat_Secp256K1MontgomeryScalar_msat(int[] out1) {
  *   twos_complement_eval out2 = (if 0 &lt; arg1 ∧ (twos_complement_eval arg3) is odd then twos_complement_eval arg3 else twos_complement_eval arg2) <p>
  *   twos_complement_eval out3 = (if 0 &lt; arg1 ∧ (twos_complement_eval arg3) is odd then ⌊(twos_complement_eval arg3 - twos_complement_eval arg2) / 2⌋ else ⌊(twos_complement_eval arg3 + (twos_complement_eval arg3 mod 2) * twos_complement_eval arg2) / 2⌋) <p>
  *   eval (from_montgomery out4) mod m = (if 0 &lt; arg1 ∧ (twos_complement_eval arg3) is odd then (2 * eval (from_montgomery arg5)) mod m else (2 * eval (from_montgomery arg4)) mod m) <p>
- *   eval (from_montgomery out5) mod m = (if 0 &lt; arg1 ∧ (twos_complement_eval arg3) is odd then (eval (from_montgomery arg4) - eval (from_montgomery arg4)) mod m else (eval (from_montgomery arg5) + (twos_complement_eval arg3 mod 2) * eval (from_montgomery arg4)) mod m) <p>
+ *   eval (from_montgomery out5) mod m = (if 0 &lt; arg1 ∧ (twos_complement_eval arg3) is odd then (eval (from_montgomery arg5) - eval (from_montgomery arg4)) mod m else (eval (from_montgomery arg5) + (twos_complement_eval arg3 mod 2) * eval (from_montgomery arg4)) mod m) <p>
  *   0 ≤ eval out5 &lt; m <p>
- *   0 ≤ eval out5 &lt; m <p>
+ *   0 ≤ eval out4 &lt; m <p>
  *   0 ≤ eval out2 &lt; m <p>
  *   0 ≤ eval out3 &lt; m <p>
  * <p>
