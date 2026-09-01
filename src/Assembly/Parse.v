@@ -235,7 +235,11 @@ Definition parse_RawLine {opts : assembly_program_options} : ParserAction RawLin
         then [(SECTION args, "")]
         else if (String.to_upper mnemonic =? "GLOBAL") || (String.to_upper mnemonic =? ".GLOBAL") || (String.to_upper mnemonic =? ".GLOBL")
         then [(GLOBAL args, "")]
-        else if (String.to_upper mnemonic =? "ALIGN") || (String.to_upper mnemonic =? ".ALIGN")
+        (* Alignment directives can emit padding bytes, so keep them out of the
+           metadata-only DIRECTIVE case below. *)
+        else if (String.to_upper mnemonic =? "ALIGN")
+                || (String.to_upper mnemonic =? ".ALIGN")
+                || (String.to_upper mnemonic =? ".P2ALIGN")
         then [(ALIGN args, "")]
         else if (String.to_upper mnemonic =? "DEFAULT") && (String.to_upper args =? "REL")
         then [(DEFAULT_REL, "")]
@@ -260,7 +264,6 @@ Definition parse_RawLine {opts : assembly_program_options} : ParserAction RawLin
            ; ".ident"
            ; ".intel_syntax"
            ; ".loc"
-           ; ".p2align"
            ; ".size"
            ; ".text"
            ; ".type"

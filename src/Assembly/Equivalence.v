@@ -1438,7 +1438,12 @@ Section check_equivalence.
             (out_bounds : ZRange.type.base.option.interp (type.final_codomain t)).
 
     Definition strip_ret (asm : Lines) :=
-      let isinstr := fun l => match l.(rawline) with INSTR _ => true | _ => false end in
+      let iscode := fun l => match l.(rawline) with
+                            | INSTR _
+                            | ALIGN _
+                            | ASCII_ _ _ => true
+                            | _ => false
+                            end in
       let notret := fun l => match l.(rawline) with
                              | INSTR {| Syntax.op := Syntax.ret ; Syntax.args := nil |} => false
                              | _ => true
@@ -1446,7 +1451,7 @@ Section check_equivalence.
       match dropWhile notret asm with
       | nil => Error Missing_ret
       | cons _r trailer =>
-          if List.existsb isinstr trailer then Error (Code_after_ret (List.filter isinstr trailer) trailer)
+          if List.existsb iscode trailer then Error (Code_after_ret (List.filter iscode trailer) trailer)
           else Success (takeWhile notret asm)
       end.
 

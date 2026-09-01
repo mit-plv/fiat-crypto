@@ -4398,7 +4398,6 @@ Definition SymexRawLine {opts : symbolic_options_computed_opt} {descr:descriptio
   | EMPTY
   | LABEL _
   | DIRECTIVE _
-  | ASCII_ _ _
     => ret tt
   | INSTR instr
     => SymexNormalInstruction instr
@@ -4406,6 +4405,8 @@ Definition SymexRawLine {opts : symbolic_options_computed_opt} {descr:descriptio
   | GLOBAL _
   | ALIGN _
   | DEFAULT_REL
+  (* ASCII directives emit their payload into the instruction stream. *)
+  | ASCII_ _ _
       => err (error.unsupported_line rawline)
   end.
 
