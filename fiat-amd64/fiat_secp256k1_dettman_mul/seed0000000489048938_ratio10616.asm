@@ -1,6 +1,18 @@
 SECTION .text
 	GLOBAL fiat_secp256k1_dettman_mul
 fiat_secp256k1_dettman_mul:
+push qword [ rdx + 0x20 ]
+push qword [ rdx + 0x18 ]
+push qword [ rdx + 0x10 ]
+push qword [ rdx + 0x8 ]
+push qword [ rdx + 0x0 ]
+mov rdx, rsp
+push qword [ rsi + 0x20 ]
+push qword [ rsi + 0x18 ]
+push qword [ rsi + 0x10 ]
+push qword [ rsi + 0x8 ]
+push qword [ rsi + 0x0 ]
+mov rsi, rsp
 mov rax, rdx; preserving value of arg2 into a new reg
 mov rdx, [ rsi + 0x20 ]; saving arg1[4] in rdx.
 mulx r11, r10, [ rax + 0x20 ]; x1_1, x1_0<- arg1[4] * arg2[4] (_0*_0)
@@ -200,6 +212,7 @@ mov r12, [ rsp - 0x70 ]; pop
 mov r13, [ rsp - 0x68 ]; pop
 mov r14, [ rsp - 0x60 ]; pop
 mov r15, [ rsp - 0x58 ]; pop
+add rsp, 80
 ret
 ; cpu AMD Ryzen 9 7950X 16-Core Processor
 ; ratio 1.0616
