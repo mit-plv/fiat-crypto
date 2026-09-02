@@ -144,6 +144,11 @@ EXTRA_C_FILES := inversion/c/*_test.c
 
 ALL_C_FILES := $(patsubst %,$(C_DIR)%.c,$(ALL_BASE_FILES))
 ALL_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(INVALID_BEDROCK2_BASE_FILES),$(ALL_BASE_FILES)))
+ALL_BEDROCK2_FILES_32 := $(filter %_32.c,$(ALL_BEDROCK2_FILES))
+ALL_BEDROCK2_FILES_64 := $(filter %_64.c,$(ALL_BEDROCK2_FILES))
+ifneq ($(filter-out $(ALL_BEDROCK2_FILES_32) $(ALL_BEDROCK2_FILES_64),$(ALL_BEDROCK2_FILES)),)
+$(error Unknown word size for bedrock2 files: $(filter-out $(ALL_BEDROCK2_FILES_32) $(ALL_BEDROCK2_FILES_64),$(ALL_BEDROCK2_FILES)))
+endif
 ALL_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(ALL_BASE_FILES))
 ALL_RUST_MODS := $(ALL_BASE_FILES)
 ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(call GO_RENAME_TO_FILE,$(filter-out $(INVALID_GO_BASE_FILES),$(ALL_BASE_FILES))))
@@ -170,6 +175,16 @@ JSON_EXTRA_ARGS := --emit-all-casts
 
 BEDROCK2_ARGS := --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select --no-field-element-typedefs
 BEDROCK2_EXTRA_CFLAGS := -Wno-error=unused-but-set-variable
+# The bedrock2 C backend represents every word as br_word_t, an alias
+# of uintptr_t, so a generated file only compiles (and only computes
+# correct results) on a target whose pointer width equals the word size
+# the file was synthesized for; each file carries a static_assert
+# enforcing this.  We therefore compile the *_32.c files as 32-bit code
+# and the *_64.c files as 64-bit code.  On x86-64 hosts, -m32 requires
+# multilib support (e.g. the gcc-multilib package on Debian/Ubuntu);
+# override these variables when using a cross compiler.
+BEDROCK2_CFLAGS_32 ?= -m32
+BEDROCK2_CFLAGS_64 ?=
 
 RUST_EXTRA_ARGS := --inline
 
@@ -232,7 +247,8 @@ $(ALL_BEDROCK2_FILES) : $(BEDROCK2_DIR)%.c : $$(BEDROCK2_$$($$*_BINARY_NAME))
 test-bedrock2-files: $(ALL_BEDROCK2_FILES)
 
 test-bedrock2-files only-test-bedrock2-files:
-	$(CC) -Wall -Wno-unused-function -Werror $(BEDROCK2_EXTRA_CFLAGS) $(CFLAGS) -c $(ALL_BEDROCK2_FILES)
+	$(CC) -Wall -Wno-unused-function -Werror $(BEDROCK2_EXTRA_CFLAGS) $(BEDROCK2_CFLAGS_64) $(CFLAGS) -c $(ALL_BEDROCK2_FILES_64)
+	$(CC) -Wall -Wno-unused-function -Werror $(BEDROCK2_EXTRA_CFLAGS) $(BEDROCK2_CFLAGS_32) $(CFLAGS) -c $(ALL_BEDROCK2_FILES_32)
 
 $(ALL_RUST_FILES) : $(RUST_DIR)%.rs : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
