@@ -110,6 +110,15 @@ Example parse_default_rel_is_implicitly_rip_relative
     end = true.
 Proof. vm_compute; reflexivity. Qed.
 
+(** The top-level parser tracks [DEFAULT REL] across lines. *)
+Example parse_default_rel_is_stateful
+  : match parse ["DEFAULT REL"; "mov rax, [0x26]"] with
+    | Success [_; {| rawline := INSTR {| args := [_; mem m] |} |}]
+      => MEM_beq m implicitly_rip_relative_operand
+    | _ => false
+    end = true.
+Proof. vm_compute; reflexivity. Qed.
+
 Example address_implicitly_rip_relative_rejected
   : match @Address _ (Build_description "test" false) 64%N implicitly_rip_relative_operand (init_symbolic_state dag.empty) with
     | Error (error.unsupported_rip_relative_addressing _, _) => true
