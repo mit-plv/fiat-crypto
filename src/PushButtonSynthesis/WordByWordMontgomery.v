@@ -990,6 +990,36 @@ Section __.
   Lemma Wf_one res (Hres : one = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
+  Strategy -1000 [divstep_precomp].
+  Lemma divstep_precomp_correct res
+        (Hres : divstep_precomp = Success res)
+    : divstep_precomp_correct machine_wordsize n m valid from_montgomery_res (Interp res).
+  Proof using curve_good.
+    prove_correctness encodemod_correct.
+    all: assert (Hprecomp : 0 <= divstep_precompmod < m) by
+      (cbv [divstep_precompmod]; rewrite Z.modexp_correct; apply Z.mod_pos_bound; lia).
+    all: pose proof (proj2 (@encodemod_correct machine_wordsize n m r' m'
+                             H10 H11 H5 H13 H6 H14)
+                           divstep_precompmod Hprecomp) as Henc.
+    - pose proof (@valid_from_montgomerymod machine_wordsize n m r' m'
+                    H10 H11 H5 H13 H6 H14 _ Henc) as Hfrom.
+      destruct Hfrom as [_ Hfrom].
+      rewrite <- Z.mod_small at 1 by exact Hfrom.
+      rewrite (@eval_encodemod machine_wordsize n m r' m'
+                 H10 H11 H5 H13 H6 H14 divstep_precompmod Hprecomp).
+      rewrite Z.mod_small by exact Hprecomp.
+      cbv [divstep_precompmod].
+      rewrite Z.modexp_correct.
+      destruct (Z.ltb_spec (Z.log2 m + 1) 46) as [Hlt|Hnlt].
+      { destruct (Crypto.Util.Decidable.dec (Z.log2 m + 1 < 46)) as [Hdec|Hdec];
+          [ reflexivity | contradiction ]. }
+      { destruct (Crypto.Util.Decidable.dec (Z.log2 m + 1 < 46)) as [Hdec|Hdec];
+          [ lia | reflexivity ]. }
+    - exact (proj1 Henc).
+    - exact (proj1 (proj2 Henc)).
+    - exact (proj2 (proj2 Henc)).
+  Qed.
+
   Local Opaque Pipeline.BoundsPipeline. (* need this or else [eapply Pipeline.BoundsPipeline_correct in Hres] takes forever *)
 
   Lemma selectznz_correct res

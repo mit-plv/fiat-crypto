@@ -686,9 +686,9 @@ Module WordByWordMontgomery.
     Definition divstep_precomp_correct
                (divstep_precomp : list Z) :=
       let mbits := (Z.log2 m) + 1  in
-      (eval (from_montgomery divstep_precomp) = ((m - 1) / 2) ^ (if Decidable.dec (mbits < 46)
-                                                         then (49 * mbits + 80) / 17
-                                                         else (49 * mbits + 57)/ 17))
+      (eval (from_montgomery divstep_precomp) = (((m + 1) / 2) ^ (if Decidable.dec (mbits < 46)
+                                                          then (49 * mbits + 80) / 17
+                                                          else (49 * mbits + 57) / 17)) mod m)
       /\ valid divstep_precomp.
 
     Definition divstep_correct
