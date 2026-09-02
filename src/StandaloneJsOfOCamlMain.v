@@ -17,16 +17,17 @@ Global Unset Extraction Optimize.
 (** Work around COQBUG(https://github.com/coq/coq/issues/4875) / COQBUG(https://github.com/coq/coq/issues/7954) / COQBUG(https://github.com/coq/coq/issues/7954) / https://discuss.ocaml.org/t/why-wont-ocaml-specialize-weak-type-variables-in-dead-code/7776 *)
 Extraction Inline Show.ShowLevel_of_Show.
 
-Inductive int : Set := int_O | int_S (x : int).
-
 (** We pull a hack to get coqchk to not report these as axioms; for
     this, all we care about is that there exists a model. *)
 Module Type OCamlPrimitivesT.
   Axiom OCaml_string : Set.
   Notation string := OCaml_string.
-  Axiom string_length : string -> int.
-  Axiom string_get : string -> int -> Ascii.ascii.
-  Axiom string_init : int -> (int -> Ascii.ascii) -> string.
+  (** Conversions between OCaml [string] and Coq [String.string]
+      (which is extracted to [char list]).  These are implemented
+      directly in OCaml so that they run in linear time and constant
+      stack space; see the [Extract Constant] directives below. *)
+  Axiom string_to_Coq_string : string -> String.string.
+  Axiom string_of_Coq_string : String.string -> string.
   (*Axiom raise_Failure : string -> unit.*)
   (*Axiom exn : Set.
   Axiom Failure : string -> exn.*)
@@ -39,9 +40,8 @@ End OCamlPrimitivesT.
 Module Export OCamlPrimitives : OCamlPrimitivesT.
   Definition OCaml_string : Set := unit.
   Notation string := OCaml_string.
-  Definition string_length : string -> int := fun _ => int_O.
-  Definition string_get : string -> int -> Ascii.ascii := fun _ _ => "000"%char.
-  Definition string_init : int -> (int -> Ascii.ascii) -> string := fun _ _ => tt.
+  Definition string_to_Coq_string : string -> String.string := fun _ => String.EmptyString.
+  Definition string_of_Coq_string : String.string -> string := fun _ => tt.
   (*Definition raise_Failure : string -> unit := fun _ => tt.*)
   (*Definition exn : Set := unit.
   Definition Failure : string -> exn := fun _ => tt.*)
@@ -85,14 +85,24 @@ Module Import Js_of_ocamlPrimitives : Js_of_ocamlPrimitivesT.
   Definition js_wrap_callback : forall {a b : Set}, (a -> b) -> js_callback (a -> b) := fun _ _ f => f.
 End Js_of_ocamlPrimitives.
 
-Extract Inductive int
-    => "Int.t" [ "0" "(fun n -> n+1)" ]
-                   "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
 (* We cannot inline these constants due to COQBUG(https://github.com/coq/coq/issues/16169) *)
 Extract (*Inlined*) Constant string => "string".
-Extract (*Inlined*) Constant string_length => "String.length".
-Extract (*Inlined*) Constant string_get => "String.get".
-Extract (*Inlined*) Constant string_init => "String.init".
+(** These conversions must be linear-time and must not recurse on the
+    OCaml stack, because they are applied to every posted argv element,
+    stdin line, and file line, and a single very long line must not
+    hang or overflow the stack of the web worker.  In particular we do
+    NOT index the string with a Peano [nat] (which would be quadratic),
+    nor use non-tail-recursive list functions. *)
+Extract Constant string_to_Coq_string
+=> "fun s ->
+      let rec go i acc =
+        if i < 0 then acc else go (i - 1) (Stdlib.String.unsafe_get s i :: acc)
+      in go (Stdlib.String.length s - 1) []".
+Extract Constant string_of_Coq_string
+=> "fun l ->
+      let b = Stdlib.Buffer.create 64 in
+      Stdlib.List.iter (Stdlib.Buffer.add_char b) l;
+      Stdlib.Buffer.contents b".
 Extract (*Inlined*) Constant array "'a" => "'a array".
 Extract (*Inlined*) Constant Array_to_list => "Array.to_list".
 Extract (*Inlined*) Constant Array_of_list => "Array.of_list".
@@ -112,32 +122,13 @@ Extract (*Inlined*) Constant Js_export => "Js_of_ocaml.Js.export".
 Extract (*Inlined*) Constant js_callback "'a" => "'a Js_of_ocaml.Js.callback".
 Extract (*Inlined*) Constant js_wrap_callback => "Js_of_ocaml.Js.wrap_callback".
 
-Fixpoint nat_of_int (x : int) : nat
-  := match x with
-     | int_O => O
-     | int_S x' => S (nat_of_int x')
-     end.
-Fixpoint int_of_nat (x : nat) : int
-  := match x with
-     | O => int_O
-     | S x' => int_S (int_of_nat x')
-     end.
-Global Set Warnings Append "-ambiguous-paths".
-Coercion nat_of_int : int >-> nat.
-Coercion int_of_nat : nat >-> int.
-
-Definition string_of_Coq_string (s : String.string) : string
-  := let s := String.list_ascii_of_string s in
-     string_init
-       (List.length s)
-       (fun n => List.nth n s "?"%char).
-
-Definition string_to_Coq_string (s : string) : String.string
-  := String.string_of_list_ascii
-       (List.map (fun n:nat => string_get s n) (List.seq 0 (string_length s))).
+(** Tail-recursive [List.map], so that a file with very many lines does
+    not overflow the stack. *)
+Definition map_tailrec {A B} (f : A -> B) (l : list A) : list B
+  := List.rev_append (List.fold_left (fun acc x => f x :: acc) l nil) nil.
 
 Definition js_to_list_map {A : Set} {B} (f : A -> B) (a : Js_t (js_array A)) : list B
-  := List.map f (Array_to_list (js_to_array a)).
+  := map_tailrec f (Array_to_list (js_to_array a)).
 
 Definition js_to_Coq_string (s : Js_t js_string) : String.string
   := string_to_Coq_string (js_to_string s).
