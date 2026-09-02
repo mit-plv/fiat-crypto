@@ -469,13 +469,18 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
  end | _ => None end | _ => None end%Z%option.
 
 
+(** This must agree with [Crypto.Assembly.Symbolic.SymexRawLine]:
+    only inert directives are no-ops; data-emitting lines ([ASCII_])
+    and everything else we do not model are undefined ([None]). *)
 Definition DenoteRawLine (st : machine_state) (rawline : RawLine) : option machine_state :=
   match rawline with
   | EMPTY
   | LABEL _
-  | DIRECTIVE _
-  | ASCII_ _ _
     => Some st
+  | DIRECTIVE d
+    => if inert_directive d then Some st else None
+  | ASCII_ _ _
+    => None
   | INSTR instr
     => DenoteNormalInstruction st instr
   | SECTION _

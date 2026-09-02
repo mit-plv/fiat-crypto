@@ -1375,6 +1375,8 @@ Proof using Type.
   rewrite unfold_bind in *; destruct_one_match_hyp; inversion_ErrorT.
   cbv [SymexLine SymexRawLine DenoteLine DenoteRawLine ret err Crypto.Util.Option.bind] in *; cbn in *.
   destruct_one_match_hyp; inversion_ErrorT; subst; eauto; destruct_head'_prod.
+  2: { (* DIRECTIVE: inert directives are no-ops on both sides; everything else is an error on both sides *)
+       break_innermost_match_hyps; inversion_ErrorT; inversion_prod; subst; cbn [snd] in *; eauto. }
   eapply SymexNornalInstruction_R in E; eauto. destruct E as (m1&Hm1&Rm1&?). rewrite Hm1.
   eapply IHasm in H; eauto. destruct H as (?&?&?&?). break_innermost_match; eauto 9.
 Qed.
