@@ -249,8 +249,8 @@ Module Rust.
          "(" ++ arith_to_string internal_private prefix x1 ++ " * " ++ arith_to_string internal_private prefix x2 ++ ")"
        | (IR.Z_sub @@@ (x1, x2)) =>
          "(" ++ arith_to_string internal_private prefix x1 ++ " - " ++ arith_to_string internal_private prefix x2 ++ ")"
-       | (IR.Z_bneg @@@ e) => "(!" ++ arith_to_string internal_private prefix e ++ ")" (* logical negation. XXX this has different semantics for numbers <>
-                                                                        0 or 1 than it did before *)
+       | (IR.Z_bneg @@@ e) =>
+         "((" ++ arith_to_string internal_private prefix e ++ " == 0) as " ++ primitive_type_to_string internal_private prefix IR.type.Z (Some _Bool) ++ ")"
        | (IR.Z_mul_split lg2s @@@ args) =>
          special_name "mulx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_add_with_get_carry lg2s @@@ args) =>
@@ -277,6 +277,13 @@ Module Rust.
        | (IR.Z_add_modulo @@@ _) => "#error bad_arg;"
        | IR.TT => "#error tt;"
        end%string%Cexpr.
+
+  Example arith_to_string_bneg_regression :
+    arith_to_string
+      (language_naming_conventions:=default_language_naming_conventions)
+      false "fiat_" (IR.Z_bneg @@@ IR.Var IR.type.Z "x") =
+    "((x == 0) as fiat_u1)"%string.
+  Proof. reflexivity. Qed.
 
   Definition stmt_to_string
              {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool)
@@ -428,7 +435,7 @@ Module Rust.
               (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
               Some ty)
           | IR.Z_bneg
-            => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
+            => ((* bneg is a zero-test with a one-bit result, so we don't ever need to cast *)
               None, None)
           end.
 

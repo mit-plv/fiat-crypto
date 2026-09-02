@@ -256,7 +256,7 @@ pub const fn fiat_25519_subborrowx_u25(out1: &mut u32, out2: &mut fiat_25519_u1,
 /// ```
 #[inline]
 pub const fn fiat_25519_cmovznz_u32(out1: &mut u32, arg1: fiat_25519_u1, arg2: u32, arg3: u32) {
-  let x1: fiat_25519_u1 = (!(!arg1));
+  let x1: fiat_25519_u1 = ((((arg1 == 0) as fiat_25519_u1) == 0) as fiat_25519_u1);
   let x2: u32 = ((((((0x0 as fiat_25519_i2) - (x1 as fiat_25519_i2)) as fiat_25519_i1) as i64) & (0xffffffff as i64)) as u32);
   let x3: u32 = ((x2 & arg3) | ((!x2) & arg2));
   *out1 = x3;
