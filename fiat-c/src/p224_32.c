@@ -3529,7 +3529,6 @@ static FIAT_P224_FIAT_INLINE void fiat_p224_set_one(fiat_p224_montgomery_domain_
  *
  * Postconditions:
  *   twos_complement_eval out1 = m
- *   0 ≤ eval out1 < m
  *
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]

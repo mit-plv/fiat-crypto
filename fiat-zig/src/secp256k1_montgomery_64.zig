@@ -1697,7 +1697,6 @@ pub fn setOne(out1: *MontgomeryDomainFieldElement) void {
 ///
 /// Postconditions:
 ///   twos_complement_eval out1 = m
-///   0 ≤ eval out1 < m
 ///
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]

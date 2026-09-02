@@ -679,9 +679,10 @@ Module WordByWordMontgomery.
 
     (* Bernstein-Yang inversion *)
     Definition msat_correct
+               (msat_bounds : list (option zrange))
                (msat : list Z) :=
       twos_complement_eval msat = m /\
-      valid msat.
+      list_Z_bounded_by msat_bounds msat.
 
     Definition divstep_precomp_correct
                (divstep_precomp : list Z) :=
