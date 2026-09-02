@@ -249,6 +249,15 @@ test-bedrock2-files: $(ALL_BEDROCK2_FILES)
 test-bedrock2-files only-test-bedrock2-files:
 	$(CC) -Wall -Wno-unused-function -Werror $(BEDROCK2_EXTRA_CFLAGS) $(BEDROCK2_CFLAGS_64) $(CFLAGS) -c $(ALL_BEDROCK2_FILES_64)
 	$(CC) -Wall -Wno-unused-function -Werror $(BEDROCK2_EXTRA_CFLAGS) $(BEDROCK2_CFLAGS_32) $(CFLAGS) -c $(ALL_BEDROCK2_FILES_32)
+	$(SHOW)'CHECK word-size guard rejects mismatched targets'
+	$(HIDE)for spec in "$(firstword $(ALL_BEDROCK2_FILES_32)):32:$(BEDROCK2_CFLAGS_64)" "$(firstword $(ALL_BEDROCK2_FILES_64)):64:$(BEDROCK2_CFLAGS_32)"; do \
+	  f="$${spec%%:*}"; rest="$${spec#*:}"; bits="$${rest%%:*}"; flags="$${rest#*:}"; \
+	  if output="$$($(CC) $(BEDROCK2_EXTRA_CFLAGS) $$flags $(CFLAGS) -fsyntax-only "$$f" 2>&1)"; then \
+	    echo "ERROR: $$f compiled with '$$flags' but should have been rejected (it was synthesized for $$bits-bit words)" >&2; exit 1; \
+	  elif ! printf '%s\n' "$$output" | grep -q "synthesized for $$bits-bit words"; then \
+	    echo "ERROR: $$f was rejected with '$$flags' for the wrong reason:" >&2; printf '%s\n' "$$output" >&2; exit 1; \
+	  fi; \
+	done
 
 $(ALL_RUST_FILES) : $(RUST_DIR)%.rs : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
