@@ -106,6 +106,12 @@ Definition update_mem_with (st : machine_state) (f : mem_state -> mem_state) : m
 Definition DenoteConst (sz : N) (a : CONST) : Z :=
   Z.land a (Z.ones (Z.of_N sz)).
 
+Definition AddressSupported (a : MEM) : bool :=
+  match mem_base_label a, rip_relative a with
+  | None, not_rip_relative => true
+  | _, _ => false
+  end.
+
 Definition DenoteAddress (sa : N) (st : machine_state) (a : MEM) : Z :=
   Z.land (
     match mem_base_reg  a with Some     r  => get_reg st r                    | _ => 0 end +
@@ -116,7 +122,9 @@ Definition DenoteAddress (sa : N) (st : machine_state) (a : MEM) : Z :=
 Definition DenoteOperand (sa s : N) (st : machine_state) (a : ARG) : option Z :=
   match a with
   | reg a => Some (get_reg st a)
-  | mem a => get_mem st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8))
+  | mem a => if AddressSupported a
+             then get_mem st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8))
+             else None
   | const a => Some (DenoteConst (operand_size a s) a)
   | label _ => None
   end.
@@ -128,7 +136,9 @@ Definition SetMem (st : machine_state) (addr : Z) (nbytes : nat) (v : Z) : optio
 Definition SetOperand (sa s : N) (st : machine_state) (a : ARG) (v : Z) : option machine_state :=
   match a with
   | reg a => Some (update_reg_with st (fun rs => set_reg rs a v))
-  | mem a => SetMem st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8)) v
+  | mem a => if AddressSupported a
+             then SetMem st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8)) v
+             else None
   | const a => None
   | label _ => None
   end.
@@ -195,7 +205,9 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     then SetOperand sa s st dst v
     else Some st
   | lea, [reg dst; mem src] => (* Flags Affected: None *)
-    Some (update_reg_with st (fun rs => set_reg rs dst (DenoteAddress sa st src)))
+    if AddressSupported src
+    then Some (update_reg_with st (fun rs => set_reg rs dst (DenoteAddress sa st src)))
+    else None
   | (add | adc) as opc, [dst; src] =>
     c <- (match opc with adc => get_flag st CF | _ => Some false end);
     let c := Z.b2z c in
