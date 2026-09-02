@@ -20,23 +20,40 @@ document.addEventListener('DOMContentLoaded', function () {
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     const isMacOrIOS = /Macintosh|MacIntel|MacPPC|Mac68K|iPhone|iPad|iPod/.test(navigator.platform);
 
+    // Format of the "Input String" text box: arguments are separated by
+    // unescaped spaces; `\ ` is a literal space, `\\` a literal backslash,
+    // `\"` a literal double quote, and a bare `""` token is an empty argument.
+    // Any other backslash is kept literally.  splitUnescapedSpaces and
+    // joinWithEscaping must be exact inverses of each other, so that the
+    // command line shown in the box is the one that actually runs.
     function splitUnescapedSpaces(input) {
-        return input
-            .replace(/\\\\/g, '\u0000')  // Temporarily replace \\ with a placeholder
-            .replace(/\\ /g, '\u0001')  // Temporarily replace escaped spaces with a placeholder
-            .split(/ +/)               // Split by spaces
-            .filter(s => s)
-            .map(s => s
-                .replace(/\u0000/g, '\\')  // Restore backslashes
-                .replace(/\u0001/g, ' ')   // Restore spaces
-            );
+        const args = [];
+        let current = null;  // null between arguments
+        for (let i = 0; i < input.length; i++) {
+            const c = input[i], next = input[i + 1];
+            if (c === ' ') {
+                if (current !== null) args.push(current);
+                current = null;
+            } else if (c === '\\' && (next === ' ' || next === '\\' || next === '"')) {
+                current = (current || '') + next;
+                i++;
+            } else if (c === '"' && current === null && next === '"' && (i + 2 >= input.length || input[i + 2] === ' ')) {
+                args.push('');
+                i++;
+            } else {
+                current = (current || '') + c;
+            }
+        }
+        if (current !== null) args.push(current);
+        return args;
     }
 
     function joinWithEscaping(inputArray) {
         return inputArray
-            .map(s => s
+            .map(s => s === '' ? '""' : s
                 .replace(/\\/g, '\\\\')  // Escape backslashes
                 .replace(/ /g, '\\ ')   // Escape spaces
+                .replace(/^""$/, '\\"\\"')  // A literal "" must not read as the empty argument
             )
             .join(' ');
     }
@@ -408,7 +425,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 populateStdinEntries(JSON.parse(decodeURIComponent(stdin)));
                 populateFileEntries(JSON.parse(decodeURIComponent(files)));
                 document.querySelector(`input[value="${inputType}"]`).checked = true;
-                updateInputType(inputType);
+                // The box already holds argv as JSON, so only the string view
+                // needs converting; running the string decoder over JSON text
+                // would show a mangled command line (scrutineer finding #2519).
+                if (inputType === 'string') {
+                    updateInputType('string');
+                } else {
+                    validateInput();
+                }
                 inputForm.classList.remove('hidden');
             }
             parseAndRun(argv, stdin, files);
