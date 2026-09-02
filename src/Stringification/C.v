@@ -159,6 +159,9 @@ Module Compilers.
                 ++ [""
                     ; "#if (-1 & 3) != 3"
                     ; "#error ""This code only works on a two's complement system"""
+                    ; "#endif"
+                    ; "#if ((-1) >> 1) != -1"
+                    ; "#error ""This code only works on a system with arithmetic right shift of negative signed values"""
                     ; "#endif"]
                 ++ (List.flat_map
                       (value_barrier_func internal_static prefix)
