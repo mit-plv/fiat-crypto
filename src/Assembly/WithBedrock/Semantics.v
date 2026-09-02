@@ -106,17 +106,26 @@ Definition update_mem_with (st : machine_state) (f : mem_state -> mem_state) : m
 Definition DenoteConst (sz : N) (a : CONST) : Z :=
   Z.land a (Z.ones (Z.of_N sz)).
 
-Definition DenoteAddress (sa : N) (st : machine_state) (a : MEM) : Z :=
-  Z.land (
-    match mem_base_reg  a with Some     r  => get_reg st r                    | _ => 0 end +
-    match mem_scale_reg a with Some (z, r) => get_reg st r * DenoteConst sa z | _ => 0 end +
-    match mem_offset    a with Some  z     =>                DenoteConst sa z | _ => 0 end
-  ) (Z.ones (Z.of_N sa)).
+(** The effective address of a memory operand.  The machine state has
+    no instruction pointer, so RIP-relative operands (explicit
+    [\[rip + disp\]] or implicit via [DEFAULT REL]) and label-based
+    operands have no denotation ([None]); this mirrors the error
+    raised by [Symbolic.Address], see scrutineer finding #2516. *)
+Definition DenoteAddress (sa : N) (st : machine_state) (a : MEM) : option Z :=
+  match rip_relative a, mem_base_label a with
+  | not_rip_relative, None =>
+    Some (Z.land (
+      match mem_base_reg  a with Some     r  => get_reg st r                    | _ => 0 end +
+      match mem_scale_reg a with Some (z, r) => get_reg st r * DenoteConst sa z | _ => 0 end +
+      match mem_offset    a with Some  z     =>                DenoteConst sa z | _ => 0 end
+    ) (Z.ones (Z.of_N sa)))
+  | _, _ => None
+  end.
 
 Definition DenoteOperand (sa s : N) (st : machine_state) (a : ARG) : option Z :=
   match a with
   | reg a => Some (get_reg st a)
-  | mem a => get_mem st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8))
+  | mem a => addr <- DenoteAddress sa st a; get_mem st addr (N.to_nat (N.div (operand_size a s) 8))
   | const a => Some (DenoteConst (operand_size a s) a)
   | label _ => None
   end.
@@ -128,7 +137,7 @@ Definition SetMem (st : machine_state) (addr : Z) (nbytes : nat) (v : Z) : optio
 Definition SetOperand (sa s : N) (st : machine_state) (a : ARG) (v : Z) : option machine_state :=
   match a with
   | reg a => Some (update_reg_with st (fun rs => set_reg rs a v))
-  | mem a => SetMem st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8)) v
+  | mem a => addr <- DenoteAddress sa st a; SetMem st addr (N.to_nat (N.div (operand_size a s) 8)) v
   | const a => None
   | label _ => None
   end.
@@ -195,7 +204,8 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     then SetOperand sa s st dst v
     else Some st
   | lea, [reg dst; mem src] => (* Flags Affected: None *)
-    Some (update_reg_with st (fun rs => set_reg rs dst (DenoteAddress sa st src)))
+    addr <- DenoteAddress sa st src;
+    Some (update_reg_with st (fun rs => set_reg rs dst addr))
   | (add | adc) as opc, [dst; src] =>
     c <- (match opc with adc => get_flag st CF | _ => Some false end);
     let c := Z.b2z c in
