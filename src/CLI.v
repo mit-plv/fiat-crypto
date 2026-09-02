@@ -217,7 +217,8 @@ Module ForExtraction.
   (** We also quote the "/" character so that we don't change quoting behavior based on Windows vs Linux paths *)
   Definition quote (s : string) : string
     := if List.existsb (fun ch => List.existsb (fun badch => badch =? ch)%char
-                                               [" "; "$"; "'"; """"; "\"; "#"; "="; "!"; ">"; "<"; "|"; ";"; "{"; "}"; "("; ")"; "["; "]"; "*"; "?"; "~"; "&"; "`"; "/"]%char)
+                                               [(Ascii.ascii_of_nat 9); (Ascii.ascii_of_nat 10);
+                                                " "; "$"; "'"; """"; "\"; "#"; "="; "!"; ">"; "<"; "|"; ";"; "{"; "}"; "("; ")"; "["; "]"; "*"; "?"; "~"; "&"; "`"; "/"]%char)
                        (String.list_ascii_of_string s)
           || (String.length s =? 0)%nat
        then "'" ++ String.replace "'" "'""'""'" s ++ "'"
