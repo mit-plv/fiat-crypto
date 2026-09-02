@@ -11,6 +11,7 @@ From Coq Require Import String.
 From Coq Require Import List.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Parse.
 Require Import Crypto.Assembly.Symbolic.
@@ -119,3 +120,16 @@ Goal show_lines (error.data_emitting_line (ASCII "abc"))
      = ["error.data_emitting_line .ascii ""abc""";
         "Lines that emit raw bytes (.ascii, .asciz, .byte, ...) are not allowed inside a function being checked, because the assembler would place those bytes in the instruction stream where they would execute as instructions that the checker did not model."].
 Proof. vm_compute. reflexivity. Qed.
+
+(** ** Universal statements about [SymexRawLine] itself *)
+
+Lemma SymexRawLine_ASCII_ {opts : symbolic_options_computed_opt} {descr : description} nul s st
+  : SymexRawLine (ASCII_ nul s) st = Error (error.data_emitting_line (ASCII_ nul s), st).
+Proof. reflexivity. Qed.
+
+Lemma SymexRawLine_DIRECTIVE {opts : symbolic_options_computed_opt} {descr : description} d st
+  : SymexRawLine (DIRECTIVE d) st
+    = if inert_directive d
+      then Success (tt, st)
+      else Error (error.unsupported_directive d, st).
+Proof. cbv [SymexRawLine ret err]; break_innermost_match; reflexivity. Qed.
