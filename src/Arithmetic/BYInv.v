@@ -1019,3 +1019,54 @@ Proof.
     rewrite <- (divstep_v _ _ _ _ r' _ _ f _ _ _); auto.
   rewrite <- divstep_spec2_divstep_spec_full_r;
     rewrite <- (divstep_r _ _ _ _ r' _ _ f _ _ _); auto. Qed.
+
+(** Validity (Montgomery-domain bounds) of the outputs [v1] and [r1] of
+    [divstep]; the bounds on the saturated outputs [f1] and [g1] and on
+    [d1] are established by the bounds pipeline instead. *)
+
+Lemma length_valid machine_wordsize n m v
+      (H : valid machine_wordsize n m v) :
+  length v = n.
+Proof.
+  destruct H as [H _]; unfold small in H; rewrite H; apply length_partition. Qed.
+
+Lemma select_valid machine_wordsize n m cond v r
+      (Hv : valid machine_wordsize n m v)
+      (Hr : valid machine_wordsize n m r) :
+  valid machine_wordsize n m (select cond v r).
+Proof.
+  rewrite (select_eq (uweight machine_wordsize) _ n)
+    by (eapply length_valid; eassumption).
+  destruct (dec (cond = 0)); assumption. Qed.
+
+Theorem divstep_valid machine_wordsize sat_limbs mont_limbs m r' m' d f g v r
+      (r'_correct : (2 ^ machine_wordsize * r') mod m = 1)
+      (m'_correct : (m * m') mod 2 ^ machine_wordsize = -1 mod 2 ^ machine_wordsize)
+      (m_big : 1 < m)
+      (m_small : m < (2 ^ machine_wordsize) ^ Z.of_nat mont_limbs)
+      (mw0 : 0 < machine_wordsize)
+      (mont_limbs0 : (0 < mont_limbs)%nat)
+      (Hv2 : valid machine_wordsize mont_limbs m v)
+      (Hr2 : valid machine_wordsize mont_limbs m r) :
+  let '(d1,f1,g1,v1,r1) := (divstep machine_wordsize sat_limbs mont_limbs m d f g v r) in
+  valid machine_wordsize mont_limbs m v1 /\ valid machine_wordsize mont_limbs m r1.
+Proof.
+  pose proof (addmod_correct machine_wordsize mont_limbs m r' m' r'_correct m'_correct mw0 m_big (ltac:(lia)) m_small) as [_ Hadd].
+  pose proof (oppmod_correct machine_wordsize mont_limbs m r' m' r'_correct m'_correct mw0 m_big (ltac:(lia)) m_small) as [_ Hopp].
+  pose proof (zero_valid machine_wordsize mont_limbs m mw0 (ltac:(lia))) as Hzero.
+  cbv beta iota zeta delta [divstep divstep_aux Let_In].
+  split; apply Hadd; repeat first [ assumption | apply select_valid | apply Hopp ]. Qed.
+
+(** The saturated representation of a value in range evaluates to
+    itself in two's complement. *)
+Lemma eval_twos_complement_partition machine_wordsize n a
+      (mw0 : 0 < machine_wordsize)
+      (Hn : (0 < n)%nat)
+      (Ha : - 2 ^ (machine_wordsize * Z.of_nat n - 1) <= a < 2 ^ (machine_wordsize * Z.of_nat n - 1)) :
+  eval_twos_complement machine_wordsize n (Partition.partition (uweight machine_wordsize) n a) = a.
+Proof.
+  unfold eval_twos_complement, Let_In.
+  rewrite eval_partition by apply (uwprops machine_wordsize mw0).
+  rewrite uweight_eq_alt'.
+  rewrite Z.twos_complement_mod by nia.
+  apply Z.twos_complement_spec; [ nia | split; [ reflexivity | assumption ] ]. Qed.

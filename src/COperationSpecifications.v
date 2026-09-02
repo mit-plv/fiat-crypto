@@ -8,6 +8,7 @@ Require Import Crypto.Arithmetic.BaseConversion.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Require Import Crypto.Arithmetic.BYInv.
+Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
@@ -570,7 +571,6 @@ Module WordByWordMontgomery.
             (length_saturated_bounds : length saturated_bounds = n).
     Local Notation eval := (@WordByWordMontgomery.eval bitwidth n).
     Local Notation bytes_eval := (Positional.eval (weight 8 1) n_bytes).
-    Local Notation twos_complement_eval f := (eval_twos_complement bitwidth n f).
 
     Let prime_bound : zrange
       := r[0~>(m - 1)]%zrange.
@@ -677,44 +677,73 @@ Module WordByWordMontgomery.
             saturated_bounds
             selectznz.
 
-    (* Bernstein-Yang inversion *)
-    Definition msat_correct
-               (msat : list Z) :=
-      twos_complement_eval msat = m /\
-      valid msat.
+    (** Bernstein-Yang inversion.
 
+        The saturated values [f] and [g] (and the saturated
+        representation of the modulus [msat]) are NOT field elements:
+        they carry [sat_limbs] limbs (one more than the Montgomery
+        representation, so that [m] itself fits in two's complement)
+        and are interpreted as signed integers in two's complement over
+        [bitwidth * sat_limbs] bits.  The word [d] is likewise a signed
+        machine word in two's complement. *)
+    Local Notation twos_complement_eval sat_limbs f := (eval_twos_complement bitwidth sat_limbs f).
+    Local Notation twos_complement_word d := (Z.twos_complement bitwidth d).
+    Local Notation saturated_bounds_of sat_limbs := (List.repeat (Some r[0~>2^bitwidth-1]%zrange) sat_limbs).
+
+    Definition msat_correct
+               (sat_limbs : nat)
+               (msat : list Z) :=
+      twos_complement_eval sat_limbs msat = m
+      /\ list_Z_bounded_by (saturated_bounds_of sat_limbs) msat.
+
+    (** [(m + 1) / 2] is the inverse of [2] modulo the odd modulus [m],
+        so [divstep_precomp] is [2⁻ⁱ mod m], where [i] is the number of
+        divsteps needed for inversion (the iteration bound from the
+        Bernstein-Yang paper, as used in [inversion/c/inversion_template.c]). *)
     Definition divstep_precomp_correct
                (divstep_precomp : list Z) :=
       let mbits := (Z.log2 m) + 1  in
-      (eval (from_montgomery divstep_precomp) = ((m - 1) / 2) ^ (if Decidable.dec (mbits < 46)
-                                                         then (49 * mbits + 80) / 17
-                                                         else (49 * mbits + 57)/ 17))
+      (eval (from_montgomery divstep_precomp) mod m
+       = (((m + 1) / 2) ^ (if Decidable.dec (mbits < 46)
+                           then (49 * mbits + 80) / 17
+                           else (49 * mbits + 57) / 17)) mod m)
       /\ valid divstep_precomp.
 
     Definition divstep_correct
+               (sat_limbs : nat)
                (divstep :
                   Z -> list Z -> list Z -> list Z -> list Z ->
                   Z * list Z * list Z * list Z * list Z) : Prop
       := forall (d : Z) f g v r,
-        valid v -> valid r ->
-        let '(d1,f1,g1,v1,r1) := divstep d f g v r in
-        (((d1,
-           twos_complement_eval f1,
-           twos_complement_eval g1,
-           eval (from_montgomery v1) mod m,
-           eval (from_montgomery r1) mod m) =
-          (if (0 <? d) && Z.odd (twos_complement_eval g)
-           then (1 - d,
-                 (twos_complement_eval g),
-                 ((twos_complement_eval g) - (twos_complement_eval f)) / 2,
-                 (2 * (eval (from_montgomery r))) mod m,
-                 ((eval (from_montgomery v)) - (eval (from_montgomery v))) mod m)
-           else (1 + d,
-                 (twos_complement_eval f),
-                 ((twos_complement_eval g) + (twos_complement_eval g mod 2) * (twos_complement_eval f)) / 2,
-                 (2 * (eval (from_montgomery v))) mod m,
-                 ((eval (from_montgomery r)) + (twos_complement_eval g mod 2) * (eval (from_montgomery v))) mod m)))
-         /\ valid r1 /\ valid r1 /\ valid f1 /\ valid g1).
+        is_bounded_by0 r[0~>2^bitwidth-1] d = true
+        -> list_Z_bounded_by (saturated_bounds_of sat_limbs) f
+        -> list_Z_bounded_by (saturated_bounds_of sat_limbs) g
+        -> valid v -> valid r
+        -> - 2 ^ (bitwidth - 1) + 1 < twos_complement_word d < 2 ^ (bitwidth - 1) - 1
+        -> Z.odd (twos_complement_eval sat_limbs f) = true
+        -> - 2 ^ (bitwidth * sat_limbs - 2) < twos_complement_eval sat_limbs f < 2 ^ (bitwidth * sat_limbs - 2)
+        -> - 2 ^ (bitwidth * sat_limbs - 2) < twos_complement_eval sat_limbs g < 2 ^ (bitwidth * sat_limbs - 2)
+        -> let '(d1,f1,g1,v1,r1) := divstep d f g v r in
+           is_bounded_by0 r[0~>2^bitwidth-1] d1 = true
+           /\ list_Z_bounded_by (saturated_bounds_of sat_limbs) f1
+           /\ list_Z_bounded_by (saturated_bounds_of sat_limbs) g1
+           /\ ((twos_complement_word d1,
+                twos_complement_eval sat_limbs f1,
+                twos_complement_eval sat_limbs g1,
+                eval (from_montgomery v1) mod m,
+                eval (from_montgomery r1) mod m) =
+               (if (0 <? twos_complement_word d) && Z.odd (twos_complement_eval sat_limbs g)
+                then (1 - twos_complement_word d,
+                      (twos_complement_eval sat_limbs g),
+                      ((twos_complement_eval sat_limbs g) - (twos_complement_eval sat_limbs f)) / 2,
+                      (2 * (eval (from_montgomery r))) mod m,
+                      ((eval (from_montgomery r)) - (eval (from_montgomery v))) mod m)
+                else (1 + twos_complement_word d,
+                      (twos_complement_eval sat_limbs f),
+                      ((twos_complement_eval sat_limbs g) + (twos_complement_eval sat_limbs g mod 2) * (twos_complement_eval sat_limbs f)) / 2,
+                      (2 * (eval (from_montgomery v))) mod m,
+                      ((eval (from_montgomery r)) + (twos_complement_eval sat_limbs g mod 2) * (eval (from_montgomery v))) mod m)))
+           /\ valid v1 /\ valid r1.
 
     Section ring.
       Context mul     (Hmul     :     mul_correct mul)
