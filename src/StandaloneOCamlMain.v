@@ -16,8 +16,6 @@ Global Unset Extraction Optimize.
 (** Work around COQBUG(https://github.com/coq/coq/issues/4875) / COQBUG(https://github.com/coq/coq/issues/7954) / COQBUG(https://github.com/coq/coq/issues/7954) / https://discuss.ocaml.org/t/why-wont-ocaml-specialize-weak-type-variables-in-dead-code/7776 *)
 Extraction Inline Show.ShowLevel_of_Show.
 
-Inductive int : Set := int_O | int_S (x : int).
-
 (** We pull a hack to get coqchk to not report these as axioms; for
     this, all we care about is that there exists a model. *)
 
@@ -26,7 +24,6 @@ Module Type OCamlPrimitivesT.
   Notation in_channel := OCaml_in_channel.
   Axiom OCaml_out_channel : Set.
   Notation out_channel := OCaml_out_channel.
-  Axiom fprintf_char : out_channel -> Ascii.ascii -> unit.
   Axiom flush : out_channel -> unit.
   Axiom OCaml_stdin : in_channel.
   Notation stdin := OCaml_stdin.
@@ -36,10 +33,14 @@ Module Type OCamlPrimitivesT.
   Notation stderr := OCaml_stderr.
   Axiom OCaml_string : Set.
   Notation string := OCaml_string.
-  Axiom string_length : string -> int.
-  Axiom string_get : string -> int -> Ascii.ascii.
+  (** Conversions between OCaml [string] and Coq [String.string]
+      (which is extracted to [char list]).  These are implemented
+      directly in OCaml so that they run in linear time and constant
+      stack space; see the [Extract Constant] directives below. *)
+  Axiom string_to_Coq_string : string -> String.string.
+  Axiom string_of_Coq_string : String.string -> string.
+  Axiom fprintf_Coq_string : out_channel -> String.string -> unit.
   Axiom sys_argv : list string.
-  Axiom string_init : int -> (int -> Ascii.ascii) -> string.
   Axiom raise_Failure : string -> unit.
   Axiom OCaml_open_in : string -> in_channel.
   Notation open_in := OCaml_open_in.
@@ -57,17 +58,16 @@ Module Export OCamlPrimitives : OCamlPrimitivesT.
   Notation in_channel := OCaml_in_channel.
   Definition OCaml_out_channel : Set := unit.
   Notation out_channel := OCaml_out_channel.
-  Definition fprintf_char : out_channel -> Ascii.ascii -> unit := fun _ _ => tt.
   Definition flush : out_channel -> unit := fun _ => tt.
   Definition OCaml_stdin : in_channel := tt.
   Definition OCaml_stdout : out_channel := tt.
   Definition OCaml_stderr : out_channel := tt.
   Definition OCaml_string : Set := unit.
   Notation string := OCaml_string.
-  Definition string_length : string -> int := fun _ => int_O.
-  Definition string_get : string -> int -> Ascii.ascii := fun _ _ => "000"%char.
+  Definition string_to_Coq_string : string -> String.string := fun _ => String.EmptyString.
+  Definition string_of_Coq_string : String.string -> string := fun _ => tt.
+  Definition fprintf_Coq_string : out_channel -> String.string -> unit := fun _ _ => tt.
   Definition sys_argv : list string := nil.
-  Definition string_init : int -> (int -> Ascii.ascii) -> string := fun _ _ => tt.
   Definition raise_Failure : string -> unit := fun _ => tt.
   Definition OCaml_open_in : string -> in_channel := fun _ => tt.
   Definition OCaml_open_out : string -> out_channel := fun _ => tt.
@@ -76,24 +76,36 @@ Module Export OCamlPrimitives : OCamlPrimitivesT.
   Definition read_channel_rev : in_channel -> list string := fun _ => nil.
 End OCamlPrimitives.
 
-Extract Inductive int
-    => "Int.t" [ "0" "(fun n -> n+1)" ]
-                   "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
 (* We cannot inline these constants due to COQBUG(https://github.com/coq/coq/issues/16169) *)
 Extract (*Inlined*) Constant in_channel => "in_channel".
 Extract (*Inlined*) Constant out_channel => "out_channel".
-Extract Constant fprintf_char =>
-"fun chan c -> Printf.fprintf chan ""%c%!"" c".
 Extract Constant flush =>
 "fun chan -> Printf.fprintf chan ""%!""".
 Extract (*Inlined*) Constant stdin => "stdin".
 Extract (*Inlined*) Constant stdout => "stdout".
 Extract (*Inlined*) Constant stderr => "stderr".
 Extract (*Inlined*) Constant string => "string".
-Extract (*Inlined*) Constant string_length => "String.length".
-Extract (*Inlined*) Constant string_get => "String.get".
+(** These conversions must be linear-time and must not recurse on the
+    OCaml stack, because they are applied to every line of every input
+    (argv, stdin, and [--hints-file] contents), and a single very long
+    line must not hang or overflow the stack of the synthesis binary.
+    In particular we do NOT index the string with a Peano [nat] (which
+    would be quadratic), nor use non-tail-recursive list functions. *)
+Extract Constant string_to_Coq_string
+=> "fun s ->
+      let rec go i acc =
+        if i < 0 then acc else go (i - 1) (Stdlib.String.unsafe_get s i :: acc)
+      in go (Stdlib.String.length s - 1) []".
+Extract Constant string_of_Coq_string
+=> "fun l ->
+      let b = Stdlib.Buffer.create 64 in
+      Stdlib.List.iter (Stdlib.Buffer.add_char b) l;
+      Stdlib.Buffer.contents b".
+Extract Constant fprintf_Coq_string
+=> "fun chan l ->
+      Stdlib.List.iter (Stdlib.output_char chan) l;
+      Stdlib.flush chan".
 Extract Constant sys_argv => "Array.to_list Sys.argv".
-Extract (*Inlined*) Constant string_init => "String.init".
 Extract Constant raise_Failure => "fun x -> raise (Failure x)".
 Extract (*Inlined*) Constant open_in => "open_in".
 Extract (*Inlined*) Constant open_out => "open_out".
@@ -109,29 +121,11 @@ Extract Constant read_channel_rev
       with End_of_file ->
         !lines".
 
-Fixpoint nat_of_int (x : int) : nat
-  := match x with
-     | int_O => O
-     | int_S x' => S (nat_of_int x')
-     end.
-Fixpoint int_of_nat (x : nat) : int
-  := match x with
-     | O => int_O
-     | S x' => int_S (int_of_nat x')
-     end.
-Global Set Warnings Append "-ambiguous-paths".
-Coercion nat_of_int : int >-> nat.
-Coercion int_of_nat : nat >-> int.
-
-Definition string_of_Coq_string (s : String.string) : string
-  := let s := String.list_ascii_of_string s in
-     string_init
-       (List.length s)
-       (fun n => List.nth n s "?"%char).
-
-Definition string_to_Coq_string (s : string) : String.string
-  := String.string_of_list_ascii
-       (List.map (fun n:nat => string_get s n) (List.seq 0 (string_length s))).
+(** Convert a reversed list of OCaml lines (as produced by
+    [read_channel_rev]) into a list of Coq strings in the original
+    order, in a single tail-recursive pass. *)
+Definition Coq_strings_of_rev_lines (rev_lines : list string) : list String.string
+  := List.fold_left (fun acc s => string_to_Coq_string s :: acc) rev_lines nil.
 
 Definition seq {A B} (x : unit -> A) (f : A -> B) : B := let y := x tt in f y.
 Extraction NoInline seq.
@@ -147,10 +141,7 @@ Fixpoint list_iter {A} (f : A -> unit) (ls : list A) : unit
      end.
 
 Definition fprintf_list_string (chan : out_channel) (strs : list String.string) : unit
-  := list_iter
-       (fun ls
-        => list_iter (fprintf_char chan) (String.list_ascii_of_string ls))
-       strs.
+  := list_iter (fprintf_Coq_string chan) strs.
 Definition printf_list_string (strs : list String.string) : unit
   := fprintf_list_string stdout strs.
 Definition fprintf_list_string_with_newlines (chan : out_channel) (strs : list String.string) : unit
@@ -172,7 +163,7 @@ Global Instance OCamlIODriver : ForExtraction.IODriverAPI unit
        ; ForExtraction.ret := fun 'tt => tt
        ; ForExtraction.with_read_stdin k
          := seq (fun 'tt => read_channel_rev stdin)
-                (fun rev_lines => k (List.map string_to_Coq_string (List.rev_append rev_lines nil)))
+                (fun rev_lines => k (Coq_strings_of_rev_lines rev_lines))
        ; ForExtraction.write_stdout_then lines k
          := seq (fun _ => fprintf_list_string stdout lines)
                 k
@@ -184,7 +175,7 @@ Global Instance OCamlIODriver : ForExtraction.IODriverAPI unit
                 (fun chan
                  => seq (fun 'tt => read_channel_rev chan)
                         (fun rev_lines => seq (fun 'tt => close_in chan)
-                                              (fun 'tt => k (List.map string_to_Coq_string (List.rev_append rev_lines nil)))))
+                                              (fun 'tt => k (Coq_strings_of_rev_lines rev_lines))))
        ; ForExtraction.write_file_then fname lines k
          := seq (fun 'tt => open_out (string_of_Coq_string fname))
                 (fun chan
