@@ -162,7 +162,11 @@ Module Zig.
          "(" ++ arith_to_string internal_private prefix x1 ++ " * " ++ arith_to_string internal_private prefix x2 ++ ")"
        | (IR.Z_sub @@@ (x1, x2)) =>
          "(" ++ arith_to_string internal_private prefix x1 ++ " - " ++ arith_to_string internal_private prefix x2 ++ ")"
-       | (IR.Z_bneg @@@ e) => "(~" ++ arith_to_string internal_private prefix e ++ ")"
+       (* logical negation: 1 if [e] is zero, else 0.  Zig's [~] is
+          bitwise complement (that is [IR.Z_lnot]), so we must spell
+          out the zero-test; [@intFromBool] yields a [u1], which is
+          what the IR types the result as. *)
+       | (IR.Z_bneg @@@ e) => "@intFromBool(" ++ arith_to_string internal_private prefix e ++ " == 0)"
        | (IR.Z_mul_split lg2s @@@ args) =>
          special_name "mulx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_add_with_get_carry lg2s @@@ args) =>
@@ -305,7 +309,11 @@ Module Zig.
               (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
               Some ty)
           | IR.Z_bneg
-            => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
+            => ((* bneg is logical negation, printed as
+                   [@intFromBool(e == 0)], which yields a value of
+                   exactly the 1-bit type the IR assigns to it, for an
+                   argument of any integer type; so we don't ever
+                   need to cast *)
               None, None)
           end.
 

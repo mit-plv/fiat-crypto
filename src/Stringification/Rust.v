@@ -249,8 +249,12 @@ Module Rust.
          "(" ++ arith_to_string internal_private prefix x1 ++ " * " ++ arith_to_string internal_private prefix x2 ++ ")"
        | (IR.Z_sub @@@ (x1, x2)) =>
          "(" ++ arith_to_string internal_private prefix x1 ++ " - " ++ arith_to_string internal_private prefix x2 ++ ")"
-       | (IR.Z_bneg @@@ e) => "(!" ++ arith_to_string internal_private prefix e ++ ")" (* logical negation. XXX this has different semantics for numbers <>
-                                                                        0 or 1 than it did before *)
+       (* logical negation: 1 if [e] is zero, else 0.  Rust's [!] on
+          an integer is bitwise complement (that is [IR.Z_lnot]), so
+          we must spell out the zero-test; the result is a 1-bit
+          value, which is what the IR types it as. *)
+       | (IR.Z_bneg @@@ e) =>
+         "((" ++ arith_to_string internal_private prefix e ++ " == 0) as " ++ primitive_type_to_string internal_private prefix IR.type.Z (Some _Bool) ++ ")"
        | (IR.Z_mul_split lg2s @@@ args) =>
          special_name "mulx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_add_with_get_carry lg2s @@@ args) =>
@@ -428,7 +432,10 @@ Module Rust.
               (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
               Some ty)
           | IR.Z_bneg
-            => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
+            => ((* bneg is logical negation, printed as [(e == 0) as
+                   u1], which yields a value of exactly the 1-bit type
+                   the IR assigns to it, for an argument of any
+                   integer type; so we don't ever need to cast *)
               None, None)
           end.
 
