@@ -146,6 +146,8 @@ Module Compilers.
                => ident_info_of_cmovznz (IntSet.singleton ty)
              | iunop (Z_value_barrier ty)
                =>ident_info_of_value_barrier (IntSet.singleton ty)
+             | iunop Z_bneg
+               => ident_info_of_bitwidths_used (IntSet.singleton _Bool)
              | literal _
              | List_nth _
              | Addr
@@ -459,6 +461,14 @@ Module Compilers.
                   | None => (tout, None)
                   end.
 
+          Definition un_op_natural_output_opt
+            : Z_unop -> option int.type -> option int.type
+            := fun idc t =>
+                 match idc with
+                 | Z_bneg => Some _Bool
+                 | _ => t
+                 end.
+
           Definition Zcast {always : bool}
             : option int.type -> arith_expr_for_base tZ -> arith_expr_for_base tZ
             := fun desired_type '(e, known_type)
@@ -607,7 +617,7 @@ Module Compilers.
             : option int.type -> arith_expr_for (type.base s) -> arith_expr_for (type.base d)
             := fun desired_type '(e, t) =>
                  let '(cstout, cst) := un_op_casts_opt idc desired_type t in
-                 let typ := (*un_op_natural_output_opt idc*) Option.or_else cst t in
+                 let typ := un_op_natural_output_opt idc (Option.or_else cst t) in
                  let '(e, t) := Zcast (always:=false) cst (e, t) in
                  Zcast (always:=false) cstout ((idc @@@ e)%Cexpr, typ).
 
