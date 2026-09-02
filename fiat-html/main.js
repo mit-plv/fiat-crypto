@@ -425,7 +425,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 populateStdinEntries(JSON.parse(decodeURIComponent(stdin)));
                 populateFileEntries(JSON.parse(decodeURIComponent(files)));
                 document.querySelector(`input[value="${inputType}"]`).checked = true;
-                updateInputType(inputType);
+                // The box already holds argv as JSON, so only the string view
+                // needs converting; running the string decoder over JSON text
+                // would show a mangled command line (scrutineer finding #2519).
+                if (inputType === 'string') {
+                    updateInputType('string');
+                } else {
+                    validateInput();
+                }
                 inputForm.classList.remove('hidden');
             }
             parseAndRun(argv, stdin, files);
