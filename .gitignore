@@ -242,6 +242,8 @@ fiat-amd64/*.status
 fiat-amd64/*.only-status
 fiat-amd64/*.description
 fiat-amd64/*.invocation
+fiat-amd64/negative-tests/*.status
+fiat-amd64/negative-tests/*.stdout
 fiat-html/fiat_crypto.js
 fiat-html/fiat_crypto.map
 fiat-html/wasm/fiat_crypto.js
