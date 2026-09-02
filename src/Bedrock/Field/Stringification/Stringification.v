@@ -16,6 +16,7 @@ Require Import Crypto.Bedrock.Field.Translation.Func.
 Require Import Crypto.Bedrock.Field.Stringification.FlattenVarData.
 Require Import Crypto.Bedrock.Field.Stringification.LoadStoreListVarData.
 Require Import Crypto.Stringification.C.
+Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Option.
 Import Stringification.Language.Compilers.
@@ -249,6 +250,27 @@ Definition Bedrock2_ToFunctionLines
     | _,_ => inr ("Only 32-bit and 64-bit targets are supported")
     end.
 
+(** The bedrock2 C prelude ([ToCString.prelude]) types every word as
+    [br_word_t], an alias of [uintptr_t], and [_br_load]/[_br_store]
+    access [sizeof(br_word_t)] bytes.  The limb stride and the buffer
+    sizes baked into the generated code, on the other hand, are fixed by
+    the [machine_wordsize] the code was synthesized for.  Compiling a
+    file synthesized for 32-bit words on a target whose [uintptr_t] is
+    64 bits wide would therefore read and write 4 bytes past the end of
+    every limb array and compute incorrect field arithmetic (and
+    vice-versa for 64-bit files on 32-bit targets).  The prelude's own
+    [static_assert(UINTPTR_MAX <= BR_WORD_MAX, ...)] cannot catch this,
+    since [BR_WORD_MAX] is defined as [UINTPTR_MAX].  We emit an
+    additional guard tying the target word width to the synthesis word
+    size, so that such a mismatch is a compile-time error rather than a
+    silent memory-safety and correctness bug. *)
+Definition bedrock2_machine_wordsize_guard (machine_wordsize : Z) : list string :=
+  let bits := Decimal.Z.to_string machine_wordsize in
+  [""
+   ; ("// This file was synthesized for " ++ bits ++ "-bit words; br_word_t (uintptr_t) must be exactly that wide on the target.")%string
+   ; ("static_assert(BR_WORD_MAX == UINT" ++ bits ++ "_MAX, ""this file was synthesized for " ++ bits ++ "-bit words; compile it only for a target whose uintptr_t is " ++ bits ++ " bits wide"");")%string
+  ].
+
 Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
   {|
     ToString.comment_block s
@@ -259,7 +281,9 @@ Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
 
     ToString.ToFunctionLines := @Bedrock2_ToFunctionLines;
 
-    ToString.header := fun _ _ _ _ _ _ _ _ _ _ _ => [""; ToCString.prelude];
+    ToString.header
+    := fun _ _ _ _ _ machine_wordsize _ _ _ _ _
+       => [""; ToCString.prelude] ++ bedrock2_machine_wordsize_guard machine_wordsize;
 
     ToString.footer := fun _ _ _ _ _ _ _ _ _ => [];
 
