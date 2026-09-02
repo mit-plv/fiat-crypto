@@ -232,7 +232,7 @@ pub const fn fiat_25519_scalar_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u6
 /// ```
 #[inline]
 pub const fn fiat_25519_scalar_cmovznz_u64(out1: &mut u64, arg1: fiat_25519_scalar_u1, arg2: u64, arg3: u64) {
-  let x1: fiat_25519_scalar_u1 = (!(!arg1));
+  let x1: fiat_25519_scalar_u1 = ((((arg1 == 0) as fiat_25519_scalar_u1) == 0) as fiat_25519_scalar_u1);
   let x2: u64 = ((((((0x0 as fiat_25519_scalar_i2) - (x1 as fiat_25519_scalar_i2)) as fiat_25519_scalar_i1) as i128) & (0xffffffffffffffff as i128)) as u64);
   let x3: u64 = ((x2 & arg3) | ((!x2) & arg2));
   *out1 = x3;

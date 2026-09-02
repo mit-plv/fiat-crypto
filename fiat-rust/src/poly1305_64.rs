@@ -256,7 +256,7 @@ pub const fn fiat_poly1305_subborrowx_u43(out1: &mut u64, out2: &mut fiat_poly13
 /// ```
 #[inline]
 pub const fn fiat_poly1305_cmovznz_u64(out1: &mut u64, arg1: fiat_poly1305_u1, arg2: u64, arg3: u64) {
-  let x1: fiat_poly1305_u1 = (!(!arg1));
+  let x1: fiat_poly1305_u1 = ((((arg1 == 0) as fiat_poly1305_u1) == 0) as fiat_poly1305_u1);
   let x2: u64 = ((((((0x0 as fiat_poly1305_i2) - (x1 as fiat_poly1305_i2)) as fiat_poly1305_i1) as i128) & (0xffffffffffffffff as i128)) as u64);
   let x3: u64 = ((x2 & arg3) | ((!x2) & arg2));
   *out1 = x3;
