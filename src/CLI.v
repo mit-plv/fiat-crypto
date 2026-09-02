@@ -555,6 +555,14 @@ Module ForExtraction.
     := ([Arg.long_key "debug-asm-symex-first"],
         Arg.Unit,
         ["Debug option: If true, the assembly equivalence checker will symex the assembly first, even though this may be more inefficient.  This may be useful for having a more concise description of errors in assembly symbolic execution."]).
+  Definition asm_aliasing_check_spec : named_argT
+    := ([Arg.long_key "asm-aliasing-check"],
+        Arg.Unit,
+        ["Additionally check that each assembly function computes the reference function when its output arrays share memory with input arrays of the same length (e.g., when called as mul(x, x, y)), which the generated C code supports.  This check only rejects more assembly; it is not covered by the soundness proof of the equivalence checker.  Only relevant when --hints-file is specified.  " ++ (if default_assembly_check_aliasing then "This is the default; see --no-asm-aliasing-check." else "Defaults to off.")]).
+  Definition no_asm_aliasing_check_spec : named_argT
+    := ([Arg.long_key "no-asm-aliasing-check"],
+        Arg.Unit,
+        ["Only check the assembly for the case where all of its array arguments are disjoint (this is the only case covered by the soundness proof of the equivalence checker); see --asm-aliasing-check.  Takes precedence over --asm-aliasing-check.  Only relevant when --hints-file is specified."]).
   Definition doc_text_before_function_name_spec : named_argT
     := ([Arg.long_key "doc-text-before-function-name"],
         Arg.String,
@@ -740,6 +748,8 @@ Module ForExtraction.
         ; asm_rewriting_passes_spec
         ; asm_node_reveal_depth_spec
         ; asm_debug_symex_asm_first_spec
+        ; asm_aliasing_check_spec
+        ; no_asm_aliasing_check_spec
         ; doc_text_before_function_name_spec
         ; doc_text_before_type_name_spec
         ; doc_newline_before_package_declaration_spec
@@ -800,6 +810,8 @@ Module ForExtraction.
              , asm_rewriting_passesv
              , asm_node_reveal_depthv
              , asm_debug_symex_asm_firstv
+             , asm_aliasing_checkv
+             , no_asm_aliasing_checkv
              , doc_text_before_function_namev
              , doc_text_before_type_namev
              , doc_newline_before_package_declarationv
@@ -886,6 +898,7 @@ Module ForExtraction.
                       ; assembly_argument_registers_left_to_right_ := negb (to_bool asm_reg_rtlv)
                       ; assembly_labels_fuzzy_suffixes_ := negb (to_bool asm_label_exact_matchv)
                       ; assembly_labels_fuzzy_prefixes_ := negb (to_bool asm_label_exact_matchv)
+                      ; assembly_check_aliasing_ := negb (to_bool no_asm_aliasing_checkv) && (to_bool asm_aliasing_checkv || default_assembly_check_aliasing)
                       |}
                     ; symbolic_options_ :=
                       {| asm_rewriting_pipeline := to_rewriting_pipeline_list asm_rewriting_pipelinev
