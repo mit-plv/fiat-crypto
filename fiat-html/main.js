@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var text = document.createTextNode(html);
         var p = document.createElement('p');
         p.appendChild(text);
-        return p.innerHTML;
+        return p.innerHTML.replace(/"/g, '&quot;');
     }
 
 
