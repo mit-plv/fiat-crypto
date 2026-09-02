@@ -496,10 +496,30 @@ Ltac step_GetReg :=
     [eassumption|..|clear H]
   end.
 
-Lemma Address_R {opts : symbolic_options_computed_opt} {descr:description} s m (HR : R s m) (sa:AddressSize) o a s' (H : Symbolic.Address o s = Success (a, s'))
-  : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = v.
+Lemma Address_AddressSupported {opts : symbolic_options_computed_opt} {descr : description}
+  {sa : AddressSize} o s i s'
+  (H : @Symbolic.Address opts descr sa o s = Success (i, s'))
+  : AddressSupported o = true.
 Proof using Type.
-  destruct o as [? ? ? ?]; cbv [Address DenoteAddress Syntax.mem_base_reg Syntax.mem_offset Syntax.mem_scale_reg err ret] in *; repeat step_symex.
+  destruct o as [bits base scale label off rip];
+    destruct rip, label;
+    cbv [Address AddressSupported err ret bind ErrorT.bind] in *;
+    repeat first [ progress inversion_ErrorT
+                 | progress inversion_pair
+                 | progress subst
+                 | break_innermost_match_hyps_step; cbn [fst snd] in * ].
+  all: reflexivity.
+Qed.
+
+Lemma Address_R {opts : symbolic_options_computed_opt} {descr:description} s m (HR : R s m) (sa:AddressSize) o a s' (H : Symbolic.Address o s = Success (a, s'))
+  : AddressSupported o = true /\ R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = v.
+Proof using Type.
+  pose proof (Address_AddressSupported o s a s' H) as Hsupported.
+  split; [ exact Hsupported | ].
+  destruct o as [bits base scale label off rip].
+  cbv [AddressSupported] in Hsupported.
+  destruct rip, label; try discriminate Hsupported.
+  cbv [Address DenoteAddress Syntax.mem_base_reg Syntax.mem_offset Syntax.mem_scale_reg err ret] in *; repeat step_symex.
   all : repeat first [ progress inversion_ErrorT
                      | progress inversion_pair
                      | progress subst
@@ -514,10 +534,39 @@ Proof using Type.
   all : f_equal; lia.
 Qed.
 
+Lemma Load_AddressSupported {opts : symbolic_options_computed_opt} {descr : description}
+  {so : OperationSize} {sa : AddressSize} o s i s'
+  (H : @Symbolic.Load opts descr so sa o s = Success (i, s'))
+  : AddressSupported o = true.
+Proof using Type.
+  cbv [Load] in H.
+  destruct (negb _) eqn:Hsize in H.
+  { cbv [err] in H; inversion H. }
+  cbv [bind ErrorT.bind] in H.
+  destruct (Address o s) as [[addr st]|e] eqn:Haddr in H.
+  { eapply Address_AddressSupported; exact Haddr. }
+  cbn in H; inversion H.
+Qed.
+
+Lemma Store_AddressSupported {opts : symbolic_options_computed_opt} {descr : description}
+  {so : OperationSize} {sa : AddressSize} o v s tt s'
+  (H : @Symbolic.Store opts descr so sa o v s = Success (tt, s'))
+  : AddressSupported o = true.
+Proof using Type.
+  cbv [Store] in H.
+  destruct (negb _) eqn:Hsize in H.
+  { cbv [err] in H; inversion H. }
+  cbv [bind ErrorT.bind] in H.
+  destruct (Address o s) as [[addr st]|e] eqn:Haddr in H.
+  { eapply Address_AddressSupported; exact Haddr. }
+  cbn in H; inversion H.
+Qed.
+
 Ltac step_Address :=
   match goal with HSa: context[Address] |- _ =>
       eapply Address_R in HSa; [|eassumption];
-          destruct HSa as (?&?&?&?&?)
+          let Hsupported := fresh "Hsupported" in
+          destruct HSa as (Hsupported&?&?&?&?&?)
   end.
 
 Ltac step_symex4 := first [step_symex3 | step_SetFlag | step_Address].
@@ -751,6 +800,9 @@ Proof using Type.
     { setoid_rewrite H4.
       eexists; split; eauto; f_equal.
       rewrite H5 at 1; trivial. } }
+  { exfalso.
+    pose proof (Load_AddressSupported m0 s i s' H).
+    congruence. }
   { step_symex; repeat (eauto||econstructor). }
 Qed.
 
@@ -824,7 +876,8 @@ Proof using Type.
     destr.destr (j - Z.of_N (reg_offset r) <? Z.of_N (reg_size r)); try (revert dependent j; clear -H6; lia).
     rewrite Bool.andb_true_r, Bool.andb_false_r, Bool.orb_false_l.
     rewrite H8, Z.land_spec, Z.ones_spec_high; revert dependent j; lia. }
-  { progress cbv [Store] in *.
+  { pose proof (Store_AddressSupported m0 i s _tt s' H) as Hsupported.
+    progress cbv [Store] in *.
     destruct_one_match_hyp; cbv [err] in *; inversion_ErrorT.
     repeat (step_symex; cbn [fst snd] in * ).
     eapply Load64_R in HSold; eauto;
@@ -839,10 +892,11 @@ Proof using Type.
       destruct_head'_ex; destruct_head'_and.
       cbv [SetMem Crypto.Util.Option.bind update_mem_with] in *;
         destruct set_mem eqn:? in *; Option.inversion_option; subst.
-      erewrite store8; eauto 9. }
+      rewrite Hsupported; erewrite store8; eauto 9. }
     { eapply Store64_R with (v':=v) in H;
         try eassumption; eauto with nocore; try solve [rewrite H5; bitblast.Z.bitblast].
-      destruct_head'_ex; destruct_head'_and. setoid_rewrite H. eauto 9. } }
+      destruct_head'_ex; destruct_head'_and.
+      rewrite Hsupported; setoid_rewrite H; eauto 9. } }
 Qed.
 
 Ltac step_SetOperand :=
@@ -1089,17 +1143,17 @@ Proof using Type.
     destr (i - Z.of_N (reg_offset r) <? Z.of_N (reg_size r)); Btauto.btauto. }
   { destruct m'; cbv [SetMem update_mem_with Crypto.Util.Option.bind get_mem option_map set_mem store_bytes unchecked_store_bytes] in *; repeat (destruct_one_match_hyp || Option.inversion_option).
     inversion Hs; clear Hs; subst; f_equal.
-    clear E0.
     change (@map.putmany ?K ?V ?M ?m) with (@map.putmany K V M machine_mem_state).
     set (word.of_Z _) as a in *; clearbody a.
     rename n into n'; set (N.to_nat (operand_size m0 n' / 8)) as n in *; clearbody n; clear n'.
-    epose proof (length_load_bytes _ _ _ _ E1) as Hl; rewrite <-Hl, split_le_combine.
+    epose proof (length_load_bytes _ _ _ _ E2) as Hl.
+    rewrite <-Hl, split_le_combine.
     eapply (@map.map_ext _ _ mem_state _); intro k.
     rewrite Properties.map.get_putmany_dec, OfListWord.map.get_of_list_word_at.
     destruct_one_match; trivial.
-    epose proof ListUtil.nth_error_value_length _ _ _ _ E.
-    rewrite <-E; clear E.
-    rewrite (nth_error_load_bytes _ _ _ _ E1 (Z.to_nat (word.unsigned (word.sub k a))) ltac:(lia)).
+    epose proof ListUtil.nth_error_value_length _ _ _ _ E0.
+    rewrite <-E0; clear E0.
+    rewrite (nth_error_load_bytes _ _ _ _ E2 (Z.to_nat (word.unsigned (word.sub k a))) ltac:(lia)).
     rewrite Z2Nat.id, word.of_Z_unsigned by (eapply Properties.word.unsigned_range).
     f_equal. ring. }
 Qed.
