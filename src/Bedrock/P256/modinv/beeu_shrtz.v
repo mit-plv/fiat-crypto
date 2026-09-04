@@ -149,7 +149,7 @@ Proof.
     lia.
 Qed.
 
-Lemma help_lemma_1 (x : word) (H : x < 64) :
+Lemma mask_pow2_sub_1 (x : word) (H : x < 64) :
     word.unsigned (word.sub (word.slu (word.of_Z 1) x) (word.of_Z 1)) = 2^x - 1.
 Proof.
     rewrite word.unsigned_sub, word.unsigned_slu, Z.shiftl_mul_pow2 by ZnWords.
@@ -208,7 +208,7 @@ Proof.
 
 
         assert (word.unsigned mask = 2 ^ x - 1) by
-        (cbv [mask]; eapply help_lemma_1; ZnWords).
+        (cbv [mask]; eapply mask_pow2_sub_1; ZnWords).
 
         remember (eval [MOD0; MOD1; MOD2; MOD3]) as MOD.
         assert ((inv_m * MOD) mod 2^x = (2^64 - 1) mod 2^x).
