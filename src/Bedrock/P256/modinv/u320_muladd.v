@@ -11,15 +11,15 @@ Local Open Scope string_scope. Local Open Scope Z_scope.
 Local Notation eval := (fold_right (fun (a : word) (s : Z) => a + 2^64*s) 0).
 Local Notation array := (array scalar (word.of_Z 8)).
 
-#[export] Instance spec_of_u320_muladd : spec_of "u320_muladd" := 
+#[export] Instance spec_of_u320_muladd : spec_of "u320_muladd" :=
     fnspec! "u320_muladd" (p_v p_m c_prime : word) / (v m : list word) R ~> c,
     {
-        requires t m' := 
-            m' =* array p_v v ⋆ array p_m m ⋆ R 
+        requires t m' :=
+            m' =* array p_v v ⋆ array p_m m ⋆ R
             /\ length v = 5%nat /\ length m = 4%nat;
-        ensures T M := T = t /\ 
+        ensures T M := T = t /\
             exists (r : list word), M =* array p_v r ⋆ array p_m m ⋆ R /\ length r = 5%nat /\
-                2^320 * c + eval r = eval v + c_prime * (eval m) 
+                2^320 * c + eval r = eval v + c_prime * (eval m) /\ 0 <= c < 2
     }.
 
 (** * Implementation *)
@@ -68,14 +68,14 @@ Local Ltac lists_into_elements := repeat match goal with
 Lemma u320_muladd_correct : program_logic_goal_for_function! u320_muladd.
 Proof. repeat straightline. lists_into_elements. unfold array in *.
         repeat (straightline || straightline_call || ZnWords).
-        eexists [_ ; _; _ ; _ ; _ ]. intuition try ecancel_assumption.
-        cbn [eval carry_mul carry_mul'2 carry_mul'1 c] in *.
-        assert (c_prime * m1 <= (2^64 - 1) * (2^64 - 1)) by 
-            (eapply Zorder.Zmult_le_compat; ZnWords).
+        eexists [_ ; _; _ ; _ ; _ ]. intuition try ecancel_assumption;
+        cbn [eval carry_mul carry_mul'2 carry_mul'1 c] in *;
+        assert (c_prime * m1 <= (2^64 - 1) * (2^64 - 1)) by
+            (eapply Zorder.Zmult_le_compat; ZnWords);
         assert (c_prime * m2 <= (2^64 - 1) * (2^64 - 1)) by
-            (eapply Zorder.Zmult_le_compat; ZnWords).
-        assert (c_prime * m3 <= (2^64 - 1) * (2^64 - 1)) by 
-            (eapply Zorder.Zmult_le_compat; ZnWords).
+            (eapply Zorder.Zmult_le_compat; ZnWords);
+        assert (c_prime * m3 <= (2^64 - 1) * (2^64 - 1)) by
+            (eapply Zorder.Zmult_le_compat; ZnWords);
         ZnWords.
 Qed.
 

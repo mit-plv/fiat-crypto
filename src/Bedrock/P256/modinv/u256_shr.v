@@ -11,33 +11,31 @@ Local Notation eval := (fold_right (fun (a : word) (s : Z) => a + 2^64*s) 0).
 Local Notation eval_bool := (fold_right (fun (a : word) (s : Z) => Z.lor a (Z.shiftl s 64)) 0).
 Local Notation array := (array scalar (word.of_Z 8)).
 
-#[export] Instance spec_of_u320_shr : spec_of "u320_shr" :=
-fnspec! "u320_shr" (p_x carry shift : word) / (x : list word) R,
+#[export] Instance spec_of_u256_shr : spec_of "u256_shr" :=
+fnspec! "u256_shr" (p_x shift : word) / (x : list word) R,
 {
     requires t m :=
         m =* array p_x x ⋆ R /\
-            length x = 5%nat /\
-            0%nat < shift < 64%nat /\ carry < 2;
+            length x = 4%nat /\
+            0%nat < shift < 64%nat;
     ensures T M :=
         T = t /\ exists (r : list word) , M =* array p_x r ⋆ R /\
-            length r = 5%nat /\ eval r = Z.shiftr (eval (x ++ [carry])) shift
+            length r = 4%nat /\ eval r = Z.shiftr (eval x) shift
 }.
 
 (** * Implementation *)
 
-Definition u320_shr := func! (p_x, carry, shift)
+Definition u256_shr := func! (p_x, shift)
 {
     sr0 = load(p_x) >> shift | load(p_x + $8) << ($64 - shift);
     sr1 = load(p_x + $8) >> shift | load(p_x + $8 + $8) << ($64 - shift);
     sr2 = load(p_x + $8 + $8) >> shift | load(p_x + $8 + $8 + $8) << ($64 - shift);
-    sr3 = load(p_x + $8 + $8 + $8) >> shift | load(p_x + $8 + $8 + $8 + $8) << ($64 - shift);
-    sr4 = (load(p_x + $8 + $8 + $8 + $8) >> shift) | (carry << ($64 - shift));
+    sr3 = load(p_x + $8 + $8 + $8) >> shift;
 
     store(p_x, sr0);
     store(p_x + $8, sr1);
     store(p_x + $8 + $8, sr2);
-    store(p_x + $8 + $8 + $8, sr3);
-    store(p_x + $8 + $8 + $8 + $8, sr4)
+    store(p_x + $8 + $8 + $8, sr3)
 }.
 
 (** * Proof *)
@@ -66,13 +64,13 @@ Proof.
 Qed.
 
 
-Lemma u320_shr_correct : program_logic_goal_for_function! u320_shr.
+Lemma u256_shr_correct : program_logic_goal_for_function! u256_shr.
 Proof.
     repeat straightline. lists_into_elements. cbv [array] in *.
     repeat (straightline || straightline_call || ZnWords).
-    eexists [_ ; _; _; _; _]. intuition try ecancel_assumption.
+    eexists [_ ; _; _; _]. intuition try ecancel_assumption.
     rewrite !eval_eval_bool.
-    cbv [fold_right v sr1 sr2 sr3 sr4 app].
+    cbv [fold_right v sr1 sr2 sr3 app].
 
     (* Arithmetic proof starts here *)
     repeat rewrite !word.unsigned_or, !word.unsigned_slu, !word.unsigned_sub, !word.unsigned_sru, !word.unsigned_of_Z by ZnWords.
