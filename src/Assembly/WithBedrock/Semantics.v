@@ -245,11 +245,23 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let v := v1 * v2 in
     st <- SetOperand sa s st lo v;
     SetOperand sa s st hi (Z.shiftr v (Z.of_N s))
-  | (Syntax.mul | imul), [src2] =>
+  | Syntax.mul, [src2] =>
     let src1 : ARG := rax in
     v1 <- DenoteOperand sa s st src1;
     v2 <- DenoteOperand sa s st src2;
     let v := v1 * v2 in
+    lo <- resize_reg rax;
+    hi <- (if (s =? 8)%N
+           then Some ah
+           else resize_reg rdx);
+    st <- SetOperand sa s st lo v;
+    st <- SetOperand sa s st hi (Z.shiftr v (Z.of_N s));
+    Some (HavocFlags st) (* conservative *)
+  | imul, [src2] =>
+    let src1 : ARG := rax in
+    v1 <- DenoteOperand sa s st src1;
+    v2 <- DenoteOperand sa s st src2;
+    let v := Z.signed s v1 * Z.signed s v2 in
     lo <- resize_reg rax;
     hi <- (if (s =? 8)%N
            then Some ah
