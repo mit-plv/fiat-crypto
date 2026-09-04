@@ -2,7 +2,7 @@ From Coq Require Import BinInt String List InitialRing.
 From bedrock2 Require Import BasicC64Semantics WeakestPrecondition ProgramLogic NotationsCustomEntry ZnWords.
 Import ListNotations ProgramLogic.Coercions SeparationLogic Array Scalars.
 From coqutil Require Import Tactics.Tactics WithBaseName.
-From coqutil Require Import CountTrailingZeros.
+From coqutil Require Import CountTrailingZeros PushPullMod.
 From bedrock2Examples Require Import full_add full_mul.
 
 Require Import br_ctz u320_shr u256_shr u320_muladd.
@@ -107,20 +107,19 @@ Proof.
     intros Hz.
     destruct (Z.eq_dec (z mod 2 ^ 64) 0) as [Hmod | Hmod].
     {
-    rewrite Hmod.
-    change (lctz 64 0) with 64.
-    change (Z.min 64 63) with 63.
-    symmetry.
-    apply Z.min_r.
-    destruct (Z.lt_ge_cases (lctz 64 z) 64) as [Hlt | Hge]; [ | lia ].
-    pose proof (Z.mod_pow2_bits_low z 64 (lctz 64 z) Hlt) as Hlow.
-    rewrite Hmod, Z.testbit_0_l, (lctz_testbit_eq 64 z Hz) in Hlow.
-    discriminate Hlow.
+        rewrite Hmod.
+        cbn [lctz pos_ctz].
+        change (Z.min 64 63) with 63.
+        symmetry. apply Z.min_r.
+        destruct (Z.lt_ge_cases (lctz 64 z) 64) as [Hlt | Hge]; [ | lia ].
+        pose proof (Z.mod_pow2_bits_low z 64 (lctz 64 z) Hlt) as Hlow.
+        rewrite Hmod, Z.testbit_0_l, (lctz_testbit_eq 64 z Hz) in Hlow.
+        discriminate Hlow.
     }
     {
-    change (2 ^ 64) with (2 ^ Z.of_nat 64%nat) in *.
-    rewrite lctz_eq_mod_pow2 by (exact Hz + exact Hmod).
-    reflexivity.
+        change (2 ^ 64) with (2 ^ Z.of_nat 64%nat) in *.
+        rewrite lctz_eq_mod_pow2 by (exact Hz + exact Hmod).
+        reflexivity.
     }
 Qed.
 
@@ -128,8 +127,7 @@ Lemma lctz_nonneg (default x : Z) : x > 0 -> 0 <= lctz default x.
 Proof.
     intros Hx.
     destruct x as [ | p | p ]; [ lia | | lia ].
-    cbv [lctz].
-    lia.
+    cbv [lctz]. lia.
 Qed.
 
 Lemma mod_pow2_divides (x a b : Z) :
@@ -150,6 +148,20 @@ Proof.
     assert (0 < 2 ^ b) by (apply Z.pow_pos_nonneg; lia).
     lia.
 Qed.
+
+Lemma help_lemma_1 (x : word) (H : x < 64) :
+    word.unsigned (word.sub (word.slu (word.of_Z 1) x) (word.of_Z 1)) = 2^x - 1.
+Proof.
+    rewrite word.unsigned_sub, word.unsigned_slu, Z.shiftl_mul_pow2 by ZnWords.
+    ZnWords_pre. rewrite_strat bottomup Z.mod_small. all: ssplit; rewrite ?Z.mul_1_l;
+    repeat match goal with
+    | [|- 2^?x - 1 < 2^_] => eapply Z.lt_le_trans with (m := 2^x); [ZnWords| ]
+    | [|- 2^_ < 2^_] => eapply Z.pow_lt_mono_r
+    | [|- 2^_ <= 2^_] => eapply Z.pow_le_mono_r
+    | [|- _] => ZnWords
+    end.
+Qed.
+
 
 Lemma beeu_shrtz_ok : program_logic_goal_for_function! beeu_shrtz.
 Proof.
@@ -174,124 +186,92 @@ Proof.
         fold (array p_m [MOD0; MOD1; MOD2; MOD3]) in *.
         repeat straightline. straightline_call; intuition try ecancel_assumption.
         repeat straightline. straightline_call; intuition try ecancel_assumption.
-        all:rewrite Properties.word.unsigned_or_nowrap, word.unsigned_slu, !word.unsigned_of_Z in * by ZnWords; cbv [word.wrap] in *;
-        rewrite Z.shiftl_mul_pow2, !Z.mod_small in H10 by (try rewrite !Z.mod_small; ZnWords);
+        all:rewrite Properties.word.unsigned_or_nowrap, word.unsigned_slu, !word.unsigned_of_Z in * by ZnWords;
+        cbv [word.wrap] in *; rewrite Z.shiftl_mul_pow2, !Z.mod_small in H10 by (try rewrite !Z.mod_small; ZnWords);
         rewrite <- (eval_mod [a1; a2;a3] a0) in H10;
         rewrite lctz_or in H10 by (eapply Z.mod_pos_bound; ZnWords);
         try ZnWords.
-        repeat straightline. eexists _, _, _; intuition try ecancel_assumption.
+        repeat straightline.
+
+        rewrite !lctz_min in * by ZnWords.
+        match goal with
+        | [|- context [lctz 64 ?x]] =>
+            assert (Z.min (lctz 64 x) 63 <= 63) by (eapply Z.le_min_r);
+            assert (0 <= Z.min (lctz 64 x) 63) by (eapply Z.min_glb; [eapply lctz_nonneg | ]; ZnWords)
+        end.
+
+        match goal with
+        | [H : 2^320 * (word.unsigned ?x) + fold_right _ 0 ?y = _ |- _] =>
+            replace (2^320 * x + eval y) with (eval (y ++ [x])) in H by
+                (lists_into_elements; cbv [app eval]; ZnWords)
+        end.
+
+
+        assert (word.unsigned mask = 2 ^ x - 1) by
+        (cbv [mask]; eapply help_lemma_1; ZnWords).
+
+        remember (eval [MOD0; MOD1; MOD2; MOD3]) as MOD.
+        assert ((inv_m * MOD) mod 2^x = (2^64 - 1) mod 2^x).
         {
-            rewrite H13, H10, Z.shiftr_div_pow2, lctz_min by ZnWords.
-            rewrite ZLib.Z.div_mul_undo; try ZnWords;
+            rewrite <- Z.mod_mod_divide with (b := 2^64);
+            [ | exists (2^(64 - x)); rewrite <- Z.pow_add_r];
+            f_equal; lia.
+        }
+
+        assert (word.unsigned v = ((eval [y0; y1; y2; y3; y4]) * inv_m) mod 2^x).
+        {
+            cbv [v] in *.
+            rewrite Properties.word.unsigned_and_nowrap.
+            rewrite word.unsigned_mul.
+            match goal with
+            | [H : ?x = 2^_ - 1|- context [Z.land _ ?x]]
+                => rewrite H
+            end.
+            rewrite Z.sub_1_r, <- Z.ones_equiv, Z.land_ones by ZnWords.
+            cbv [word.wrap].
+            rewrite <- (eval_mod [y1;y2;y3;y4]).
+            rewrite Zmult_mod_idemp_l, Z.mod_mod_divide; try lia.
+            exists (2^(64-x)). rewrite <- Z.pow_add_r by ZnWords.
+            f_equal; lia.
+        }
+        remember (eval [y0; y1; y2; y3; y4]) as y.
+
+        eexists _, _, _; intuition try ecancel_assumption.
+        {
+            rewrite H13, H10, Z.shiftr_div_pow2, ZLib.Z.div_mul_undo; try ZnWords.
             pose proof (lctz_nonneg 64 (eval [a0;a1;a2;a3]) H9); try lia.
             eapply mod_pow2_divides with (a := (lctz 64 (eval [a0;a1;a2;a3]))); ssplit;
             try lia; try eapply Z.min_l. eapply lctz_mod_pow2; lia.
         }
         {
-            assert (word.unsigned mask = 2 ^ (Z.min (lctz 64 (eval [a0; a1; a2; a3])) 63) -1).
-            {
-                cbv [mask] in *.
-                rewrite word.unsigned_sub, word.unsigned_slu, <- !word.unsigned_of_Z,
-                Properties.word.unsigned_of_Z_1, Z.shiftl_mul_pow2, Z.mul_1_l by ZnWords.
-                rewrite H10, lctz_min by ZnWords.
-                assert (Z.min (lctz 64 (eval [a0; a1; a2; a3])) 63 <= 63) by (eapply Z.le_min_r).
-                assert (0 <= Z.min (lctz 64 (eval [a0; a1; a2; a3])) 63) by (eapply Z.min_glb; [eapply lctz_nonneg | ]; ZnWords).
-                assert (0 < 2) by econstructor.
-                pose proof (Z.pow_le_mono_r _ _ _ H21 H7).
-
-                rewrite_strat bottomup Properties.word.unsigned_of_Z_nowrap. all: ssplit; try ZnWords.
-            }
-            assert (Z.min (lctz 64 (eval [a0; a1; a2; a3])) 63 <= 63) by (eapply Z.le_min_r).
-            assert (0 <= Z.min (lctz 64 (eval [a0; a1; a2; a3])) 63) by (eapply Z.min_glb; [eapply lctz_nonneg | ]; ZnWords).
-            replace (2^320 * x0 + eval x1) with (eval (x1 ++ [x0])) in H15 by
-                (lists_into_elements; cbv [app eval] in *; ZnWords).
-            rewrite H20, H15 in *.
-            rewrite Z.shiftr_div_pow2, H10, lctz_min by ZnWords.
-            rewrite ZLib.Z.div_mul_undo; try ZnWords.
-            { rewrite Z_mod_plus_full. reflexivity. }
-            remember (Z.min (lctz 64 (eval [a0;a1;a2;a3])) 63) as s.
-            remember (eval [MOD0; MOD1; MOD2; MOD3]) as MOD.
-            assert (word.unsigned v = ((eval [y0; y1; y2; y3; y4]) * inv_m) mod 2^s).
-            {
-                cbv [v] in *.
-                rewrite Properties.word.unsigned_and_nowrap.
-                rewrite word.unsigned_mul.
-                rewrite Z.sub_1_r, <- Z.ones_equiv in H7.
-                cbv [word.wrap]. rewrite H7.
-                rewrite Z.land_ones by ZnWords.
-                rewrite <- (eval_mod [y1;y2;y3;y4] y0).
-                remember (eval [y0;y1;y2;y3;y4]) as y.
-                rewrite Zmult_mod_idemp_l.
-                rewrite Z.mod_mod_divide; eauto.
-                exists (2^(64-s)). rewrite <- Z.pow_add_r by lia.
-                f_equal. lia.
-            }
-            remember (eval [y0;y1;y2;y3;y4]) as y.
-            assert ((inv_m * MOD) mod (2^s) = (2^64 - 1) mod (2^s)).
-            {
-                rewrite <- Z.mod_mod_divide with (b:= 2^64).
-                1: f_equal; eauto.
-                exists (2^(64-s)); rewrite <- Z.pow_add_r by lia;f_equal; lia.
-            }
-            rewrite H22, Zplus_mod, Zmult_mod_idemp_l,<- Z.mul_assoc, Z.mul_mod, H23 by lia.
-            rewrite <- Z.mul_mod, <- Zplus_mod by lia.
-            eapply Zdivisibility.Z.mod0_divide.
-            exists (y * 2^(64-s)). rewrite <- Z.mul_assoc, <- Z.pow_add_r by lia.
-            replace (64 - s + s) with 64 by lia.
+            rewrite H20, H15, Z.shiftr_div_pow2, H10 in * by ZnWords.
+            rewrite ZLib.Z.div_mul_undo; try lia.
+            { rewrite Z_mod_plus_full. eauto. }
+            rewrite H23, <- H10 in *. Z.push_pull_mod.
+            rewrite <- Z.mul_assoc. do 2 Z.push_mod_step. rewrite H22.
+            Z.push_pull_mod. eapply Zdivisibility.Z.mod0_divide.
+            eexists (y * (2^(64-x))). rewrite <- Z.mul_assoc, <- Z.pow_add_r, Z.sub_add by lia.
             lia.
         }
         {
-            assert (word.unsigned mask = 2 ^ (Z.min (lctz 64 (eval [a0; a1; a2; a3])) 63) -1).
-            {
-                cbv [mask] in *.
-                rewrite word.unsigned_sub, word.unsigned_slu, <- !word.unsigned_of_Z,
-                Properties.word.unsigned_of_Z_1, Z.shiftl_mul_pow2, Z.mul_1_l by ZnWords.
-                rewrite H10, lctz_min by ZnWords.
-                assert (Z.min (lctz 64 (eval [a0; a1; a2; a3])) 63 <= 63) by (eapply Z.le_min_r).
-                assert (0 <= Z.min (lctz 64 (eval [a0; a1; a2; a3])) 63) by (eapply Z.min_glb; [eapply lctz_nonneg | ]; ZnWords).
-                assert (0 < 2) by econstructor.
-                pose proof (Z.pow_le_mono_r _ _ _ H21 H7).
-
-                rewrite_strat bottomup Properties.word.unsigned_of_Z_nowrap. all: ssplit; try ZnWords.
-            }
-            assert (v < (2 ^ (Z.min (lctz 64 (eval [a0; a1; a2; a3])) 63))).
-            {
-                cbv [v] in *.
-                rewrite Properties.word.unsigned_and_nowrap, H7.
-                rewrite Z.sub_1_r in *.
-                rewrite <- Z.ones_equiv in *.
-                assert (0 <= Z.min (lctz 64 (eval [a0; a1; a2; a3])) 63).
-                {
-                    eapply Z.min_glb; [eapply lctz_nonneg | ]; ZnWords.
-                }
-                rewrite Z.land_ones in * by ZnWords.
-                eapply Z.mod_pos_bound; ZnWords.
-            }
-            replace (2 ^ 320 * x0 + eval x1) with (eval (x1 ++ [x0])) in H15 by
-            ( lists_into_elements; cbv [app eval] in *; ZnWords).
-            lists_into_elements. cbv [app eval] in *.
-            rewrite Z.shiftr_div_pow2, lctz_min, H10 in * by ZnWords.
-            rewrite H20.
+            assert (word.unsigned v <= 2^x - 1) by
+                (pose proof (Z.mod_pos_bound (y * inv_m) (2^x)) as Hbound; ZnWords).
+            rewrite Z.shiftr_div_pow2, <- H10, H20 in * by ZnWords.
             eapply Z.le_trans. 1: eapply ZLib.Z.div_mul_undo_le; ZnWords.
-            rewrite H15. eapply Zorder.Zplus_le_compat_l, Z.mul_le_mono_nonneg_r; ZnWords.
+            rewrite H15. eapply Zorder.Zplus_le_compat_l, Z.mul_le_mono_nonneg_r;
+            rewrite ?HeqMOD; cbv [eval]; ZnWords.
         }
     }
-    {
-        eexists _, _, _; intuition try ecancel_assumption.
-        all:
-            rewrite Properties.word.unsigned_or_nowrap, word.unsigned_slu, !word.unsigned_of_Z in * by ZnWords; cbv [word.wrap] in *;
-            rewrite Z.shiftl_mul_pow2, !Z.mod_small in H10 by (try rewrite !Z.mod_small; ZnWords);
-            rewrite <- (eval_mod [a1; a2;a3] a0), H6 in H10;
-            rewrite lctz_or in H10 by (eapply Z.mod_pos_bound; ZnWords);
-            destruct (Z.min_dec (lctz 64 (eval [a0; a1;a2;a3] mod (2^64))) 63) as [e | e];
-            rewrite e in H10; try discriminate; rewrite <- (lctz_eq_mod_pow2 _ _ 64%nat) by
-            ( try assumption;
-              rewrite eval_mod in *; intros contra; rewrite contra in *; discriminate
-            );
-            replace (Z.of_nat 64) with 64 by lia;
-            rewrite <- H10;
-            rewrite Z.min_l by lia;
-            try f_equal; lia.
+    {   rewrite Properties.word.unsigned_or_nowrap, word.unsigned_slu, !word.unsigned_of_Z in * by ZnWords;
+        cbv [word.wrap] in *.
+        rewrite Z.shiftl_mul_pow2 in * by ZnWords.
+        rewrite !Z.mod_small in H10 by (try rewrite !Z.mod_small; ZnWords).
+        rewrite <- (eval_mod [a1;a2;a3] a0), H6, lctz_or in H10 by (eapply Z.mod_pos_bound; ZnWords).
+        rewrite lctz_min in H10 by ZnWords.
+        destruct (Z.min_dec (lctz 64 (eval [a0;a1;a2;a3])) 63) as [e | e];
+        rewrite e in H10; try discriminate. rewrite e, <- H10.
+        eexists _, _, _; intuition try ecancel_assumption;
+            rewrite ?Z.pow_0_r; try f_equal; ZnWords.
     }
 Qed.
 
