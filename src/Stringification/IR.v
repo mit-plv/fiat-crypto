@@ -75,6 +75,12 @@ Module Compilers.
         | Z_shiftl (offset : BinInt.Z)
         (*| Z_opp*)
         | Z_lnot (ty:int.type)
+        (** [Z_bneg] is logical (boolean) negation: it takes its
+            argument to [1] if the argument is [0], and to [0]
+            otherwise.  Its result therefore always fits in a 1-bit
+            type ([_Bool]), whatever the type of the argument.  It is
+            NOT bitwise complement (that is [Z_lnot]); backends must
+            print it as a genuine zero-test (e.g. C's [!]). *)
         | Z_bneg
         | Z_value_barrier (ty:int.type)
         .
@@ -146,6 +152,12 @@ Module Compilers.
                => ident_info_of_cmovznz (IntSet.singleton ty)
              | iunop (Z_value_barrier ty)
                =>ident_info_of_value_barrier (IntSet.singleton ty)
+             | iunop Z_bneg
+               (* the result of logical negation has the 1-bit type
+                  [_Bool]; backends which spell out that type (e.g.
+                  Rust's [as fiat_u1]) need its typedef to be
+                  declared *)
+               => ident_info_of_bitwidths_used (IntSet.singleton _Bool)
              | literal _
              | List_nth _
              | Addr
@@ -458,6 +470,26 @@ Module Compilers.
                     => un_op_casts idc tout t1
                   | None => (tout, None)
                   end.
+          (** [un_op_natural_output_opt] takes in a unary operation
+              and the known type of its (possibly already cast)
+              input, and returns the type that the output is known to
+              fit in if no casts are present.  This is not
+              language-specific: it follows from the semantics of the
+              IR operation. *)
+          Definition un_op_natural_output_opt
+            : Z_unop -> option int.type -> option int.type
+            := fun idc t
+               => match idc with
+                  | Z_bneg
+                    (* logical negation always yields 0 or 1,
+                       regardless of the width of its argument *)
+                    => Some _Bool
+                  | Z_shiftr _
+                  | Z_shiftl _
+                  | Z_lnot _
+                  | Z_value_barrier _
+                    => t
+                  end.
 
           Definition Zcast {always : bool}
             : option int.type -> arith_expr_for_base tZ -> arith_expr_for_base tZ
@@ -607,7 +639,7 @@ Module Compilers.
             : option int.type -> arith_expr_for (type.base s) -> arith_expr_for (type.base d)
             := fun desired_type '(e, t) =>
                  let '(cstout, cst) := un_op_casts_opt idc desired_type t in
-                 let typ := (*un_op_natural_output_opt idc*) Option.or_else cst t in
+                 let typ := un_op_natural_output_opt idc (Option.or_else cst t) in
                  let '(e, t) := Zcast (always:=false) cst (e, t) in
                  Zcast (always:=false) cstout ((idc @@@ e)%Cexpr, typ).
 
