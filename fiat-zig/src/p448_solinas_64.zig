@@ -96,7 +96,7 @@ inline fn subborrowxU56(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) v
 inline fn cmovznzU64(out1: *u64, arg1: u1, arg2: u64, arg3: u64) void {
     @setRuntimeSafety(mode == .Debug);
 
-    const x1 = (~(~arg1));
+    const x1 = @intFromBool(@intFromBool(arg1 == 0) == 0);
     const x2 = cast(u64, (cast(i128, cast(i1, (cast(i2, 0x0) - cast(i2, x1)))) & cast(i128, 0xffffffffffffffff)));
     const x3 = ((x2 & arg3) | ((~x2) & arg2));
     out1.* = x3;
