@@ -14,8 +14,8 @@ CFLAGS?=
 	c-files bedrock2-files rust-files go-files json-files java-files zig-files generated-files \
 	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-zig-files lite-generated-files \
 	update-go-pkg-cache \
-	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files test-zig-files test-amd64-files test-amd64-files-lite \
-	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files only-test-zig-files only-test-amd64-files only-test-amd64-files-lite \
+	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files test-zig-files test-amd64-files test-amd64-files-lite test-amd64-negative-files \
+	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files only-test-zig-files only-test-amd64-files only-test-amd64-files-lite only-test-amd64-negative-files \
 	test-go-module only-test-go-module \
 	javadoc only-javadoc \
 	#
@@ -406,6 +406,51 @@ only-test-amd64-files: only-test-amd64-files-print-report only-test-amd64-files-
 test-amd64-files-lite: test-amd64-files-lite-print-report test-amd64-files-lite-status
 
 only-test-amd64-files-lite: only-test-amd64-files-lite-print-report only-test-amd64-files-lite-status
+
+# Negative tests for the assembly equivalence checker: inputs which
+# must be rejected quickly with a specific error message, rather than
+# hanging or exhausting memory.  Each test runs the checker and
+# requires that it fails and that its output mentions the expected
+# error.
+AMD64_NEGATIVE_TEST_DIR := fiat-amd64/negative-tests
+AMD64_NEGATIVE_TEST_INVOCATION := $(UNSATURATED_SOLINAS) curve25519 64 5 '2^255 - 19' carry_mul --no-wide-int --shiftr-avoid-uint1 --tight-bounds-mul-by 1.000001
+AMD64_NEGATIVE_STATUS_FILES := \
+	$(AMD64_NEGATIVE_TEST_DIR)/stack-size-too-large-inferred.status \
+	$(AMD64_NEGATIVE_TEST_DIR)/stack-size-too-large-explicit.status \
+	#
+
+# A hints file with `sub rsp, 0x100000000` (scrutineer finding #2517): the inferred stack size must be rejected up front
+$(AMD64_NEGATIVE_TEST_DIR)/stack-size-too-large-inferred.status: $(AMD64_NEGATIVE_TEST_DIR)/stack-size-too-large.asm
+$(AMD64_NEGATIVE_TEST_DIR)/stack-size-too-large-inferred.status: NEGATIVE_TEST_ARGS := --hints-file $(AMD64_NEGATIVE_TEST_DIR)/stack-size-too-large.asm
+$(AMD64_NEGATIVE_TEST_DIR)/stack-size-too-large-inferred.status: NEGATIVE_TEST_EXPECTED_ERROR := exceeds the maximum supported stack size
+# The same bound applies to an explicitly given --asm-stack-size
+$(AMD64_NEGATIVE_TEST_DIR)/stack-size-too-large-explicit.status: fiat-amd64/fiat_curve25519_carry_mul/seed0000000059842304_ratio12536.asm
+$(AMD64_NEGATIVE_TEST_DIR)/stack-size-too-large-explicit.status: NEGATIVE_TEST_ARGS := --hints-file fiat-amd64/fiat_curve25519_carry_mul/seed0000000059842304_ratio12536.asm --asm-stack-size 65537
+$(AMD64_NEGATIVE_TEST_DIR)/stack-size-too-large-explicit.status: NEGATIVE_TEST_EXPECTED_ERROR := exceeds the maximum supported stack size
+
+$(AMD64_NEGATIVE_STATUS_FILES): %.status:
+	$(SHOW)'TEST AMD64 NEGATIVE $(notdir $*) ...'
+	$(HIDE)rm -f $@
+	$(HIDE)if $(TIMER) $(AMD64_NEGATIVE_TEST_INVOCATION) $(NEGATIVE_TEST_ARGS) -o /dev/null --output-asm /dev/null >$*.stdout 2>&1; then \
+	  echo 1 > $@; echo 'TEST AMD64 NEGATIVE $(notdir $*) ... 	$(RED)$(BOLD)FAILED$(NORMAL)$(NC) (unexpectedly succeeded)'; \
+	elif grep -q '$(NEGATIVE_TEST_EXPECTED_ERROR)' $*.stdout; then \
+	  echo 0 > $@; echo 'TEST AMD64 NEGATIVE $(notdir $*) ... 	$(GREEN)$(BOLD)PASSED$(NORMAL)$(NC)'; \
+	else \
+	  echo 1 > $@; echo 'TEST AMD64 NEGATIVE $(notdir $*) ... 	$(RED)$(BOLD)FAILED$(NORMAL)$(NC) (did not report "$(NEGATIVE_TEST_EXPECTED_ERROR)"; see $*.stdout)'; \
+	fi
+
+.PHONY: $(AMD64_NEGATIVE_STATUS_FILES)
+
+clean::
+	$(HIDE)rm -f $(AMD64_NEGATIVE_STATUS_FILES) $(AMD64_NEGATIVE_STATUS_FILES:.status=.stdout)
+
+test-amd64-negative-files: $(UNSATURATED_SOLINAS)
+
+test-amd64-negative-files only-test-amd64-negative-files: $(AMD64_NEGATIVE_STATUS_FILES)
+	$(HIDE)! grep -q -v '^0$$' $(AMD64_NEGATIVE_STATUS_FILES)
+
+test-amd64-files test-amd64-files-lite: test-amd64-negative-files
+only-test-amd64-files only-test-amd64-files-lite: only-test-amd64-negative-files
 
 
 

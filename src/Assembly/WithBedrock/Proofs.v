@@ -3327,7 +3327,7 @@ Theorem check_equivalence_correct
   : Forall
       (fun '(_fname, asm)
        => forall
-           (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
+           (stack_size := N.to_nat (assembly_stack_size_words match strip_ret asm with Success asm => asm | Error _ => asm end))
            (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
            (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
          exists asm' st' (retvals : list (Z + list Z)),
@@ -3472,7 +3472,7 @@ Theorem generate_assembly_of_hinted_expr_correct
               (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers),
              Forall
          (fun '(_fname, asm)
-          => forall (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
+          => forall (stack_size := N.to_nat (assembly_stack_size_words match strip_ret asm with Success asm => asm | Error _ => asm end))
                     (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
                     (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
             (* Should match check_equivalence_correct exactly *)

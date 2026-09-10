@@ -78,7 +78,9 @@ Typeclasses Opaque assembly_output_first_opt.
 Class assembly_argument_registers_left_to_right_opt := assembly_argument_registers_left_to_right : bool.
 #[global]
 Typeclasses Opaque assembly_argument_registers_left_to_right_opt.
-(** Stack size (in bytes) *)
+(** Stack size (in bytes).  Note that the symbolic executor models
+    the stack as a list of 64-bit words; see
+    [assembly_stack_size_words] for the conversion. *)
 Class assembly_stack_size_opt := assembly_stack_size' : option N.
 #[global]
 Typeclasses Opaque assembly_stack_size_opt.
@@ -144,6 +146,37 @@ Definition assembly_stack_size {calling_convention : assembly_callee_saved_regis
      | None => let red_zone := Z.of_N assembly_stack_red_zone in
                Z.to_N (fold_right Z.max red_zone (assembly_stack_size_at red_zone asm))
      end.
+(** The symbolic executor models the stack as a list of 64-bit words
+    ([compute_stack_base] places the base of the modeled stack at [rsp
+    - 8 * stack_size] and [build_merge_stack_placeholders] creates one
+    64-bit placeholder cell per word), whereas [assembly_stack_size] is
+    measured in bytes (each [push] contributes 8, [sub rsp, n]
+    contributes [n], and the red zone is 128 bytes on System V).  We
+    round the byte count up to a whole number of words so that the
+    modeled stack covers every byte the assembly is allowed to
+    touch. *)
+Definition assembly_stack_size_words_of_bytes (stack_size_bytes : N) : N
+  := ((stack_size_bytes + 7) / 8)%N.
+Definition assembly_stack_size_words {calling_convention : assembly_callee_saved_registers_opt} {v : assembly_stack_size_opt} (asm : _) : N
+  := assembly_stack_size_words_of_bytes (assembly_stack_size asm).
+(** Sanity bound (in bytes) on the stack size we are willing to model.
+
+    The stack size is converted to a unary [nat] and then each modeled
+    word costs several dag nodes plus one symbolic memory cell, with
+    dag insertion being linear in the size of the dag.  Since the
+    stack size is either inferred from the [sub rsp, n] / [push] /
+    etc. instructions in the (untrusted) hints file or passed on the
+    command line, an absurd value such as [sub rsp, 0x100000000] would
+    otherwise make the equivalence checker exhaust memory or run for
+    hours before reporting anything.  We refuse such sizes up front
+    with [Stack_size_too_large] instead.
+
+    The largest stack frame of any assembly file in fiat-amd64 (as of
+    2026) is under 2 KiB including the red zone, so 64 KiB is well over
+    an order of magnitude beyond anything a field-arithmetic routine
+    plausibly needs, while still being small enough that the checker
+    finishes in reasonable time if the bound is nearly hit. *)
+Definition assembly_stack_size_max_bytes : N := 65536.
 
 Class assembly_conventions_opt :=
   { #[global] assembly_calling_registers_ :: assembly_calling_registers_opt
@@ -244,6 +277,7 @@ Inductive EquivalenceCheckingError :=
 | Unable_to_unify (_ _ : list (idx + list idx)) (first_new_idx_after_all_old_idxs : option idx) (_ : symbolic_state)
 | Missing_ret
 | Code_after_ret (significant : Lines) (l : Lines)
+| Stack_size_too_large (stack_size_bytes max_stack_size_bytes : N)
 .
 
 Definition symbolic_state_of_EquivalenceCheckingError (e : EquivalenceCheckingError) : option symbolic_state
@@ -275,6 +309,7 @@ Definition symbolic_state_of_EquivalenceCheckingError (e : EquivalenceCheckingEr
      | Unhandled_cast _ _
      | Missing_ret
      | Code_after_ret _ _
+     | Stack_size_too_large _ _
        => None
      end.
 
@@ -743,6 +778,8 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                   => ["Missing 'ret' at the end of the function"]
                 | Code_after_ret significant l
                   => ["Code after ret:"; "In:"] ++ show_lines l ++ ["Found instructions after ret:"] ++ show_lines significant
+                | Stack_size_too_large stack_size_bytes max_stack_size_bytes
+                  => [("Stack size of " ++ show stack_size_bytes ++ " bytes (as inferred from the assembly, or as given explicitly) exceeds the maximum supported stack size of " ++ show max_stack_size_bytes ++ " bytes (assembly_stack_size_max_bytes)")%string]
                 end%list.
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
@@ -1299,6 +1336,8 @@ Definition init_symbolic_state (d : dag) : symbolic_state
        symbolic_flag_state := Tuple.repeat None 6;
      |}.
 
+(** [stack_size] is measured in 64-bit words, not bytes; see
+    [assembly_stack_size_words] *)
 Definition compute_stack_base {opts : symbolic_options_computed_opt} {descr:description} (stack_size : nat) : M idx
   := (rsp_val <- SetRegFresh rsp;
       stack_size <- Symbolic.App (zconst 64 (-8 * Z.of_nat stack_size), []);
@@ -1461,7 +1500,12 @@ Section check_equivalence.
       (ls <-- (List.map
                (fun '((fname, asm) as label)
                 => (asm <- map_err_Some label (strip_ret asm);
-                    let stack_size : nat := N.to_nat (assembly_stack_size asm) in
+                    (* Refuse absurd stack sizes before converting to a unary [nat] or allocating any placeholders *)
+                    _ <- map_err_Some label (let stack_size_bytes := assembly_stack_size asm in
+                                             if (stack_size_bytes <=? assembly_stack_size_max_bytes)%N
+                                             then Success tt
+                                             else Error (Stack_size_too_large stack_size_bytes assembly_stack_size_max_bytes));
+                    let stack_size : nat := N.to_nat (assembly_stack_size_words asm) in
                     symevaled_asm <- map_err_Some label (symex_asm_func (dereference_output_scalars:=false) d assembly_callee_saved_registers output_types stack_size inputs reg_available asm);
                     Success (label, symevaled_asm)))
                asm);
