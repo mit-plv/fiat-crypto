@@ -37,6 +37,9 @@ typedef uint64_t fiat_p521_tight_field_element[9];
 #if (-1 & 3) != 3
 #error "This code only works on a two's complement system"
 #endif
+#if ((-1) >> 1) != -1
+#error "This code only works on a system with arithmetic right shift of negative signed values"
+#endif
 
 #if !defined(FIAT_P521_NO_ASM) && (defined(__GNUC__) || defined(__clang__))
 static __inline__ uint64_t fiat_p521_value_barrier_u64(uint64_t a) {
