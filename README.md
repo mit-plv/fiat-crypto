@@ -405,7 +405,16 @@ The files contain:
     of var-like things, a pass that inserts let-binders in the
     next-to-last line of code, substituting away var-like things (this
     is used to ensure that when we output C code, aliasing the input
-    and the output arrays doesn't cause issues).
+    and the output arrays doesn't cause issues: every input is loaded
+    before any output is stored, so an output array may be the same
+    array as one or more of the input arrays of the same type, as in
+    `mul(x, x, y)`).  Note that this only applies to the generated
+    code; assembly validated with the equivalence checker (via
+    `--hints-file`) is proven correct only for non-overlapping
+    arrays, and is additionally checked for the aliasing
+    configurations by an unproven check that is on by default
+    (`--asm-aliasing-check` / `--no-asm-aliasing-check`); see
+    `fiat-amd64/Readme.md`.
     Defines the passes:
     * SubstVar
     * SubstVarLike

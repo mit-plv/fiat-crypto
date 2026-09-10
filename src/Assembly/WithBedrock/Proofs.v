@@ -3442,6 +3442,7 @@ Theorem generate_assembly_of_hinted_expr_correct
         {assembly_output_first : assembly_output_first_opt}
         {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
         {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}
+        {assembly_check_aliasing : assembly_check_aliasing_opt}
         {t}
         (asm : list (String.string (* fname *) * Lines))
         (expr : API.Expr t)
@@ -3484,8 +3485,10 @@ Theorem generate_assembly_of_hinted_expr_correct
          asm.
 Proof.
   cbv [generate_assembly_of_hinted_expr] in H.
-  break_innermost_match_hyps; inversion H; subst; destruct_head'_and; split; [ reflexivity | intros ].
-  eapply check_equivalence_correct; eassumption.
+  (* whether or not the (unproven) aliasing check ran, the disjoint-buffer check succeeded *)
+  break_innermost_match_hyps; inversion H; subst; destruct_head'_and.
+  all: split; [ reflexivity | intros ].
+  all: eapply check_equivalence_correct; eassumption.
 Qed.
 
 (* Some theorems about the result of calling generate_assembly_of_hinted_expr_correct on various Pipeline functions *)
