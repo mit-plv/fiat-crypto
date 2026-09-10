@@ -1110,7 +1110,7 @@ Lemma SymexNornalInstruction_R {opts : symbolic_options_computed_opt} {descr:des
   exists m', Semantics.DenoteNormalInstruction m instr = Some m' /\ R s' m' /\ s :< s'.
 Proof using Type.
   intros [] s' H.
-  case instr as [op args]; cbv [SymexNormalInstruction OperationSize] in H.
+  case instr as [op args]; cbv [SymexNormalInstruction SignedMulHigh OperationSize] in H.
   repeat (repeat destruct_one_match_hyp; repeat step01).
 
   all : repeat
@@ -1360,6 +1360,10 @@ Proof using Type.
 
   Unshelve. all : match goal with H : context[push] |- _ => idtac | H : context[pop] |- _ => idtac | _ => shelve end; shelve_unifiable.
   all: rewrite !Z.land_ones by lia; push_Zmod; pull_Zmod; f_equal; lia.
+
+  Unshelve. all : match goal with H : context[Syntax.imul] |- _ => idtac | _ => shelve end; shelve_unifiable.
+  (* one-operand imul: the symbolic sign extension [(x + 2^(s-1)) land ones s - 2^(s-1)] is [Z.signed s x] unfolded *)
+  all: cbv [Z.signed]; rewrite ?Z.add_opp_r, ?(Z.add_comm _ (Z.shiftl 1 _)); reflexivity.
 
   Unshelve. all: shelve_unifiable.
   all: fail_if_goals_remain ().

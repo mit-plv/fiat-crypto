@@ -245,7 +245,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let v := v1 * v2 in
     st <- SetOperand sa s st lo v;
     SetOperand sa s st hi (Z.shiftr v (Z.of_N s))
-  | (Syntax.mul | imul), [src2] =>
+  | Syntax.mul, [src2] =>
     let src1 : ARG := rax in
     v1 <- DenoteOperand sa s st src1;
     v2 <- DenoteOperand sa s st src2;
@@ -256,6 +256,24 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
            else resize_reg rdx);
     st <- SetOperand sa s st lo v;
     st <- SetOperand sa s st hi (Z.shiftr v (Z.of_N s));
+    Some (HavocFlags st) (* conservative *)
+  | imul, [src2] =>
+    (* One-operand [imul] is a *signed* widening multiply (Intel SDM Vol. 2A,
+       IMUL): rdx:rax (ah:al for s = 8) := signed(rax) * signed(src2).  The low
+       half agrees with the unsigned product [v1 * v2], but the high half does
+       not whenever an operand has its top bit set, so it must not share the
+       unsigned [mul] branch above. *)
+    let src1 : ARG := rax in
+    v1 <- DenoteOperand sa s st src1;
+    v2 <- DenoteOperand sa s st src2;
+    let v := v1 * v2 in
+    let vs := Z.signed s v1 * Z.signed s v2 in
+    lo <- resize_reg rax;
+    hi <- (if (s =? 8)%N
+           then Some ah
+           else resize_reg rdx);
+    st <- SetOperand sa s st lo v;
+    st <- SetOperand sa s st hi (Z.land (Z.shiftr vs (Z.of_N s)) (Z.ones (Z.of_N s)));
     Some (HavocFlags st) (* conservative *)
   | imul, ([src1 as dst; src2] | [dst; src1; src2]) =>
     v1 <- DenoteOperand sa s st src1;
