@@ -23,3 +23,8 @@ Every `asm` file contains a footer comment with some metadata on which CPU it wa
 
 All assembly files use the *Linux System-V ABI* and require the CPU flags `-adx` and `-bmi2` (Supported at least from Intel Cores since the 6th generation (Skylake), released in 2016).
 The files are written using Intel assembly syntax.
+
+As with the corresponding generated C functions, the output array may be the
+same array as either input.  On an x86-64 host with ADX and BMI2,
+`./fiat-amd64/test_aliasing.py` assembles every implementation and checks both
+supported in-place calling patterns.

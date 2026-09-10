@@ -1,6 +1,26 @@
 SECTION .text
 	GLOBAL fiat_p521_carry_mul
 fiat_p521_carry_mul:
+push qword [ rdx + 0x40 ]
+push qword [ rdx + 0x38 ]
+push qword [ rdx + 0x30 ]
+push qword [ rdx + 0x28 ]
+push qword [ rdx + 0x20 ]
+push qword [ rdx + 0x18 ]
+push qword [ rdx + 0x10 ]
+push qword [ rdx + 0x8 ]
+push qword [ rdx + 0x0 ]
+mov rdx, rsp
+push qword [ rsi + 0x40 ]
+push qword [ rsi + 0x38 ]
+push qword [ rsi + 0x30 ]
+push qword [ rsi + 0x28 ]
+push qword [ rsi + 0x20 ]
+push qword [ rsi + 0x18 ]
+push qword [ rsi + 0x10 ]
+push qword [ rsi + 0x8 ]
+push qword [ rsi + 0x0 ]
+mov rsi, rsp
 sub rsp, 736
 mov rax, rdx
 mov rdx, [ rsi + 0x8 ]
@@ -566,6 +586,7 @@ mov r13, [ rsp - 0x68 ]
 mov r14, [ rsp - 0x60 ]
 mov r15, [ rsp - 0x58 ]
 add rsp, 736
+add rsp, 144
 ret
 ; cpu AMD Ryzen 7 5800X 8-Core Processor
 ; ratio 1.1667
