@@ -3956,6 +3956,7 @@ Module error.
 
   | unsupported_memory_access_size (_:N)
   | unsupported_label_in_memory (_:string)
+  | unsupported_rip_relative_addressing
   | unsupported_label_argument (_:JUMP_LABEL)
   | unimplemented_prefix (_:NormalInstruction)
   | unimplemented_instruction (_ : NormalInstruction)
@@ -3996,6 +3997,7 @@ Module error.
             => ["RevealConst called at " ++ show i ++ " resulted in non-const value " ++ show x]
           | unsupported_memory_access_size n => ["error.unsupported_memory_access_size " ++ show n]
           | unsupported_label_in_memory l => ["error.unsupported_label_in_memory " ++ l]
+          | unsupported_rip_relative_addressing => ["error.unsupported_rip_relative_addressing"]
           | unsupported_label_argument l => ["error.unsupported_label_argument " ++ show l]
           | unimplemented_instruction n => ["error.unimplemented_instruction " ++ show n]
           | unimplemented_prefix n => ["error.unimplemented_prefix " ++ show n]
@@ -4094,6 +4096,11 @@ Definition SetReg {opts : symbolic_options_computed_opt} {descr:description} r (
 
 Class AddressSize := address_size : OperationSize.
 Definition Address {opts : symbolic_options_computed_opt} {descr:description} {sa : AddressSize} (a : MEM) : M idx :=
+  _ <- match a.(rip_relative) with
+       | not_rip_relative => ret tt
+       | explicitly_rip_relative
+       | implicitly_rip_relative => err error.unsupported_rip_relative_addressing
+       end;
   _ <- match a.(mem_base_label) with
        | None => ret tt
        | Some l => err (error.unsupported_label_in_memory l)
