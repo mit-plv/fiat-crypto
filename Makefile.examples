@@ -144,6 +144,9 @@ EXTRA_C_FILES := inversion/c/*_test.c
 
 ALL_C_FILES := $(patsubst %,$(C_DIR)%.c,$(ALL_BASE_FILES))
 ALL_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(INVALID_BEDROCK2_BASE_FILES),$(ALL_BASE_FILES)))
+BEDROCK2_CC_BITWIDTH = $(shell printf '#ifdef __SIZEOF_POINTER__\n__SIZEOF_POINTER__\n#endif\n' | $(CC) $(CFLAGS) -dM -E -x c - 2>/dev/null | awk '$$2 == "__SIZEOF_POINTER__" { print $$3 * 8 }')
+NATIVE_BEDROCK2_FILES = $(filter %_$(BEDROCK2_CC_BITWIDTH).c,$(ALL_BEDROCK2_FILES))
+NONNATIVE_BEDROCK2_FILE = $(firstword $(filter-out $(NATIVE_BEDROCK2_FILES),$(ALL_BEDROCK2_FILES)))
 ALL_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(ALL_BASE_FILES))
 ALL_RUST_MODS := $(ALL_BASE_FILES)
 ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(call GO_RENAME_TO_FILE,$(filter-out $(INVALID_GO_BASE_FILES),$(ALL_BASE_FILES))))
@@ -232,7 +235,11 @@ $(ALL_BEDROCK2_FILES) : $(BEDROCK2_DIR)%.c : $$(BEDROCK2_$$($$*_BINARY_NAME))
 test-bedrock2-files: $(ALL_BEDROCK2_FILES)
 
 test-bedrock2-files only-test-bedrock2-files:
-	$(CC) -Wall -Wno-unused-function -Werror $(BEDROCK2_EXTRA_CFLAGS) $(CFLAGS) -c $(ALL_BEDROCK2_FILES)
+	@test -n "$(BEDROCK2_CC_BITWIDTH)" || { echo "Could not determine $(CC)'s pointer width" >&2; exit 1; }
+	$(CC) -Wall -Wno-unused-function -Werror $(BEDROCK2_EXTRA_CFLAGS) $(CFLAGS) -fsyntax-only $(NATIVE_BEDROCK2_FILES)
+	@output="$$( $(CC) -Wall -Wno-unused-function -Werror $(BEDROCK2_EXTRA_CFLAGS) $(CFLAGS) -fsyntax-only $(NONNATIVE_BEDROCK2_FILE) 2>&1 )"; status=$$?; \
+	 if [ $$status -eq 0 ]; then echo "Expected $(NONNATIVE_BEDROCK2_FILE) to reject $(BEDROCK2_CC_BITWIDTH)-bit compilation" >&2; exit 1; fi; \
+	 printf '%s\n' "$$output" | grep -q "target word size does not match synthesis word size" || { printf '%s\n' "$$output" >&2; exit 1; }
 
 $(ALL_RUST_FILES) : $(RUST_DIR)%.rs : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'

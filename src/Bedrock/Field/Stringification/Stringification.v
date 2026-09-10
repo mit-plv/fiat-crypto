@@ -113,6 +113,23 @@ Definition bedrock_func_to_lines (f : string * func)
   : list string :=
   [c_func f].
 
+Definition bedrock2_prelude (machine_wordsize : Z) : string :=
+  (ToCString.prelude
+   ++ "static_assert(BR_WORD_MAX == UINT"
+   ++ Decimal.Z.to_string machine_wordsize
+   ++ "_MAX, ""target word size does not match synthesis word size"");"
+   ++ String.NewLine)%string.
+
+Definition bedrock2_header
+           {language_naming_conventions : language_naming_conventions_opt}
+           {documentation_options : documentation_options_opt}
+           {package_name : package_name_opt}
+           {class_name : class_name_opt}
+           {output_options : output_options_opt}
+           (machine_wordsize : Z) (_ _ : bool) (_ : string)
+           (_ : ToString.ident_infos) (_ : list ToString.typedef_info) : list string :=
+  [""; bedrock2_prelude machine_wordsize].
+
 Definition wrap_call
   {width BW word mem locals ext_spec varname_gen error}
   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}
@@ -259,7 +276,7 @@ Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
 
     ToString.ToFunctionLines := @Bedrock2_ToFunctionLines;
 
-    ToString.header := fun _ _ _ _ _ _ _ _ _ _ _ => [""; ToCString.prelude];
+    ToString.header := @bedrock2_header;
 
     ToString.footer := fun _ _ _ _ _ _ _ _ _ => [];
 
