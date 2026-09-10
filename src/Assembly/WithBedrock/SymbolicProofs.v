@@ -497,9 +497,9 @@ Ltac step_GetReg :=
   end.
 
 Lemma Address_R {opts : symbolic_options_computed_opt} {descr:description} s m (HR : R s m) (sa:AddressSize) o a s' (H : Symbolic.Address o s = Success (a, s'))
-  : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = v.
+  : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = Some v.
 Proof using Type.
-  destruct o as [? ? ? ?]; cbv [Address DenoteAddress Syntax.mem_base_reg Syntax.mem_offset Syntax.mem_scale_reg err ret] in *; repeat step_symex.
+  destruct o as [? ? ? ? ? ?]; cbv [Address DenoteAddress Syntax.mem_base_reg Syntax.mem_offset Syntax.mem_scale_reg Syntax.mem_base_label Syntax.rip_relative err ret] in *; repeat step_symex.
   all : repeat first [ progress inversion_ErrorT
                      | progress inversion_pair
                      | progress subst
@@ -511,7 +511,7 @@ Proof using Type.
   all : rewrite !Z.land_ones by lia.
   all : push_Zmod; pull_Zmod.
   all : autorewrite with zsimplify_const.
-  all : f_equal; lia.
+  all : repeat f_equal; lia.
 Qed.
 
 Ltac step_Address :=
@@ -723,6 +723,7 @@ Proof using Type.
     { repeat (eauto||econstructor). }
     split; eauto; [].
     split; eauto; [].
+    match goal with H : DenoteAddress _ _ _ = Some _ |- _ => rewrite H end; cbv [Crypto.Util.Option.bind].
     rewrite Z.shiftr_0_r in Hi by lia.
     case E as [E|E];
       rewrite E in *; simpl Z.of_N in *.
@@ -739,8 +740,8 @@ Proof using Type.
       eexists; split; eauto.
       cbv [le_combine].
       rewrite Z.shiftl_0_l, Z.lor_0_r.
-      change (Z.lor (Byte.byte.unsigned b) (Z.shiftl (le_combine l) 8) = x) in H4.
-      rewrite <-H4 in H5 at 2; rewrite H5; clear H4 H5.
+      change (Z.lor (Byte.byte.unsigned b) (Z.shiftl (le_combine l) 8) = x0) in H5.
+      rewrite <-H5 in H6 at 2; rewrite H6; clear H5 H6.
       f_equal.
       rewrite <-Byte.byte.wrap_unsigned at 1; setoid_rewrite <-Z.land_ones; [|clear;lia].
       rewrite <-Z.land_assoc.
@@ -748,9 +749,9 @@ Proof using Type.
       rewrite Z.land_lor_distr_l.
       bitblast.Z.bitblast. subst.
       rewrite (Z.testbit_neg_r _ (_-8)) by lia; Btauto.btauto. }
-    { setoid_rewrite H4.
+    { setoid_rewrite H5.
       eexists; split; eauto; f_equal.
-      rewrite H5 at 1; trivial. } }
+      rewrite H6 at 1; trivial. } }
   { step_symex; repeat (eauto||econstructor). }
 Qed.
 
@@ -833,15 +834,16 @@ Proof using Type.
     { repeat (eauto || econstructor). }
     { repeat (eauto || econstructor). }
     rewrite !Z.shiftl_0_r, ?Z.shiftr_0_r, <-Z.land_assoc, Z.land_diag in *.
+    match goal with H : DenoteAddress _ _ _ = Some _ |- _ => rewrite H end; cbv beta iota delta [Crypto.Util.Option.bind].
     case E as [E|E]; rewrite E in *; simpl Z.of_N in *.
-    { eapply Store64_R with (v':=Z.lor (Z.land v (Z.ones 8)) (Z.ldiff x (Z.ones 8))) in H;
-        try eassumption; eauto with nocore; try solve [rewrite H5; bitblast.Z.bitblast].
+    { eapply Store64_R with (v':=Z.lor (Z.land v (Z.ones 8)) (Z.ldiff x0 (Z.ones 8))) in H;
+        try eassumption; eauto with nocore; try solve [rewrite H6; bitblast.Z.bitblast].
       destruct_head'_ex; destruct_head'_and.
       cbv [SetMem Crypto.Util.Option.bind update_mem_with] in *;
         destruct set_mem eqn:? in *; Option.inversion_option; subst.
       erewrite store8; eauto 9. }
     { eapply Store64_R with (v':=v) in H;
-        try eassumption; eauto with nocore; try solve [rewrite H5; bitblast.Z.bitblast].
+        try eassumption; eauto with nocore; try solve [rewrite H6; bitblast.Z.bitblast].
       destruct_head'_ex; destruct_head'_and. setoid_rewrite H. eauto 9. } }
 Qed.
 
@@ -1087,7 +1089,8 @@ Proof using Type.
     destr (0 <=? i - Z.of_N (reg_offset r)); try lia; cbn.
     replace (i - Z.of_N (reg_offset r) + Z.of_N (reg_offset r)) with i by lia.
     destr (i - Z.of_N (reg_offset r) <? Z.of_N (reg_size r)); Btauto.btauto. }
-  { destruct m'; cbv [SetMem update_mem_with Crypto.Util.Option.bind get_mem option_map set_mem store_bytes unchecked_store_bytes] in *; repeat (destruct_one_match_hyp || Option.inversion_option).
+  { match goal with H : context[DenoteAddress ?sa ?st ?a] |- _ => destruct (DenoteAddress sa st a) eqn:HDA in *; [ clear HDA | discriminate ] end.
+    destruct m'; cbv [SetMem update_mem_with Crypto.Util.Option.bind get_mem option_map set_mem store_bytes unchecked_store_bytes] in *; repeat (destruct_one_match_hyp || Option.inversion_option).
     inversion Hs; clear Hs; subst; f_equal.
     clear E0.
     change (@map.putmany ?K ?V ?M ?m) with (@map.putmany K V M machine_mem_state).
