@@ -25,8 +25,7 @@ Local Ltac lists_into_elements := repeat match goal with
         requires t m :=
             m =* array p_a a ⋆ array p_y y ⋆ array p_m MOD ⋆ R /\
             (eval MOD) mod 2 = 1 /\ inv_m * (eval MOD) mod (2^64) = 2^64 - 1 /\
-            length a = 4%nat /\ length y = 5%nat /\ length MOD = 4%nat /\
-            eval a > 0;
+            length a = 4%nat /\ length y = 5%nat /\ length MOD = 4%nat;
         ensures T M := T = t /\ exists (a' y' : list word) (s : Z),
             M =* array p_a a' ⋆ array p_y y' ⋆ array p_m MOD ⋆ R /\
             length a' = 4%nat /\ length y' = 5%nat /\
@@ -102,9 +101,11 @@ Lemma lctz_or (a : Z) : 0 <= a < 2^64 -> lctz 64 (Z.lor a (2^63)) = Z.min (lctz 
       }
     Qed.
 
-Lemma lctz_min (z : Z) : z > 0 -> Z.min (lctz 64 (z mod 2^64)) 63 = Z.min (lctz 64 z) 63.
+Lemma lctz_min (z : Z) : 0 <= z -> Z.min (lctz 64 (z mod 2^64)) 63 = Z.min (lctz 64 z) 63.
 Proof.
-    intros Hz.
+    intros Hz0.
+    destruct (Z.eq_dec z 0) as [-> | Hnz]; [ rewrite Zmod_0_l; reflexivity | ].
+    assert (Hz : z > 0) by lia.
     destruct (Z.eq_dec (z mod 2 ^ 64) 0) as [Hmod | Hmod].
     {
         rewrite Hmod.
@@ -123,30 +124,18 @@ Proof.
     }
 Qed.
 
-Lemma lctz_nonneg (default x : Z) : x > 0 -> 0 <= lctz default x.
+Lemma lctz_nonneg (default x : Z) : 0 <= default -> 0 <= lctz default x.
 Proof.
-    intros Hx.
-    destruct x as [ | p | p ]; [ lia | | lia ].
-    cbv [lctz]. lia.
+    destruct x; cbv [lctz]; lia.
 Qed.
 
 Lemma mod_pow2_divides (x a b : Z) :
       0 <= b <= a -> x mod 2 ^ a = 0 -> x mod 2 ^ b = 0.
 Proof.
     intros Hba Hmod.
-    assert (Hdiv : (2 ^ b | 2 ^ a)).
-    {
-    exists (2 ^ (a - b)).
-    rewrite <- (Z.pow_add_r 2 (a - b) b) by lia.
-    f_equal.
-    lia.
-    }
-    rewrite <- (Z.mod_mod_divide x (2 ^ a) (2 ^ b) Hdiv).
-    rewrite Hmod.
-    apply Z.mod_0_l.
-    intro Heq.
-    assert (0 < 2 ^ b) by (apply Z.pow_pos_nonneg; lia).
-    lia.
+    erewrite <- Z.mod_mod_divide with (b := 2^a); rewrite ?Hmod; eauto.
+    eexists (2^(a-b)). rewrite <- Z.pow_add_r by lia.
+    f_equal; lia.
 Qed.
 
 Lemma mask_pow2_sub_1 (x : word) (H : x < 64) :
@@ -174,9 +163,9 @@ Proof.
     {
         straightline_call; intuition try ecancel_assumption; try ZnWords.
         { rewrite Properties.word.unsigned_or_nowrap, word.unsigned_slu, !word.unsigned_of_Z in * by ZnWords; cbv [word.wrap] in *;
-            rewrite Z.shiftl_mul_pow2, !Z.mod_small in H10 by (try rewrite !Z.mod_small; ZnWords);
-            rewrite <- (eval_mod [a1; a2;a3] a0) in H10;
-            rewrite lctz_or in H10 by (eapply Z.mod_pos_bound; ZnWords).
+            rewrite Z.shiftl_mul_pow2, !Z.mod_small in H9 by (try rewrite !Z.mod_small; ZnWords);
+            rewrite <- (eval_mod [a1; a2;a3] a0) in H9;
+            rewrite lctz_or in H9 by (eapply Z.mod_pos_bound; ZnWords).
             lia.
         }
         repeat straightline. lists_into_elements. cbn [array] in *.
@@ -187,17 +176,18 @@ Proof.
         repeat straightline. straightline_call; intuition try ecancel_assumption.
         repeat straightline. straightline_call; intuition try ecancel_assumption.
         all:rewrite Properties.word.unsigned_or_nowrap, word.unsigned_slu, !word.unsigned_of_Z in * by ZnWords;
-        cbv [word.wrap] in *; rewrite Z.shiftl_mul_pow2, !Z.mod_small in H10 by (try rewrite !Z.mod_small; ZnWords);
-        rewrite <- (eval_mod [a1; a2;a3] a0) in H10;
-        rewrite lctz_or in H10 by (eapply Z.mod_pos_bound; ZnWords);
+        cbv [word.wrap] in *; rewrite Z.shiftl_mul_pow2, !Z.mod_small in H9 by (try rewrite !Z.mod_small; ZnWords);
+        rewrite <- (eval_mod [a1; a2;a3] a0) in H9;
+        rewrite lctz_or in H9 by (eapply Z.mod_pos_bound; ZnWords);
         try ZnWords.
         repeat straightline.
 
-        rewrite !lctz_min in * by ZnWords.
+        rewrite !lctz_min in * by (lists_into_elements; cbv [eval]; ZnWords).
         match goal with
         | [|- context [lctz 64 ?x]] =>
+            assert (0 <= lctz 64 x) by (eapply lctz_nonneg; lia);
             assert (Z.min (lctz 64 x) 63 <= 63) by (eapply Z.le_min_r);
-            assert (0 <= Z.min (lctz 64 x) 63) by (eapply Z.min_glb; [eapply lctz_nonneg | ]; ZnWords)
+            assert (0 <= Z.min (lctz 64 x) 63) by (eapply Z.min_glb; ZnWords)
         end.
 
         match goal with
@@ -238,16 +228,18 @@ Proof.
 
         eexists _, _, _; intuition try ecancel_assumption.
         {
-            rewrite H13, H10, Z.shiftr_div_pow2, ZLib.Z.div_mul_undo; try ZnWords.
-            pose proof (lctz_nonneg 64 (eval [a0;a1;a2;a3]) H9); try lia.
+            rewrite H12, H9, Z.shiftr_div_pow2, ZLib.Z.div_mul_undo; try ZnWords.
+            pose proof (lctz_nonneg 64 (eval [a0;a1;a2;a3])).
             eapply mod_pow2_divides with (a := (lctz 64 (eval [a0;a1;a2;a3]))); ssplit;
-            try lia; try eapply Z.min_l. eapply lctz_mod_pow2; lia.
+            try lia; try eapply Z.min_l.
+            destruct (Z.eq_dec (eval [a0;a1;a2;a3]) 0) as [-> | ]; eauto.
+            eapply lctz_mod_pow2. cbv [eval] in *; ZnWords.
         }
         {
-            rewrite H20, H15, Z.shiftr_div_pow2, H10 in * by ZnWords.
+            rewrite H19, H14, Z.shiftr_div_pow2, H9 in * by ZnWords.
             rewrite ZLib.Z.div_mul_undo; try lia.
             { rewrite Z_mod_plus_full. eauto. }
-            rewrite H23, <- H10 in *. Z.push_pull_mod.
+            rewrite H23, <- H9 in *. Z.push_pull_mod.
             rewrite <- Z.mul_assoc. do 2 Z.push_mod_step. rewrite H22.
             Z.push_pull_mod. eapply Zdivisibility.Z.mod0_divide.
             eexists (y * (2^(64-x))). rewrite <- Z.mul_assoc, <- Z.pow_add_r, Z.sub_add by lia.
@@ -256,20 +248,20 @@ Proof.
         {
             assert (word.unsigned v <= 2^x - 1) by
                 (pose proof (Z.mod_pos_bound (y * inv_m) (2^x)) as Hbound; ZnWords).
-            rewrite Z.shiftr_div_pow2, <- H10, H20 in * by ZnWords.
+            rewrite Z.shiftr_div_pow2, <- H9, H19 in * by ZnWords.
             eapply Z.le_trans. 1: eapply ZLib.Z.div_mul_undo_le; ZnWords.
-            rewrite H15. eapply Zorder.Zplus_le_compat_l, Z.mul_le_mono_nonneg_r;
+            rewrite H14. eapply Zorder.Zplus_le_compat_l, Z.mul_le_mono_nonneg_r;
             rewrite ?HeqMOD; cbv [eval]; ZnWords.
         }
     }
     {   rewrite Properties.word.unsigned_or_nowrap, word.unsigned_slu, !word.unsigned_of_Z in * by ZnWords;
         cbv [word.wrap] in *.
         rewrite Z.shiftl_mul_pow2 in * by ZnWords.
-        rewrite !Z.mod_small in H10 by (try rewrite !Z.mod_small; ZnWords).
-        rewrite <- (eval_mod [a1;a2;a3] a0), H6, lctz_or in H10 by (eapply Z.mod_pos_bound; ZnWords).
-        rewrite lctz_min in H10 by ZnWords.
+        rewrite !Z.mod_small in H9 by (try rewrite !Z.mod_small; ZnWords).
+        rewrite <- (eval_mod [a1;a2;a3] a0), H6, lctz_or in H9 by (eapply Z.mod_pos_bound; ZnWords).
+        rewrite lctz_min in H9 by (lists_into_elements; cbv [eval]; ZnWords).
         destruct (Z.min_dec (lctz 64 (eval [a0;a1;a2;a3])) 63) as [e | e];
-        rewrite e in H10; try discriminate. rewrite e, <- H10.
+        rewrite e in H9; try discriminate. rewrite e, <- H9.
         eexists _, _, _; intuition try ecancel_assumption;
             rewrite ?Z.pow_0_r; try f_equal; ZnWords.
     }
