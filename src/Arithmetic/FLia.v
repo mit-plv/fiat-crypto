@@ -1,22 +1,22 @@
 Require Import PArith BinInt ZArith.
-From Coq Require Import Lia.
+From Coq Require Import Lia Zmod.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 
 Local Open Scope Z_scope.
 
 
 Section __.
-  Context {M_pos : positive}.
+  Context {m : Z}.
 
-  Lemma solve_F_equality_via_Z lhs' rhs' (lhs rhs : F M_pos)
-    : F.to_Z lhs = lhs' mod Z.pos M_pos ->
-      F.to_Z rhs = rhs' mod Z.pos M_pos ->
+  Lemma solve_F_equality_via_Z lhs' rhs' (lhs rhs : F m)
+    : F.to_Z lhs = lhs' mod m ->
+      F.to_Z rhs = rhs' mod m ->
       lhs' = rhs' ->
       lhs = rhs.
   Proof.
     intros.
-    rewrite <- (F.of_Z_to_Z lhs).
-    rewrite <- (F.of_Z_to_Z rhs).
+    rewrite <- (Zmod.of_Z_unsigned lhs).
+    rewrite <- (Zmod.of_Z_unsigned rhs).
     intuition congruence.
   Qed.
 
@@ -27,12 +27,12 @@ Section __.
    *)
 
   Lemma F_mul_to_Z a a' b b'
-    : F.to_Z a = a' mod Z.pos M_pos ->
-      F.to_Z b = b' mod Z.pos M_pos ->
-      @F.to_Z M_pos (a * b) = (a' * b') mod Z.pos M_pos.
+    : F.to_Z a = a' mod m ->
+      F.to_Z b = b' mod m ->
+      @F.to_Z m (a * b) = (a' * b') mod m.
   Proof.
     intros H H0.
-    rewrite F.to_Z_mul.
+    rewrite Zmod.unsigned_mul.
     rewrite H, H0.
     rewrite <- PullPush.Z.mul_mod_l.
     rewrite <- PullPush.Z.mul_mod_r.
@@ -40,12 +40,12 @@ Section __.
   Qed.
 
   Lemma F_add_to_Z a a' b b'
-    : F.to_Z a = a' mod Z.pos M_pos ->
-      F.to_Z b = b' mod Z.pos M_pos ->
-      @F.to_Z M_pos (a + b) = (a' + b') mod Z.pos M_pos.
+    : F.to_Z a = a' mod m ->
+      F.to_Z b = b' mod m ->
+      @F.to_Z m (a + b) = (a' + b') mod m.
   Proof.
     intros H H0.
-    rewrite F.to_Z_add.
+    rewrite Zmod.unsigned_add.
     rewrite H, H0.
     rewrite <- PullPush.Z.add_mod_l.
     rewrite <- PullPush.Z.add_mod_r.
@@ -54,30 +54,15 @@ Section __.
 
 
   Lemma F_pow_to_Z a a' c
-    : F.to_Z a = a' mod Z.pos M_pos ->
-      @F.to_Z M_pos (a ^ c) = (a' ^ c) mod Z.pos M_pos.
+    : F.to_Z a = a' mod m ->
+      0 <= c ->
+      @F.to_Z m (a ^ c) = (a' ^ c) mod m.
   Proof.
-    intros H.
-    rewrite F.to_Z_pow.
+    intros H Hc.
+    rewrite Zmod.unsigned_pow_nonneg_r by assumption.
     rewrite H.
     rewrite <- PullPush.Z.pow_mod_full.
     congruence.
-  Qed.
-
-  Lemma F_var_to_Z (x : F M_pos) : F.to_Z x = proj1_sig x mod Z.pos M_pos.
-  Proof.
-    destruct x; simpl; assumption.
-  Qed.
-
-  Lemma F_one_to_Z : @F.to_Z M_pos 1 = 1 mod Z.pos M_pos.
-  Proof.
-    reflexivity.
-  Qed.
-
-
-  Lemma F_const_to_Z c : F.to_Z (F.of_Z M_pos c) = c mod Z.pos M_pos.
-  Proof.
-    reflexivity.
   Qed.
 
 End __.
@@ -88,11 +73,11 @@ Ltac F_convert_to_Z :=
            let e := lazymatch goal with |- F.to_Z ?x = _ => x end in
            first [ simple eapply F_mul_to_Z
                  | simple eapply F_add_to_Z
-                 | simple eapply F_one_to_Z
-                 | simple eapply F_pow_to_Z
-                 | simple eapply F_const_to_Z
+                 | simple eapply Zmod.unsigned_1
+                 | simple eapply F_pow_to_Z; [ | lia ]
+                 | simple eapply Zmod.unsigned_of_Z
                  (* must be last *)
-                 | simple eapply F_var_to_Z]].
+                 | symmetry; simple eapply Zmod.mod_unsigned ]].
 
 (*TODO: doesn't prepare hypotheses.
   To support working with hypotheses will require a variation on `solve_F_equality_via_Z`
@@ -112,9 +97,9 @@ Ltac F_lia := F_zify; (lia || fail "F_lia failed; check that all necessary homom
 
 
 Section Example.
-  Context {M_pos : positive}.
+  Context {m : Z}.
 
-  Goal forall (x : F M_pos), (x + F.of_Z  _ 4 * x)%F = ( x * F.of_Z  _ 2 + F.of_Z  _ 2 * x + 1 * 1 * x)%F.
+  Goal forall (x : F m), (x + F.of_Z  _ 4 * x)%F = ( x * F.of_Z  _ 2 + F.of_Z  _ 2 * x + 1 * 1 * x)%F.
   Proof.
     F_lia.
   Qed.
