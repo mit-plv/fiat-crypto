@@ -1,6 +1,6 @@
 (** * C Operation Specifications *)
 (** The specifications for the various operations to be synthesized. *)
-From Coq Require Import ZArith Lia.
+From Coq Require Import ZArith Zmod Lia.
 From Coq Require Import List.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
@@ -393,15 +393,12 @@ Module Solinas.
               one       (Hone       :       one_correct one)
               (Hrelax : forall x, list_Z_bounded_by tight_bounds x -> list_Z_bounded_by loose_bounds x).
 
-      Let m' := Z.to_pos m.
-
       Local Notation T := (list Z) (only parsing).
       Local Notation encoded_ok ls
         := (is_bounded_by tight_bounds ls = true) (only parsing).
       Local Notation encoded_okf := (fun ls => encoded_ok ls) (only parsing).
 
-      Definition Fdecode (v : T) : F m'
-        := F.of_Z m' (eval v).
+      Definition Fdecode (v : T) : F m := F.of_Z m (eval v).
       Definition T_eq (x y : T)
         := Fdecode x = Fdecode y.
 
@@ -411,32 +408,33 @@ Module Solinas.
       Definition ring_add (x y : T) : T := carry (add x y).
       Definition ring_sub (x y : T) : T := carry (sub x y).
       Definition ring_opp (x : T) : T := carry (opp x).
-      Definition ring_encode (x : F m') : T := encode (F.to_Z x).
+      Definition ring_encode (x : F m) : T := encode (F.to_Z x).
 
       Definition GoodT : Prop
         := @subsetoid_ring
              (list Z) encoded_okf T_eq
              zero one ring_opp ring_add ring_sub ring_mul
            /\ @is_subsetoid_homomorphism
-                (F m') (fun _ => True) eq 1%F F.add F.mul
+                (F m) (fun _ => True) eq 1%F F.add F.mul
                 (list Z) encoded_okf T_eq one ring_add ring_mul ring_encode
            /\ @is_subsetoid_homomorphism
                 (list Z) encoded_okf T_eq one ring_add ring_mul
-                (F m') (fun _ => True) eq 1%F F.add F.mul
+                (F m) (fun _ => True) eq 1%F F.add F.mul
                 Fdecode.
 
-      Hint Rewrite ->@F.to_Z_add : push_FtoZ.
-      Hint Rewrite ->@F.to_Z_mul : push_FtoZ.
-      Hint Rewrite ->@F.to_Z_opp : push_FtoZ.
-      Hint Rewrite ->@F.to_Z_of_Z : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_add : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_mul : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_opp : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_of_Z : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_sub : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_0 : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_1 : push_FtoZ.
 
-      Lemma Fm_bounded_alt (x : F m')
+      Lemma Fm_bounded_alt (x : F m)
         : is_bounded_by0 prime_bound (F.to_Z x) = true.
       Proof using m_pos.
         clear -m_pos.
-        destruct x as [x H]; cbn [F.to_Z proj1_sig].
-        pose proof (Z.mod_pos_bound x (Z.pos m')).
-        subst m'; rewrite Z2Pos.id in * by lia.
+        pose proof Zmod.unsigned_pos_bound x ltac:(lia).
         cbv [prime_bound lower upper].
         rewrite Bool.andb_true_iff; split; Z.ltb_to_lt; lia.
       Qed.
@@ -449,16 +447,15 @@ Module Solinas.
                end.
         all: cbv [carry_mul_correct add_correct sub_correct opp_correct carry_correct encode_correct zero_correct one_correct] in *; split_and.
         eapply subsetoid_ring_by_ring_isomorphism;
-          cbv [ring_opp ring_add ring_sub ring_mul ring_encode F.sub list_Z_bounded_by Fdecode m' F.one] in *; auto.
+          cbv [ring_opp ring_add ring_sub ring_mul ring_encode list_Z_bounded_by Fdecode] in *; auto.
         all: repeat first [ progress intros
                           | reflexivity
                           | progress autorewrite with push_FtoZ
-                          | rewrite Z2Pos.id
                           | apply Fm_bounded_alt
                           | match goal with
-                            | [ |- _ = _ :> F _ ] => apply F.eq_to_Z_iff
+                            | [ |- _ = _ :> F _ ] => apply Zmod.unsigned_inj
                             | [ |- _ mod _ = F.to_Z ?x ]
-                              => etransitivity; [ | apply (F.mod_to_Z x) ]
+                              => etransitivity; [ | apply (Zmod.mod_unsigned x) ]
                             | [ H : _ |- _ ] => apply H; clear H
                             | [ H : context[eval (?f _) mod ?m = _] |- context[eval (?f _) mod ?m] ]
                               => rewrite H
@@ -725,15 +722,12 @@ Module WordByWordMontgomery.
               zero    (Hzero    :    zero_correct zero)
               one     (Hone     :     one_correct one).
 
-      Let m' := Z.to_pos m.
-
       Local Notation T := (list Z) (only parsing).
       Local Notation encoded_ok ls
         := (valid ls) (only parsing).
       Local Notation encoded_okf := (fun ls => encoded_ok ls) (only parsing).
 
-      Definition Fdecode (v : T) : F m'
-        := F.of_Z m' (eval (from_montgomery v)).
+      Definition Fdecode (v : T) : F m := F.of_Z m (eval (from_montgomery v)).
       Definition T_eq (x y : T)
         := Fdecode x = Fdecode y.
 
@@ -743,32 +737,33 @@ Module WordByWordMontgomery.
       Definition ring_add (x y : T) : T := add x y.
       Definition ring_sub (x y : T) : T := sub x y.
       Definition ring_opp (x : T) : T := opp x.
-      Definition ring_encode (x : F m') : T := encode (F.to_Z x).
+      Definition ring_encode (x : F m) : T := encode (F.to_Z x).
 
       Definition GoodT : Prop
         := @subsetoid_ring
              (list Z) encoded_okf T_eq
              zero one ring_opp ring_add ring_sub ring_mul
            /\ @is_subsetoid_homomorphism
-                (F m') (fun _ => True) eq 1%F F.add F.mul
+                (F m) (fun _ => True) eq 1%F F.add F.mul
                 (list Z) encoded_okf T_eq one ring_add ring_mul ring_encode
            /\ @is_subsetoid_homomorphism
                 (list Z) encoded_okf T_eq one ring_add ring_mul
-                (F m') (fun _ => True) eq 1%F F.add F.mul
+                (F m) (fun _ => True) eq 1%F F.add F.mul
                 Fdecode.
 
-      Hint Rewrite ->@F.to_Z_add : push_FtoZ.
-      Hint Rewrite ->@F.to_Z_mul : push_FtoZ.
-      Hint Rewrite ->@F.to_Z_opp : push_FtoZ.
-      Hint Rewrite ->@F.to_Z_of_Z : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_add : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_mul : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_opp : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_of_Z : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_sub : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_0 : push_FtoZ.
+      Hint Rewrite ->@Zmod.unsigned_1 : push_FtoZ.
 
-      Lemma Fm_bounded_alt (x : F m')
+      Lemma Fm_bounded_alt (x : F m)
         : is_bounded_by0 prime_bound (F.to_Z x) = true.
       Proof using m_pos.
         clear -m_pos.
-        destruct x as [x H]; cbn [F.to_Z proj1_sig].
-        pose proof (Z.mod_pos_bound x (Z.pos m')).
-        subst m'; rewrite Z2Pos.id in * by lia.
+        pose proof Zmod.unsigned_pos_bound x ltac:(lia).
         cbv [prime_bound lower upper].
         rewrite Bool.andb_true_iff; split; Z.ltb_to_lt; lia.
       Qed.
@@ -781,16 +776,15 @@ Module WordByWordMontgomery.
                end.
         all: cbv [mul_correct add_correct sub_correct opp_correct encode_correct zero_correct one_correct] in *; split_and.
         eapply subsetoid_ring_by_ring_isomorphism;
-          cbv [ring_opp ring_add ring_sub ring_mul ring_encode F.sub list_Z_bounded_by Fdecode m' F.one] in *; auto.
+          cbv [ring_opp ring_add ring_sub ring_mul ring_encode list_Z_bounded_by Fdecode] in *; auto.
         all: repeat first [ progress intros
                           | reflexivity
                           | progress autorewrite with push_FtoZ
-                          | rewrite Z2Pos.id
                           | apply Fm_bounded_alt
                           | match goal with
-                            | [ |- _ = _ :> F _ ] => apply F.eq_to_Z_iff
+                            | [ |- _ = _ :> F _ ] => apply Zmod.unsigned_inj
                             | [ |- _ mod _ = F.to_Z ?x ]
-                              => etransitivity; [ | apply (F.mod_to_Z x) ]
+                              => etransitivity; [ | apply (Zmod.mod_unsigned x) ]
                             | [ H : _ |- _ ] => apply H; clear H
                             | [ H : context[eval (?f _) mod ?m = _] |- context[eval (?f _) mod ?m] ]
                               => rewrite H

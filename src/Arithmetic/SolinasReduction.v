@@ -32,6 +32,7 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 From Coq Require Import Znat.
+From Coqprime Require ListAux.
 
 Require Import Crypto.Util.CPSUtil.
 Require Import Crypto.Util.CPSNotations.

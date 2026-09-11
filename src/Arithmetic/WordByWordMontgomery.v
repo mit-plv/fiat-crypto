@@ -3,9 +3,7 @@ From Coq Require Import List.
 Require Import Crypto.Algebra.Ring.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.Freeze.
-Require Import Crypto.Arithmetic.ModularArithmeticTheorems.
 Require Import Crypto.Arithmetic.Partition.
-Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Arithmetic.Saturated.
 Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.Util.LetIn.
@@ -611,36 +609,10 @@ Module WordByWordMontgomery.
       Proof using B_bounds R_numlimbs_nz lgr_big small_A small_B small_S k_correct.
         clear -B_bounds R_numlimbs_nz lgr_big small_A small_B small_S r_big' partition_Proper k_correct.
         cbv [S2 q s]; autorewrite with push_mont_eval; rewrite S1_eq.
-        assert (r > 0) by lia.
-        assert (Hr : (-(1 mod r)) mod r = r - 1 /\ (-(1)) mod r = r - 1).
-        { destruct (Z.eq_dec r 1) as [H'|H'].
-          { rewrite H'; split; reflexivity. }
-          { rewrite !Z_mod_nz_opp_full; rewrite ?Z.mod_mod; Z.rewrite_mod_small; [ split; reflexivity | lia.. ]. } }
-        autorewrite with pull_Zmod.
-        replace 0 with (0 mod r) by rapply Zmod_0_l.
-        pose (Z.to_pos r) as r'.
-        replace r with (Z.pos r') by (subst r'; rewrite Z2Pos.id; lia).
-        rewrite @F.eq_of_Z_iff.
-        rewrite Z.mul_split_mod.
-        repeat rewrite ?F.of_Z_add, ?F.of_Z_mul, <-?F.of_Z_mod.
-        rewrite <-!Algebra.Hierarchy.associative.
-        replace ((F.of_Z r' k * F.of_Z r' (eval N))%F) with (F.opp (m:=r') F.one).
-        { cbv [F.of_Z F.add]; simpl.
-          rapply @path_sig_hprop; [ intro; exact HProp.allpath_hprop | ].
-          simpl.
-          subst r'; rewrite Z2Pos.id by lia.
-          rewrite (proj1 Hr), Z.mul_sub_distr_l.
-          push_Zmod; pull_Zmod.
-          rapply open_constr:(f_equal2 Z.modulo); lia. }
-        { rewrite <- F.of_Z_mul.
-          rewrite F.of_Z_mod.
-          subst r'; rewrite Z2Pos.id by lia.
-          rewrite k_correct.
-          cbv [F.of_Z F.add F.opp F.one]; simpl.
-          change (-(1)) with (-1) in *.
-          rapply @path_sig_hprop; [ intro; exact HProp.allpath_hprop | ]; simpl.
-          rewrite Z2Pos.id by lia.
-          rewrite (proj1 Hr), (proj2 Hr); Z.rewrite_mod_small; reflexivity. }
+        rewrite Z.mul_split_mod; push_Zmod; pull_Zmod.
+        rewrite <- (Z.mul_assoc _ k); push_Zmod;
+          rewrite_strat (bottomup (choice k_correct (<- Z.mul_mod_l) (<- Z.mul_mod_r) (<- Z.add_mod_l) (<- Z.add_mod_r))).
+        rewrite <- (Zmod_0_l r); f_equal; lia.
       Qed.
 
       Lemma pre_S3_mod_N

@@ -217,9 +217,9 @@ Lemma sat_add_bounds machine_wordsize n f g
 Proof.
   pose proof uwprops machine_wordsize mw0.
   intros z Hin; unfold sat_add in *; rewrite Rows.add_partitions in *; auto.
-  unfold Partition.partition in Hin. apply ListAux.in_map_inv in Hin.
-  destruct Hin as [a [Hin]].
-  rewrite H0, !uweight_eq_alt by lia. split.
+  unfold Partition.partition in Hin. apply in_map_iff in Hin.
+  destruct Hin as [a [Hz Hin]].
+  rewrite <-Hz, !uweight_eq_alt by lia. split.
   - apply Z.div_le_lower_bound;
       ring_simplify; try apply Z.mod_pos_bound;
         apply Z.pow_pos_nonneg; try apply Z.pow_pos_nonneg; lia.
