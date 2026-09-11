@@ -5,7 +5,7 @@ Require Import Crypto.Curves.EdwardsMontgomery. Import M.
 Require Import Crypto.Curves.Edwards.TwistIsomorphism.
 Require Import Crypto.Spec.Curve25519.
 
-Local Definition sqrtm1 : F p := F.pow (F.of_Z _ 2) ((N.pos p-1)/4).
+Local Definition sqrtm1 : F p := F.pow (F.of_Z _ 2) ((p-1)/4).
 Local Definition sqrt := PrimeFieldTheorems.F.sqrt_5mod8 sqrtm1.
 
 Import MontgomeryCurve CompleteEdwardsCurve.
