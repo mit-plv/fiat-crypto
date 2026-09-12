@@ -40,7 +40,7 @@ Section Field.
   Proof using ext_spec_ok. constructor; try exact _; apply prefix_name_gen_unique. Qed.
 
   Instance field_parameters : FieldParameters :=
-    field_parameters_prefixed (Z.to_pos Curve25519.p) Curve25519.M.a24 "fe25519_"%string.
+    field_parameters_prefixed Curve25519.p Curve25519.M.a24 "fe25519_"%string.
 
   #[export] Instance frep25519 : FieldRepresentation := field_representation n s c.
 

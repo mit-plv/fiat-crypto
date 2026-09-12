@@ -152,11 +152,11 @@ Definition secp256k1_inv := Eval cbv in
 (* Compute ToCString.c_func ("secp256k1_inv", secp256k1_inv). *)
 
 Section WithParameters.
-  Context {two_lt_M: 2 < M_pos}.
-  Context {char_ge_3 : (@Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos BinNat.N.two))}.
-  Context {field:@Algebra.Hierarchy.field (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
+  Context {two_lt_M: 2 < M}.
+  Context {char_ge_3 : (@Ring.char_ge (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos BinNat.N.two))}.
+  Context {field:@Algebra.Hierarchy.field (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
   Context {secp256k1_prime: prime m}.
-  Context {F_M_pos : Z.pos M_pos = m}.
+  Context {F_M : M = m}.
 
   Import (notations) coqutil.Map.Memory.
 
@@ -169,7 +169,7 @@ Section WithParameters.
 
   Global Instance spec_of_inv : spec_of "secp256k1_inv" :=
     fnspec! "secp256k1_inv"
-      (zK xK : word) / z (x : felem) (vx : F M_pos) (R : _ -> Prop),
+      (zK xK : word) / z (x : felem) (vx : F M) (R : _ -> Prop),
     { requires t m :=
         vx = feval x /\
         bounded_by loose_bounds x /\
@@ -324,7 +324,7 @@ Section WithParameters.
     generalize (feval x) as b; intro b.
     repeat rewrite <-?Zmod.pow_mul_r_nonneg, <-?Zmod.pow_succ_nonneg_r, <-?Zmod.pow_add_r_nonneg
       by (apply Z.leb_le; vm_compute; reflexivity).
-    f_equal; rewrite F_M_pos; vm_compute; reflexivity.
+    f_equal; rewrite F_M; vm_compute; reflexivity.
   Qed.
 
 End WithParameters.

@@ -308,12 +308,11 @@ Section UnsaturatedSolinas.
       erewrite map_byte_wrap_bounded
         by eauto with bounds
     end.
-  (* [rewrite M_eq] cannot abstract [Z.pos M_pos] out of the goal: it also
-     occurs in the types of the field elements ([F M_pos] is [Zmod (Z.pos M_pos)]),
+  (* [rewrite M_eq] cannot abstract [M] out of the goal: it also
+     occurs in the types of the field elements ([F M] is [Zmod M]),
      so rewrite only the moduli of [Z.modulo] via congruence. *)
   Ltac FtoZ :=
     apply Zmod.of_Z_inj; rewrite ?Zmod.unsigned_of_Z;
-    cbv [M] in M_eq;
     lazymatch type of M_eq with
     | ?lhs = ?rhs =>
       repeat match goal with
@@ -552,7 +551,7 @@ Section UnsaturatedSolinas.
       destruct (Hcorrect (Interface.word.unsigned w)); clear Hcorrect.
       { pose proof Properties.word.unsigned_range w.
         eapply Bool.andb_true_iff; split; eapply Zle_is_le_bool; Lia.lia. }
-      rewrite <- M_eq in *; cbv [M] in *; eapply Zmod.of_Z_inj in H2.
+      rewrite <- M_eq in *; eapply Zmod.of_Z_inj in H2.
       rewrite <-H2.
       unfold feval.
       unfold Signature.field_representation.
@@ -570,7 +569,7 @@ Section UnsaturatedSolinas.
       destruct (Hcorrect (Interface.word.unsigned w)); clear Hcorrect.
       { pose proof Properties.word.unsigned_range w.
         eapply Bool.andb_true_iff; split; eapply Zle_is_le_bool; Lia.lia. }
-      rewrite <- M_eq in *; cbv [M] in *; eapply Zmod.of_Z_inj in H2.
+      rewrite <- M_eq in *; eapply Zmod.of_Z_inj in H2.
       trivial. }
     { eauto using relax_list_Z_bounded_by, tight_bounds_tighter_than. }
   Qed.
@@ -644,9 +643,9 @@ Require Import Crypto.Bedrock.Field.Translation.Proofs.ValidComputable.Func.
 
 (* TODO: move somewhere common *)
 Definition field_parameters_prefixed
-           M_pos a24 (prefix: string) : FieldParameters :=
+           M a24 (prefix: string) : FieldParameters :=
   Build_FieldParameters
-    M_pos a24
+    M a24
     (prefix ++ "mul")
     (prefix ++ "add")
     (prefix ++ "carry_add")
@@ -723,7 +722,7 @@ Section Tests.
 
   Instance field_parameters : FieldParameters.
   Proof using Type.
-    let M := (eval vm_compute in (Z.to_pos (m s c))) in
+    let M := (eval vm_compute in (m s c)) in
     (* Curve25519 "A" parameter (see section 4.1 of RFC 7748) *)
     let a := constr:(F.of_Z M 486662) in
     let prefix := constr:("fe25519_"%string) in

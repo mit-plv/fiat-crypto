@@ -24,7 +24,7 @@ Section Field.
   (* Define Poly1305 field *)
   Instance field_parameters : FieldParameters.
   Proof using Type.
-    let M := (eval vm_compute in (Z.to_pos (UnsaturatedSolinas.m s c))) in
+    let M := (eval vm_compute in (UnsaturatedSolinas.m s c)) in
     (* dummy 'A' parameter since we don't care about scmula24 here *)
     let a := constr:(F.of_Z M 2) in
     let prefix := constr:("fe1305_"%string) in
