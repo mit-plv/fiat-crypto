@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Import bedrock2.Array.
 Require Import bedrock2.BasicC64Semantics.
 Require Import bedrock2.Loops.
@@ -150,14 +151,18 @@ Section WithParameters.
         lazymatch type of m with | @map.rep _ _ _ => idtac | _ => fail end
     end.
 
+  Lemma felem_to_list_if (P : bool) (x1 x2 : felem) :
+    (if P then felem_to_list x1 else felem_to_list x2) = felem_to_list (if P then x1 else x2).
+  Proof. destruct P; reflexivity. Qed.
+
   (* This is mainly to keep clean ifs and back and forth conversions between felem and lists of
-    words as used by rupicola. *)
+    words as used by rupicola. ([replace ... in H] would search [H] for the term up to
+    conversion, which unfolds the field operations and is very slow.) *)
   Ltac simplify_mem_hyps :=
     rewrite ?ws2felem_felem_to_list, ?felem_to_list_ws2felem in *; try solve_length;
     repeat match goal with
       | H: context [if ?P then felem_to_list ?x1 else felem_to_list ?x2] |- _ =>
-          replace (if P then felem_to_list x1 else felem_to_list x2) with
-                  (felem_to_list (if P then x1 else x2)) in H; [| destruct P; exact eq_refl]
+          rewrite (felem_to_list_if P x1 x2) in H
     end.
 
   Local Ltac solve_mem :=
@@ -167,7 +172,13 @@ Section WithParameters.
     end;
     ensure_memory_goal;
     repeat match goal with
-      | H: ?P%sep ?m |- ?G%sep ?m => progress ecancel_assumption_preprocess_with solve_length; simplify_mem_hyps
+      | |- ?G%sep ?m =>
+        (* Take the memory from the goal before searching the hypotheses: matching
+           [H: ?P ?m] against every hypothesis unfolds the field operations and
+           is very slow. *)
+        lazymatch goal with
+        | H: ?P%sep m |- _ => progress ecancel_assumption_preprocess_with solve_length; simplify_mem_hyps
+        end
       | |- _%sep _ => ecancel_assumption
     end.
 
@@ -859,7 +870,7 @@ Section WithParameters.
     repeat match goal with
            | H : feval ?a = _ |- context [feval ?a] => rewrite H
            end.
-    1,2,5,6: rewrite F.inv_0; ring.
+    1,2,5,6: rewrite Zmod.inv_0; ring.
     Add Field Private_field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F M_pos)).
     Import Field_tac.
     1-4: field; exact n.

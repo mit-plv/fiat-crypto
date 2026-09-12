@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Import bedrock2.Array.
 Require Import bedrock2.FE310CSemantics.
 Require Import bedrock2.Loops.
@@ -510,7 +511,13 @@ Section WithParameters.
     end;
     ensure_memory_goal;
     repeat match goal with
-      | H: ?P%sep ?m |- ?G%sep ?m => progress ecancel_assumption_preprocess_with solve_length
+      | |- ?G%sep ?m =>
+        (* Take the memory from the goal before searching the hypotheses: matching
+           [H: ?P ?m] against every hypothesis unfolds the field operations and
+           is very slow. *)
+        lazymatch goal with
+        | H: ?P%sep m |- _ => progress ecancel_assumption_preprocess_with solve_length
+        end
       | |- _%sep _ => ecancel_assumption
     end.
 
@@ -561,7 +568,7 @@ Section WithParameters.
     repeat match goal with
            | H: feval ?x = _ |- context [feval ?x] => rewrite H
            end.
-    rewrite F.pow_2_r in *; repeat (apply pair_equal_spec; split); ring.
+    rewrite Zmod.pow_2_r in *; repeat (apply pair_equal_spec; split); ring.
 
     ecancel_assumption.
   Qed.
@@ -585,7 +592,7 @@ Section WithParameters.
     1,2: cbv match beta delta [zaddu proj1_sig fst snd].
     1,2: destruct P; destruct Q; cbv [proj1_sig] in H17, H18.
     1,2: rewrite H17, H18; cbv match zeta.
-    1,2: rewrite F.pow_2_r in *; congruence.
+    1,2: rewrite Zmod.pow_2_r in *; congruence.
 
     ecancel_assumption.
   Qed.
@@ -605,7 +612,7 @@ Section WithParameters.
     1,2: cbv match beta delta [zaddc proj1_sig fst snd].
     1,2: destruct P; destruct Q; cbv [proj1_sig] in H28, H29.
     1,2: rewrite H28, H29; cbv match zeta.
-    1,2: rewrite F.pow_2_r in *; congruence.
+    1,2: rewrite Zmod.pow_2_r in *; congruence.
 
     ecancel_assumption.
   Qed.
@@ -623,7 +630,7 @@ Section WithParameters.
     1,2: cbv match beta delta [dblu proj1_sig fst snd].
     1,2: destruct P; cbv [proj1_sig] in H24.
     1,2: rewrite H24; cbv match zeta.
-    1,2: rewrite F.pow_2_r in *; cbv [id] in zero_a; subst a; repeat (apply pair_equal_spec; split); try congruence.
+    1,2: rewrite Zmod.pow_2_r in *; cbv [id] in zero_a; subst a; repeat (apply pair_equal_spec; split); try congruence.
     1,2,3: repeat match goal with
                   | H: feval ?x = _ |- context [feval ?x] => rewrite H
                   end; ring.
@@ -666,7 +673,7 @@ Section WithParameters.
     1,2: cbv match beta delta [zdau proj1_sig fst snd].
     1,2: destruct P; destruct Q; cbv [proj1_sig] in H42, H43.
     1,2: rewrite H42, H43; cbv match zeta.
-    1,2: rewrite F.pow_2_r in *; congruence.
+    1,2: rewrite Zmod.pow_2_r in *; congruence.
 
     ecancel_assumption.
   Qed.
