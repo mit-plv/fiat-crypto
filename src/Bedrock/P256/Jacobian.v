@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Import coqutil.Datatypes.List.
 Require Import Bedrock.P256.Specs.
 
@@ -136,8 +137,8 @@ Proof.
   { eexists. cbv [coord.to_bytes] in *. ecancel_assumption. }
   { cbv [coord.to_bytes] in *. ecancel_assumption. }
   { trivial. }
-  { eapply F.to_Z_range, eq_refl. }
-  { etransitivity; try eapply F.to_Z_range; eapply eq_refl. }
+  { eapply Zmod.unsigned_pos_bound, eq_refl. }
+  { etransitivity; try eapply Zmod.unsigned_pos_bound; eapply eq_refl. }
   { ZnWords.ZnWords. }
 
   repeat straightline.
@@ -152,8 +153,8 @@ Proof.
     cancel_seps_at_indices 0%nat 0%nat; [|cancel].
 
     instantiate (1:=F.of_Z _ (F.to_Z (x*coord.R)%F / 2)).
-    rewrite F.to_Z_of_Z, Z.mod_small; trivial.
-    specialize (F.to_Z_range (x*coord.R) eq_refl); clear; PreOmega.Z.to_euclidean_division_equations; lia. }
+    rewrite Zmod.unsigned_of_Z, Z.mod_small; trivial.
+    specialize (Zmod.unsigned_pos_bound (x*coord.R) eq_refl); clear; PreOmega.Z.to_euclidean_division_equations; lia. }
   { eexists. use_sep_assumption. cancel.
     cancel_seps_at_indices 1%nat 0%nat. { exact eq_refl. }
     cancel. }
@@ -184,11 +185,11 @@ Proof.
 
   (* NOTE: back-and-forth rewrite between Z.modulo and Z.odd *)
   rewrite word.unsigned_of_Z; cbv [word.wrap]; rewrite Zmod_mod, Zdiv.Zodd_mod, Z.mod_mod_divide by (apply Divide.Z.divide_pow_le with (n:=1); lia).
-  symmetry; rewrite <-(F.of_Z_to_Z xR) at 1; rewrite (Z.div_mod xR 2) at 1 by lia.
+  symmetry; rewrite <-(Zmod.of_Z_unsigned xR) at 1; rewrite (Z.div_mod xR 2) at 1 by lia.
   rewrite Div.Z.div_sub_mod_exact, Zdiv.Zmod_odd by lia.
 
   assert (F.of_Z p256 2 * i2 = F.one)%F as Hi2 by (cbv [i2]; clear; Decidable.vm_decide).
-  case Z.odd; cbn [Z.eqb Pos.eqb Zeq_bool Z.compare Pos.compare Pos.compare_cont]; rewrite ?F.of_Z_add, ?F.of_Z_mul; fold (@F.zero p256); fold (@F.one p256); try ring [Hi2].
+  case Z.odd; cbn [Z.eqb Pos.eqb Zeq_bool Z.compare Pos.compare Pos.compare_cont]; rewrite ?Zmod.of_Z_add, ?Zmod.of_Z_mul; fold (@F.zero p256); fold (@F.one p256); try ring [Hi2].
 Qed.
 
 Definition p256_point_add_nz_nz_neq := func! (p_out, p_P, p_Q) ~> ok {
@@ -286,10 +287,10 @@ rewrite ?app_length, ?length_coord in *.
     cbv [fst snd Jacobian.eq Jacobian.iszero proj1_sig] in *.
     case Decidable.dec; intros; try contradiction; split; trivial.
     rewrite Hierarchy.commutative in Hx.
-    rewrite <-!F.pow_succ_r in Hx, Hy; simpl N.succ in Hx, Hy.
+    rewrite <-!Zmod.pow_succ_nonneg_r in Hx, Hy by lia; simpl Z.succ in Hx, Hy.
     rewrite F.pow_0_iff, Ring.sub_zero_iff in Hx, Hy by (lia||exact _).
-    rewrite ?F.pow_3_r, ?F.pow_2_r in Hx.
-    rewrite ?F.pow_3_r, ?F.pow_2_r in Hy.
+    rewrite ?F.pow_3_r, ?Zmod.pow_2_r in Hx.
+    rewrite ?F.pow_3_r, ?Zmod.pow_2_r in Hy.
     split; Field.fsatz. }
   { unshelve eexists ?[pfPneqQ].
     { intros HX; cbv [Jacobian.eq Jacobian.iszero proj1_sig fst snd] in H122, H123, HX.
@@ -297,9 +298,9 @@ rewrite ?app_length, ?length_coord in *.
       apply H121. subst x x0.
       rewrite !word.broadcast_0_iff in *.
       rewrite !Bool.negb_false_iff, !F.eqb_eq.
-      rewrite ?F.pow_3_r, ?F.pow_2_r, ?Hx, ?Hy, ?(proj2 (Ring.sub_zero_iff _ _)); ssplit; Field.fsatz. }
+      rewrite ?F.pow_3_r, ?Zmod.pow_2_r, ?Hx, ?Hy, ?(proj2 (Ring.sub_zero_iff _ _)); ssplit; (ring || Field.fsatz). }
     cbv [Jacobian.add_inequal_nz_nz point.to_bytes]; cbn [fst snd proj1_sig].
-    rewrite ?F.pow_3_r, ?F.pow_2_r.
+    rewrite ?F.pow_3_r, ?Zmod.pow_2_r.
     trivial. }
 Qed.
 
@@ -568,6 +569,6 @@ rewrite ?app_length, ?length_coord in *.
 
   cbv [proj1_sig proj2_sig fst snd point.to_bytes Jacobian.double_minus_3 Jacobian.double_minus3_impl Jacobian.Fsquare Jacobian.Ftriple Jacobian.Fhalve ].
   progress repeat seprewrite_in_by Array.list_word_at_app_of_adjacent_eq H69 ltac:(rewrite ?length_coord; listZnWords).
-  rewrite ?F.pow_3_r, ?F.pow_2_r in H69.
+  rewrite ?F.pow_3_r, ?Zmod.pow_2_r in H69.
   ecancel_assumption.
 Qed.

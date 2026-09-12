@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Import coqutil.Datatypes.List Coq.Lists.List.
 From bedrock2 Require Import Syntax NotationsCustomEntry.
 
@@ -85,26 +86,15 @@ Module F.
   Lemma eqb_eq {m} (x y : F m) : eqb x y = true <-> x = y.
   Proof. cbv [eqb]; case F.eq_dec; intuition congruence. Qed.
 
-  Lemma zero_iff_to_Z : forall {m : positive} (x : F m), x = 0%F :> F m <-> F.to_Z x = 0%Z.
+  Lemma pow_0_iff (p : Z) (Hp : Znumtheory.prime p) (x : F p) n (Hn : 0 < n) : F.pow x n = 0%F <-> x = 0%F.
   Proof.
-     split; intros; subst; try apply F.to_Z_0; [].
-     apply F.eq_to_Z_iff. rewrite F.to_Z_0. assumption.
-  Qed.
-
-  Lemma pow_0_iff (p : positive) (Hp : Znumtheory.prime p) (x : F p) n (Hn : n <> 0%N) : F.pow x n = 0%F <-> x = 0%F.
-  Proof.
-    revert Hn ;induction n using N.peano_ind; try contradiction.
-    intros _; split; cycle 1; intros; subst; rewrite ?F.pow_0_l; trivial; try lia.
-    rewrite F.pow_succ_r in H; eapply Hierarchy.zero_product_zero_factor in H; destruct H; trivial.
-    case (N.eqb_spec n 0) as [->|]; rewrite ?F.pow_0_r in *.
+    assert (0 <= n) as Hn' by lia; revert Hn; pattern n; revert Hn'; revert n.
+    apply Wf_Z.natlike_ind; [lia|]; intros n Hn IHn.
+    intros _; split; cycle 1; intros; subst; rewrite ?Zmod.pow_0_l; trivial; try lia.
+    rewrite Zmod.pow_succ_nonneg_r in H by trivial; eapply Hierarchy.zero_product_zero_factor in H; destruct H; trivial.
+    case (Z.eqb_spec n 0) as [->|]; rewrite ?Zmod.pow_0_r in *.
     { apply eq_sym in H; apply Hierarchy.zero_neq_one in H; case H. }
-    eapply IHn; eauto.
-  Qed.
-
-  Lemma to_Z_sub {m} (x y : F m) : F.to_Z (x - y) = Z.modulo (F.to_Z x - F.to_Z y) m.
-  Proof.
-    cbv [F.sub].
-    rewrite F.to_Z_add, F.to_Z_opp, Zdiv.Zplus_mod_idemp_r; trivial.
+    eapply IHn; eauto; lia.
   Qed.
 End F.
 

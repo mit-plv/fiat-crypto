@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Import coqutil.Datatypes.List Coq.Lists.List.
 Require Import Curves.Weierstrass.P256.
 Require Import Bedrock.P256.Specs.
@@ -172,8 +173,8 @@ Proof.
   rewrite !word.lor_0_iff, !word.zero_of_Z_iff, !Zdiv.Zmod_mod by exact _.
 
   rewrite coord.zero_iff; fold xR.
-  rewrite F.zero_iff_to_Z.
-  pose proof F.to_Z_range xR eq_refl as range.
+  rewrite <-Zmod.unsigned_0_iff.
+  pose proof Zmod.unsigned_pos_bound xR eq_refl as range.
   clearbody xR; clear x; set (F.to_Z xR) as x in *; clearbody x.
   clear -range.
   Time PreOmega.Z.to_euclidean_division_equations.

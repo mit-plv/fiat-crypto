@@ -234,7 +234,8 @@ Proof.
     ssplit; cycle -1.
     { rewrite Znat.Z2Nat.id; [exact eq_refl|ZnWords]. }
     { case Z.ltb_spec0; try (intros; ecancel_assumption).
-      intros Hl. cbn in Hl. lia. }
+      intros Hl. subst i. rewrite word.unsigned_of_Z_0 in Hl. cbn [Z.to_nat Z.of_nat] in Hl.
+      pose proof word.unsigned_range idx. lia. }
     { ZnWords. }
     { ZnWords. }
     { trivial. }

@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Import coqutil.Datatypes.List Coq.Lists.List.
 Require Import Bedrock.P256.Specs.
 
@@ -197,10 +198,10 @@ Proof.
     case H60 as [Hx Hy].
     case Decidable.dec; intros; try contradiction; split; [apply Hierarchy.one_neq_zero|].
     rewrite Hierarchy.commutative in Hx.
-    rewrite <-!F.pow_succ_r in Hx, Hy; simpl N.succ in Hx, Hy.
+    rewrite <-!Zmod.pow_succ_nonneg_r in Hx, Hy by lia; simpl Z.succ in Hx, Hy.
     rewrite F.pow_0_iff, Ring.sub_zero_iff in Hx, Hy by (lia||exact _).
-    rewrite ?F.pow_3_r, ?F.pow_2_r in Hx.
-    rewrite ?F.pow_3_r, ?F.pow_2_r in Hy.
+    rewrite ?F.pow_3_r, ?Zmod.pow_2_r in Hx.
+    rewrite ?F.pow_3_r, ?Zmod.pow_2_r in Hy.
     split; Field.fsatz. }
   { unshelve eexists ?[pfPneqQ].
     { intros HX; cbv [Jacobian.eq Jacobian.iszero of_affine Jacobian.of_affine Jacobian.of_affine_impl proj1_sig fst snd] in H59, H60, HX.
@@ -208,9 +209,9 @@ Proof.
       apply H60. subst x x0.
       rewrite !word.broadcast_0_iff in *.
       rewrite !Bool.negb_false_iff, !F.eqb_eq.
-      rewrite ?F.pow_3_r, ?F.pow_2_r, ?Hx, ?Hy, ?(proj2 (Ring.sub_zero_iff _ _)); ssplit; Field.fsatz. }
+      rewrite ?F.pow_3_r, ?Zmod.pow_2_r, ?Hx, ?Hy, ?(proj2 (Ring.sub_zero_iff _ _)); ssplit; (ring || Field.fsatz). }
     cbv [Jacobian.add_inequal_nz_nz Jacobian.add_inequal_impl of_affine Jacobian.of_affine Jacobian.of_affine_impl proj1_sig fst snd point.to_bytes]; cbn [fst snd proj1_sig].
-    rewrite ?app_assoc, ?F.pow_3_r, ?F.pow_2_r; repeat (ring || f_equal). }
+    rewrite ?app_assoc, ?F.pow_3_r, ?Zmod.pow_2_r; repeat (ring || f_equal). }
 Qed.
 
 
