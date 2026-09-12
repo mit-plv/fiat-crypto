@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Import bedrock2.Array.
 Require Import bedrock2.bottom_up_simpl.
 Require Import bedrock2.Loops.
@@ -447,8 +448,16 @@ Local Ltac solve_length :=
 Local Ltac solve_mem :=
   repeat match goal with
     | |- exists _ : _ -> Prop, _%sep _ => eexists
-    | H: ?P%sep ?m |- ?G%sep ?m => progress ecancel_assumption_preprocess_with solve_length
-    | H : _ %sep ?m |- _ %sep ?m => bottom_up_simpl_in_goal
+    | |- ?G%sep ?m =>
+      ensure_map m;
+      lazymatch goal with
+      | H: ?P%sep m |- _ => progress ecancel_assumption_preprocess_with solve_length
+      end
+    | |- _ %sep ?m =>
+      ensure_map m;
+      lazymatch goal with
+      | H : _ %sep m |- _ => bottom_up_simpl_in_goal
+      end
     | |- _%sep _ => ecancel_assumption
   end.
 
@@ -550,7 +559,7 @@ Proof.
   2: split; [solve_mem|].
   ssplit; try solve_bounds.
   apply HPost.
-  all:(Prod.inversion_prod; rewrite F.pow_2_r in *; congruence).
+  all:(Prod.inversion_prod; rewrite Zmod.pow_2_r in *; congruence).
 Qed.
 
 Lemma readd_ok : program_logic_goal_for_function! readd.

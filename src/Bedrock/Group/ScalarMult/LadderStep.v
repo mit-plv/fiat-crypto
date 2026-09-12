@@ -7,7 +7,7 @@ Local Open Scope Z_scope.
 Section Gallina.
   Local Open Scope F_scope.
 
-  Definition ladderstep_gallina (m : positive) (a24 : F m)
+  Definition ladderstep_gallina (m : Z) (a24 : F m)
              (X1 X2 Z2 X3 Z3: F m) : \<< F m, F m, F m, F m \>> :=
     let/n A := stack (X2+Z2) in
     let/n X2 := (X2-Z2) in

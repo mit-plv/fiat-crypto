@@ -40,10 +40,10 @@ Definition garageowner_P : Curve25519.M.point.
 refine (
   let x := F.of_Z _ (le_combine garageowner) in
   let y2 := (x*x*x + Curve25519.M.a*x*x +x)%F in
-  let sqrtm1 := (F.pow (F.of_Z _ 2) ((N.pos p-1)/4)) in
+  let sqrtm1 := (F.pow (F.of_Z _ 2) ((p-1)/4)) in
   let y := F.sqrt_5mod8 sqrtm1 y2 in
   exist _ (inl (x, y)) _).
-Decidable.vm_decide.
+Crypto.Util.Decidable.vm_decide.
 Defined.
 
 Lemma garageowner_P_correct : le_split 32 (Curve25519.M.X0 garageowner_P) = garageowner.
@@ -375,7 +375,7 @@ Proof.
     repeat straightline.
     straightline_call; ssplit; try ecancel_assumption; try trivial; try ZnWords.
     { cbv. inversion 1. }
-    { instantiate (1:=garageowner_P). Decidable.vm_decide. }
+    { instantiate (1:=garageowner_P). Crypto.Util.Decidable.vm_decide. }
 
     rename Lppp into Lihl; assert (List.length ppp = 40)%nat as Lppp by ZnWords.
 
@@ -390,7 +390,6 @@ Proof.
     repeat rewrite ?(app_assoc _ _ pPPP), ?app_comm_cons in H33.
     do 3 (seprewrite_in @Array.bytearray_append H33; cbn [Array.array] in H33).
 
-    change (unsigned x) with (@word.unsigned _ word32 x) in H32.
     repeat straightline.
     pose proof (List.firstn_skipn 16 pPPP) as HH.
     pose proof (@firstn_length_le _ pPPP 16 ltac:(ZnWords)).

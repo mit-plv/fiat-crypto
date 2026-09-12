@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Crypto.Spec.Curve25519.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
@@ -36,7 +37,7 @@ Section FElems.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
 
   Section Impl.
-    Context (m : positive).
+    Context (m : Z).
     Fixpoint exp_by_squaring (x : F m) (n : positive) : F m :=
       match n with
       | 1    => x
@@ -146,7 +147,7 @@ Section FElems.
   End Impl.
 
   Section Proofs.
-    Context (m : positive).
+    Context (m : Z).
 
 
     Lemma F_mul_1_r : forall x : F m,
@@ -164,11 +165,11 @@ Section FElems.
     Qed.
 
     Create HintDb F_pow.
-    Hint Rewrite @F.pow_2_r : F_pow.
-    Hint Rewrite @F.pow_add_r : F_pow.
-    Hint Rewrite @F.pow_mul_l : F_pow.
-    Hint Rewrite <- @F.pow_pow_l : F_pow.
-    Hint Rewrite @F.pow_1_r : F_pow.
+    Hint Rewrite @Zmod.pow_2_r : F_pow.
+    Hint Rewrite @Zmod.pow_add_r_nonneg using lia : F_pow.
+    Hint Rewrite @Zmod.pow_mul_l_nonneg using lia : F_pow.
+    Hint Rewrite @Zmod.pow_mul_r_nonneg using lia : F_pow.
+    Hint Rewrite @Zmod.pow_1_r : F_pow.
     Hint Rewrite @F.pow_3_r : F_pow.
 
     Ltac simplify_F :=
@@ -180,14 +181,14 @@ Section FElems.
       try F_lia.
 
 
-    Definition Pos2N_pos_xI n : N.pos n~1 = (2 * N.pos n + 1)%N := eq_refl.
-    Definition Pos2N_pos_xO n : N.pos n~0 = (2 * N.pos n)%N := eq_refl.
+    Definition Pos2Z_pos_xI n : Z.pos n~1 = 2 * Z.pos n + 1 := eq_refl.
+    Definition Pos2Z_pos_xO n : Z.pos n~0 = 2 * Z.pos n := eq_refl.
 
      Lemma exp_by_squaring_correct :
-      forall n x, exp_by_squaring m x n = (x ^ N.pos n)%F.
+      forall n x, exp_by_squaring m x n = (x ^ Z.pos n)%F.
     Proof using Type.
       induction n; intros; cbn [exp_by_squaring]; unfold nlet;
-        rewrite (Pos2N_pos_xI n) || rewrite (Pos2N_pos_xO n) || idtac.
+        rewrite (Pos2Z_pos_xI n) || rewrite (Pos2Z_pos_xO n) || idtac.
       all: try rewrite IHn.
       all: try destruct n eqn : H'; autorewrite with F_pow; try reflexivity.
       all: F_lia.
@@ -207,7 +208,7 @@ Section FElems.
     Qed.
 
     Lemma exp_by_squaring_encoded_simple_correct :
-      forall n x, exp_by_squaring_encoded_simple m x n = (x ^ N.pos n)%F.
+      forall n x, exp_by_squaring_encoded_simple m x n = (x ^ Z.pos n)%F.
     Proof using Type.
       intros. rewrite <- exp_by_squaring_correct; eauto.
       unfold exp_by_squaring_encoded_simple; induction n; simpl.
@@ -245,7 +246,7 @@ Section FElems.
     Qed.
 
     Lemma exp_by_squaring_encoded_correct :
-      forall n x, exp_by_squaring_encoded m x n = (x ^ N.pos n)%F.
+      forall n x, exp_by_squaring_encoded m x n = (x ^ Z.pos n)%F.
 
     Proof using Type.
       intros. rewrite <- exp_by_squaring_encoded_simple_correct; eauto.
@@ -361,7 +362,7 @@ Section FElems.
           subst H
         end;
         repeat simpl Nat.add;
-        cbn -[Nat.iter].
+        cbn -[Nat.iter ZmodDef.Zmod.pow].
 
       Ltac lower :=
         lower_setup;
@@ -387,7 +388,7 @@ Section FElems.
       Context {field_representaton : FieldRepresentation}.
       Context {field_representation_ok : FieldRepresentation_ok}.
 
-      Definition exp (e : positive) (x : F M_pos) := F.pow x (N.pos e).
+      Definition exp (e : positive) (x : F M_pos) := F.pow x (Z.pos e).
 
       Instance spec_of_exp_6
       : spec_of "exp_6" :=
@@ -402,8 +403,8 @@ Section FElems.
 
       Ltac rewrite_exponentiation lemma :=
         lazymatch goal with
-        | |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (?x ^ N.pos ?n)%F) =>
-          eassert (?[rewritten] = (x ^ N.pos n)%F) as <-
+        | |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (?x ^ Z.pos ?n)%F) =>
+          eassert (?[rewritten] = (x ^ Z.pos n)%F) as <-
               by (rewrite <- lemma by assumption;
                   lower; reflexivity)
         end.
@@ -507,10 +508,10 @@ Section FElems.
         intuition subst.
         subst v.
         replace (F.inv x) with (exp (2^255-21) x).
-        2: { unshelve erewrite F.Fq_inv_fermat; rewrite F_M_pos; try vm_decide.
-             exact Curve25519.prime_p.
-             eauto.
-        }
+        2: { unshelve erewrite F.Fq_inv_fermat.
+             { rewrite F_M_pos; exact Curve25519.prime_p. }
+             { rewrite F_M_pos; vm_decide. }
+             cbv [exp]; f_equal; rewrite F_M_pos; reflexivity. }
         ecancel_assumption.
       Qed.
 

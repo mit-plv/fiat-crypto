@@ -111,7 +111,11 @@ Local Ltac solve_length :=
 Local Ltac solve_mem :=
   repeat match goal with
     | |- exists _ : _ -> Prop, _%sep _ => eexists
-    | H: ?P%sep ?m |- ?G%sep ?m => progress ecancel_assumption_preprocess_with solve_length
+    | |- ?G%sep ?m =>
+      ensure_map m;
+      lazymatch goal with
+      | H: ?P%sep m |- _ => progress ecancel_assumption_preprocess_with solve_length
+      end
     | |- _%sep _ => ecancel_assumption
   end.
 
@@ -178,7 +182,7 @@ Proof.
   rewrite H34, le_combine_split.
   do 7 Morphisms.f_equiv.
   pose proof clamp_range (le_combine s).
-  change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255.
+  change (Z.of_nat (Z.to_nat (Z.log2 order))) with 255.
   (rewrite_strat bottomup Z.mod_small); [ reflexivity | .. ]; try Lia.lia.
 Qed.
 
@@ -220,7 +224,7 @@ Proof.
   rewrite H31, le_combine_split.
   do 7 Morphisms.f_equiv.
   pose proof clamp_range (le_combine s).
-  change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255.
+  change (Z.of_nat (Z.to_nat (Z.log2 order))) with 255.
   (rewrite_strat bottomup Z.mod_small); [ | Lia.lia .. ].
   lazymatch goal with
   | |- montladder_gallina _ _ _ ?x = _ => change x with (M.X0 M.B)
@@ -229,7 +233,7 @@ Proof.
   rewrite (@montladder_gallina_equiv_affine (Curve25519.p) _ _ (Curve25519.field)) with
       (b_nonzero:=Curve25519.M.b_nonzero) (char_ge_3:=Curve25519.char_ge_3);
     [ | Lia.lia | vm_decide | apply M.a2m4_nonsq ].
-  change (Z.of_nat (Z.to_nat (Z.log2 (Z.pos order)))) with 255.
+  change (Z.of_nat (Z.to_nat (Z.log2 order))) with 255.
   (rewrite_strat bottomup Z.mod_small); [ | Lia.lia .. ].
   reflexivity.
 Qed.
