@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 From Coq Require Import String.
 From Coq Require Import List.
 From Coq Require Import ZArith.
@@ -307,9 +308,21 @@ Section UnsaturatedSolinas.
       erewrite map_byte_wrap_bounded
         by eauto with bounds
     end.
+  (* [rewrite M_eq] cannot abstract [Z.pos M_pos] out of the goal: it also
+     occurs in the types of the field elements ([F M_pos] is [Zmod (Z.pos M_pos)]),
+     so rewrite only the moduli of [Z.modulo] via congruence. *)
   Ltac FtoZ :=
-    apply F.eq_of_Z_iff; rewrite ?F.to_Z_of_Z;
-    cbv [M] in M_eq; rewrite ?M_eq; pull_Zmod.
+    apply Zmod.of_Z_inj; rewrite ?Zmod.unsigned_of_Z;
+    cbv [M] in M_eq;
+    lazymatch type of M_eq with
+    | ?lhs = ?rhs =>
+      repeat match goal with
+             | |- context [Z.modulo ?a ?b] =>
+               constr_eq b lhs;
+               replace (Z.modulo a b) with (Z.modulo a rhs) by (f_equal; symmetry; exact M_eq)
+             end
+    end;
+    pull_Zmod.
 
   Ltac loosen_bounds := lazymatch goal with
   | |- forall _, list_Z_bounded_by ?thesebounds _ -> _ => simpl; intros; eapply relax_list_Z_bounded_by; [| eauto];
@@ -355,7 +368,7 @@ Section UnsaturatedSolinas.
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
-      rewrite F.pow_2_r. FtoZ; congruence. }
+      rewrite Zmod.pow_2_r. FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
   Qed.
@@ -376,7 +389,7 @@ Section UnsaturatedSolinas.
       intros.
       specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
-      FtoZ; congruence. }
+      rewrite <-Zmod.of_Z_add. FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
   Qed.
@@ -397,7 +410,7 @@ Section UnsaturatedSolinas.
       intros.
       specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
-      FtoZ; congruence. }
+      rewrite <-Zmod.of_Z_add. FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
   Qed.
@@ -418,7 +431,7 @@ Section UnsaturatedSolinas.
       intros.
       specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
-      rewrite <-F.of_Z_sub. FtoZ. congruence. }
+      rewrite <-Zmod.of_Z_sub. FtoZ. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
   Qed.
@@ -439,7 +452,7 @@ Section UnsaturatedSolinas.
       intros.
       specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
-      rewrite <-F.of_Z_sub. FtoZ. congruence. }
+      rewrite <-Zmod.of_Z_sub. FtoZ. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
   Qed.
@@ -459,7 +472,7 @@ Section UnsaturatedSolinas.
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
-      FtoZ. rewrite Z.sub_0_l; congruence. }
+      rewrite <-Zmod.of_Z_opp. FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
   Qed.
@@ -539,7 +552,7 @@ Section UnsaturatedSolinas.
       destruct (Hcorrect (Interface.word.unsigned w)); clear Hcorrect.
       { pose proof Properties.word.unsigned_range w.
         eapply Bool.andb_true_iff; split; eapply Zle_is_le_bool; Lia.lia. }
-      rewrite <- M_eq in *; cbv [M] in *; eapply F.eq_of_Z_iff in H2.
+      rewrite <- M_eq in *; cbv [M] in *; eapply Zmod.of_Z_inj in H2.
       rewrite <-H2.
       unfold feval.
       unfold Signature.field_representation.
@@ -557,7 +570,7 @@ Section UnsaturatedSolinas.
       destruct (Hcorrect (Interface.word.unsigned w)); clear Hcorrect.
       { pose proof Properties.word.unsigned_range w.
         eapply Bool.andb_true_iff; split; eapply Zle_is_le_bool; Lia.lia. }
-      rewrite <- M_eq in *; cbv [M] in *; eapply F.eq_of_Z_iff in H2.
+      rewrite <- M_eq in *; cbv [M] in *; eapply Zmod.of_Z_inj in H2.
       trivial. }
     { eauto using relax_list_Z_bounded_by, tight_bounds_tighter_than. }
   Qed.
@@ -608,7 +621,7 @@ Section UnsaturatedSolinas.
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       rewrite Hcorrect.
-      rewrite F.to_Z_of_Z, <-M_eq.
+      rewrite Zmod.unsigned_of_Z, <-M_eq.
       reflexivity. }
     { (* output *bounds* are correct *)
       intros. rewrite Hcorrect by auto.

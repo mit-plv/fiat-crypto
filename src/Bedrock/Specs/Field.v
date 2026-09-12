@@ -551,14 +551,20 @@ Ltac ecancel_assumption_preprocess_with length_tac :=
     end end
   end.
 
-(* Rewrites FElem to bytearrays for deallocation. *)
+(* Rewrites FElem to bytearrays for deallocation.
+   The memory [m] is taken from the goal first: matching [H: ?P ?m] against
+   every hypothesis and then unifying [?m] with the goal's [map.split] argument
+   unfolds the field operations in unrelated hypotheses and is very slow. *)
 Ltac dealloc_preprocess :=
     repeat match goal with
     | |- context [anybytes ?p _ _] =>
         match goal with
-        | H: ?P ?m |- context [map.split ?m _ _] =>
-          match P with context [FElem p ?v] =>
-            seprewrite_in (felem_to_bytearray p) H; pose proof (ws2bs_felem_length v)
+        | |- context [map.split ?m _ _] =>
+          match goal with
+          | H: ?P m |- _ =>
+            match P with context [FElem p ?v] =>
+              seprewrite_in (felem_to_bytearray p) H; pose proof (ws2bs_felem_length v)
+            end
           end
         end
     end.
