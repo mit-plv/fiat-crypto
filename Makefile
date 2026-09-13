@@ -360,7 +360,11 @@ Makefile.coq: Makefile _CoqProject
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-old && cat Makefile-old | sed s'/^printenv:/printenv::/g' | sed s'/^printenv:::/printenv::/g' | sed s'/\$$(TIMER) \$$(COQC)/$$(SET_LIMITS) $$(TIMER) $$(TIMEOUT_CMD) $$(COQC)/g' | sed s'/\$$(SHOW)COQC/$$(SHOW)$$(TIMEOUT_SHOW)COQC/g' > $@ && rm -f Makefile-old
 
 NO_LIMIT_PERF?=
-MAX_KB?=10000000 # 10 GB
+# coqc built with OCaml 5 reserves about 32 GiB of virtual address space for
+# minor heaps at startup (Rocq's 256 MB minor heap times OCaml 5's default of
+# 128 domains), so the limit must be well above that; measured threshold on
+# OCaml 5.4.1 is ~33.9 GB.  See https://github.com/rocq-prover/rocq/pull/22444
+MAX_KB?=80000000 # 80 GB
 MAX_SEC?=
 TIMEOUT_CMD?=
 TIMEOUT_SHOW?=
