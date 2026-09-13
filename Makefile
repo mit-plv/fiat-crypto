@@ -393,9 +393,13 @@ endif
 $(PERF_MAKEFILE): Makefile src/Rewriter/PerfTesting/Specific/make.py primes.txt
 	./src/Rewriter/PerfTesting/Specific/make.py primes.txt
 PERF_MAX_TIME?=600 # 10 minutes
-PERF_MAX_MEM?=10000000 # 10 GB in kbytes
+# coqc built with OCaml 5 reserves about 32 GiB of virtual address space for
+# minor heaps at startup (Rocq's 256 MB minor heap times OCaml 5's default of
+# 128 domains), so the limit must be well above that; measured threshold on
+# OCaml 5.4.1 is ~33.9 GB.  See https://github.com/rocq-prover/rocq/pull/22444
+PERF_MAX_MEM?=80000000 # 80 GB in kbytes
 PERF_MAX_STACK?=1000000
-PERF_TIMEOUT?=timeout $(PERF_MAX_TIME) # etc/timeout/timeout -m $(PERF_MAX_MEM) # limit to 10 GB # https://raw.githubusercontent.com/pshved/timeout/master/timeout
+PERF_TIMEOUT?=timeout $(PERF_MAX_TIME) # etc/timeout/timeout -m $(PERF_MAX_MEM) # limit to 80 GB # https://raw.githubusercontent.com/pshved/timeout/master/timeout
 # PERF_TIMEOUT?=timeout $(PERF_MAX_TIME)
 # apparently ulimit -m doesn't work anymore https://superuser.com/a/1497437/59575 / https://thirld.com/blog/2012/02/09/things-to-remember-when-using-ulimit/
 PERF_SET_LIMITS = ulimit -S -s $(PERF_MAX_STACK); ulimit -S -m $(PERF_MAX_MEM); ulimit -S -v $(PERF_MAX_MEM);
