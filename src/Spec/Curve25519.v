@@ -1,6 +1,6 @@
-From Coq Require Import BinPosDef.
+From Coq Require Import ZArith.
 Require Import Spec.ModularArithmetic.
-Local Open Scope positive_scope.
+Local Open Scope Z_scope.
 
 Notation p := (2^255-19).
 Notation l := (2^252 + 27742317777372353535851937790883648493).
@@ -29,7 +29,7 @@ Proof.
   Pock_certif 29 2 [(2, 2)] 1;
   Proof_certif 3 prime_3;
   Proof_certif 2 prime_2
-  ] _).
+  ] _)%positive.
   native_cast_no_check (@eq_refl bool true).
 Qed. (* 1s *)
 
@@ -43,7 +43,7 @@ Proof.
   Pock_certif 307 5 [(3, 1); (2, 1)] 1;
   Pock_certif 269 2 [(67, 1); (2, 2)] 1; Pock_certif 67 2 [(3, 1); (2, 1)] 1;
   Proof_certif 3 prime_3; Proof_certif 2 prime_2] _)
-  _ _ _ _ _ _ _ _).
+  _ _ _ _ _ _ _ _)%positive.
   1: native_cast_no_check (@eq_refl bool true).
   all : native_compute; exact eq_refl.
 Qed. (* 1.3s *)
@@ -65,7 +65,7 @@ Proof.
   Pock_certif 191 7 [(5, 1); (2, 1)] 1; Pock_certif 7 3 [(2, 1)] 1;
   Pock_certif 5 2 [(2, 2)] 1;
   Proof_certif 3 prime_3;
-  Proof_certif 2 prime_2] _).
+  Proof_certif 2 prime_2] _)%positive.
   native_cast_no_check (@eq_refl bool true).
 Time Qed. (* 1s *)
 

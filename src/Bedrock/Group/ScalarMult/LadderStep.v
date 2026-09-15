@@ -7,7 +7,7 @@ Local Open Scope Z_scope.
 Section Gallina.
   Local Open Scope F_scope.
 
-  Definition ladderstep_gallina (m : positive) (a24 : F m)
+  Definition ladderstep_gallina (m : Z) (a24 : F m)
              (X1 X2 Z2 X3 Z3: F m) : \<< F m, F m, F m, F m \>> :=
     let/n A := stack (X2+Z2) in
     let/n X2 := (X2-Z2) in
@@ -46,7 +46,7 @@ Section __.
   Instance spec_of_ladderstep : spec_of "ladderstep" :=
     fnspec! "ladderstep"
           (pX1 pX2 pZ2 pX3 pZ3 : word)
-          / (X1 X2 Z2 X3 Z3 : F M_pos) R,
+          / (X1 X2 Z2 X3 Z3 : F M) R,
     { requires tr mem :=
         (FElem (Some tight_bounds) pX1 X1
          * FElem (Some tight_bounds) pX2 X2
@@ -56,8 +56,8 @@ Section __.
       ensures tr' mem' :=
         tr = tr'
         /\ exists X4 Z4 X5 Z5 (* output values *)
-                  : F M_pos,
-                  (ladderstep_gallina M_pos a24 X1 X2 Z2 X3 Z3
+                  : F M,
+                  (ladderstep_gallina M a24 X1 X2 Z2 X3 Z3
            = \<X4, Z4, X5, Z5\>)
           /\ (FElem (Some tight_bounds) pX1 X1
               * FElem (Some tight_bounds) pX2 X4
@@ -66,8 +66,8 @@ Section __.
               * FElem (Some tight_bounds) pZ3 Z5 * R)%sep mem'}.
 
   Lemma compile_ladderstep {tr m l functions}
-        (x1 x2 z2 x3 z3 : F M_pos) :
-    let v := ladderstep_gallina M_pos a24 x1 x2 z2 x3 z3 in
+        (x1 x2 z2 x3 z3 : F M) :
+    let v := ladderstep_gallina M a24 x1 x2 z2 x3 z3 in
     forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
            Rout
            X1_ptr X1_var X2_ptr X2_var Z2_ptr Z2_var
@@ -87,7 +87,7 @@ Section __.
 
       (let v := v in
        forall (* output values *) m',
-       let '\<X4, Z4, X5, Z5\> := ladderstep_gallina M_pos a24 x1 x2 z2 x3 z3 in
+       let '\<X4, Z4, X5, Z5\> := ladderstep_gallina M a24 x1 x2 z2 x3 z3 in
          (FElem (Some tight_bounds) X1_ptr x1
           * FElem (Some tight_bounds) X2_ptr X4
           * FElem (Some tight_bounds) Z2_ptr Z4

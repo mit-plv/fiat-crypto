@@ -1059,21 +1059,10 @@ Proof.
         with (truncate_word access_size.word (nth n lst (word.of_Z 0))).
       eapply array_load_of_sep; eauto.
       {
-
-        change (Naive.unsigned ?a) with (word.unsigned (word:=word) a).
         rewrite word.unsigned_of_Z.
-        (*lia.
-        rewrite Radd_comm by apply word.ring_theory.
-        reflexivity.*)
-        change (Naive.wrap ?a) with (word.of_Z (word:=word) a).
-        rewrite word.ring_morph_add.
-        rewrite word.of_Z_unsigned.
-        rewrite Radd_comm by apply word.ring_theory.
-        f_equal.
-        rewrite word.unsigned_of_Z.
-        symmetry.
-        rewrite word.of_Z_wrap.
         change (word.wrap 4) with 4.
+        rewrite (Radd_comm word.ring_theory ptr).
+        instantiate (1:=ptr).
         reflexivity.
       }
       lia.
@@ -1821,7 +1810,7 @@ Proof.
   subst l0.
   change (array_locs ?a ?b ?c) with (array_locs a b v1).
   set (array_locs _ _ _) as l0.
-  let l' := eval cbn -[v1 combine] in l0 in change l0 with l'.
+  let l' := eval cbn -[v1 combine word.of_Z word.rep] in l0 in change l0 with l'.
   cbv [map.putmany_of_list gs].
   dedup  "_gs_from0".
   dedup  "_gs_to0".
@@ -1862,7 +1851,7 @@ Proof.
     cbn [unroll app].
     {
       repeat constructor; repeat compile_step.
-      all: apply expr_compile_var; cbn [word word.rep Naive.gen_word word.of_Z];
+      all: apply expr_compile_var;
         let v := lazymatch goal with |- _ = Some ?v => v end in
         let k := lazymatch goal with |- map.get _ ?k = Some _ => k end in
         lazymatch goal with

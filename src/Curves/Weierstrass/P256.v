@@ -5,9 +5,9 @@ Require Import Crypto.Spec.WeierstrassCurve.
 Require Import Crypto.Curves.Weierstrass.Affine.
 Require Import Crypto.Curves.Weierstrass.AffineProofs.
 
-Local Open Scope positive_scope.
+Local Open Scope Z_scope.
 
-Definition p256 := 2^256 - 2^224 + 2^192 + 2^96 - 1.
+Definition p256 := Eval cbv in (2^256 - 2^224 + 2^192 + 2^96 - 1).
 
 From Coq Require Import List. Import ListNotations.
 From Coqprime Require Import PocklingtonCertificat(Pocklington_refl,singleCertif(..)).
@@ -36,9 +36,9 @@ Add Field Private_field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F p2
 #[local] Definition b : F p256 := F.of_Z _ 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b.
 
 #[export] Instance p256_char_ge_3 : @Ring.char_ge (F p256) eq F.zero F.one F.opp F.add F.sub F.mul 3.
-Proof. intros n Hn. apply (@F.char_gt p256). cbv [p256]. Lia.lia. Qed.
+Proof. eapply Hierarchy.char_ge_weaken; [ apply (@F.char_gt p256) | Decidable.vm_decide ]. Qed.
 #[export] Instance p256_char_ge_12 : @Ring.char_ge (F p256) eq F.zero F.one F.opp F.add F.sub F.mul 12.
-Proof. intros n Hn. apply (@F.char_gt p256). cbv [p256]. Lia.lia. Qed.
+Proof. eapply Hierarchy.char_ge_weaken; [ apply (@F.char_gt p256) | Decidable.vm_decide ]. Qed.
 
 #[local] Notation Wpoint := (@W.point (F p256) eq F.add F.mul a b).
 

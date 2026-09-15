@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Import coqutil.Datatypes.List Coq.Lists.List.
 Require Import Curves.Weierstrass.P256.
 Require Import Bedrock.P256.Specs.
@@ -152,8 +153,8 @@ Proof.
   rewrite !word.lor_0_iff, !word.zero_of_Z_iff, !Zdiv.Zmod_mod by exact _.
 
   rewrite coord.zero_iff; fold xR.
-  rewrite F.zero_iff_to_Z.
-  pose proof F.to_Z_range xR eq_refl as range.
+  rewrite <-Zmod.unsigned_0_iff.
+  pose proof Zmod.unsigned_pos_bound xR eq_refl as range.
   clearbody xR; clear x; set (F.to_Z xR) as x in *; clearbody x.
   clear -range.
   Time PreOmega.Z.to_euclidean_division_equations.
@@ -258,19 +259,19 @@ Proof.
   eassert ((_ ++ _) = _) as ->; [|intros;ecancel_assumption].
   eapply le_combine_inj; rewrite ?app_length, ?length_le_combine, ?length_le_split; trivial.
   rewrite !le_combine_app, !le_combine_split, ?length_le_split; change (2^(8%nat*8)) with (2^64).
-  pose proof F.to_Z_range ((x - y)) eq_refl.
+  pose proof Zmod.unsigned_pos_bound ((x - y)) eq_refl.
   rewrite ?Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
 
-  pose proof F.to_Z_range x eq_refl.
-  pose proof F.to_Z_range y eq_refl.
-  rewrite F.to_Z_sub.
+  pose proof Zmod.unsigned_pos_bound x eq_refl.
+  pose proof Zmod.unsigned_pos_bound y eq_refl.
+  rewrite Zmod.unsigned_sub.
   rewrite ?word.unsigned_of_Z in *; cbv [word.wrap] in *; rewrite ?Zdiv.Zmod_mod in *.
 
   cbv [Semantics.interp_op1] in *.
   assert (x9 = word.of_Z 0 /\ F.to_Z y <= F.to_Z x
         \/x9 = word.of_Z 1 /\ F.to_Z x < F.to_Z y) as [ [-> ?]|[-> ?]] by
       (rewrite <-!word.unsigned_inj_iff; cbv [p256] in *; ZnWords.ZnWords).
-  { rewrite ?Z.add_0_r in *; cbv [p256] in *. ZnWords.ZnWords. }
+  { rewrite ?Z.add_0_r in *; cbv [p256] in *. rewrite Z.mod_small by lia. ZnWords.ZnWords. }
   rewrite <-(Z.mod_add _ 1), Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
   rewrite word.and_m1_l, ?word.unsigned_of_Z_nowrap in * by lia.
   cbv [p256] in *; ZnWords.ZnWords.
@@ -333,12 +334,12 @@ Proof.
   revert H23; eassert ((_ ++ _) = _)%list as ->; [|intros;ecancel_assumption].
   eapply le_combine_inj; rewrite ?app_length, ?length_le_combine, ?length_le_split; trivial.
   rewrite !le_combine_app, !le_combine_split, ?length_le_split; change (2^(8%nat*8)) with (2^64).
-  pose proof F.to_Z_range ((x + y)) eq_refl.
+  pose proof Zmod.unsigned_pos_bound ((x + y)) eq_refl.
   rewrite ?Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
 
-  pose proof F.to_Z_range x eq_refl.
-  pose proof F.to_Z_range y eq_refl.
-  rewrite F.to_Z_add.
+  pose proof Zmod.unsigned_pos_bound x eq_refl.
+  pose proof Zmod.unsigned_pos_bound y eq_refl.
+  rewrite Zmod.unsigned_add.
   rewrite ?word.unsigned_of_Z in *; cbv [word.wrap] in *; rewrite ?Zdiv.Zmod_mod, ?Z.mod_0_l, ?Z.add_0_r, ?Z.sub_0_r in * by (clear; lia).
 
   destruct Z.eqb eqn:Hborrow in *; [apply Z.eqb_eq in Hborrow|apply Z.eqb_neq in Hborrow]; repeat straightline.

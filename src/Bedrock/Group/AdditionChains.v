@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Crypto.Spec.Curve25519.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
@@ -36,7 +37,7 @@ Section FElems.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
 
   Section Impl.
-    Context (m : positive).
+    Context (m : Z).
     Fixpoint exp_by_squaring (x : F m) (n : positive) : F m :=
       match n with
       | 1    => x
@@ -146,7 +147,7 @@ Section FElems.
   End Impl.
 
   Section Proofs.
-    Context (m : positive).
+    Context (m : Z).
 
 
     Lemma F_mul_1_r : forall x : F m,
@@ -164,11 +165,11 @@ Section FElems.
     Qed.
 
     Create HintDb F_pow.
-    Hint Rewrite @F.pow_2_r : F_pow.
-    Hint Rewrite @F.pow_add_r : F_pow.
-    Hint Rewrite @F.pow_mul_l : F_pow.
-    Hint Rewrite <- @F.pow_pow_l : F_pow.
-    Hint Rewrite @F.pow_1_r : F_pow.
+    Hint Rewrite @Zmod.pow_2_r : F_pow.
+    Hint Rewrite @Zmod.pow_add_r_nonneg using lia : F_pow.
+    Hint Rewrite @Zmod.pow_mul_l_nonneg using lia : F_pow.
+    Hint Rewrite @Zmod.pow_mul_r_nonneg using lia : F_pow.
+    Hint Rewrite @Zmod.pow_1_r : F_pow.
     Hint Rewrite @F.pow_3_r : F_pow.
 
     Ltac simplify_F :=
@@ -180,14 +181,14 @@ Section FElems.
       try F_lia.
 
 
-    Definition Pos2N_pos_xI n : N.pos n~1 = (2 * N.pos n + 1)%N := eq_refl.
-    Definition Pos2N_pos_xO n : N.pos n~0 = (2 * N.pos n)%N := eq_refl.
+    Definition Pos2Z_pos_xI n : Z.pos n~1 = 2 * Z.pos n + 1 := eq_refl.
+    Definition Pos2Z_pos_xO n : Z.pos n~0 = 2 * Z.pos n := eq_refl.
 
      Lemma exp_by_squaring_correct :
-      forall n x, exp_by_squaring m x n = (x ^ N.pos n)%F.
+      forall n x, exp_by_squaring m x n = (x ^ Z.pos n)%F.
     Proof using Type.
       induction n; intros; cbn [exp_by_squaring]; unfold nlet;
-        rewrite (Pos2N_pos_xI n) || rewrite (Pos2N_pos_xO n) || idtac.
+        rewrite (Pos2Z_pos_xI n) || rewrite (Pos2Z_pos_xO n) || idtac.
       all: try rewrite IHn.
       all: try destruct n eqn : H'; autorewrite with F_pow; try reflexivity.
       all: F_lia.
@@ -207,7 +208,7 @@ Section FElems.
     Qed.
 
     Lemma exp_by_squaring_encoded_simple_correct :
-      forall n x, exp_by_squaring_encoded_simple m x n = (x ^ N.pos n)%F.
+      forall n x, exp_by_squaring_encoded_simple m x n = (x ^ Z.pos n)%F.
     Proof using Type.
       intros. rewrite <- exp_by_squaring_correct; eauto.
       unfold exp_by_squaring_encoded_simple; induction n; simpl.
@@ -245,7 +246,7 @@ Section FElems.
     Qed.
 
     Lemma exp_by_squaring_encoded_correct :
-      forall n x, exp_by_squaring_encoded m x n = (x ^ N.pos n)%F.
+      forall n x, exp_by_squaring_encoded m x n = (x ^ Z.pos n)%F.
 
     Proof using Type.
       intros. rewrite <- exp_by_squaring_encoded_simple_correct; eauto.
@@ -361,7 +362,7 @@ Section FElems.
           subst H
         end;
         repeat simpl Nat.add;
-        cbn -[Nat.iter].
+        cbn -[Nat.iter ZmodDef.Zmod.pow].
 
       Ltac lower :=
         lower_setup;
@@ -387,11 +388,11 @@ Section FElems.
       Context {field_representaton : FieldRepresentation}.
       Context {field_representation_ok : FieldRepresentation_ok}.
 
-      Definition exp (e : positive) (x : F M_pos) := F.pow x (N.pos e).
+      Definition exp (e : positive) (x : F M) := F.pow x (Z.pos e).
 
       Instance spec_of_exp_6
       : spec_of "exp_6" :=
-        fnspec! "exp_6" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
+        fnspec! "exp_6" (sq_ptr x_ptr : word) / (sq x : F M) R,
         { requires tr mem :=
             (FElem (Some tight_bounds) x_ptr x
              * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
@@ -402,8 +403,8 @@ Section FElems.
 
       Ltac rewrite_exponentiation lemma :=
         lazymatch goal with
-        | |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (?x ^ N.pos ?n)%F) =>
-          eassert (?[rewritten] = (x ^ N.pos n)%F) as <-
+        | |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (?x ^ Z.pos ?n)%F) =>
+          eassert (?[rewritten] = (x ^ Z.pos n)%F) as <-
               by (rewrite <- lemma by assumption;
                   lower; reflexivity)
         end.
@@ -421,7 +422,7 @@ Section FElems.
       End Exp_by_squaring.
 
       Instance spec_of_exp97 : spec_of "exp_97" :=
-        fnspec! "exp_97" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
+        fnspec! "exp_97" (sq_ptr x_ptr : word) / (sq x : F M) R,
         { requires tr mem :=
             (FElem (Some tight_bounds) x_ptr x
              * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
@@ -431,7 +432,7 @@ Section FElems.
                 * FElem (Some tight_bounds) sq_ptr (exp 97 x)  * R)%sep mem'}.
 
       Local Instance spec_of_exp_large : spec_of "fe25519_inv" :=
-        fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
+        fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : F M) R,
         { requires tr mem :=
             (FElem (Some tight_bounds) x_ptr x
              * FElem None sq_ptr sq * R)%sep mem;
@@ -466,12 +467,12 @@ Section FElems.
         compile.
       Qed.
 
-      Context { F_M_pos : Z.pos M_pos = 2^255-19 }.
+      Context { F_M : M = 2^255-19 }.
 
       Lemma compile_inv : forall m l tr functions x,
             let v := F.inv x in
             forall P (pred : P v -> predicate) (k : nlet_eq_k P v) k_impl
-                   (R : map.rep -> Prop) (out : F M_pos)
+                   (R : map.rep -> Prop) (out : F M)
                    (x_ptr : word.rep) (x_var : string) (out_ptr : word.rep) (out_var : string)
                    (out_bounds : option bounds),
 
@@ -493,7 +494,7 @@ Section FElems.
               cmd.seq (cmd.call [] "fe25519_inv" [expr.var out_var; expr.var x_var]) k_impl
 
               <{ pred (let/n x as out_var eq:Heq := v in k x Heq) }>.
-      Proof using F_M_pos ext_spec_ok field_representation_ok locals_ok mem_ok word_ok.
+      Proof using F_M ext_spec_ok field_representation_ok locals_ok mem_ok word_ok.
         repeat straightline.
         repeat (eexists; split; eauto).
         straightline_call.
@@ -507,15 +508,15 @@ Section FElems.
         intuition subst.
         subst v.
         replace (F.inv x) with (exp (2^255-21) x).
-        2: { unshelve erewrite F.Fq_inv_fermat; rewrite F_M_pos; try vm_decide.
-             exact Curve25519.prime_p.
-             eauto.
-        }
+        2: { unshelve erewrite F.Fq_inv_fermat.
+             { rewrite F_M; exact Curve25519.prime_p. }
+             { rewrite F_M; vm_decide. }
+             cbv [exp]; f_equal; rewrite F_M; reflexivity. }
         ecancel_assumption.
       Qed.
 
       (*
-      Context { F_M_pos : Z.pos M_pos = 2^255-19 }.
+      Context { F_M : M = 2^255-19 }.
       Require Import Crypto.Spec.Curve25519.
 
       Derive fe25519_inv SuchThat
@@ -529,7 +530,7 @@ Section FElems.
         cbv [ spec_of_UnOp unop_spec un_inv un_model ].
         intros.
         replace (F.inv (feval x)) with (exp (2^255-21) (feval x)).
-        2: { unshelve erewrite F.Fq_inv_fermat; rewrite F_M_pos; try vm_decide.
+        2: { unshelve erewrite F.Fq_inv_fermat; rewrite F_M; try vm_decide.
              exact Curve25519.prime_p.
              lia.
              unfold feval; eauto.
@@ -613,7 +614,7 @@ Section FElems.
         change (fun x => ?c x) with c.
 
     Global Instance spec_of_fe25519_inv : spec_of "fe25519_inv" :=
-      fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : F M_pos) R,
+      fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : F M) R,
       { requires tr mem :=
           (FElem (Some tight_bounds) x_ptr x
            * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
@@ -624,7 +625,7 @@ Section FElems.
 
     Require Import Crypto.Spec.Curve25519. *)
     Lemma fe_inv_correct :
-      Z.pos M_pos = 2^255-19 ->
+      M = 2^255-19 ->
       (forall functions : map.rep,
         map.get functions "fe25519_inv" = Some fe25519_inv ->
         spec_of_UnOp un_square functions -> spec_of_BinOp bin_mul functions ->
@@ -648,11 +649,11 @@ simple eapply compile_inv; shelve : compiler.
 Require Import bedrock2.BasicC64Semantics.
 
 Section Extraction.
-  Definition _M_pos := (2 ^ 255 - 19)%positive.
-  Context (_a24: F _M_pos).
+  Definition _M := (2 ^ 255 - 19)%Z.
+  Context (_a24: F _M).
 
   Instance fp : FieldParameters :=
-    {| M_pos := _M_pos;
+    {| M := _M;
        a24 := _a24;
        mul := "mul";
        add := "add";

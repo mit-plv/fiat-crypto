@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Import bedrock2.Array.
 Require Import bedrock2.BasicC64Semantics.
 Require Import bedrock2.Loops.
@@ -151,11 +152,11 @@ Definition secp256k1_inv := Eval cbv in
 (* Compute ToCString.c_func ("secp256k1_inv", secp256k1_inv). *)
 
 Section WithParameters.
-  Context {two_lt_M: 2 < M_pos}.
-  Context {char_ge_3 : (@Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos BinNat.N.two))}.
-  Context {field:@Algebra.Hierarchy.field (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
+  Context {two_lt_M: 2 < M}.
+  Context {char_ge_3 : (@Ring.char_ge (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos BinNat.N.two))}.
+  Context {field:@Algebra.Hierarchy.field (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
   Context {secp256k1_prime: prime m}.
-  Context {F_M_pos : Z.pos M_pos = m}.
+  Context {F_M : M = m}.
 
   Import (notations) coqutil.Map.Memory.
 
@@ -168,7 +169,7 @@ Section WithParameters.
 
   Global Instance spec_of_inv : spec_of "secp256k1_inv" :=
     fnspec! "secp256k1_inv"
-      (zK xK : word) / z (x : felem) (vx : F M_pos) (R : _ -> Prop),
+      (zK xK : word) / z (x : felem) (vx : F M) (R : _ -> Prop),
     { requires t m :=
         vx = feval x /\
         bounded_by loose_bounds x /\
@@ -194,10 +195,17 @@ Section WithParameters.
         solve [rewrite ?ws2bs_felem_length; try lia; change felem_size_in_bytes with 32 in *; lia]
     end.
 
+  (* Take the memory from the goal before searching the hypotheses: matching
+     [H: ?P ?m] against every hypothesis unfolds the field operations and is
+     very slow. *)
   Local Ltac solve_mem :=
     repeat match goal with
       | |- exists _ : _ -> Prop, _%sep _ => eexists
-      | H: ?P%sep ?m |- ?G%sep ?m => progress ecancel_assumption_preprocess_with solve_length
+      | |- ?G%sep ?m =>
+        ensure_map m;
+        lazymatch goal with
+        | H: ?P%sep m |- _ => progress ecancel_assumption_preprocess_with solve_length
+        end
       | |- _%sep _ => ecancel_assumption
     end.
 
@@ -226,7 +234,7 @@ Section WithParameters.
            loc' = map.put loc "i" (word.of_Z to) /\
            exists vvar',
              (FElem pvar vvar' * R)%sep mem' /\
-             feval vvar' = F.pow (feval vvar) (N.pow 2%N (Z.to_N (to - 1))) /\
+             feval vvar' = F.pow (feval vvar) (2 ^ (to - 1)) /\
              bounded_by un_outbounds vvar') ->
           post tr' mem' loc'
       ) ->
@@ -243,14 +251,14 @@ Section WithParameters.
                           exists i (Hi: 1 <= i <= to),
                           v = Z.to_nat (to - i) /\
                           (exists vx, ((FElem pvar vx) * R)%sep m /\
-                                   feval vx = F.pow (feval vvar) (N.pow 2%N (Z.to_N (i - 1))) /\
+                                   feval vx = F.pow (feval vvar) (2 ^ (i - 1)) /\
                                    bounded_by un_outbounds vx) /\
                           l = map.put loc "i" (word.of_Z i)).
     eapply wp_while. exists nat, lt, inv. ssplit; [eapply lt_wf|..].
     eexists. unfold inv; ssplit; [reflexivity|..].
     exists 1. exists (ltac:(lia): 1 <= 1 <= to). ssplit; [reflexivity|..].
     eexists. ssplit.
-    ecancel_assumption. rewrite F.pow_1_r. reflexivity. auto.
+    ecancel_assumption. rewrite Zmod.pow_1_r. reflexivity. auto.
     reflexivity.
     intros fuel * Hinv.
     destruct Hinv as (-> & vi & Hvi & -> & Hmem & ->).
@@ -278,8 +286,9 @@ Section WithParameters.
     repeat match goal with
            | H : feval ?a = _ |- context [feval ?a] => rewrite H
            end. cbv [un_model un_square].
-    rewrite F.pow_pow_l, N.mul_comm, <- N.pow_succ_r', <- Z2N.inj_succ.
-    f_equal. f_equal. lia. lia. auto.
+    rewrite <-Zmod.pow_mul_r_nonneg by (try apply Z.pow_nonneg; lia).
+    rewrite Z.mul_comm, <- Z.pow_succ_r by lia.
+    f_equal. f_equal. lia. auto.
     unfold l'. rewrite <- word.ring_morph_add, map.put_put_same. reflexivity.
     lia. assert (vi = to) as -> by lia.
     destruct Hmem as (? & ? & ? & ?).
@@ -309,9 +318,13 @@ Section WithParameters.
     unfold vx. rewrite (@F.Fq_inv_fermat _ _ two_lt_M).
     cbv [un_model bin_model un_square bin_mul felem_to_list proj1_sig].
 
-    rewrite F_M_pos.
-    repeat rewrite ?F.pow_pow_l, <- ?(F.pow_succ_r (feval x)), <- ?(F.pow_add_r (feval x)).
-    f_equal.
+    (* [feval x] unfolds to concrete modular arithmetic, and [rewrite] checks
+       mismatching subterms up to conversion; with the base abstracted those
+       checks stay cheap. *)
+    generalize (feval x) as b; intro b.
+    repeat rewrite <-?Zmod.pow_mul_r_nonneg, <-?Zmod.pow_succ_nonneg_r, <-?Zmod.pow_add_r_nonneg
+      by (apply Z.leb_le; vm_compute; reflexivity).
+    f_equal; rewrite F_M; vm_compute; reflexivity.
   Qed.
 
 End WithParameters.

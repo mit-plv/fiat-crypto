@@ -539,7 +539,7 @@ Section __.
     lia.
   Qed.
 
-    Lemma compile_felem_cswap {tr m l functions} swap (lhs rhs : F M_pos) :
+    Lemma compile_felem_cswap {tr m l functions} swap (lhs rhs : F M) :
       let v := cswap swap lhs rhs in
       forall P (pred: P v -> predicate) (k: nlet_eq_k P v) k_impl
              R mask_var bounds lhs_ptr lhs_var rhs_ptr rhs_var,

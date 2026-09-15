@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Crypto.Bedrock.Group.Loops.
 Require Import Crypto.Curves.Montgomery.XZ.
 Require Import Crypto.Curves.Montgomery.XZProofs.
@@ -46,7 +47,7 @@ Notation "'let/n' ( v , w , x , y , z ) := val 'in' body" :=
 
 Section Gallina.
   Local Open Scope F_scope.
-  Context {m : positive} (a24 : F m) (count : nat).
+  Context {m : Z} (a24 : F m) (count : nat).
   Definition montladder_gallina (k : Z) (u : F m)
     : F m :=
     let/n X1 := stack 1 in
@@ -96,7 +97,7 @@ Section Gallina.
     intros. cbv [ladderstep_gallina M.xzladderstep].
     destruct P1 as [x1 z1]. destruct P2 as [x2 z2].
     cbv [Rewriter.Util.LetIn.Let_In nlet]. cbn [fst snd].
-    rewrite !F.pow_2_r; trivial.
+    rewrite !Zmod.pow_2_r; trivial.
   Qed.
 
   Lemma montladder_gallina_equiv n point :
@@ -132,13 +133,16 @@ Section Gallina.
 
   Context
     (field : @Hierarchy.field (F m) eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div)
-    (Hm' : (28 <= m)%positive)
+    (Hm' : (28 <= m)%Z)
      a (a24_correct : (1 + 1 + 1 + 1) * a24 = a - (1 + 1))
     (a2m4_nonsq : ~(exists r, F.mul r r = F.sub (F.mul a a) (F.of_Z _ 4)))
     (b : F m) (b_nonzero : b <> 0).
 
   Local Instance char_ge_28 : @Ring.char_ge (F m) eq 0 1 F.opp F.add F.sub F.mul 28.
-  Proof. eapply Algebra.Hierarchy.char_ge_weaken; try eapply F.char_gt; trivial. Qed.
+  Proof.
+    eapply Algebra.Hierarchy.char_ge_weaken; [eapply F.char_gt|].
+    rewrite <-(Z2Pos.id m) in Hm' by lia; exact Hm'.
+  Qed.
 
   Context {char_ge_3 : @Ring.char_ge (F m) eq 0 1 F.opp F.add F.sub F.mul 3}. (* appears in statement *)
   Import MontgomeryCurve Montgomery.Affine.
@@ -152,7 +156,7 @@ Section Gallina.
     montladder_gallina n (X0 P) = X0 (scalarmult (n mod 2^Z.of_nat count) P).
   Proof.
     unshelve erewrite montladder_gallina_equiv, M.montladder_correct;
-      try lia; try exact _; trivial using F.inv_0.
+      try lia; try exact _; trivial using Zmod.inv_0.
    { intros r Hr. apply a2m4_nonsq; exists r. rewrite Hr. f_equal. ring. }
   Qed.
 End Gallina.
@@ -173,9 +177,9 @@ Section __.
   Section MontLadder.
     Context scalarbits (scalarbits_small : word.wrap (Z.of_nat scalarbits) = Z.of_nat scalarbits).
     Local Notation "bs $@ a" := (array ptsto (word.of_Z 1) a bs) (at level 20).
-    Let m : positive := M_pos.
+    Let m : Z := M.
     Context
-      (field : @Hierarchy.field (F m) eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div) (Hm' : (28 <= m)%positive)
+      (field : @Hierarchy.field (F m) eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div) (Hm' : (28 <= m)%Z)
       (a : F m) (b : F m) (b_nonzero : b <> F.zero).
 
     Context {char_ge_3 : @Ring.char_ge (F m) eq F.zero F.one F.opp F.add F.sub F.mul 3}. (* appears in statement *)
@@ -189,7 +193,7 @@ Section __.
     Instance spec_of_montladder : spec_of "montladder" :=
       fnspec! "montladder"
             (pOUT pK pU : word)
-            / Kbytes (K : Z) (U : F M_pos) (* inputs *)
+            / Kbytes (K : Z) (U : F M) (* inputs *)
             out_bound OUT
             R,
       { requires tr mem :=
@@ -396,7 +400,7 @@ Section __.
     | cons _ ?xs => let i := find_implication xs y in constr:(S i)
     end.
 
-  Context { F_M_pos : M_pos = (2^255-19)%positive }.
+  Context { F_M : M = 2^255-19 }.
   Context (a24_correct : F.mul (1 + 1 + 1 + 1) Field.a24 = F.sub a (1 + 1))
           (Ha : ~(exists r, F.mul r r = F.sub (F.mul a a) (F.of_Z _ 4))).
 
@@ -408,7 +412,7 @@ Section __.
     Derive montladder_body SuchThat
            (defn! "montladder" ("OUT", "K", "U")
                 { montladder_body },
-             implements (montladder_gallina(m:=M_pos))
+             implements (montladder_gallina(m:=M))
                         using ["felem_cswap"; felem_copy; from_word;
                                "ladderstep"; "fe25519_inv"; mul])
            As montladder_correct.

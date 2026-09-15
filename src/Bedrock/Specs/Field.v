@@ -15,12 +15,11 @@ Import bedrock2.Memory.
 
 Class FieldParameters :=
   { (** mathematical parameters **)
-    M_pos : positive; (* modulus *)
-    M : Z := Z.pos M_pos;
-    a24 : F M_pos; (* (a+2) / 4 or (a-2) / 4, depending on the implementation *)
+    M : Z; (* modulus *)
+    a24 : F M; (* (a+2) / 4 or (a-2) / 4, depending on the implementation *)
 
     (* special wrapper for copy so that compilation lemmas can recognize it *)
-    fe_copy := (@id (F M_pos));
+    fe_copy := (@id (F M));
 
     (** function names **)
     mul : string; add : string; carry_add : string; sub : string; carry_sub : string; opp : string;
@@ -42,9 +41,9 @@ Class FieldRepresentation
        :=
   { felem_size_in_words : nat;
     felem := {x : list word | length x = felem_size_in_words};
-    feval : list word -> F M_pos;
+    feval : list word -> F M;
 
-    feval_bytes : list byte -> F M_pos;
+    feval_bytes : list byte -> F M;
     felem_size_in_bytes : Z := (Z.of_nat felem_size_in_words) * bytes_per_word width; (* for stack allocation *)
     encoded_felem_size_in_bytes : nat; (* number of bytes when serialized *)
     bytes_in_bounds : list byte -> Prop;
@@ -76,7 +75,7 @@ Section FunctionSpecs.
           {field_representation : FieldRepresentation}.
 
   Class UnOp (name: string) :=
-    { un_model: F M_pos -> F M_pos;
+    { un_model: F M -> F M;
       un_xbounds: bounds;
       un_outbounds: bounds }.
 
@@ -105,7 +104,7 @@ Section FunctionSpecs.
     unop_spec op.
 
   Class BinOp (name: string) :=
-    { bin_model: F M_pos -> F M_pos -> F M_pos;
+    { bin_model: F M -> F M -> F M;
       bin_xbounds: bounds;
       bin_ybounds: bounds;
       bin_outbounds: bounds }.
@@ -215,8 +214,8 @@ Section FunctionSpecs.
     Definition m' := Z.modinv (- M) r.
     Definition r' := Z.modinv (r) M.
 
-    Definition from_mont_model x := F.mul x (@F.of_Z M_pos (r' ^ (Z.of_nat felem_size_in_words)%Z)).
-    Definition to_mont_model x := F.mul x (@F.of_Z M_pos (r ^ (Z.of_nat felem_size_in_words)%Z)).
+    Definition from_mont_model x := F.mul x (@F.of_Z M (r' ^ (Z.of_nat felem_size_in_words)%Z)).
+    Definition to_mont_model x := F.mul x (@F.of_Z M (r ^ (Z.of_nat felem_size_in_words)%Z)).
 
     Instance un_from_mont {from_mont : string} : UnOp from_mont :=
       {| un_model := from_mont_model; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
@@ -475,8 +474,8 @@ Section SpecProperties.
     rewrite ByteBounds.byte_map_of_Z_unsigned.
     reflexivity.
   Qed.
-  Lemma M_nonzero : M <> 0.
-  Proof. cbv [M]. congruence. Qed.
+  Lemma M_nonzero {field_parameters_ok : FieldParameters_ok} : M <> 0.
+  Proof. pose proof (Znumtheory.prime_ge_2 _ M_prime); lia. Qed.
 
   (* Rupicola Array helper lemmas.*)
 
@@ -551,14 +550,20 @@ Ltac ecancel_assumption_preprocess_with length_tac :=
     end end
   end.
 
-(* Rewrites FElem to bytearrays for deallocation. *)
+(* Rewrites FElem to bytearrays for deallocation.
+   The memory [m] is taken from the goal first: matching [H: ?P ?m] against
+   every hypothesis and then unifying [?m] with the goal's [map.split] argument
+   unfolds the field operations in unrelated hypotheses and is very slow. *)
 Ltac dealloc_preprocess :=
     repeat match goal with
     | |- context [anybytes ?p _ _] =>
         match goal with
-        | H: ?P ?m |- context [map.split ?m _ _] =>
-          match P with context [FElem p ?v] =>
-            seprewrite_in (felem_to_bytearray p) H; pose proof (ws2bs_felem_length v)
+        | |- context [map.split ?m _ _] =>
+          match goal with
+          | H: ?P m |- _ =>
+            match P with context [FElem p ?v] =>
+              seprewrite_in (felem_to_bytearray p) H; pose proof (ws2bs_felem_length v)
+            end
           end
         end
     end.

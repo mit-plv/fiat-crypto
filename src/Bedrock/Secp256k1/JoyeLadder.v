@@ -1,3 +1,4 @@
+From Coq Require Import Zmod.
 Require Import bedrock2.Array.
 Require Import bedrock2.BasicC64Semantics.
 Require Import bedrock2.Loops.
@@ -50,12 +51,12 @@ Local Existing Instance frep256k1.
 Local Existing Instance frep256k1_ok.
 
 Section WithParameters.
-  Context {two_lt_M: 2 < M_pos}.
-  Context {char_ge_3 : (@Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos BinNat.N.two))}.
-  Context {field:@Algebra.Hierarchy.field (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
+  Context {two_lt_M: 2 < M}.
+  Context {char_ge_3 : (@Ring.char_ge (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos BinNat.N.two))}.
+  Context {field:@Algebra.Hierarchy.field (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
   Context {secp256k1_prime: Znumtheory.prime m}.
-  Context {F_M_pos : Z.pos M_pos = m}.
-  Context {a b : F M_pos}.
+  Context {F_M : M = m}.
+  Context {a b : F M}.
   Context {zero_a : id a = F.zero}
           {seven_b : id b = F.of_Z _ 7}.
   Context {scalarbitsz : Z} {scalarbitsz_small : word.wrap scalarbitsz = scalarbitsz}.
@@ -99,7 +100,7 @@ Section WithParameters.
       secp256k1_mul(oY, oY, Z)
   }.
 
-  Add Ring Private_ring : (F.ring_theory M_pos) (morphism (F.ring_morph M_pos), constants [F.is_constant]).
+  Add Ring Private_ring : (F.ring_theory M) (morphism (F.ring_morph M), constants [F.is_constant]).
 
   Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
   Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
@@ -107,14 +108,14 @@ Section WithParameters.
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
   Local Notation word := (BasicC64Semantics.word).
   Local Notation felem := (felem(FieldRepresentation:=frep256k1)).
-  Local Notation Wpoint := (WeierstrassCurve.W.point(F:=F M_pos)(Feq:=Logic.eq)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)).
-  Local Notation Wzero := (WeierstrassCurve.W.zero(F:=F M_pos)(Feq:=Logic.eq)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)).
-  Local Notation point := (Jacobian.point(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
-  Local Notation co_z_points := (ScalarMult.co_z_points(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
-  Local Notation zaddu_co_z_points := (ScalarMult.zaddu_co_z_points(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)(Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)(a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
-  Local Notation zdau_co_z_points := (ScalarMult.zdau_co_z_points(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)(a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
-  Local Notation cswap_co_z_points := (ScalarMult.cswap_co_z_points(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)(a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
-  Local Notation make_co_z_points := (ScalarMult.make_co_z_points(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)(a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
+  Local Notation Wpoint := (WeierstrassCurve.W.point(F:=F M)(Feq:=Logic.eq)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)).
+  Local Notation Wzero := (WeierstrassCurve.W.zero(F:=F M)(Feq:=Logic.eq)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)).
+  Local Notation point := (Jacobian.point(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
+  Local Notation co_z_points := (ScalarMult.co_z_points(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
+  Local Notation zaddu_co_z_points := (ScalarMult.zaddu_co_z_points(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)(Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)(a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
+  Local Notation zdau_co_z_points := (ScalarMult.zdau_co_z_points(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)(a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
+  Local Notation cswap_co_z_points := (ScalarMult.cswap_co_z_points(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)(a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
+  Local Notation make_co_z_points := (ScalarMult.make_co_z_points(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)(a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
 
   Local Instance spec_of_secp256k1_opp : spec_of "secp256k1_opp" := Field.spec_of_UnOp un_opp.
   Local Instance spec_of_secp256k1_square : spec_of "secp256k1_square" := Field.spec_of_UnOp un_square.
@@ -150,14 +151,18 @@ Section WithParameters.
         lazymatch type of m with | @map.rep _ _ _ => idtac | _ => fail end
     end.
 
+  Lemma felem_to_list_if (P : bool) (x1 x2 : felem) :
+    (if P then felem_to_list x1 else felem_to_list x2) = felem_to_list (if P then x1 else x2).
+  Proof. destruct P; reflexivity. Qed.
+
   (* This is mainly to keep clean ifs and back and forth conversions between felem and lists of
-    words as used by rupicola. *)
+    words as used by rupicola. ([replace ... in H] would search [H] for the term up to
+    conversion, which unfolds the field operations and is very slow.) *)
   Ltac simplify_mem_hyps :=
     rewrite ?ws2felem_felem_to_list, ?felem_to_list_ws2felem in *; try solve_length;
     repeat match goal with
       | H: context [if ?P then felem_to_list ?x1 else felem_to_list ?x2] |- _ =>
-          replace (if P then felem_to_list x1 else felem_to_list x2) with
-                  (felem_to_list (if P then x1 else x2)) in H; [| destruct P; exact eq_refl]
+          rewrite (felem_to_list_if P x1 x2) in H
     end.
 
   Local Ltac solve_mem :=
@@ -167,7 +172,13 @@ Section WithParameters.
     end;
     ensure_memory_goal;
     repeat match goal with
-      | H: ?P%sep ?m |- ?G%sep ?m => progress ecancel_assumption_preprocess_with solve_length; simplify_mem_hyps
+      | |- ?G%sep ?m =>
+        (* Take the memory from the goal before searching the hypotheses: matching
+           [H: ?P ?m] against every hypothesis unfolds the field operations and
+           is very slow. *)
+        lazymatch goal with
+        | H: ?P%sep m |- _ => progress ecancel_assumption_preprocess_with solve_length; simplify_mem_hyps
+        end
       | |- _%sep _ => ecancel_assumption
     end.
 
@@ -859,8 +870,8 @@ Section WithParameters.
     repeat match goal with
            | H : feval ?a = _ |- context [feval ?a] => rewrite H
            end.
-    1,2,5,6: rewrite F.inv_0; ring.
-    Add Field Private_field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F M_pos)).
+    1,2,5,6: rewrite Zmod.inv_0; ring.
+    Add Field Private_field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F M)).
     Import Field_tac.
     1-4: field; exact n.
   Qed.
@@ -900,7 +911,7 @@ Proof. apply secp256k1_felem_copy_correct. reflexivity. Qed.
 
 (* Assume m = 2 ^ 256 - 2 ^ 32 - 977 is prime *)
 Lemma link_secp256k1_laddermul (secp256k1_prime: Znumtheory.prime m) :
-  @spec_of_laddermul (F.field_modulo M_pos) (0%F) (F.of_Z _ 7%Z) (256%Z) (map.of_list funcs).
+  @spec_of_laddermul (F.field_modulo M) (0%F) (F.of_Z _ 7%Z) (256%Z) (map.of_list funcs).
 Proof.
   eapply spec_of_laddermul_ok; repeat
   match goal with
