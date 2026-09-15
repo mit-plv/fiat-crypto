@@ -33,7 +33,7 @@ Section Field.
   (* Define p224 field *)
   Instance field_parameters : FieldParameters.
   Proof using Type.
-    let M := (eval vm_compute in (Z.to_pos (m))) in
+    let M := (eval vm_compute in m) in
     (* curve 'A' parameter *)
     let a := constr:(F.of_Z M (m - 3)) in
     let prefix := constr:("p224_felem_"%string) in

@@ -21,7 +21,7 @@ Section Field.
   (* Define Secp256k1 field *)
   Instance field_parameters : FieldParameters.
   Proof using Type.
-    let M := (eval vm_compute in (Z.to_pos (m))) in
+    let M := (eval vm_compute in m) in
     (* 'A' parameter *)
     let a := constr:(F.of_Z M 0) in
     let prefix := constr:("secp256k1_"%string) in

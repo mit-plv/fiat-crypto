@@ -312,12 +312,11 @@ Section WordByWordMontgomery.
       erewrite map_byte_wrap_bounded
         by eauto with bounds
     end.
-  (* [rewrite M_eq] cannot abstract [Z.pos M_pos] out of the goal: it also
-     occurs in the types of the field elements ([F M_pos] is [Zmod (Z.pos M_pos)]),
+  (* [rewrite M_eq] cannot abstract [M] out of the goal: it also
+     occurs in the types of the field elements ([F M] is [Zmod M]),
      so rewrite only the moduli of [Z.modulo] via congruence. *)
   Ltac FtoZ :=
     apply Zmod.of_Z_inj; rewrite ?Zmod.unsigned_of_Z;
-    cbv [M] in M_eq;
     lazymatch type of M_eq with
     | ?lhs = ?rhs =>
       repeat match goal with
@@ -619,7 +618,7 @@ Qed.
     ] in *.
     rewrite Zmod.unsigned_of_Z.
     specialize (Hcorrect (map Interface.word.unsigned x0) H2).
-    rewrite Hcorrect. cbv [M] in M_eq. rewrite <-M_eq. auto.
+    rewrite Hcorrect. rewrite <-M_eq. auto.
      }
     { (* output *bounds* are correct *)
       intros. rewrite Hcorrect by auto.
@@ -707,13 +706,13 @@ Qed.
     }
     destruct Hcorrect. FtoZ. pose proof (WordByWordMontgomery.from_montgomerymod_correct width n m (@Field.r' width field_parameters) (m' m width)) as Hcorrect.
     cbv [WordByWordMontgomery.eval] in *.
-    edestruct Hcorrect as [Hvalue Hvalid]; [| | | | | | eapply H3| ]; try eapply use_curve_good; try eassumption; [pose proof r'_correct as Htemp; cbv [r' M] in Htemp; rewrite M_eq in Htemp; eauto |].
+    edestruct Hcorrect as [Hvalue Hvalid]; [| | | | | | eapply H3| ]; try eapply use_curve_good; try eassumption; [pose proof r'_correct as Htemp; cbv [r'] in Htemp; rewrite M_eq in Htemp; eauto |].
     rewrite Hvalue. rewrite Z.mul_mod; try apply m_nz. rewrite H2. rewrite <- Z.mul_mod; try apply m_nz.
     symmetry. rewrite Z.mul_mod; try apply m_nz. cbv [list_in_bounds] in *. clear H3.
-    edestruct Hcorrect as [Hvalue' _]; [| | | | | | eapply H1 |]; try eapply use_curve_good; try eassumption; [pose proof r'_correct as Htemp; cbv [r' M] in Htemp; rewrite M_eq in Htemp; eauto |].
+    edestruct Hcorrect as [Hvalue' _]; [| | | | | | eapply H1 |]; try eapply use_curve_good; try eassumption; [pose proof r'_correct as Htemp; cbv [r'] in Htemp; rewrite M_eq in Htemp; eauto |].
     rewrite Hvalue'. rewrite <- Z.mul_mod; try apply m_nz.
-    cbv [Field.r' PushButtonSynthesis.WordByWordMontgomery.r' Field.r r M felem_size_in_words].
-    assert (Hinv : ModInv.Z.invmod (2 ^ width) (Z.pos M_pos) = ModInv.Z.invmod (2 ^ width) m)
+    cbv [Field.r' PushButtonSynthesis.WordByWordMontgomery.r' Field.r r felem_size_in_words].
+    assert (Hinv : ModInv.Z.invmod (2 ^ width) M = ModInv.Z.invmod (2 ^ width) m)
       by (rewrite M_eq; reflexivity).
     rewrite Hinv. auto.
     }
@@ -754,7 +753,7 @@ Qed.
     pose proof (WordByWordMontgomery.from_montgomerymod_correct width n m (@Field.r' width field_parameters) (m' m width)) as Hcorrect.
     cbv [WordByWordMontgomery.eval] in *.
     edestruct Hcorrect as [Hvalue _]; [ | | | | | | apply H0 |]; try eapply use_curve_good; try eassumption;
-    [pose proof r'_correct as Htemp; cbv [r' M] in Htemp; rewrite M_eq in Htemp; auto| ].
+    [pose proof r'_correct as Htemp; cbv [r'] in Htemp; rewrite M_eq in Htemp; auto| ].
     rewrite Z.mul_mod; try apply m_nz. rewrite Hvalue. rewrite <- Z.mul_mod; try apply m_nz.
     rewrite <- Z.mul_assoc. rewrite Z.mul_mod; try apply m_nz.
     lazymatch goal with
@@ -764,7 +763,7 @@ Qed.
       {
         pose proof (r'_correct) as Htemp. rewrite <- Z.pow_mul_l. rewrite PullPush.Z.mod_pow_full.
         rewrite Z.mul_comm.
-        cbv [Field.r]. cbv [r' M] in Htemp. rewrite M_eq in Htemp.
+        cbv [Field.r]. cbv [r'] in Htemp. rewrite M_eq in Htemp.
         rewrite Htemp. rewrite Z.pow_1_l; auto with zarith.
       }
       rewrite Hr'. assert (H1' : (1 mod m = 1)%Z).
@@ -809,9 +808,9 @@ Require Import Crypto.Bedrock.Field.Translation.Proofs.ValidComputable.Func.
 
 (* TODO: move somewhere common *)
 Definition field_parameters_prefixed
-           M_pos a24 (prefix: string) : FieldParameters :=
+           M a24 (prefix: string) : FieldParameters :=
   Build_FieldParameters
-    M_pos a24
+    M a24
     (prefix ++ "mul")
     (prefix ++ "add")
     (prefix ++ "carry_add_dontuse")

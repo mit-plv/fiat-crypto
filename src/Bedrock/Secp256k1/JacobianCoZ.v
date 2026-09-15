@@ -239,10 +239,10 @@ Definition secp256k1_felem_cswap := CSwap.felem_cswap(word:=Naive.word64)(field_
 (* Compute ToCString.c_func ("secp256k1_felem_cswap", secp256k1_felem_cswap). *)
 
 Section WithParameters.
-  Context {two_lt_M: 2 < M_pos}.
-  Context {char_ge_3 : (@Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos BinNat.N.two))}.
-  Context {field:@Algebra.Hierarchy.field (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
-  Context {a b : F M_pos}.
+  Context {two_lt_M: 2 < M}.
+  Context {char_ge_3 : (@Ring.char_ge (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos BinNat.N.two))}.
+  Context {field:@Algebra.Hierarchy.field (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
+  Context {a b : F M}.
   Context {zero_a : id a = F.zero}
           {seven_b : id b = F.of_Z _ 7}.
 
@@ -252,35 +252,35 @@ Section WithParameters.
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
   Local Notation word := (BasicC64Semantics.word).
   Local Notation felem := (felem(FieldRepresentation:=frep256k1)).
-  Local Notation point := (Jacobian.point(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
-  Local Notation co_z := (Jacobian.co_z(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
-  Local Notation z_of := (Jacobian.z_of(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
+  Local Notation point := (Jacobian.point(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
+  Local Notation co_z := (Jacobian.co_z(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
+  Local Notation z_of := (Jacobian.z_of(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
   Local Notation jopp :=
-    (Jacobian.opp(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+    (Jacobian.opp(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
        (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
        (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
   Local Notation make_co_z :=
-    (Jacobian.make_co_z(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+    (Jacobian.make_co_z(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
        (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
        (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
   Local Notation zaddu :=
-    (Jacobian.zaddu(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+    (Jacobian.zaddu(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
        (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
        (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
   Local Notation zaddc :=
-    (Jacobian.zaddc(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+    (Jacobian.zaddc(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
        (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
        (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
   Local Notation dblu :=
-    (Jacobian.dblu(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+    (Jacobian.dblu(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
        (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
        (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
   Local Notation tplu :=
-    (Jacobian.tplu(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+    (Jacobian.tplu(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
        (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
        (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
   Local Notation zdau :=
-    (Jacobian.zdau(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+    (Jacobian.zdau(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
        (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
        (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
 
@@ -549,7 +549,7 @@ Section WithParameters.
     ecancel_assumption.
   Qed.
 
-  Add Ring Private_ring : (F.ring_theory M_pos) (morphism (F.ring_morph M_pos), constants [F.is_constant]).
+  Add Ring Private_ring : (F.ring_theory M) (morphism (F.ring_morph M), constants [F.is_constant]).
 
   Lemma secp256k1_make_co_z_ok : program_logic_goal_for_function! secp256k1_make_co_z.
   Proof.

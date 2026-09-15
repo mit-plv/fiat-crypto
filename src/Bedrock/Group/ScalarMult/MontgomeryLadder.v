@@ -177,7 +177,7 @@ Section __.
   Section MontLadder.
     Context scalarbits (scalarbits_small : word.wrap (Z.of_nat scalarbits) = Z.of_nat scalarbits).
     Local Notation "bs $@ a" := (array ptsto (word.of_Z 1) a bs) (at level 20).
-    Let m : Z := M_pos.
+    Let m : Z := M.
     Context
       (field : @Hierarchy.field (F m) eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div) (Hm' : (28 <= m)%Z)
       (a : F m) (b : F m) (b_nonzero : b <> F.zero).
@@ -193,7 +193,7 @@ Section __.
     Instance spec_of_montladder : spec_of "montladder" :=
       fnspec! "montladder"
             (pOUT pK pU : word)
-            / Kbytes (K : Z) (U : F M_pos) (* inputs *)
+            / Kbytes (K : Z) (U : F M) (* inputs *)
             out_bound OUT
             R,
       { requires tr mem :=
@@ -400,7 +400,7 @@ Section __.
     | cons _ ?xs => let i := find_implication xs y in constr:(S i)
     end.
 
-  Context { F_M_pos : M_pos = (2^255-19)%positive }.
+  Context { F_M : M = 2^255-19 }.
   Context (a24_correct : F.mul (1 + 1 + 1 + 1) Field.a24 = F.sub a (1 + 1))
           (Ha : ~(exists r, F.mul r r = F.sub (F.mul a a) (F.of_Z _ 4))).
 
@@ -412,7 +412,7 @@ Section __.
     Derive montladder_body SuchThat
            (defn! "montladder" ("OUT", "K", "U")
                 { montladder_body },
-             implements (montladder_gallina(m:=M_pos))
+             implements (montladder_gallina(m:=M))
                         using ["felem_cswap"; felem_copy; from_word;
                                "ladderstep"; "fe25519_inv"; mul])
            As montladder_correct.

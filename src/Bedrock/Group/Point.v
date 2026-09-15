@@ -4,7 +4,7 @@ Require Import Crypto.Bedrock.Specs.Field.
 
 Section Gallina.
   Definition point {field_parameters : FieldParameters} : Type
-    := (F M_pos * F M_pos).
+    := (F M * F M).
 End Gallina.
 
 Section Compile.
@@ -23,7 +23,7 @@ Section Compile.
     forall (l: locals) (mem: mem)
            (locals_ok : locals -> Prop)
       tr retvars R functions T (pred: T -> _ -> _ -> Prop)
-      (x y : F M_pos) k k_impl,
+      (x y : F M) k k_impl,
       let v := (x, y) in
       (let _ := 0 in (* placeholder *)
        find k_impl

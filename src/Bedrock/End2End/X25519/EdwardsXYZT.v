@@ -158,12 +158,12 @@ Definition readd := func! (p_out, p_a, p_c) {
 }.
 
 Section WithParameters.
-  Context {two_lt_M: 2 < M_pos}.
+  Context {two_lt_M: 2 < M}.
   (* TODO: Can we provide actual values/proofs for these, rather than just sticking them in the context? *)
-  Context {char_ge_3 : @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul
+  Context {char_ge_3 : @Ring.char_ge (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul
     (BinNat.N.succ_pos BinNat.N.two)}.
-  Context {field:@Algebra.Hierarchy.field (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
-  Context {a d: F M_pos}
+  Context {field:@Algebra.Hierarchy.field (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
+  Context {a d: F M}
           {nonzero_a : a <> F.zero}
           {square_a : exists sqrt_a, (F.mul sqrt_a sqrt_a) = a}
           {nonsquare_d : forall x, (F.mul x x) <> d}.
@@ -186,25 +186,25 @@ Local Notation cached_coordinates := (cached_coordinates(Fzero:=F.zero)(Fadd:=F.
 Local Notation precomputed_coordinates := (precomputed_coordinates(Fone:=F.one)(Fadd:=F.add)
   (Fmul:=F.mul)(Fsub:=F.sub)(Feq:=Logic.eq)(a:=a)(d:=d)).
 Local Notation m1double :=
-  (Extended.m1double(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+  (Extended.m1double(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
            (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
            (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
            (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
            (a_eq_minus1:=a_eq_minus1)(twice_d:=twice_d)(k_eq_2d:=k_eq_2d)).
 Local Notation m1_prep :=
-  (m1_prep(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+  (m1_prep(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
                   (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
                   (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
                   (a:=a)(d:=d)(nonzero_a:=nonzero_a)(a_eq_minus1:=a_eq_minus1)
                   (twice_d:=twice_d)(k_eq_2d:=k_eq_2d)(nonzero_d:=nonzero_d)).
 Local Notation m1_readd :=
-  (m1_readd(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+  (m1_readd(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
            (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
            (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
            (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
            (a_eq_minus1:=a_eq_minus1)(twice_d:=twice_d)(k_eq_2d:=k_eq_2d)(nonzero_d:=nonzero_d)).
 Local Notation m1add_precomputed_coordinates :=
-  (m1add_precomputed_coordinates(F:=F M_pos)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
+  (m1add_precomputed_coordinates(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
            (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
            (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
            (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
