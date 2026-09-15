@@ -1708,7 +1708,6 @@ pub const fn fiat_25519_scalar_set_one(mut out1: &mut fiat_25519_scalar_montgome
 /// ```text
 /// Postconditions:
 ///   twos_complement_eval out1 = m
-///   0 ≤ eval out1 < m
 /// ```
 ///
 /// ```text

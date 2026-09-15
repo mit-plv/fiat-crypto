@@ -5062,7 +5062,6 @@ static FIAT_P256_SCALAR_FIAT_INLINE void fiat_p256_scalar_set_one(fiat_p256_scal
  *
  * Postconditions:
  *   twos_complement_eval out1 = m
- *   0 ≤ eval out1 < m
  *
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]

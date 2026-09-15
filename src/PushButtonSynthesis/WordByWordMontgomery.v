@@ -611,7 +611,7 @@ Section __.
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => [text_before_function_name ++ fname ++ " returns the saturated representation of the prime modulus."]%string)
-             (msat_correct machine_wordsize n m valid)).
+             (msat_correct machine_wordsize n m larger_bounds)).
 
   Definition divstep_precomp
     := Pipeline.BoundsPipeline

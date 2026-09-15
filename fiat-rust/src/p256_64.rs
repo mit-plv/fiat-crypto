@@ -1671,7 +1671,6 @@ pub const fn fiat_p256_set_one(mut out1: &mut fiat_p256_montgomery_domain_field_
 /// ```text
 /// Postconditions:
 ///   twos_complement_eval out1 = m
-///   0 ≤ eval out1 < m
 /// ```
 ///
 /// ```text

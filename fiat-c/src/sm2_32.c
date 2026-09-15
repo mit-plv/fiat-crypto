@@ -4950,7 +4950,6 @@ static FIAT_SM2_FIAT_INLINE void fiat_sm2_set_one(fiat_sm2_montgomery_domain_fie
  *
  * Postconditions:
  *   twos_complement_eval out1 = m
- *   0 ≤ eval out1 < m
  *
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
