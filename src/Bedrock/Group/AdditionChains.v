@@ -38,15 +38,15 @@ Section FElems.
 
   Section Impl.
     Context (m : Z).
-    Fixpoint exp_by_squaring (x : F m) (n : positive) : F m :=
+    Fixpoint exp_by_squaring (x : Zmod m) (n : positive) : Zmod m :=
       match n with
       | 1    => x
       | n'~0 => let/n res := exp_by_squaring x n' in
-                let/n res := F.pow res 2 in
+                let/n res := Zmod.pow res 2 in
                 res
       | n'~1 => let/n res := exp_by_squaring x n' in
-                let/n res := F.pow res 2 in
-                let/n res := F.mul x res in
+                let/n res := Zmod.pow res 2 in
+                let/n res := Zmod.mul x res in
                 res
       end%positive.
 
@@ -65,24 +65,24 @@ Section FElems.
         end
       end%nat.
 
-    Definition exp_square_and_multiply (x : F m) (x' : F m) :=
-      let/n res := F.pow x' 2 in
-      let/n res := F.mul res x in
+    Definition exp_square_and_multiply (x : Zmod m) (x' : Zmod m) :=
+      let/n res := Zmod.pow x' 2 in
+      let/n res := Zmod.mul res x in
       res.
 
-    Definition exp_square (x' : F m) :=
-      let/n res := F.pow x' 2 in
+    Definition exp_square (x' : Zmod m) :=
+      let/n res := Zmod.pow x' 2 in
       res.
 
-    Fixpoint exp_from_encoding_simple (x : F m) (n : list (bool * nat)) : F m :=
+    Fixpoint exp_from_encoding_simple (x : Zmod m) (n : list (bool * nat)) : Zmod m :=
       match n with
       | [] =>
         1
       (* can add more cases for small k to be faster *)
       | (true, 0%nat) :: t =>
         let/n res := exp_from_encoding_simple x t in
-        let/n res := F.pow res 2 in
-        let/n res := F.mul x res in
+        let/n res := Zmod.pow res 2 in
+        let/n res := Zmod.mul x res in
         res
       | (true, k) :: t =>
         let/n res := exp_from_encoding_simple x t in
@@ -90,7 +90,7 @@ Section FElems.
         res
       | (false, 0%nat) :: t =>
         let/n res := exp_from_encoding_simple x t in
-        let/n res := F.pow res 2 in
+        let/n res := Zmod.pow res 2 in
         res
       | (false, k) :: t =>
         let/n res := exp_from_encoding_simple x t in
@@ -98,32 +98,32 @@ Section FElems.
         res
       end.
 
-    Fixpoint exp_from_encoding (x : F m) (n : list (bool * nat)) : F m :=
+    Fixpoint exp_from_encoding (x : Zmod m) (n : list (bool * nat)) : Zmod m :=
       match n with
       | [] =>
         1
       | [(true, 0%nat)] =>
         x
       | [(true, 1%nat)] =>
-        let/n res := F.pow x 2 in
-        let/n res := F.mul x res in
+        let/n res := Zmod.pow x 2 in
+        let/n res := Zmod.mul x res in
         res
       | [(true, (S k))] =>
-        let/n res := F.pow x 2 in
-        let/n res := F.mul x res in
+        let/n res := Zmod.pow x 2 in
+        let/n res := Zmod.mul x res in
         let/n res := Nat.iter k (exp_square_and_multiply x) res in
         res
       | [(false, 0%nat); (true, 0%nat)] =>
-        let/n res := F.pow x 2 in
+        let/n res := Zmod.pow x 2 in
         res
       | [(false, k); (true, 0%nat)] =>
-        let/n res := F.pow x 2 in
+        let/n res := Zmod.pow x 2 in
         let/n res := Nat.iter k (exp_square) res in
         res
       | (true, 0%nat) :: t =>
         let/n res := exp_from_encoding x t in
-        let/n res := F.pow res 2 in
-        let/n res := F.mul x res in
+        let/n res := Zmod.pow res 2 in
+        let/n res := Zmod.mul x res in
         res
       | (true, k) :: t =>
         let/n res := exp_from_encoding x t in
@@ -131,7 +131,7 @@ Section FElems.
         res
       | (false, 0%nat) :: t =>
         let/n res := exp_from_encoding x t in
-        let/n res := F.pow res 2 in
+        let/n res := Zmod.pow res 2 in
         res
       | (false, k) :: t =>
         let/n res := exp_from_encoding x t in
@@ -139,10 +139,10 @@ Section FElems.
         res
       end.
 
-    Definition exp_by_squaring_encoded_simple (x : F m) (n : positive) : F m :=
+    Definition exp_by_squaring_encoded_simple (x : Zmod m) (n : positive) : Zmod m :=
       exp_from_encoding_simple x (run_length_encoding n).
 
-    Definition exp_by_squaring_encoded (x : F m) (n : positive) : F m :=
+    Definition exp_by_squaring_encoded (x : Zmod m) (n : positive) : Zmod m :=
       exp_from_encoding x (run_length_encoding n).
   End Impl.
 
@@ -150,15 +150,15 @@ Section FElems.
     Context (m : Z).
 
 
-    Lemma F_mul_1_r : forall x : F m,
-        (x * 1)%F = x.
+    Lemma F_mul_1_r : forall x : Zmod m,
+        (x * 1)%Zmod = x.
     Proof using Type.
       intros.
       F_lia.
     Qed.
 
-    Lemma F_mul_1_l : forall x : F m,
-        (1 * x)%F = x.
+    Lemma F_mul_1_l : forall x : Zmod m,
+        (1 * x)%Zmod = x.
     Proof using Type.
       intros.
       F_lia.
@@ -170,7 +170,7 @@ Section FElems.
     Hint Rewrite @Zmod.pow_mul_l_nonneg using lia : F_pow.
     Hint Rewrite @Zmod.pow_mul_r_nonneg using lia : F_pow.
     Hint Rewrite @Zmod.pow_1_r : F_pow.
-    Hint Rewrite @F.pow_3_r : F_pow.
+    Hint Rewrite @Zmod.pow_3_r : F_pow.
 
     Ltac simplify_F :=
       unfold nlet;
@@ -185,7 +185,7 @@ Section FElems.
     Definition Pos2Z_pos_xO n : Z.pos n~0 = 2 * Z.pos n := eq_refl.
 
      Lemma exp_by_squaring_correct :
-      forall n x, exp_by_squaring m x n = (x ^ Z.pos n)%F.
+      forall n x, exp_by_squaring m x n = (x ^ Z.pos n)%Zmod.
     Proof using Type.
       induction n; intros; cbn [exp_by_squaring]; unfold nlet;
         rewrite (Pos2Z_pos_xI n) || rewrite (Pos2Z_pos_xO n) || idtac.
@@ -208,7 +208,7 @@ Section FElems.
     Qed.
 
     Lemma exp_by_squaring_encoded_simple_correct :
-      forall n x, exp_by_squaring_encoded_simple m x n = (x ^ Z.pos n)%F.
+      forall n x, exp_by_squaring_encoded_simple m x n = (x ^ Z.pos n)%Zmod.
     Proof using Type.
       intros. rewrite <- exp_by_squaring_correct; eauto.
       unfold exp_by_squaring_encoded_simple; induction n; simpl.
@@ -246,7 +246,7 @@ Section FElems.
     Qed.
 
     Lemma exp_by_squaring_encoded_correct :
-      forall n x, exp_by_squaring_encoded m x n = (x ^ Z.pos n)%F.
+      forall n x, exp_by_squaring_encoded m x n = (x ^ Z.pos n)%Zmod.
 
     Proof using Type.
       intros. rewrite <- exp_by_squaring_encoded_simple_correct; eauto.
@@ -260,7 +260,7 @@ Section FElems.
           simpl Nat.iter.
           simplify_F.
         + pose Nat_iter_plus_one.
-          specialize e with (f := exp_square_and_multiply m x) (k := S (S n0)) (x := 1%F).
+          specialize e with (f := exp_square_and_multiply m x) (k := S (S n0)) (x := 1%Zmod).
           rewrite <- e.
           replace (exp_square_and_multiply m x 1) with x.
           2: { unfold exp_square_and_multiply; simplify_F. }
@@ -388,11 +388,11 @@ Section FElems.
       Context {field_representaton : FieldRepresentation}.
       Context {field_representation_ok : FieldRepresentation_ok}.
 
-      Definition exp (e : positive) (x : F M) := F.pow x (Z.pos e).
+      Definition exp (e : positive) (x : Zmod M) := Zmod.pow x (Z.pos e).
 
       Instance spec_of_exp_6
       : spec_of "exp_6" :=
-        fnspec! "exp_6" (sq_ptr x_ptr : word) / (sq x : F M) R,
+        fnspec! "exp_6" (sq_ptr x_ptr : word) / (sq x : Zmod M) R,
         { requires tr mem :=
             (FElem (Some tight_bounds) x_ptr x
              * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
@@ -403,8 +403,8 @@ Section FElems.
 
       Ltac rewrite_exponentiation lemma :=
         lazymatch goal with
-        | |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (?x ^ Z.pos ?n)%F) =>
-          eassert (?[rewritten] = (x ^ Z.pos n)%F) as <-
+        | |- WeakestPrecondition.cmd _ _ _ ?mem _ (_ (?x ^ Z.pos ?n)%Zmod) =>
+          eassert (?[rewritten] = (x ^ Z.pos n)%Zmod) as <-
               by (rewrite <- lemma by assumption;
                   lower; reflexivity)
         end.
@@ -422,7 +422,7 @@ Section FElems.
       End Exp_by_squaring.
 
       Instance spec_of_exp97 : spec_of "exp_97" :=
-        fnspec! "exp_97" (sq_ptr x_ptr : word) / (sq x : F M) R,
+        fnspec! "exp_97" (sq_ptr x_ptr : word) / (sq x : Zmod M) R,
         { requires tr mem :=
             (FElem (Some tight_bounds) x_ptr x
              * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
@@ -432,7 +432,7 @@ Section FElems.
                 * FElem (Some tight_bounds) sq_ptr (exp 97 x)  * R)%sep mem'}.
 
       Local Instance spec_of_exp_large : spec_of "fe25519_inv" :=
-        fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : F M) R,
+        fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : Zmod M) R,
         { requires tr mem :=
             (FElem (Some tight_bounds) x_ptr x
              * FElem None sq_ptr sq * R)%sep mem;
@@ -470,9 +470,9 @@ Section FElems.
       Context { F_M : M = 2^255-19 }.
 
       Lemma compile_inv : forall m l tr functions x,
-            let v := F.inv x in
+            let v := Zmod.inv x in
             forall P (pred : P v -> predicate) (k : nlet_eq_k P v) k_impl
-                   (R : map.rep -> Prop) (out : F M)
+                   (R : map.rep -> Prop) (out : Zmod M)
                    (x_ptr : word.rep) (x_var : string) (out_ptr : word.rep) (out_var : string)
                    (out_bounds : option bounds),
 
@@ -507,8 +507,8 @@ Section FElems.
         repeat compile_step.
         intuition subst.
         subst v.
-        replace (F.inv x) with (exp (2^255-21) x).
-        2: { unshelve erewrite F.Fq_inv_fermat.
+        replace (Zmod.inv x) with (exp (2^255-21) x).
+        2: { unshelve erewrite Zmod.Fq_inv_fermat.
              { rewrite F_M; exact Curve25519.prime_p. }
              { rewrite F_M; vm_decide. }
              cbv [exp]; f_equal; rewrite F_M; reflexivity. }
@@ -524,13 +524,13 @@ Section FElems.
              implements (exp (2^255-21)) using [square; mul])
              As fe25519_inv_correct_exp.
       Proof.
-        (* replace (exp (2^255-21)) with @F.inv.*)
+        (* replace (exp (2^255-21)) with @Zmod.inv.*)
         compile_setup_unfold_spec_of.
         unfold spec_of_UnOp, un_inv, un_model.
         cbv [ spec_of_UnOp unop_spec un_inv un_model ].
         intros.
-        replace (F.inv (feval x)) with (exp (2^255-21) (feval x)).
-        2: { unshelve erewrite F.Fq_inv_fermat; rewrite F_M; try vm_decide.
+        replace (Zmod.inv (feval x)) with (exp (2^255-21) (feval x)).
+        2: { unshelve erewrite Zmod.Fq_inv_fermat; rewrite F_M; try vm_decide.
              exact Curve25519.prime_p.
              lia.
              unfold feval; eauto.
@@ -614,14 +614,14 @@ Section FElems.
         change (fun x => ?c x) with c.
 
     Global Instance spec_of_fe25519_inv : spec_of "fe25519_inv" :=
-      fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : F M) R,
+      fnspec! "fe25519_inv" (sq_ptr x_ptr : word) / (sq x : Zmod M) R,
       { requires tr mem :=
           (FElem (Some tight_bounds) x_ptr x
            * FElem (Some tight_bounds) sq_ptr sq * R)%sep mem;
         ensures tr' mem' :=
           tr = tr'
           /\ (FElem (Some tight_bounds) x_ptr x
-          * FElem (Some tight_bounds) sq_ptr (F.inv x)  * R)%sep mem'}.
+          * FElem (Some tight_bounds) sq_ptr (Zmod.inv x)  * R)%sep mem'}.
 
     Require Import Crypto.Spec.Curve25519. *)
     Lemma fe_inv_correct :
@@ -640,7 +640,7 @@ Section FElems.
   End Bedrock2.
 End FElems.
 
-#[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (F.inv _) _))) =>
+#[export] Hint Extern 8 (WeakestPrecondition.cmd _ _ _ _ _ (_ (nlet_eq _ (Zmod.inv _) _))) =>
 simple eapply compile_inv; shelve : compiler.
 
 (*
@@ -650,7 +650,7 @@ Require Import bedrock2.BasicC64Semantics.
 
 Section Extraction.
   Definition _M := (2 ^ 255 - 19)%Z.
-  Context (_a24: F _M).
+  Context (_a24: Zmod _M).
 
   Instance fp : FieldParameters :=
     {| M := _M;

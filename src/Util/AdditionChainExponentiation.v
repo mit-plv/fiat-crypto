@@ -10,7 +10,7 @@ Section AddChainExp.
   (* TODO: rewrite this.
      - use CPS and Loop
      - use an inner loop for repeated squaring
-     - connect to something that abstracts over F.pow, Z.pow, N.pow NOT scalarmult
+     - connect to something that abstracts over Zmod.pow, Z.pow, N.pow NOT scalarmult
   *)
 
   Function fold_chain {T} (id:T) (op:T->T->T) (si:list (nat*nat)) (acc:list T) {struct si} : T :=

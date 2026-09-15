@@ -21,9 +21,9 @@ TODO: prove equivalent to current spec
 *)
 
 Definition poly1305 (p:=(2^130-5)%Z) (k : list byte) (m : list byte) : list byte :=
-  let r := F.of_Z p (Z.land (le_combine (firstn 16 k)) 0x0ffffffc0ffffffc0ffffffc0fffffff) in
-  let t := fold_left (fun a n => (a+(F.of_Z p (le_combine(n++[x01]))))*r)%F (chunk 16 m) 0%F in
-  le_split 16 ((F.to_Z t) + le_combine (skipn 16 k)).
+  let r := Zmod.of_Z p (Z.land (le_combine (firstn 16 k)) 0x0ffffffc0ffffffc0ffffffc0fffffff) in
+  let t := fold_left (fun a n => (a+(Zmod.of_Z p (le_combine(n++[x01]))))*r)%Zmod (chunk 16 m) 0%Zmod in
+  le_split 16 ((Zmod.unsigned t) + le_combine (skipn 16 k)).
 
 Local Notation "a + b" := (Z.land (a+b) (Z.ones 32)).
 Local Notation "a ^ b" := (Z.lxor a b).

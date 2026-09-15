@@ -129,7 +129,7 @@ Proof.
 
   rename H0 into Hm.
   cbv [coord.to_bytes] in *.
-  set (x * coord.R)%F as xR in *.
+  set (x * coord.R)%Zmod as xR in *.
   do 4 (
     rewrite <-(firstn_skipn 8 (le_split _ _)), List.firstn_le_split, skipn_le_split, ?Z.shiftr_shiftr in Hm by lia;
     simpl Nat.min in Hm; simpl Nat.sub in Hm; set (le_split 8 _) in Hm);
@@ -148,14 +148,14 @@ Proof.
   clear Hm.
 
   subst x1. f_equal. f_equal. apply Bool.eq_true_iff_eq.
-  rewrite Z.eqb_eq, F.eqb_eq.
+  rewrite Z.eqb_eq, Zmod.eqb_eq.
   rewrite <-word.unsigned_of_Z_0, !word.unsigned_inj_iff by exact _.
   rewrite !word.lor_0_iff, !word.zero_of_Z_iff, !Zdiv.Zmod_mod by exact _.
 
   rewrite coord.zero_iff; fold xR.
   rewrite <-Zmod.unsigned_0_iff.
   pose proof Zmod.unsigned_pos_bound xR eq_refl as range.
-  clearbody xR; clear x; set (F.to_Z xR) as x in *; clearbody x.
+  clearbody xR; clear x; set (Zmod.unsigned xR) as x in *; clearbody x.
   clear -range.
   Time PreOmega.Z.to_euclidean_division_equations.
   cbv [p256] in *.
@@ -268,8 +268,8 @@ Proof.
   rewrite ?word.unsigned_of_Z in *; cbv [word.wrap] in *; rewrite ?Zdiv.Zmod_mod in *.
 
   cbv [Semantics.interp_op1] in *.
-  assert (x9 = word.of_Z 0 /\ F.to_Z y <= F.to_Z x
-        \/x9 = word.of_Z 1 /\ F.to_Z x < F.to_Z y) as [ [-> ?]|[-> ?]] by
+  assert (x9 = word.of_Z 0 /\ Zmod.unsigned y <= Zmod.unsigned x
+        \/x9 = word.of_Z 1 /\ Zmod.unsigned x < Zmod.unsigned y) as [ [-> ?]|[-> ?]] by
       (rewrite <-!word.unsigned_inj_iff; cbv [p256] in *; ZnWords.ZnWords).
   { rewrite ?Z.add_0_r in *; cbv [p256] in *. rewrite Z.mod_small by lia. ZnWords.ZnWords. }
   rewrite <-(Z.mod_add _ 1), Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
@@ -282,19 +282,19 @@ Lemma p256_coord_sub_ok : program_logic_goal_for_function! p256_coord_sub.
 Proof.
   cbv [program_logic_goal_for spec_of_p256_coord_sub ]; intros; destruct_head' @and; destruct_head' @ex.
   eapply WeakestPreconditionProperties.Proper_call; [|unshelve (eapply p256_coord_sub_nonmont_ok; trivial)]; cycle 1.
-  { exact (F.mul x coord.R). } { exact (F.mul y coord.R). } { shelve. } { exact out. }
+  { exact (Zmod.mul x coord.R). } { exact (Zmod.mul y coord.R). } { shelve. } { exact out. }
   { repeat intro; intuition eauto using ex_intro with nocore. }
   repeat intro; destruct_head' @and.
   cbv [coord.to_bytes] in *; ssplit; trivial.
-  enough ((x-y)*coord.R = x*coord.R - y*coord.R)%F as -> by eauto.
+  enough ((x-y)*coord.R = x*coord.R - y*coord.R)%Zmod as -> by eauto.
   ring.
 Qed.
 
 
 Definition spec_of_p256_coord_add_nonmont : spec_of "p256_coord_add" :=
-  fnspec! "p256_coord_add" p_out p_x p_y / out (x y : F p256) R,
+  fnspec! "p256_coord_add" p_out p_x p_y / out (x y : Zmod p256) R,
   { requires t m := m =*> (le_split 32 x)$@p_x /\ m =*> (le_split 32 y)$@p_y /\ m =* out$@p_out * R /\ length out = 32%nat;
-    ensures t' m := t' = t /\ m =* (le_split 32 (x+y)%F)$@p_out * R }.
+    ensures t' m := t' = t /\ m =* (le_split 32 (x+y)%Zmod)$@p_out * R }.
 
 Lemma p256_coord_add_nonmont_ok :
   let '_ := spec_of_p256_coord_add_nonmont in
@@ -351,11 +351,11 @@ Lemma p256_coord_add_ok : program_logic_goal_for_function! p256_coord_add.
 Proof.
   cbv [program_logic_goal_for spec_of_p256_coord_add ]; intros; destruct_head' @and; destruct_head' @ex.
   eapply WeakestPreconditionProperties.Proper_call; [|unshelve (eapply p256_coord_add_nonmont_ok; trivial)]; cycle 1.
-  { exact (F.mul x coord.R). } { exact (F.mul y coord.R). } { shelve. } { exact out. }
+  { exact (Zmod.mul x coord.R). } { exact (Zmod.mul y coord.R). } { shelve. } { exact out. }
   { repeat intro; intuition eauto using ex_intro with nocore. }
   repeat intro.
   cbv [coord.to_bytes] in *.
-  assert ((x+y)*coord.R = x*coord.R + y*coord.R)%F as -> by ring; eauto.
+  assert ((x+y)*coord.R = x*coord.R + y*coord.R)%Zmod as -> by ring; eauto.
 Qed.
 
 Lemma u256_set_p256_minushalf_conditional_ok : program_logic_goal_for_function! u256_set_p256_minushalf_conditional.

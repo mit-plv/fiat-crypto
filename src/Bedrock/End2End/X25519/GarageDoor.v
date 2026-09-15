@@ -38,10 +38,10 @@ Definition garageowner : list byte :=
 
 Definition garageowner_P : Curve25519.M.point.
 refine (
-  let x := F.of_Z _ (le_combine garageowner) in
-  let y2 := (x*x*x + Curve25519.M.a*x*x +x)%F in
-  let sqrtm1 := (F.pow (F.of_Z _ 2) ((p-1)/4)) in
-  let y := F.sqrt_5mod8 sqrtm1 y2 in
+  let x := Zmod.of_Z _ (le_combine garageowner) in
+  let y2 := (x*x*x + Curve25519.M.a*x*x +x)%Zmod in
+  let sqrtm1 := (Zmod.pow (Zmod.of_Z _ 2) ((p-1)/4)) in
+  let y := Zmod.sqrt_5mod8 sqrtm1 y2 in
   exist _ (inl (x, y)) _).
 Crypto.Util.Decidable.vm_decide.
 Defined.

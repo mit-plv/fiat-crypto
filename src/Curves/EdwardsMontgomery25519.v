@@ -1,18 +1,18 @@
 From Coq Require Import ZArith. Local Open Scope Z_scope.
 Require Import Crypto.Util.Decidable.
-Require Import Crypto.Spec.ModularArithmetic. Local Open Scope F_scope.
+Require Import Crypto.Spec.ModularArithmetic. Local Open Scope Zmod_scope.
 Require Import Crypto.Curves.EdwardsMontgomery. Import M.
 Require Import Crypto.Curves.Edwards.TwistIsomorphism.
 Require Import Crypto.Spec.Curve25519.
 
-Local Definition sqrtm1 : F p := F.pow (F.of_Z _ 2) ((p-1)/4).
-Local Definition sqrt := PrimeFieldTheorems.F.sqrt_5mod8 sqrtm1.
+Local Definition sqrtm1 : Zmod p := Zmod.pow (Zmod.of_Z _ 2) ((p-1)/4).
+Local Definition sqrt := PrimeFieldTheorems.Zmod.sqrt_5mod8 sqrtm1.
 
 Import MontgomeryCurve CompleteEdwardsCurve.
 
 Local Definition a' := (M.a + (1 + 1)) / M.b.
 Local Definition d' := (M.a - (1 + 1)) / M.b.
-Local Definition r := sqrt (F.inv ((a' / M.b) / E.a)).
+Local Definition r := sqrt (Zmod.inv ((a' / M.b) / E.a)).
 
 Local Lemma is_twist : E.a * d' = a' * E.d. Proof. vm_decide. Qed.
 Local Lemma nonzero_a' : a' <> 0. Proof. vm_decide. Qed.
@@ -54,6 +54,6 @@ Proof.
   pose proof Group.compose_homomorphism(homom:=cb)(homom2:=ba)(groupH2:=ltac:(eapply A)) as ca.
   split; try exact ac; try exact ca; try exact A; try exact C.
   Unshelve.
-  all : try (pose (@PrimeFieldTheorems.F.Decidable_square p prime_p eq_refl); vm_decide).
-  all : try (eapply Hierarchy.char_ge_weaken; try apply ModularArithmeticTheorems.F.char_gt; vm_decide).
+  all : try (pose (@PrimeFieldTheorems.Zmod.Decidable_square p prime_p eq_refl); vm_decide).
+  all : try (eapply Hierarchy.char_ge_weaken; try apply ModularArithmeticTheorems.Zmod.char_gt; vm_decide).
 Qed.

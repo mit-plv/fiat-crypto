@@ -19,20 +19,20 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Require Crypto.Algebra.Hierarchy Crypto.Algebra.Field.
 
 Existing Class prime.
-Local Open Scope F_scope.
+Local Open Scope Zmod_scope.
 
-Module F.
+Module Zmod.
   Section Field.
     Context (q:Z) {prime_q:prime q}.
 
-    Lemma inv_nonzero (x:F q) : (x <> 0 -> F.inv x * x%F = 1)%F.
+    Lemma inv_nonzero (x:Zmod q) : (x <> 0 -> Zmod.inv x * x%Zmod = 1)%Zmod.
     Proof using Type*. apply Zmod.mul_inv_same_l_prime, prime_alt, prime_q. Qed.
 
-    Global Instance field_modulo : @Algebra.Hierarchy.field (F q) Logic.eq 0%F 1%F F.opp F.add F.sub F.mul F.inv F.div.
+    Global Instance field_modulo : @Algebra.Hierarchy.field (Zmod q) Logic.eq 0%Zmod 1%Zmod Zmod.opp Zmod.add Zmod.sub Zmod.mul Zmod.inv Zmod.mdiv.
     Proof using Type*.
       pose proof (prime_ge_2 q prime_q).
       split.
-      { apply F.commutative_ring_modulo. }
+      { apply Zmod.commutative_ring_modulo. }
       { split; apply inv_nonzero. }
       { split; apply not_eq_sym, Zmod.one_neq_zero; lia. }
       { reflexivity. }
@@ -44,23 +44,23 @@ Module F.
   Section NumberThoery.
     Context {q:Z} {prime_q:prime q} {two_lt_q: 2 < q}.
 
-    Lemma Fq_inv_fermat (x:F q) : F.inv x = x ^ (q - 2)%Z.
+    Lemma Fq_inv_fermat (x:Zmod q) : Zmod.inv x = x ^ (q - 2)%Z.
     Proof using Type*.
-      destruct (dec (x = 0%F)) as [->|Hnz].
+      destruct (dec (x = 0%Zmod)) as [->|Hnz].
       { rewrite Zmod.inv_0, Zmod.pow_0_l by lia; reflexivity. }
       symmetry; apply Zmod.fermat_inv, prime_alt; assumption.
     Qed.
 
-    Lemma euler_criterion (a : F q) (a_nonzero : a <> 0) :
+    Lemma euler_criterion (a : Zmod q) (a_nonzero : a <> 0) :
       (a ^ (q / 2) = 1) <-> (exists b, b*b = a).
     Proof using Type*.
-      pose proof F.to_Z_nonzero_range a; pose proof (odd_as_div q).
+      pose proof Zmod.to_Z_nonzero_range a; pose proof (odd_as_div q).
       specialize_by (destruct (Z.prime_odd_or_2 _ prime_q); try lia; trivial).
       rewrite <-Zmod.unsigned_inj_iff, !Zmod.unsigned_pow_nonneg_r, !Zmod.unsigned_1_pos by (Z.to_euclidean_division_equations; lia).
-      rewrite F.square_iff, <-(euler_criterion (q/2)) by (trivial || lia); reflexivity.
+      rewrite Zmod.square_iff, <-(euler_criterion (q/2)) by (trivial || lia); reflexivity.
     Qed.
 
-    Global Instance Decidable_square : forall (x:F q), Decidable (exists y, y*y = x).
+    Global Instance Decidable_square : forall (x:Zmod q), Decidable (exists y, y*y = x).
     Proof.
       intro x; destruct (dec (x = 0)).
       { left. abstract (exists 0; subst; apply Ring.mul_0_l). }
@@ -71,13 +71,13 @@ Module F.
   Section SquareRootsPrime3Mod4.
     Context {q:Z} {prime_q: prime q} {q_3mod4 : q mod 4 = 3}.
 
-    Add Field _field2 : (Algebra.Field.field_theory_for_stdlib_tactic(T:=F q))
-                          (morphism (F.ring_morph q),
-                           constants [F.is_constant],
-                           div (F.morph_div_theory q),
-                           power_tac (F.power_theory q) [F.is_pow_constant]).
+    Add Field _field2 : (Algebra.Field.field_theory_for_stdlib_tactic(T:=Zmod q))
+                          (morphism (Zmod.ring_morph q),
+                           constants [Zmod.is_constant],
+                           div (Zmod.morph_div_theory q),
+                           power_tac (Zmod.power_theory q) [Zmod.is_pow_constant]).
 
-    Definition sqrt_3mod4 (a : F q) : F q := a ^ (q / 4 + 1).
+    Definition sqrt_3mod4 (a : Zmod q) : Zmod q := a ^ (q / 4 + 1).
 
     Global Instance Proper_sqrt_3mod4 : Proper (eq ==> eq ) sqrt_3mod4.
     Proof using Type. repeat intro; subst; reflexivity. Qed.
@@ -89,11 +89,11 @@ Module F.
     Qed.
     Local Hint Resolve two_lt_q_3mod4 : core.
 
-    Lemma sqrt_3mod4_correct (x:F q) :
-      ((exists y, y*y = x) <-> (sqrt_3mod4 x)*(sqrt_3mod4 x) = x)%F.
+    Lemma sqrt_3mod4_correct (x:Zmod q) :
+      ((exists y, y*y = x) <-> (sqrt_3mod4 x)*(sqrt_3mod4 x) = x)%Zmod.
     Proof using Type*.
       pose proof two_lt_q_3mod4; cbv [sqrt_3mod4].
-      destruct (F.eq_dec x 0) as [->|Hnz].
+      destruct (Zmod.eq_dec x 0) as [->|Hnz].
       { rewrite Zmod.pow_0_l by (Z.to_euclidean_division_equations; lia).
         split; intros; [ring | exists 0; ring]. }
       rewrite <-(euler_criterion (two_lt_q:=two_lt_q_3mod4) x Hnz).
@@ -106,16 +106,16 @@ Module F.
 
   Section SquareRootsPrime5Mod8.
     Context {q:Z} {prime_q: prime q} {q_5mod8 : q mod 8 = 5}.
-    Local Open Scope F_scope.
-    Add Field _field3 : (Algebra.Field.field_theory_for_stdlib_tactic(T:=F q))
-                          (morphism (F.ring_morph q),
-                           constants [F.is_constant],
-                           div (F.morph_div_theory q),
-                           power_tac (F.power_theory q) [F.is_pow_constant]).
+    Local Open Scope Zmod_scope.
+    Add Field _field3 : (Algebra.Field.field_theory_for_stdlib_tactic(T:=Zmod q))
+                          (morphism (Zmod.ring_morph q),
+                           constants [Zmod.is_constant],
+                           div (Zmod.morph_div_theory q),
+                           power_tac (Zmod.power_theory q) [Zmod.is_pow_constant]).
 
     (* Any nonsquare element raised to (q-1)/4 (real implementations use 2 ^ ((q-1)/4) )
        would work for sqrt_minus1 *)
-    Context (sqrt_minus1 : F q) (sqrt_minus1_valid : sqrt_minus1 * sqrt_minus1 = F.opp 1).
+    Context (sqrt_minus1 : Zmod q) (sqrt_minus1_valid : sqrt_minus1 * sqrt_minus1 = Zmod.opp 1).
 
     Lemma two_lt_q_5mod8 : 2 < q.
     Proof using prime_q q_5mod8.
@@ -124,7 +124,7 @@ Module F.
     Qed.
     Local Hint Resolve two_lt_q_5mod8 : core.
 
-    Definition sqrt_5mod8 (a : F q) : F q :=
+    Definition sqrt_5mod8 (a : Zmod q) : Zmod q :=
       let b := a ^ (q / 8 + 1) in
       if dec (b ^ 2 = a)
       then b
@@ -133,11 +133,11 @@ Module F.
     Global Instance Proper_sqrt_5mod8 : Proper (eq ==> eq ) sqrt_5mod8.
     Proof using Type. repeat intro; subst; reflexivity. Qed.
 
-    Lemma eq_b4_a2 (x : F q) (Hex:exists y, y*y = x) :
+    Lemma eq_b4_a2 (x : Zmod q) (Hex:exists y, y*y = x) :
       ((x ^ (q / 8 + 1)) ^ 2) ^ 2 = x ^ 2.
     Proof using prime_q q_5mod8.
       pose proof two_lt_q_5mod8.
-      destruct (F.eq_dec x 0) as [->|Hnz].
+      destruct (Zmod.eq_dec x 0) as [->|Hnz].
       { rewrite !Zmod.pow_0_l by (Z.to_euclidean_division_equations; lia); reflexivity. }
       rewrite <-!Zmod.pow_mul_r_nonneg by (Z.to_euclidean_division_equations; lia).
       replace ((q / 8 + 1) * (2 * 2))%Z with (q / 2 + 2)%Z by (Z.to_euclidean_division_equations; lia).
@@ -146,15 +146,15 @@ Module F.
       apply Zmod.mul_1_l.
     Qed.
 
-    Lemma mul_square_sqrt_minus1 : forall x, sqrt_minus1 * x * (sqrt_minus1 * x) = F.opp (x * x).
+    Lemma mul_square_sqrt_minus1 : forall x, sqrt_minus1 * x * (sqrt_minus1 * x) = Zmod.opp (x * x).
     Proof using prime_q sqrt_minus1_valid.
       intros x.
-      transitivity (F.opp 1 * (x * x)); [ | field].
+      transitivity (Zmod.opp 1 * (x * x)); [ | field].
       rewrite <-sqrt_minus1_valid.
       field.
     Qed.
 
-    Lemma eq_b4_a2_iff (x : F q) : x <> 0 ->
+    Lemma eq_b4_a2_iff (x : Zmod q) : x <> 0 ->
       ((exists y, y*y = x) <-> ((x ^ (q / 8 + 1)) ^ 2) ^ 2 = x ^ 2).
     Proof using Type*.
       split; try apply eq_b4_a2.
@@ -162,7 +162,7 @@ Module F.
       rewrite !@Zmod.pow_2_r in *.
       destruct (Field.only_two_square_roots_choice _ x (x * x) Hyy eq_refl); clear Hyy;
         [ eexists; eassumption | ].
-      match goal with H : ?a * ?a = F.opp _ |- _ => exists (sqrt_minus1 * a);
+      match goal with H : ?a * ?a = Zmod.opp _ |- _ => exists (sqrt_minus1 * a);
         rewrite mul_square_sqrt_minus1; rewrite H end.
       field.
     Qed.
@@ -172,7 +172,7 @@ Module F.
     Proof using Type*.
       cbv [sqrt_5mod8]; intros x.
       pose proof two_lt_q_5mod8.
-      destruct (F.eq_dec x 0) as [->|Hnz].
+      destruct (Zmod.eq_dec x 0) as [->|Hnz].
       {
         rewrite !Zmod.pow_0_l by (Z.to_euclidean_division_equations; lia).
         break_match;
@@ -188,10 +188,10 @@ Module F.
           rewrite mul_square_sqrt_minus1, B; field.
         } {
           rewrite mul_square_sqrt_minus1 in A.
-          transitivity (F.opp x * F.opp x); [ | field ].
+          transitivity (Zmod.opp x * Zmod.opp x); [ | field ].
           f_equal; rewrite <-A at 3; field.
         }
       }
     Qed.
   End SquareRootsPrime5Mod8.
-End F.
+End Zmod.

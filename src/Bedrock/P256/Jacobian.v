@@ -64,7 +64,9 @@ Proof.
   straightline_call; [eexists; ecancel_assumption|]; repeat straightline.
 
   subst z x0.
-  setoid_rewrite word.not_broadcast; rewrite Bool.negb_involutive; trivial.
+  setoid_rewrite word.not_broadcast; rewrite Bool.negb_involutive.
+  cbv [point.iszero Jacobian.iszero]; f_equal; case Decidable.dec as [Hz|Hz];
+    case (Zmod.eqb_spec (snd (proj1_sig P)) 0); congruence.
 Qed.
 
 Definition p256_point_set_zero := func! (p_P) {
@@ -152,7 +154,7 @@ Proof.
     use_sep_assumption; cancel.
     cancel_seps_at_indices 0%nat 0%nat; [|cancel].
 
-    instantiate (1:=F.of_Z _ (F.to_Z (x*coord.R)%F / 2)).
+    instantiate (1:=Zmod.of_Z _ (Zmod.unsigned (x*coord.R)%Zmod / 2)).
     rewrite Zmod.unsigned_of_Z, Z.mod_small; trivial.
     specialize (Zmod.unsigned_pos_bound (x*coord.R) eq_refl); clear; PreOmega.Z.to_euclidean_division_equations; lia. }
   { eexists. use_sep_assumption. cancel.
@@ -177,19 +179,19 @@ Proof.
   f_equal.
   f_equal.
   subst x2 b.
-  cbv [coord.to_bytes F.div].
+  cbv [coord.to_bytes Zmod.mdiv].
   progress Morphisms.f_equiv; [].
   progress Morphisms.f_equiv; [].
-  transitivity (x * coord.R * F.inv (1 + 1))%F; [|ring].
-  set (x*coord.R)%F as xR; set (F.inv (1 + 1)) as i2.
+  transitivity (x * coord.R * Zmod.inv (1 + 1))%Zmod; [|ring].
+  set (x*coord.R)%Zmod as xR; set (Zmod.inv (1 + 1)) as i2.
 
   (* NOTE: back-and-forth rewrite between Z.modulo and Z.odd *)
   rewrite word.unsigned_of_Z; cbv [word.wrap]; rewrite Zmod_mod, Zdiv.Zodd_mod, Z.mod_mod_divide by (apply Divide.Z.divide_pow_le with (n:=1); lia).
   symmetry; rewrite <-(Zmod.of_Z_unsigned xR) at 1; rewrite (Z.div_mod xR 2) at 1 by lia.
   rewrite Div.Z.div_sub_mod_exact, Zdiv.Zmod_odd by lia.
 
-  assert (F.of_Z p256 2 * i2 = F.one)%F as Hi2 by (cbv [i2]; clear; Decidable.vm_decide).
-  case Z.odd; cbn [Z.eqb Pos.eqb Zeq_bool Z.compare Pos.compare Pos.compare_cont]; rewrite ?Zmod.of_Z_add, ?Zmod.of_Z_mul; fold (@F.zero p256); fold (@F.one p256); try ring [Hi2].
+  assert (Zmod.of_Z p256 2 * i2 = Zmod.one)%Zmod as Hi2 by (cbv [i2]; clear; Decidable.vm_decide).
+  case Z.odd; cbn [Z.eqb Pos.eqb Zeq_bool Z.compare Pos.compare Pos.compare_cont]; rewrite ?Zmod.of_Z_add, ?Zmod.of_Z_mul; fold (@Zmod.zero p256); fold (@Zmod.one p256); try ring [Hi2].
 Qed.
 
 Definition p256_point_add_nz_nz_neq := func! (p_out, p_P, p_Q) ~> ok {
@@ -283,24 +285,24 @@ rewrite ?app_length, ?length_coord in *.
   { case H121 as [Hx Hy].
     subst x x0.
     rewrite !word.broadcast_0_iff in *.
-    rewrite !Bool.negb_false_iff, !F.eqb_eq in *.
+    rewrite !Bool.negb_false_iff, !Zmod.eqb_eq in *.
     cbv [fst snd Jacobian.eq Jacobian.iszero proj1_sig] in *.
     case Decidable.dec; intros; try contradiction; split; trivial.
     rewrite Hierarchy.commutative in Hx.
     rewrite <-!Zmod.pow_succ_nonneg_r in Hx, Hy by lia; simpl Z.succ in Hx, Hy.
-    rewrite F.pow_0_iff, Ring.sub_zero_iff in Hx, Hy by (lia||exact _).
-    rewrite ?F.pow_3_r, ?Zmod.pow_2_r in Hx.
-    rewrite ?F.pow_3_r, ?Zmod.pow_2_r in Hy.
+    rewrite Zmod.pow_0_iff, Ring.sub_zero_iff in Hx, Hy by (lia||exact _).
+    rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r in Hx.
+    rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r in Hy.
     split; Field.fsatz. }
   { unshelve eexists ?[pfPneqQ].
     { intros HX; cbv [Jacobian.eq Jacobian.iszero proj1_sig fst snd] in H122, H123, HX.
       destruct Decidable.dec in HX; try contradiction; case HX as (Hz&Hx&Hy).
       apply H121. subst x x0.
       rewrite !word.broadcast_0_iff in *.
-      rewrite !Bool.negb_false_iff, !F.eqb_eq.
-      rewrite ?F.pow_3_r, ?Zmod.pow_2_r, ?Hx, ?Hy, ?(proj2 (Ring.sub_zero_iff _ _)); ssplit; (ring || Field.fsatz). }
+      rewrite !Bool.negb_false_iff, !Zmod.eqb_eq.
+      rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r, ?Hx, ?Hy, ?(proj2 (Ring.sub_zero_iff _ _)); ssplit; (ring || Field.fsatz). }
     cbv [Jacobian.add_inequal_nz_nz point.to_bytes]; cbn [fst snd proj1_sig].
-    rewrite ?F.pow_3_r, ?Zmod.pow_2_r.
+    rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r.
     trivial. }
 Qed.
 
@@ -386,7 +388,7 @@ Proof.
       subst x4; subst x5; subst x6;
       rewrite ?Byte.map_xor_0_l in * by (ZnWords).
     { (* 0 + 0 *)
-      eexists (exist _ (0,0,0)%F I); split.
+      eexists (exist _ (0,0,0)%Zmod I); split.
       { use_sep_assumption; cancel. reflexivity. }
       apply Decidable.dec_bool, Jacobian.iszero_iff in HP.
       apply Decidable.dec_bool, Jacobian.iszero_iff in HQ.
@@ -569,6 +571,6 @@ rewrite ?app_length, ?length_coord in *.
 
   cbv [proj1_sig proj2_sig fst snd point.to_bytes Jacobian.double_minus_3 Jacobian.double_minus3_impl Jacobian.Fsquare Jacobian.Ftriple Jacobian.Fhalve ].
   progress repeat seprewrite_in_by Array.list_word_at_app_of_adjacent_eq H69 ltac:(rewrite ?length_coord; listZnWords).
-  rewrite ?F.pow_3_r, ?Zmod.pow_2_r in H69.
+  rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r in H69.
   ecancel_assumption.
 Qed.

@@ -515,7 +515,7 @@ Qed.
     Context (res_eq : forall w:word,
                 feval (map word.of_Z
                            (API.interp (res _) (word.unsigned w)))
-                = F.of_Z _ (word.unsigned w))
+                = Zmod.of_Z _ (word.unsigned w))
             (res_bounds : forall w:word,
                 list_in_bounds
                   tight_bounds
@@ -848,7 +848,7 @@ Qed.
                 = Partition.partition
                     (ModOps.weight 8 1)
                     encoded_felem_size_in_bytes
-                    (F.to_Z (feval x)))
+                    (Zmod.unsigned (feval x)))
             (res_bounds : forall x,
                 bounded_by tight_bounds x ->
                 bytes_in_bounds

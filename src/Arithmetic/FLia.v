@@ -8,9 +8,9 @@ Local Open Scope Z_scope.
 Section __.
   Context {m : Z}.
 
-  Lemma solve_F_equality_via_Z lhs' rhs' (lhs rhs : F m)
-    : F.to_Z lhs = lhs' mod m ->
-      F.to_Z rhs = rhs' mod m ->
+  Lemma solve_F_equality_via_Z lhs' rhs' (lhs rhs : Zmod m)
+    : Zmod.unsigned lhs = lhs' mod m ->
+      Zmod.unsigned rhs = rhs' mod m ->
       lhs' = rhs' ->
       lhs = rhs.
   Proof.
@@ -27,9 +27,9 @@ Section __.
    *)
 
   Lemma F_mul_to_Z a a' b b'
-    : F.to_Z a = a' mod m ->
-      F.to_Z b = b' mod m ->
-      @F.to_Z m (a * b) = (a' * b') mod m.
+    : Zmod.unsigned a = a' mod m ->
+      Zmod.unsigned b = b' mod m ->
+      @Zmod.unsigned m (a * b) = (a' * b') mod m.
   Proof.
     intros H H0.
     rewrite Zmod.unsigned_mul.
@@ -40,9 +40,9 @@ Section __.
   Qed.
 
   Lemma F_add_to_Z a a' b b'
-    : F.to_Z a = a' mod m ->
-      F.to_Z b = b' mod m ->
-      @F.to_Z m (a + b) = (a' + b') mod m.
+    : Zmod.unsigned a = a' mod m ->
+      Zmod.unsigned b = b' mod m ->
+      @Zmod.unsigned m (a + b) = (a' + b') mod m.
   Proof.
     intros H H0.
     rewrite Zmod.unsigned_add.
@@ -54,9 +54,9 @@ Section __.
 
 
   Lemma F_pow_to_Z a a' c
-    : F.to_Z a = a' mod m ->
+    : Zmod.unsigned a = a' mod m ->
       0 <= c ->
-      @F.to_Z m (a ^ c) = (a' ^ c) mod m.
+      @Zmod.unsigned m (a ^ c) = (a' ^ c) mod m.
   Proof.
     intros H Hc.
     rewrite Zmod.unsigned_pow_nonneg_r by assumption.
@@ -70,7 +70,7 @@ End __.
 
 Ltac F_convert_to_Z :=
   solve [repeat
-           let e := lazymatch goal with |- F.to_Z ?x = _ => x end in
+           let e := lazymatch goal with |- Zmod.unsigned ?x = _ => x end in
            first [ simple eapply F_mul_to_Z
                  | simple eapply F_add_to_Z
                  | simple eapply Zmod.unsigned_1
@@ -99,7 +99,7 @@ Ltac F_lia := F_zify; (lia || fail "F_lia failed; check that all necessary homom
 Section Example.
   Context {m : Z}.
 
-  Goal forall (x : F m), (x + F.of_Z  _ 4 * x)%F = ( x * F.of_Z  _ 2 + F.of_Z  _ 2 * x + 1 * 1 * x)%F.
+  Goal forall (x : Zmod m), (x + Zmod.of_Z  _ 4 * x)%Zmod = ( x * Zmod.of_Z  _ 2 + Zmod.of_Z  _ 2 * x + 1 * 1 * x)%Zmod.
   Proof.
     F_lia.
   Qed.
