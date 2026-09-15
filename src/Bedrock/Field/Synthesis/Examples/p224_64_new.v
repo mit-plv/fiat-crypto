@@ -35,11 +35,11 @@ Section Field.
   Proof using Type.
     let M := (eval vm_compute in m) in
     (* curve 'A' parameter *)
-    let a := constr:(F.of_Z M (m - 3)) in
+    let a := constr:(Zmod.of_Z M (m - 3)) in
     let prefix := constr:("p224_felem_"%string) in
     eapply
       (field_parameters_prefixed
-         M ((a - F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
+         M ((a - Zmod.of_Z _ 2) / Zmod.of_Z _ 4)%Zmod prefix).
   Defined.
 
   Definition to_mont_string := prefix ++ "to_mont".

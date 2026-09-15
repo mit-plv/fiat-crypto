@@ -374,13 +374,13 @@ Proof.
 
   (* Dealloc of a. Prep ptsto and length so straightline processes. *)
   Require Import coqutil.Macros.symmetry.
-  pose proof (length_coord (F.opp y)).
+  pose proof (length_coord (Zmod.opp y)).
   seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at (value:=Byte.byte)a)) ltac:(hyp_containing a) lia.
 
   repeat straightline.
 
   (* Final postcondition verification. *)
-  unshelve eexists (exist _ (x, if Z.ltb (word.signed k) 0 then F.opp y else y, z) _);
+  unshelve eexists (exist _ (x, if Z.ltb (word.signed k) 0 then Zmod.opp y else y, z) _);
   ssplit.
 
   { case Z.ltb_spec; intros; assumption. }

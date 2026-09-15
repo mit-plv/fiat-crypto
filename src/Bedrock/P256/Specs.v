@@ -80,13 +80,9 @@ Proof.
   { rewrite ?Z.testbit_neg_r by Lia.lia; trivial. }
 Qed.
 
-Module F.
+Module Zmod.
   Import micromega.Lia.
-  Definition eqb {m} (x y : F m) := if F.eq_dec x y then true else false.
-  Lemma eqb_eq {m} (x y : F m) : eqb x y = true <-> x = y.
-  Proof. cbv [eqb]; case F.eq_dec; intuition congruence. Qed.
-
-  Lemma pow_0_iff (p : Z) (Hp : Znumtheory.prime p) (x : F p) n (Hn : 0 < n) : F.pow x n = 0%F <-> x = 0%F.
+  Lemma pow_0_iff (p : Z) (Hp : Znumtheory.prime p) (x : Zmod p) n (Hn : 0 < n) : Zmod.pow x n = 0%Zmod <-> x = 0%Zmod.
   Proof.
     assert (0 <= n) as Hn' by lia; revert Hn; pattern n; revert Hn'; revert n.
     apply Wf_Z.natlike_ind; [lia|]; intros n Hn IHn.
@@ -96,7 +92,7 @@ Module F.
     { apply eq_sym in H; apply Hierarchy.zero_neq_one in H; case H. }
     eapply IHn; eauto; lia.
   Qed.
-End F.
+End Zmod.
 
 Module Byte.
   Import Byte.
@@ -123,32 +119,32 @@ End Byte.
 Require Import Curves.Weierstrass.P256.
 
 Module Import coord. (* bytes in montgomery form *)
-  Notation coord := (F p256).
-  Definition R : F p256 := F.of_Z _ (2^256).
-  Coercion to_bytes (x : coord) : list byte := Z.to_bytes 32 (x * R)%F.
+  Notation coord := (Zmod p256).
+  Definition R : Zmod p256 := Zmod.of_Z _ (2^256).
+  Coercion to_bytes (x : coord) : list byte := Z.to_bytes 32 (x * R)%Zmod.
   Lemma length_coord (x : coord) : length x = 32%nat.
   Proof. apply length_le_split. Qed.
 
-  Lemma zero_iff (x : coord) : (x = 0 <-> x*R = 0)%F.
+  Lemma zero_iff (x : coord) : (x = 0 <-> x*R = 0)%Zmod.
   Proof.
     split; intuition (subst; trivial).
     eapply Field.is_mul_nonzero_nonzero in H; case H as [?|H]; trivial.
-    apply (f_equal F.to_Z) in H. cbv in H. inversion H.
+    apply (f_equal Zmod.unsigned) in H. cbv in H. inversion H.
   Qed.
 End coord.
 
 From Crypto.Curves Require Import Jacobian.
 Import Coq.Lists.List.
 
-Notation affine_point := (@WeierstrassCurve.W.point coord eq F.add F.mul P256.a P256.b).
+Notation affine_point := (@WeierstrassCurve.W.point coord eq Zmod.add Zmod.mul P256.a P256.b).
 Module affine_point.
   Definition iszero (P : affine_point) := proj1_sig P = inr tt.
 End affine_point.
 
 Module Import point.
-  Notation point := (@Jacobian.point coord eq F.zero F.add F.mul P256.a P256.b _).
+  Notation point := (@Jacobian.point coord eq Zmod.zero Zmod.add Zmod.mul P256.a P256.b _).
   Notation add :=
-    (@Jacobian.add coord eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div P256.a P256.b _ _ _).
+    (@Jacobian.add coord eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul Zmod.inv Zmod.mdiv P256.a P256.b _ _ _).
   Coercion of_affine (p : affine_point) : point := Jacobian.of_affine p.
   Coercion to_bytes (p : point) :=
     let p := proj1_sig p in
@@ -223,7 +219,7 @@ Context {ext_spec : Semantics.ExtSpec}.
 #[export] Instance spec_of_p256_coord_nonzero : spec_of "p256_coord_nonzero" :=
   fnspec! "p256_coord_nonzero" p_x / (x : coord) ~> nz,
   { requires t m := m =*> x$@p_x;
-    ensures t' m' := t' = t /\ m' = m /\ nz = word.broadcast (negb (F.eqb x 0)) }.
+    ensures t' m' := t' = t /\ m' = m /\ nz = word.broadcast (negb (Zmod.eqb x 0)) }.
 
 #[export] Instance spec_of_fiat_p256_point_iszero : spec_of "p256_point_iszero" :=
   fnspec! "p256_point_iszero" p_P / (P : point) ~> nz,
@@ -238,7 +234,7 @@ Context {ext_spec : Semantics.ExtSpec}.
 #[export] Instance spec_of_p256_coord_opp : spec_of "p256_coord_opp" :=
   fnspec! "p256_coord_opp" p / (x : coord) R,
   { requires t m := m =* x$@p * R;
-    ensures t' m' := t' = t /\ let x_opp := F.opp x in m' =* x_opp$@p * R }.
+    ensures t' m' := t' = t /\ let x_opp := Zmod.opp x in m' =* x_opp$@p * R }.
 
 #[export] Instance spec_of_p256_coord_selectznz  : spec_of "p256_coord_select_znz" :=
     fnspec! "p256_coord_select_znz" (p_out c p_z p_nz : word) / out (z nz : coord) R,
@@ -248,27 +244,27 @@ Context {ext_spec : Semantics.ExtSpec}.
 #[export] Instance spec_of_p256_coord_add : spec_of "p256_coord_add" :=
   fnspec! "p256_coord_add" p_out p_x p_y / out (x y : coord) R,
   { requires t m := m =*> x$@p_x /\ m =*> y$@p_y /\ m =* out$@p_out * R /\ length out = length x;
-    ensures t' m := let r : coord := F.add x y in t' = t /\ m =* r$@p_out * R }.
+    ensures t' m := let r : coord := Zmod.add x y in t' = t /\ m =* r$@p_out * R }.
 
 #[export] Instance spec_of_p256_coord_sub : spec_of "p256_coord_sub" :=
   fnspec! "p256_coord_sub" p_out p_x p_y / out (x y : coord) R,
   { requires t m := m =*> x$@p_x /\ m =*> y$@p_y /\ m =* out$@p_out * R /\ length out = length x;
-    ensures t' m := let r : coord := F.sub x y in t' = t /\ m =* r$@p_out * R }.
+    ensures t' m := let r : coord := Zmod.sub x y in t' = t /\ m =* r$@p_out * R }.
 
 #[export] Instance spec_of_p256_coord_halve : spec_of "p256_coord_halve" :=
   fnspec! "p256_coord_halve" p_out p_x / out (x : coord) R,
   { requires t m := m =*> x$@p_x /\ m =* out$@p_out * R /\ length out = length x;
-    ensures t' m := let r : coord := F.div x (F.add F.one F.one) in t' = t /\ m =* r$@p_out * R }.
+    ensures t' m := let r : coord := Zmod.mdiv x (Zmod.add Zmod.one Zmod.one) in t' = t /\ m =* r$@p_out * R }.
 
 #[export] Instance spec_of_p256_coord_mul : spec_of "p256_coord_mul" :=
   fnspec! "p256_coord_mul" p_out p_x p_y / out (x y : coord) R,
   { requires t m := m =*> x$@p_x /\ m =*> y$@p_y /\ m =* out$@p_out * R /\ length out = length x;
-    ensures t' m := let r : coord := F.mul x y in t' = t /\ m =* r$@p_out * R }.
+    ensures t' m := let r : coord := Zmod.mul x y in t' = t /\ m =* r$@p_out * R }.
 
 #[export] Instance spec_of_p256_coord_sqr : spec_of "p256_coord_sqr" :=
   fnspec! "p256_coord_sqr" p_out p_x / out (x : coord) R,
   { requires t m := m =*> x$@p_x /\ m =* out$@p_out * R /\ length out = length x;
-    ensures t' m := let r : coord := F.pow x 2 in t' = t /\ m =* r$@p_out * R }.
+    ensures t' m := let r : coord := Zmod.pow x 2 in t' = t /\ m =* r$@p_out * R }.
 
 #[export] Instance spec_of_p256_point_add_nz_nz_neq : spec_of "p256_point_add_nz_nz_neq" :=
   fnspec! "p256_point_add_nz_nz_neq" p_out p_P p_Q / out (P Q : point) R ~> ok,
@@ -365,15 +361,15 @@ Context {ext_spec : Semantics.ExtSpec}.
           t' = t /\ m =* (le_split 32 r)$@p_out * R }.
 
 Definition spec_of_p256_coord_sub_nonmont : spec_of "p256_coord_sub" :=
-  fnspec! "p256_coord_sub" p_out p_x p_y / out (x y : F p256) R,
+  fnspec! "p256_coord_sub" p_out p_x p_y / out (x y : Zmod p256) R,
   { requires t m := m =*> (le_split 32 x)$@p_x /\ m =*> (le_split 32 y)$@p_y /\ m =* out$@p_out * R /\ length out = 32%nat;
-    ensures t' m := t' = t /\ m =* (le_split 32 (x-y)%F)$@p_out * R }.
+    ensures t' m := t' = t /\ m =* (le_split 32 (x-y)%Zmod)$@p_out * R }.
 
 #[export] Instance spec_of_p256_coord_set_minushalf_conditional : spec_of "u256_set_p256_minushalf_conditional" :=
   fnspec! "u256_set_p256_minushalf_conditional" p_out mask / b out R,
   { requires t m := m =* out$@p_out * R /\ length out = 32%nat /\ mask = word.broadcast b;
-    ensures t' m := exists r : F p256,
-      t' = t /\ m =* (le_split 32 r)$@p_out * R /\ (r = if b then F.opp (1/(1+1)) else F.zero)
+    ensures t' m := exists r : Zmod p256,
+      t' = t /\ m =* (le_split 32 r)$@p_out * R /\ (r = if b then Zmod.opp (1/(1+1)) else Zmod.zero)
   }.
 
 End WithSemantics.

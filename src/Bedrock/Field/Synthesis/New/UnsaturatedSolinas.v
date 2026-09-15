@@ -65,7 +65,7 @@ Class unsaturated_solinas_ops
     scmula24_op :
       computed_op
         (UnsaturatedSolinas.carry_scmul_const n s c width
-                                              (F.to_Z a24)) Field.scmula24
+                                              (Zmod.unsigned a24)) Field.scmula24
         list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
     felem_copy_op :
       computed_op
@@ -309,7 +309,7 @@ Section UnsaturatedSolinas.
         by eauto with bounds
     end.
   (* [rewrite M_eq] cannot abstract [M] out of the goal: it also
-     occurs in the types of the field elements ([F M] is [Zmod M]),
+     occurs in the types of the field elements ([Zmod M] is [Zmod M]),
      so rewrite only the moduli of [Z.modulo] via congruence. *)
   Ltac FtoZ :=
     apply Zmod.of_Z_inj; rewrite ?Zmod.unsigned_of_Z;
@@ -484,7 +484,7 @@ Section UnsaturatedSolinas.
         tight_bounds_tighter_than felem_size_ok.
     cbv [spec_of_UnOp un_scmula24]. rewrite scmula24_func_eq. intros.
     pose proof carry_scmul_const_correct
-         _ _ _ _ _ (ltac:(eassumption)) (F.to_Z a24) _
+         _ _ _ _ _ (ltac:(eassumption)) (Zmod.unsigned a24) _
          (res_eq scmula24_op)
       as Hcorrect.
 
@@ -724,11 +724,11 @@ Section Tests.
   Proof using Type.
     let M := (eval vm_compute in (m s c)) in
     (* Curve25519 "A" parameter (see section 4.1 of RFC 7748) *)
-    let a := constr:(F.of_Z M 486662) in
+    let a := constr:(Zmod.of_Z M 486662) in
     let prefix := constr:("fe25519_"%string) in
     eapply
       (field_parameters_prefixed
-         M ((a - F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
+         M ((a - Zmod.of_Z _ 2) / Zmod.of_Z _ 4)%Zmod prefix).
   Defined.
 
   Instance fe25519_ops : unsaturated_solinas_ops n s c.

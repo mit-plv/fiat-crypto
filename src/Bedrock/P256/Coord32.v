@@ -148,7 +148,7 @@ Proof.
 
   rename H0 into Hm.
   cbv [coord.to_bytes] in *.
-  set (x * coord.R)%F as xR in *.
+  set (x * coord.R)%Zmod as xR in *.
   do 8 (
     rewrite <-(firstn_skipn 4 (le_split _ _)), List.firstn_le_split, skipn_le_split, ?Z.shiftr_shiftr in Hm by lia;
     simpl Nat.min in Hm; simpl Nat.sub in Hm; set (le_split 4 _) in Hm);
@@ -167,7 +167,7 @@ Proof.
   clear Hm.
 
   subst x1. f_equal. f_equal. apply Bool.eq_true_iff_eq.
-  rewrite Z.eqb_eq, F.eqb_eq.
+  rewrite Z.eqb_eq, Zmod.eqb_eq.
   rewrite <-word.unsigned_of_Z_0, !word.unsigned_inj_iff by exact _.
   subst nz nz'0 nz'1 nz'2 v.
   rewrite !word.lor_0_iff, !word.zero_of_Z_iff, !Zdiv.Zmod_mod by exact _.
@@ -175,7 +175,7 @@ Proof.
   rewrite coord.zero_iff; fold xR.
   rewrite <-Zmod.unsigned_0_iff.
   pose proof Zmod.unsigned_pos_bound xR eq_refl as range.
-  clearbody xR; clear x; set (F.to_Z xR) as x in *; clearbody x.
+  clearbody xR; clear x; set (Zmod.unsigned xR) as x in *; clearbody x.
   clear -range.
   Time PreOmega.Z.to_euclidean_division_equations.
   cbv [p256] in *.

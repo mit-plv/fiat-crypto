@@ -16,10 +16,10 @@ Import bedrock2.Memory.
 Class FieldParameters :=
   { (** mathematical parameters **)
     M : Z; (* modulus *)
-    a24 : F M; (* (a+2) / 4 or (a-2) / 4, depending on the implementation *)
+    a24 : Zmod M; (* (a+2) / 4 or (a-2) / 4, depending on the implementation *)
 
     (* special wrapper for copy so that compilation lemmas can recognize it *)
-    fe_copy := (@id (F M));
+    fe_copy := (@id (Zmod M));
 
     (** function names **)
     mul : string; add : string; carry_add : string; sub : string; carry_sub : string; opp : string;
@@ -41,9 +41,9 @@ Class FieldRepresentation
        :=
   { felem_size_in_words : nat;
     felem := {x : list word | length x = felem_size_in_words};
-    feval : list word -> F M;
+    feval : list word -> Zmod M;
 
-    feval_bytes : list byte -> F M;
+    feval_bytes : list byte -> Zmod M;
     felem_size_in_bytes : Z := (Z.of_nat felem_size_in_words) * bytes_per_word width; (* for stack allocation *)
     encoded_felem_size_in_bytes : nat; (* number of bytes when serialized *)
     bytes_in_bounds : list byte -> Prop;
@@ -75,7 +75,7 @@ Section FunctionSpecs.
           {field_representation : FieldRepresentation}.
 
   Class UnOp (name: string) :=
-    { un_model: F M -> F M;
+    { un_model: Zmod M -> Zmod M;
       un_xbounds: bounds;
       un_outbounds: bounds }.
 
@@ -104,7 +104,7 @@ Section FunctionSpecs.
     unop_spec op.
 
   Class BinOp (name: string) :=
-    { bin_model: F M -> F M -> F M;
+    { bin_model: Zmod M -> Zmod M -> Zmod M;
       bin_xbounds: bounds;
       bin_ybounds: bounds;
       bin_outbounds: bounds }.
@@ -129,23 +129,23 @@ Section FunctionSpecs.
     binop_spec op.
 
   Instance bin_mul : BinOp mul :=
-    {| bin_model := F.mul; bin_xbounds := loose_bounds; bin_ybounds := loose_bounds; bin_outbounds := tight_bounds |}.
+    {| bin_model := Zmod.mul; bin_xbounds := loose_bounds; bin_ybounds := loose_bounds; bin_outbounds := tight_bounds |}.
   Instance un_square : UnOp square :=
-    {| un_model := fun x => F.pow x 2; un_xbounds := loose_bounds; un_outbounds := tight_bounds |}.
+    {| un_model := fun x => Zmod.pow x 2; un_xbounds := loose_bounds; un_outbounds := tight_bounds |}.
   Instance bin_add : BinOp add :=
-    {| bin_model := F.add; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := loose_bounds |}.
+    {| bin_model := Zmod.add; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := loose_bounds |}.
   Instance bin_carry_add : BinOp carry_add :=
-    {| bin_model := F.add; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := tight_bounds |}.
+    {| bin_model := Zmod.add; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := tight_bounds |}.
   Instance bin_sub : BinOp sub :=
-    {| bin_model := F.sub; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := loose_bounds |}.
+    {| bin_model := Zmod.sub; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := loose_bounds |}.
   Instance bin_carry_sub : BinOp carry_sub :=
-    {| bin_model := F.sub; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := tight_bounds |}.
+    {| bin_model := Zmod.sub; bin_xbounds := tight_bounds; bin_ybounds := tight_bounds; bin_outbounds := tight_bounds |}.
   Instance un_scmula24 : UnOp scmula24 :=
-    {| un_model := F.mul a24; un_xbounds := loose_bounds; un_outbounds := tight_bounds |}.
+    {| un_model := Zmod.mul a24; un_xbounds := loose_bounds; un_outbounds := tight_bounds |}.
   Instance un_inv : UnOp inv := (* TODO: what are the bounds for inv? *)
-    {| un_model := F.inv; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
+    {| un_model := Zmod.inv; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
   Instance un_opp : UnOp opp :=
-    {| un_model := F.opp; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
+    {| un_model := Zmod.opp; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
 
   Instance spec_of_from_bytes : spec_of from_bytes :=
     fnspec! from_bytes (pout px : word) / (out bs : list byte) Rr,
@@ -168,7 +168,7 @@ Section FunctionSpecs.
         (exists Ra, (FElem px x * Ra)%sep mem) /\
         bounded_by tight_bounds x;
       ensures tr' mem' := tr = tr' /\
-        let bs := le_split encoded_felem_size_in_bytes (F.to_Z (feval x)) in
+        let bs := le_split encoded_felem_size_in_bytes (Zmod.unsigned (feval x)) in
         (array ptsto (word.of_Z 1) pout bs * Rr)%sep mem' /\
         Field.bytes_in_bounds bs }.
 
@@ -188,7 +188,7 @@ Section FunctionSpecs.
         length out = felem_size_in_bytes;
       ensures tr' mem' :=
         tr = tr' /\
-        exists X : felem, feval X = F.of_Z _ (word.unsigned x)
+        exists X : felem, feval X = Zmod.of_Z _ (word.unsigned x)
              /\ bounded_by tight_bounds X
              /\ (FElem pout X * R)%sep mem' }.
 
@@ -214,8 +214,8 @@ Section FunctionSpecs.
     Definition m' := Z.modinv (- M) r.
     Definition r' := Z.modinv (r) M.
 
-    Definition from_mont_model x := F.mul x (@F.of_Z M (r' ^ (Z.of_nat felem_size_in_words)%Z)).
-    Definition to_mont_model x := F.mul x (@F.of_Z M (r ^ (Z.of_nat felem_size_in_words)%Z)).
+    Definition from_mont_model x := Zmod.mul x (@Zmod.of_Z M (r' ^ (Z.of_nat felem_size_in_words)%Z)).
+    Definition to_mont_model x := Zmod.mul x (@Zmod.of_Z M (r ^ (Z.of_nat felem_size_in_words)%Z)).
 
     Instance un_from_mont {from_mont : string} : UnOp from_mont :=
       {| un_model := from_mont_model; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.

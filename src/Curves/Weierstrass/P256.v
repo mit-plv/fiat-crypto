@@ -30,17 +30,17 @@ Proof.
   native_cast_no_check (@eq_refl bool true).
 Qed.
 
-Add Field Private_field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F p256)).
+Add Field Private_field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=Zmod p256)).
 
-#[local] Definition a : F p256 := F.opp (1+1+1).
-#[local] Definition b : F p256 := F.of_Z _ 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b.
+#[local] Definition a : Zmod p256 := Zmod.opp (1+1+1).
+#[local] Definition b : Zmod p256 := Zmod.of_Z _ 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b.
 
-#[export] Instance p256_char_ge_3 : @Ring.char_ge (F p256) eq F.zero F.one F.opp F.add F.sub F.mul 3.
-Proof. eapply Hierarchy.char_ge_weaken; [ apply (@F.char_gt p256) | Decidable.vm_decide ]. Qed.
-#[export] Instance p256_char_ge_12 : @Ring.char_ge (F p256) eq F.zero F.one F.opp F.add F.sub F.mul 12.
-Proof. eapply Hierarchy.char_ge_weaken; [ apply (@F.char_gt p256) | Decidable.vm_decide ]. Qed.
+#[export] Instance p256_char_ge_3 : @Ring.char_ge (Zmod p256) eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul 3.
+Proof. eapply Hierarchy.char_ge_weaken; [ apply (@Zmod.char_gt p256) | Decidable.vm_decide ]. Qed.
+#[export] Instance p256_char_ge_12 : @Ring.char_ge (Zmod p256) eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul 12.
+Proof. eapply Hierarchy.char_ge_weaken; [ apply (@Zmod.char_gt p256) | Decidable.vm_decide ]. Qed.
 
-#[local] Notation Wpoint := (@W.point (F p256) eq F.add F.mul a b).
+#[local] Notation Wpoint := (@W.point (Zmod p256) eq Zmod.add Zmod.mul a b).
 
 #[refine, export] Instance curve_commutative_group : Hierarchy.commutative_group (T:=Wpoint) :=
   (W.commutative_group p256_char_ge_3 (a:=a)(b:=b)).

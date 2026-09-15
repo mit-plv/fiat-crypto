@@ -1307,13 +1307,13 @@ Section AddMod.
 
   Require Import Spec.ModularArithmetic.
 
-  Definition P := F ( 101 ).
-  Definition O : P := F.zero.
-  Definition B : P := F.of_Z _ 2.
-  Definition addP : P -> P -> P := F.add.
-  Definition doubleP : P -> P := F.mul (F.of_Z _ 2).
-  Definition mulP (n : Z) : P -> P := F.mul (F.of_Z _ n).
-  Definition negP : P -> P := F.opp.
+  Definition P := Zmod 101.
+  Definition O : P := Zmod.zero.
+  Definition B : P := Zmod.of_Z _ 2.
+  Definition addP : P -> P -> P := Zmod.add.
+  Definition doubleP : P -> P := Zmod.mul (Zmod.of_Z _ 2).
+  Definition mulP (n : Z) : P -> P := Zmod.mul (Zmod.of_Z _ n).
+  Definition negP : P -> P := Zmod.opp.
 
   Definition n := 1.
   Definition s := 2.

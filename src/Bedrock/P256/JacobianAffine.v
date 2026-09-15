@@ -193,25 +193,25 @@ Proof.
   case (Properties.word.eqb_spec x3 $0); subst x3; rewrite word.lor_0_iff; [right|left]; split; trivial.
   { subst x x0.
     rewrite !word.broadcast_0_iff in *.
-    rewrite !Bool.negb_false_iff, !F.eqb_eq in *.
+    rewrite !Bool.negb_false_iff, !Zmod.eqb_eq in *.
     cbv [of_affine Jacobian.of_affine fst snd Jacobian.eq Jacobian.iszero proj1_sig] in *.
     case H60 as [Hx Hy].
     case Decidable.dec; intros; try contradiction; split; [apply Hierarchy.one_neq_zero|].
     rewrite Hierarchy.commutative in Hx.
     rewrite <-!Zmod.pow_succ_nonneg_r in Hx, Hy by lia; simpl Z.succ in Hx, Hy.
-    rewrite F.pow_0_iff, Ring.sub_zero_iff in Hx, Hy by (lia||exact _).
-    rewrite ?F.pow_3_r, ?Zmod.pow_2_r in Hx.
-    rewrite ?F.pow_3_r, ?Zmod.pow_2_r in Hy.
+    rewrite Zmod.pow_0_iff, Ring.sub_zero_iff in Hx, Hy by (lia||exact _).
+    rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r in Hx.
+    rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r in Hy.
     split; Field.fsatz. }
   { unshelve eexists ?[pfPneqQ].
     { intros HX; cbv [Jacobian.eq Jacobian.iszero of_affine Jacobian.of_affine Jacobian.of_affine_impl proj1_sig fst snd] in H59, H60, HX.
       destruct Decidable.dec in HX; try contradiction; case HX as (Hz&Hx&Hy).
       apply H60. subst x x0.
       rewrite !word.broadcast_0_iff in *.
-      rewrite !Bool.negb_false_iff, !F.eqb_eq.
-      rewrite ?F.pow_3_r, ?Zmod.pow_2_r, ?Hx, ?Hy, ?(proj2 (Ring.sub_zero_iff _ _)); ssplit; (ring || Field.fsatz). }
+      rewrite !Bool.negb_false_iff, !Zmod.eqb_eq.
+      rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r, ?Hx, ?Hy, ?(proj2 (Ring.sub_zero_iff _ _)); ssplit; (ring || Field.fsatz). }
     cbv [Jacobian.add_inequal_nz_nz Jacobian.add_inequal_impl of_affine Jacobian.of_affine Jacobian.of_affine_impl proj1_sig fst snd point.to_bytes]; cbn [fst snd proj1_sig].
-    rewrite ?app_assoc, ?F.pow_3_r, ?Zmod.pow_2_r; repeat (ring || f_equal). }
+    rewrite ?app_assoc, ?Zmod.pow_3_r, ?Zmod.pow_2_r; repeat (ring || f_equal). }
 Qed.
 
 
@@ -303,7 +303,7 @@ assert (word__and_broadcast : forall a b, word.and (word.broadcast a) (word.broa
            end); subst; rewrite ?Byte.map_xor_0_l in * by (rewrite ?length_point; ZnWords.ZnWords).
     { (* 0 + 0 *)
       apply Decidable.dec_bool, Jacobian.iszero_iff in HP.
-      eexists (exist _ (0,0,0)%F I); split.
+      eexists (exist _ (0,0,0)%Zmod I); split.
       { use_sep_assumption; cancel. reflexivity. }
       rewrite Jacobian.eq_iff, HP; reflexivity. }
     { (* 0 + Q *)

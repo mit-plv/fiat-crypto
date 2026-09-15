@@ -153,8 +153,8 @@ Definition secp256k1_inv := Eval cbv in
 
 Section WithParameters.
   Context {two_lt_M: 2 < M}.
-  Context {char_ge_3 : (@Ring.char_ge (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos BinNat.N.two))}.
-  Context {field:@Algebra.Hierarchy.field (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
+  Context {char_ge_3 : (@Ring.char_ge (Zmod M) Logic.eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul (BinNat.N.succ_pos BinNat.N.two))}.
+  Context {field:@Algebra.Hierarchy.field (Zmod M) Logic.eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul Zmod.inv Zmod.mdiv}.
   Context {secp256k1_prime: prime m}.
   Context {F_M : M = m}.
 
@@ -169,7 +169,7 @@ Section WithParameters.
 
   Global Instance spec_of_inv : spec_of "secp256k1_inv" :=
     fnspec! "secp256k1_inv"
-      (zK xK : word) / z (x : felem) (vx : F M) (R : _ -> Prop),
+      (zK xK : word) / z (x : felem) (vx : Zmod M) (R : _ -> Prop),
     { requires t m :=
         vx = feval x /\
         bounded_by loose_bounds x /\
@@ -178,7 +178,7 @@ Section WithParameters.
       ensures t' m' :=
         t = t' /\
         exists z' : felem,
-        feval z' = (F.inv vx) /\
+        feval z' = (Zmod.inv vx) /\
         bounded_by tight_bounds z' /\
         m' =* (FElem zK z') * (FElem xK x) * R
     }.
@@ -234,7 +234,7 @@ Section WithParameters.
            loc' = map.put loc "i" (word.of_Z to) /\
            exists vvar',
              (FElem pvar vvar' * R)%sep mem' /\
-             feval vvar' = F.pow (feval vvar) (2 ^ (to - 1)) /\
+             feval vvar' = Zmod.pow (feval vvar) (2 ^ (to - 1)) /\
              bounded_by un_outbounds vvar') ->
           post tr' mem' loc'
       ) ->
@@ -251,7 +251,7 @@ Section WithParameters.
                           exists i (Hi: 1 <= i <= to),
                           v = Z.to_nat (to - i) /\
                           (exists vx, ((FElem pvar vx) * R)%sep m /\
-                                   feval vx = F.pow (feval vvar) (2 ^ (i - 1)) /\
+                                   feval vx = Zmod.pow (feval vvar) (2 ^ (i - 1)) /\
                                    bounded_by un_outbounds vx) /\
                           l = map.put loc "i" (word.of_Z i)).
     eapply wp_while. exists nat, lt, inv. ssplit; [eapply lt_wf|..].
@@ -315,7 +315,7 @@ Section WithParameters.
            | H : feval ?a = _ |- context [feval ?a] => rewrite H
            end.
     destruct x.
-    unfold vx. rewrite (@F.Fq_inv_fermat _ _ two_lt_M).
+    unfold vx. rewrite (@Zmod.Fq_inv_fermat _ _ two_lt_M).
     cbv [un_model bin_model un_square bin_mul felem_to_list proj1_sig].
 
     (* [feval x] unfolds to concrete modular arithmetic, and [rewrite] checks

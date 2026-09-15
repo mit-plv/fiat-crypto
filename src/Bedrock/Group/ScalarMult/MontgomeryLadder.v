@@ -46,10 +46,10 @@ Notation "'let/n' ( v , w , x , y , z ) := val 'in' body" :=
      only parsing).
 
 Section Gallina.
-  Local Open Scope F_scope.
-  Context {m : Z} (a24 : F m) (count : nat).
-  Definition montladder_gallina (k : Z) (u : F m)
-    : F m :=
+  Local Open Scope Zmod_scope.
+  Context {m : Z} (a24 : Zmod m) (count : nat).
+  Definition montladder_gallina (k : Z) (u : Zmod m)
+    : Zmod m :=
     let/n X1 := stack 1 in
     let/n Z1 := stack 0 in
     let/n X2 := stack u in
@@ -71,7 +71,7 @@ Section Gallina.
          ) in
     let/n (X1, X2) := cswap swap X1 X2 in
     let/n (Z1, Z2) := cswap swap Z1 Z2 in
-    let/n OUT := (F.inv Z1) in
+    let/n OUT := (Zmod.inv Z1) in
     let/n OUT := (X1 * OUT) in
     OUT.
 
@@ -92,7 +92,7 @@ Section Gallina.
 
   Lemma ladderstep_gallina_equiv X1 P1 P2 :
     reorder_pairs (ladderstep_gallina _ a24 X1 (fst P1) (snd P1) (fst P2) (snd P2)) =
-    @M.xzladderstep _ F.add F.sub F.mul a24 X1 P1 P2.
+    @M.xzladderstep _ Zmod.add Zmod.sub Zmod.mul a24 X1 P1 P2.
   Proof.
     intros. cbv [ladderstep_gallina M.xzladderstep].
     destruct P1 as [x1 z1]. destruct P2 as [x2 z2].
@@ -102,7 +102,7 @@ Section Gallina.
 
   Lemma montladder_gallina_equiv n point :
     montladder_gallina n point =
-    @M.montladder _ F.zero F.one F.add F.sub F.mul F.inv a24 (Z.of_nat count) (Z.testbit n) point.
+    @M.montladder _ Zmod.zero Zmod.one Zmod.add Zmod.sub Zmod.mul Zmod.inv a24 (Z.of_nat count) (Z.testbit n) point.
   Proof.
     cbv [montladder_gallina M.montladder Rewriter.Util.LetIn.Let_In stack].
     do 5 (unfold nlet at 1); cbn [fst snd P2.car P2.cdr].
@@ -132,25 +132,25 @@ Section Gallina.
   Qed.
 
   Context
-    (field : @Hierarchy.field (F m) eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div)
+    (field : @Hierarchy.field (Zmod m) eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul Zmod.inv Zmod.mdiv)
     (Hm' : (28 <= m)%Z)
      a (a24_correct : (1 + 1 + 1 + 1) * a24 = a - (1 + 1))
-    (a2m4_nonsq : ~(exists r, F.mul r r = F.sub (F.mul a a) (F.of_Z _ 4)))
-    (b : F m) (b_nonzero : b <> 0).
+    (a2m4_nonsq : ~(exists r, Zmod.mul r r = Zmod.sub (Zmod.mul a a) (Zmod.of_Z _ 4)))
+    (b : Zmod m) (b_nonzero : b <> 0).
 
-  Local Instance char_ge_28 : @Ring.char_ge (F m) eq 0 1 F.opp F.add F.sub F.mul 28.
+  Local Instance char_ge_28 : @Ring.char_ge (Zmod m) eq 0 1 Zmod.opp Zmod.add Zmod.sub Zmod.mul 28.
   Proof.
-    eapply Algebra.Hierarchy.char_ge_weaken; [eapply F.char_gt|].
+    eapply Algebra.Hierarchy.char_ge_weaken; [eapply Zmod.char_gt|].
     rewrite <-(Z2Pos.id m) in Hm' by lia; exact Hm'.
   Qed.
 
-  Context {char_ge_3 : @Ring.char_ge (F m) eq 0 1 F.opp F.add F.sub F.mul 3}. (* appears in statement *)
+  Context {char_ge_3 : @Ring.char_ge (Zmod m) eq 0 1 Zmod.opp Zmod.add Zmod.sub Zmod.mul 3}. (* appears in statement *)
   Import MontgomeryCurve Montgomery.Affine.
-  Local Notation X0 := (@M.X0 _ eq F.zero F.add F.mul a b).
+  Local Notation X0 := (@M.X0 _ eq Zmod.zero Zmod.add Zmod.mul a b).
   Local Notation add := (M.add(field:=field)(char_ge_3:=char_ge_3)(a:=a)(b_nonzero:=b_nonzero)).
   Local Notation opp := (M.opp(field:=field)(a:=a)(b_nonzero:=b_nonzero)).
   Local Notation scalarmult := (@ScalarMult.scalarmult_ref _ add M.zero opp).
-  Add Ring Private_ring : (F.ring_theory m) (morphism (F.ring_morph m), constants [F.is_constant]).
+  Add Ring Private_ring : (Zmod.ring_theory m) (morphism (Zmod.ring_morph m), constants [Zmod.is_constant]).
 
   Lemma montladder_gallina_equiv_affine n P :
     montladder_gallina n (X0 P) = X0 (scalarmult (n mod 2^Z.of_nat count) P).
@@ -179,12 +179,12 @@ Section __.
     Local Notation "bs $@ a" := (array ptsto (word.of_Z 1) a bs) (at level 20).
     Let m : Z := M.
     Context
-      (field : @Hierarchy.field (F m) eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div) (Hm' : (28 <= m)%Z)
-      (a : F m) (b : F m) (b_nonzero : b <> F.zero).
+      (field : @Hierarchy.field (Zmod m) eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul Zmod.inv Zmod.mdiv) (Hm' : (28 <= m)%Z)
+      (a : Zmod m) (b : Zmod m) (b_nonzero : b <> Zmod.zero).
 
-    Context {char_ge_3 : @Ring.char_ge (F m) eq F.zero F.one F.opp F.add F.sub F.mul 3}. (* appears in statement *)
+    Context {char_ge_3 : @Ring.char_ge (Zmod m) eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul 3}. (* appears in statement *)
     Import MontgomeryCurve Montgomery.Affine.
-    Local Notation X0 := (@M.X0 _ eq F.zero F.add F.mul a b).
+    Local Notation X0 := (@M.X0 _ eq Zmod.zero Zmod.add Zmod.mul a b).
     Local Notation add := (M.add(field:=field)(char_ge_3:=char_ge_3)(a:=a)(b_nonzero:=b_nonzero)).
     Local Notation opp := (M.opp(field:=field)(a:=a)(b_nonzero:=b_nonzero)).
     Local Notation scalarmult := (@ScalarMult.scalarmult_ref _ add M.zero opp).
@@ -193,7 +193,7 @@ Section __.
     Instance spec_of_montladder : spec_of "montladder" :=
       fnspec! "montladder"
             (pOUT pK pU : word)
-            / Kbytes (K : Z) (U : F M) (* inputs *)
+            / Kbytes (K : Z) (U : Zmod M) (* inputs *)
             out_bound OUT
             R,
       { requires tr mem :=
@@ -385,7 +385,7 @@ Section __.
 
   Hint Resolve unsigned_of_Z_0 : compiler_side_conditions.
   Hint Resolve unsigned_of_Z_1 : compiler_side_conditions.
-  Hint Unfold F.one F.zero : compiler_cleanup.
+  Hint Unfold Zmod.one Zmod.zero : compiler_cleanup.
 
   Hint Extern 10 (_ < _) => lia : compiler_side_conditions.
 
@@ -401,8 +401,8 @@ Section __.
     end.
 
   Context { F_M : M = 2^255-19 }.
-  Context (a24_correct : F.mul (1 + 1 + 1 + 1) Field.a24 = F.sub a (1 + 1))
-          (Ha : ~(exists r, F.mul r r = F.sub (F.mul a a) (F.of_Z _ 4))).
+  Context (a24_correct : Zmod.mul (1 + 1 + 1 + 1) Field.a24 = Zmod.sub a (1 + 1))
+          (Ha : ~(exists r, Zmod.mul r r = Zmod.sub (Zmod.mul a a) (Zmod.of_Z _ 4))).
 
   Hint Extern 1 (spec_of "fe25519_inv") => (simple refine (spec_of_exp_large)) : typeclass_instances.
   Hint Extern 1 (spec_of "felem_cswap") => (simple refine (spec_of_cswap)) : typeclass_instances.

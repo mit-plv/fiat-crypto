@@ -313,7 +313,7 @@ Section WordByWordMontgomery.
         by eauto with bounds
     end.
   (* [rewrite M_eq] cannot abstract [M] out of the goal: it also
-     occurs in the types of the field elements ([F M] is [Zmod M]),
+     occurs in the types of the field elements ([Zmod M] is [Zmod M]),
      so rewrite only the moduli of [Z.modulo] via congruence. *)
   Ltac FtoZ :=
     apply Zmod.of_Z_inj; rewrite ?Zmod.unsigned_of_Z;
@@ -841,11 +841,11 @@ Require Import bedrock2.ProgramLogic.
   Proof using Type.
     let M := (eval vm_compute in (Z.to_pos (m))) in
     (* Curve25519 "A" parameter (see section 4.1 of RFC 7748) *)
-    let a := constr:(F.of_Z M 486662) in
+    let a := constr:(Zmod.of_Z M 486662) in
     let prefix := constr:("p224_"%string) in
     eapply
       (field_parameters_prefixed
-         M ((a - F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
+         M ((a - Zmod.of_Z _ 2) / Zmod.of_Z _ 4)%Zmod prefix).
   Defined.
 
   Instance p224_ops : word_by_word_Montgomery_ops n m.

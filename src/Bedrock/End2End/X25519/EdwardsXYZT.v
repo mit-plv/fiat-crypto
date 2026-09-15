@@ -160,14 +160,14 @@ Definition readd := func! (p_out, p_a, p_c) {
 Section WithParameters.
   Context {two_lt_M: 2 < M}.
   (* TODO: Can we provide actual values/proofs for these, rather than just sticking them in the context? *)
-  Context {char_ge_3 : @Ring.char_ge (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul
+  Context {char_ge_3 : @Ring.char_ge (Zmod M) Logic.eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul
     (BinNat.N.succ_pos BinNat.N.two)}.
-  Context {field:@Algebra.Hierarchy.field (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
-  Context {a d: F M}
-          {nonzero_a : a <> F.zero}
-          {square_a : exists sqrt_a, (F.mul sqrt_a sqrt_a) = a}
-          {nonsquare_d : forall x, (F.mul x x) <> d}.
-  Context {a_eq_minus1:a = F.opp F.one} {twice_d} {k_eq_2d:twice_d = (F.add d d)} {nonzero_d: d<>F.zero}.
+  Context {field:@Algebra.Hierarchy.field (Zmod M) Logic.eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul Zmod.inv Zmod.mdiv}.
+  Context {a d: Zmod M}
+          {nonzero_a : a <> Zmod.zero}
+          {square_a : exists sqrt_a, (Zmod.mul sqrt_a sqrt_a) = a}
+          {nonsquare_d : forall x, (Zmod.mul x x) <> d}.
+  Context {a_eq_minus1:a = Zmod.opp Zmod.one} {twice_d} {k_eq_2d:twice_d = (Zmod.add d d)} {nonzero_d: d<>Zmod.zero}.
 
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
 
@@ -176,50 +176,50 @@ Local Notation felem_size_in_bytes := (felem_size_in_bytes(FieldRepresentation:=
 Local Notation bounded_by := (bounded_by(FieldRepresentation:=frep25519)).
 Local Notation word := (Naive.word 32).
 Local Notation felem := (felem(FieldRepresentation:=frep25519)).
-Local Notation point := (Extended.point(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(d:=d)).
-Local Notation cached := (cached(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(d:=d)(Feq:=Logic.eq)
-  (Fsub:=F.sub)(Fdiv:=F.div)).
-Local Notation precomputed_point := (precomputed_point(Feq:=Logic.eq)(a:=a)(d:=d)(Fone:=F.one)
-  (Fadd:=F.add)(Fmul:=F.mul)(Fsub:=F.sub)).
-Local Notation cached_coordinates := (cached_coordinates(Fzero:=F.zero)(Fadd:=F.add)(Fdiv:=F.div)
-  (Fmul:=F.mul)(Fsub:=F.sub)(Feq:=Logic.eq)(a:=a)(d:=d)).
-Local Notation precomputed_coordinates := (precomputed_coordinates(Fone:=F.one)(Fadd:=F.add)
-  (Fmul:=F.mul)(Fsub:=F.sub)(Feq:=Logic.eq)(a:=a)(d:=d)).
+Local Notation point := (Extended.point(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fadd:=Zmod.add)(Fmul:=Zmod.mul)(a:=a)(d:=d)).
+Local Notation cached := (cached(Fzero:=Zmod.zero)(Fadd:=Zmod.add)(Fmul:=Zmod.mul)(a:=a)(d:=d)(Feq:=Logic.eq)
+  (Fsub:=Zmod.sub)(Fdiv:=Zmod.mdiv)).
+Local Notation precomputed_point := (precomputed_point(Feq:=Logic.eq)(a:=a)(d:=d)(Fone:=Zmod.one)
+  (Fadd:=Zmod.add)(Fmul:=Zmod.mul)(Fsub:=Zmod.sub)).
+Local Notation cached_coordinates := (cached_coordinates(Fzero:=Zmod.zero)(Fadd:=Zmod.add)(Fdiv:=Zmod.mdiv)
+  (Fmul:=Zmod.mul)(Fsub:=Zmod.sub)(Feq:=Logic.eq)(a:=a)(d:=d)).
+Local Notation precomputed_coordinates := (precomputed_coordinates(Fone:=Zmod.one)(Fadd:=Zmod.add)
+  (Fmul:=Zmod.mul)(Fsub:=Zmod.sub)(Feq:=Logic.eq)(a:=a)(d:=d)).
 Local Notation m1double :=
-  (Extended.m1double(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
-           (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
-           (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
+  (Extended.m1double(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fone:=Zmod.one)
+           (Fopp:=Zmod.opp)(Fadd:=Zmod.add)(Fsub:=Zmod.sub)(Fmul:=Zmod.mul)(Finv:=Zmod.inv)(Fdiv:=Zmod.mdiv)
+           (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=Zmod.eq_dec)
            (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
            (a_eq_minus1:=a_eq_minus1)(twice_d:=twice_d)(k_eq_2d:=k_eq_2d)).
 Local Notation m1_prep :=
-  (m1_prep(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
-                  (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
-                  (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
+  (m1_prep(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fone:=Zmod.one)
+                  (Fopp:=Zmod.opp)(Fadd:=Zmod.add)(Fsub:=Zmod.sub)(Fmul:=Zmod.mul)(Finv:=Zmod.inv)(Fdiv:=Zmod.mdiv)
+                  (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=Zmod.eq_dec)
                   (a:=a)(d:=d)(nonzero_a:=nonzero_a)(a_eq_minus1:=a_eq_minus1)
                   (twice_d:=twice_d)(k_eq_2d:=k_eq_2d)(nonzero_d:=nonzero_d)).
 Local Notation m1_readd :=
-  (m1_readd(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
-           (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
-           (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
+  (m1_readd(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fone:=Zmod.one)
+           (Fopp:=Zmod.opp)(Fadd:=Zmod.add)(Fsub:=Zmod.sub)(Fmul:=Zmod.mul)(Finv:=Zmod.inv)(Fdiv:=Zmod.mdiv)
+           (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=Zmod.eq_dec)
            (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
            (a_eq_minus1:=a_eq_minus1)(twice_d:=twice_d)(k_eq_2d:=k_eq_2d)(nonzero_d:=nonzero_d)).
 Local Notation m1add_precomputed_coordinates :=
-  (m1add_precomputed_coordinates(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
-           (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
-           (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=F.eq_dec)
+  (m1add_precomputed_coordinates(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fone:=Zmod.one)
+           (Fopp:=Zmod.opp)(Fadd:=Zmod.add)(Fsub:=Zmod.sub)(Fmul:=Zmod.mul)(Finv:=Zmod.inv)(Fdiv:=Zmod.mdiv)
+           (field:=field)(char_ge_3:=char_ge_3)(Feq_dec:=Zmod.eq_dec)
            (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
            (a_eq_minus1:=a_eq_minus1)).
 
 Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
 
-Local Notation "a <> b" := (not (a = b)) : type_scope. Local Notation "0" := F.zero.
-Local Notation "1" := F.one. Local Infix "+" := F.add. Local Infix "*" := F.mul.
-Local Infix "-" := F.sub. Local Infix "/" := F.div. Local Notation "x ^ 2" := (x*x).
+Local Notation "a <> b" := (not (a = b)) : type_scope. Local Notation "0" := Zmod.zero.
+Local Notation "1" := Zmod.one. Local Infix "+" := Zmod.add. Local Infix "*" := Zmod.mul.
+Local Infix "-" := Zmod.sub. Local Infix "/" := Zmod.mdiv. Local Notation "x ^ 2" := (x*x).
 
 Definition valid_projective_coords (X Y Z Ta Tb : felem):=
-    ((a * (feval X)^2*(feval Z)^2 + (feval Y)^2*(feval Z)^2 = ((feval Z)^2)^2 + d * (feval X)^2 * (feval Y)^2)%F /\
-    ((feval X) * (feval Y) = (feval Z) * (feval Ta) * (feval Tb))%F /\
-    ((feval Z) <> 0)%F).
+    ((a * (feval X)^2*(feval Z)^2 + (feval Y)^2*(feval Z)^2 = ((feval Z)^2)^2 + d * (feval X)^2 * (feval Y)^2)%Zmod /\
+    ((feval X) * (feval Y) = (feval Z) * (feval Ta) * (feval Tb))%Zmod /\
+    ((feval Z) <> 0)%Zmod).
 Definition projective_coords := { c | let '(X,Y,Z,Ta,Tb) := c in
     valid_projective_coords X Y Z Ta Tb /\
     bounded_by tight_bounds X /\ bounded_by tight_bounds Y /\ bounded_by tight_bounds Z /\
@@ -325,7 +325,7 @@ Instance spec_of_fe25519_half : spec_of "fe25519_half" :=
       t = t' /\
       exists result : felem,
         bounded_by tight_bounds result /\
-        feval result = F.div (feval input) (F.add F.one F.one) /\
+        feval result = Zmod.mdiv (feval input) (Zmod.add Zmod.one Zmod.one) /\
         m' =* (FElem result_location result)  * R}.
 
 Global Instance spec_of_add_precomputed : spec_of "add_precomputed" :=

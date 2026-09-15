@@ -23,11 +23,11 @@ Section Field.
   Proof using Type.
     let M := (eval vm_compute in m) in
     (* 'A' parameter *)
-    let a := constr:(F.of_Z M 0) in
+    let a := constr:(Zmod.of_Z M 0) in
     let prefix := constr:("secp256k1_"%string) in
     eapply
       (field_parameters_prefixed
-         M ((a + F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
+         M ((a + Zmod.of_Z _ 2) / Zmod.of_Z _ 4)%Zmod prefix).
   Defined.
 
   #[export] Instance frep256k1 : Field.FieldRepresentation := field_representation m.

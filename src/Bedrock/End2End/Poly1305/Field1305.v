@@ -26,11 +26,11 @@ Section Field.
   Proof using Type.
     let M := (eval vm_compute in (UnsaturatedSolinas.m s c)) in
     (* dummy 'A' parameter since we don't care about scmula24 here *)
-    let a := constr:(F.of_Z M 2) in
+    let a := constr:(Zmod.of_Z M 2) in
     let prefix := constr:("fe1305_"%string) in
     eapply
       (field_parameters_prefixed
-         M ((a - F.of_Z _ 2) / F.of_Z _ 4)%F prefix).
+         M ((a - Zmod.of_Z _ 2) / Zmod.of_Z _ 4)%Zmod prefix).
   Defined.
 
   #[export] Instance frep1305 : FieldRepresentation := field_representation n s c.

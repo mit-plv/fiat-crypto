@@ -33,13 +33,13 @@ Section Representation.
             and for word-by-word Montgomery, the argument must be pulled out of the Montgomery domain*)
           (eval_transformation : list Z -> list Z).
 
-  Definition eval_words : list word -> F M :=
+  Definition eval_words : list word -> Zmod M :=
     fun ws =>
-      F.of_Z _ (Positional.eval weight n (eval_transformation (map word.unsigned ws))).
+      Zmod.of_Z _ (Positional.eval weight n (eval_transformation (map word.unsigned ws))).
 
-  Definition eval_bytes : list byte -> F M :=
+  Definition eval_bytes : list byte -> Zmod M :=
     fun bs =>
-      F.of_Z _ (Positional.eval
+      Zmod.of_Z _ (Positional.eval
                            (ModOps.weight 8 1)
                            n_bytes
                            (map byte.unsigned bs)).

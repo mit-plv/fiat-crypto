@@ -12,8 +12,8 @@ Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Export Crypto.Util.FixCoqMistakes.
 
-Module F.
-  Global Instance eq_dec {m} : DecidableRel (@eq (F m)).
+Module Zmod.
+  Global Instance eq_dec {m} : DecidableRel (@eq (Zmod m)).
   Proof.
     refine (fun x y =>
               match Zmod.eqb x y as b return Zmod.eqb x y = b -> {x = y} + {x <> y} with
@@ -24,7 +24,7 @@ Module F.
   Defined.
 
   Global Instance commutative_ring_modulo m
-    : @Algebra.Hierarchy.commutative_ring (F m) Logic.eq 0%F 1%F F.opp F.add F.sub F.mul.
+    : @Algebra.Hierarchy.commutative_ring (Zmod m) Logic.eq 0%Zmod 1%Zmod Zmod.opp Zmod.add Zmod.sub Zmod.mul.
   Proof.
     repeat (split || intro); subst; try reflexivity;
       auto using Zmod.add_assoc, Zmod.add_comm, Zmod.add_0_l, Zmod.add_0_r,
@@ -35,29 +35,26 @@ Module F.
 
   Section FandZ.
     Context {m:Z}.
-    Local Open Scope F_scope.
+    Local Open Scope Zmod_scope.
 
-    Lemma of_Z_small_nonzero z : (0 < z < m)%Z -> F.of_Z m z <> 0.
+    Lemma of_Z_small_nonzero z : (0 < z < m)%Z -> Zmod.of_Z m z <> 0.
     Proof using Type. intros; apply Zmod.of_Z_nz; rewrite Z.mod_small; lia. Qed.
 
-    Lemma to_Z_nonzero_range (x : F m) : (x <> 0) -> 0 < m -> (1 <= F.to_Z x < m)%Z.
+    Lemma to_Z_nonzero_range (x : Zmod m) : (x <> 0) -> 0 < m -> (1 <= Zmod.unsigned x < m)%Z.
     Proof using Type.
       intros Hnz Hlt; pose proof (Zmod.unsigned_nz x Hnz); pose proof (Zmod.unsigned_pos_bound x Hlt); lia.
     Qed.
 
-    Lemma of_Z_pow x n : 0 <= n -> F.of_Z _ x ^ n = F.of_Z _ (x ^ n mod m) :> F m.
-    Proof using Type. intros; rewrite Zmod.of_Z_mod, Zmod.of_Z_pow by trivial; reflexivity. Qed.
-
-    Lemma square_iff (x:F m) :
-      (exists y : F m, y * y = x) <-> (exists y : Z, y * y mod m = F.to_Z x)%Z.
+    Lemma square_iff (x:Zmod m) :
+      (exists y : Zmod m, y * y = x) <-> (exists y : Z, y * y mod m = Zmod.unsigned x)%Z.
     Proof using Type.
       setoid_rewrite <-Zmod.unsigned_inj_iff; setoid_rewrite Zmod.unsigned_mul; split; intro H; destruct H as [x' H].
       - eauto.
-      - exists (F.of_Z _ x'); rewrite !Zmod.unsigned_of_Z; pull_Zmod; auto.
+      - exists (Zmod.of_Z _ x'); rewrite !Zmod.unsigned_of_Z; pull_Zmod; auto.
     Qed.
 
-    Local Notation R_of_nat := (@Ring.of_nat (F m) 0%F 1%F F.add).
-    Lemma Ring_of_nat p : R_of_nat (Pos.to_nat p) = F.of_Z m (Z.pos p).
+    Local Notation R_of_nat := (@Ring.of_nat (Zmod m) 0%Zmod 1%Zmod Zmod.add).
+    Lemma Ring_of_nat p : R_of_nat (Pos.to_nat p) = Zmod.of_Z m (Z.pos p).
     Proof.
       induction p using Pos.peano_ind.
       { simpl. rewrite left_identity. reflexivity. }
@@ -66,8 +63,8 @@ Module F.
         reflexivity. }
     Qed.
 
-    Local Notation R_of_Z := (@Ring.of_Z (F m) 0%F 1%F F.opp F.add).
-    Lemma Ring_of_Z x : R_of_Z x = F.of_Z m x.
+    Local Notation R_of_Z := (@Ring.of_Z (Zmod m) 0%Zmod 1%Zmod Zmod.opp Zmod.add).
+    Lemma Ring_of_Z x : R_of_Z x = Zmod.of_Z m x.
     Proof.
       destruct x; cbv [R_of_Z];
         rewrite ?Ring_of_nat, <-?Pos2Z.opp_pos, ?Zmod.of_Z_opp; reflexivity.
@@ -75,7 +72,7 @@ Module F.
 
     Global Instance char_gt :
       @Ring.char_ge
-        (F m) Logic.eq F.zero F.one F.opp F.add F.sub F.mul
+        (Zmod m) Logic.eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul
         (Z.to_pos m).
     Proof.
       cbv [Ring.char_ge Hierarchy.char_ge].
@@ -93,9 +90,9 @@ Module F.
 
     Context {m:Z}.
 
-    Lemma to_nat_of_nat (n:nat) (Hm:(0 < m)%Z) : F.to_nat (F.of_nat m n) = (n mod (Z.to_nat m))%nat.
+    Lemma to_nat_of_nat (n:nat) (Hm:(0 < m)%Z) : Zmod.to_nat (Zmod.of_nat m n) = (n mod (Z.to_nat m))%nat.
     Proof using Type.
-      unfold F.to_nat, F.of_nat.
+      unfold Zmod.to_nat, Zmod.of_nat.
       rewrite Zmod.unsigned_of_Z.
       pose proof (Nat2Z.inj_mod n (Z.to_nat m)) as Hmod.
       rewrite Z2Nat.id in Hmod by lia.
@@ -103,9 +100,9 @@ Module F.
       rewrite Nat2Z.id; reflexivity.
     Qed.
 
-    Lemma of_nat_to_nat x (Hm:(0 < m)%Z) : F.of_nat m (F.to_nat x) = x.
+    Lemma of_nat_to_nat x (Hm:(0 < m)%Z) : Zmod.of_nat m (Zmod.to_nat x) = x.
     Proof using Type.
-      unfold F.to_nat, F.of_nat.
+      unfold Zmod.to_nat, Zmod.of_nat.
       rewrite Z2Nat.id; [ eapply Zmod.of_Z_unsigned | eapply Zmod.unsigned_pos_bound; assumption].
     Qed.
 
@@ -115,55 +112,52 @@ Module F.
       pose proof (Pos2Nat.is_pos p); lia.
     Qed.
 
-    Lemma of_nat_mod (n:nat) (Hm:(0 < m)%Z) : F.of_nat m (n mod (Z.to_nat m)) = F.of_nat m n.
+    Lemma of_nat_mod (n:nat) (Hm:(0 < m)%Z) : Zmod.of_nat m (n mod (Z.to_nat m)) = Zmod.of_nat m n.
     Proof using Type.
-      unfold F.of_nat.
+      unfold Zmod.of_nat.
       rewrite <-(Zmod.of_Z_mod (Z.of_nat n)), ?Nat2Z.inj_mod, ?Z2Nat.id; [reflexivity|].
       lia.
     Qed.
 
-    Lemma to_nat_mod (x:F m) (Hm:(0 < m)%Z) : F.to_nat x mod (Z.to_nat m) = F.to_nat x.
+    Lemma to_nat_mod (x:Zmod m) (Hm:(0 < m)%Z) : Zmod.to_nat x mod (Z.to_nat m) = Zmod.to_nat x.
     Proof using Type.
-      unfold F.to_nat.
+      unfold Zmod.to_nat.
       rewrite <-Zmod.mod_unsigned at 2.
       apply Z.mod_to_nat; [assumption|].
       apply Zmod.unsigned_pos_bound; assumption.
     Qed.
 
     Lemma of_nat_add x y :
-      F.of_nat m (x + y) = (F.of_nat m x + F.of_nat m y)%F.
-    Proof using Type. unfold F.of_nat; rewrite Nat2Z.inj_add, Zmod.of_Z_add; reflexivity. Qed.
+      Zmod.of_nat m (x + y) = (Zmod.of_nat m x + Zmod.of_nat m y)%Zmod.
+    Proof using Type. unfold Zmod.of_nat; rewrite Nat2Z.inj_add, Zmod.of_Z_add; reflexivity. Qed.
 
     Lemma of_nat_mul x y :
-      F.of_nat m (x * y) = (F.of_nat m x * F.of_nat m y)%F.
-    Proof using Type. unfold F.of_nat; rewrite Nat2Z.inj_mul, Zmod.of_Z_mul; reflexivity. Qed.
+      Zmod.of_nat m (x * y) = (Zmod.of_nat m x * Zmod.of_nat m y)%Zmod.
+    Proof using Type. unfold Zmod.of_nat; rewrite Nat2Z.inj_mul, Zmod.of_Z_mul; reflexivity. Qed.
   End FandNat.
 
   Section RingTacticGadgets.
     Context (m:Z).
 
-    Definition ring_theory : ring_theory 0%F 1%F (@F.add m) (@F.mul m) (@F.sub m) (@F.opp m) eq
-      := Algebra.Ring.ring_theory_for_stdlib_tactic.
-
-    Lemma pow_pow_N (x : F m) : forall (n : N), (x ^ Z.of_N n)%F = pow_N 1%F F.mul x n.
+    Lemma pow_pow_N (x : Zmod m) : forall (n : N), (x ^ Z.of_N n)%Zmod = pow_N 1%Zmod Zmod.mul x n.
     Proof using Type.
       induction n as [|n IHn] using N.peano_ind; [apply Zmod.pow_0_r|].
       rewrite N2Z.inj_succ, Zmod.pow_succ_nonneg_r, IHn by apply N2Z.is_nonneg.
       destruct n as [|p]; cbn [N.succ pow_N pow_pos]; [apply Zmod.mul_1_r|].
-      symmetry; apply (@pow_pos_succ (F m) (@F.mul m) eq _ ltac:(solve_proper) (@Zmod.mul_assoc m) x p).
+      symmetry; apply (@pow_pos_succ (Zmod m) (@Zmod.mul m) eq _ ltac:(solve_proper) (@Zmod.mul_assoc m) x p).
     Qed.
 
-    (* The exponent of [F.pow] is a [Z]; the [ring]/[field] tactics only handle
+    (* The exponent of [Zmod.pow] is a [Z]; the [ring]/[field] tactics only handle
        [N] exponents internally, so [Z.of_N] is the embedding the tactics see
        (as for [Z]'s own [Zpower_theory]). Together with [is_pow_constant]
        below this lets [ring] normalize [x ^ 2] and [x ^ 3]. *)
-    Lemma power_theory : power_theory 1%F (@F.mul m) eq Z.of_N (@F.pow m).
+    Lemma power_theory : power_theory 1%Zmod (@Zmod.mul m) eq Z.of_N (@Zmod.pow m).
     Proof using Type. split; apply pow_pow_N. Qed.
 
     (***** Division Theory *****)
-    Definition quotrem (a b: F m): F m * F m :=
-      (F.of_Z _ (F.to_Z a / F.to_Z b), F.of_Z _ (F.to_Z a mod F.to_Z b)).
-    Lemma div_theory : div_theory eq (@F.add m) (@F.mul m) (@id _) quotrem.
+    Definition quotrem (a b: Zmod m): Zmod m * Zmod m :=
+      (Zmod.of_Z _ (Zmod.unsigned a / Zmod.unsigned b), Zmod.of_Z _ (Zmod.unsigned a mod Zmod.unsigned b)).
+    Lemma div_theory : div_theory eq (@Zmod.add m) (@Zmod.mul m) (@id _) quotrem.
     Proof using Type.
       constructor; intros a b; unfold quotrem, id.
       apply Zmod.unsigned_inj.
@@ -178,8 +172,8 @@ Module F.
      * Doing this allows the [ring] tactic to do coefficient
      * manipulations in Z rather than F, because we know it's equivalent
      * to inject the result afterward. *)
-    Lemma ring_morph: ring_morph 0%F 1%F F.add F.mul F.sub F.opp   eq
-                                 0%Z 1%Z Z.add Z.mul Z.sub Z.opp Z.eqb  (F.of_Z m).
+    Lemma ring_morph: ring_morph 0%Zmod 1%Zmod Zmod.add Zmod.mul Zmod.sub Zmod.opp   eq
+                                 0%Z 1%Z Z.add Z.mul Z.sub Z.opp Z.eqb  (Zmod.of_Z m).
     Proof using Type.
       split; intros;
         auto using Zmod.of_Z_0, Zmod.of_Z_1, Zmod.of_Z_add, Zmod.of_Z_sub, Zmod.of_Z_mul, Zmod.of_Z_opp.
@@ -188,7 +182,7 @@ Module F.
 
     (* Redefine our division theory under the ring morphism *)
     Lemma morph_div_theory:
-      Ring_theory.div_theory eq Z.add Z.mul (F.of_Z m) Z.quotrem.
+      Ring_theory.div_theory eq Z.add Z.mul (Zmod.of_Z m) Z.quotrem.
     Proof using Type.
       split; intros a b.
       replace (Z.quotrem a b) with (Z.quot a b, Z.rem a b);
@@ -198,7 +192,7 @@ Module F.
 
   End RingTacticGadgets.
 
-  Ltac is_constant t := match t with F.of_Z _ ?x => x | _ => NotConstant end.
+  Ltac is_constant t := match t with Zmod.of_Z _ ?x => x | _ => NotConstant end.
   (* [ring]/[field] represent exponents as [N] (see [power_theory]); a literal
      [Z] exponent [Zpos p] is handed over as [Npos p], which [Z.of_N] maps back
      to [Zpos p] by computation. *)
@@ -215,29 +209,29 @@ Module F.
 
   Section VariousModulo.
     Context {m:Z}.
-    Local Open Scope F_scope.
+    Local Open Scope Zmod_scope.
 
-    Add Ring _theory : (ring_theory m)
+    Add Ring _theory : (Zmod.ring_theory m)
                          (morphism (ring_morph m),
                           constants [is_constant],
                           div (morph_div_theory m),
                           power_tac (power_theory m) [is_pow_constant]).
 
-    Lemma mul_nonzero_l : forall a b : F m, a*b <> 0 -> a <> 0.
+    Lemma mul_nonzero_l : forall a b : Zmod m, a*b <> 0 -> a <> 0.
     Proof using Type. intros a b Hnz Hz. rewrite Hz in Hnz; apply Hnz; ring. Qed.
 
-    Lemma mul_nonzero_r : forall a b : F m, a*b <> 0 -> b <> 0.
+    Lemma mul_nonzero_r : forall a b : Zmod m, a*b <> 0 -> b <> 0.
     Proof using Type. intros a b Hnz Hz. rewrite Hz in Hnz; apply Hnz; ring. Qed.
   End VariousModulo.
 
   Section Pow.
     Context {m:Z}.
-    Add Ring _theory' : (ring_theory m)
+    Add Ring _theory' : (Zmod.ring_theory m)
                           (morphism (ring_morph m),
                            constants [is_constant],
                            div (morph_div_theory m),
                            power_tac (power_theory m) [is_pow_constant]).
-    Local Open Scope F_scope.
+    Local Open Scope Zmod_scope.
 
     (* TODO: move this somewhere? *)
     Create HintDb nat2N discriminated.
@@ -252,7 +246,7 @@ Module F.
          Nat2N.inj_div2 Nat2N.inj_max Nat2N.inj_min Nat2N.id
       : nat2N.
 
-    Lemma pow_3_r (x:F m) : x^3 = x*x*x.
+    Lemma pow_3_r (x:Zmod m) : x^3 = x*x*x.
     Proof using Type. ring. Qed.
   End Pow.
-End F.
+End Zmod.

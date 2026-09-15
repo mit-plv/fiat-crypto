@@ -240,11 +240,11 @@ Definition secp256k1_felem_cswap := CSwap.felem_cswap(word:=Naive.word64)(field_
 
 Section WithParameters.
   Context {two_lt_M: 2 < M}.
-  Context {char_ge_3 : (@Ring.char_ge (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul (BinNat.N.succ_pos BinNat.N.two))}.
-  Context {field:@Algebra.Hierarchy.field (F M) Logic.eq F.zero F.one F.opp F.add F.sub F.mul F.inv F.div}.
-  Context {a b : F M}.
-  Context {zero_a : id a = F.zero}
-          {seven_b : id b = F.of_Z _ 7}.
+  Context {char_ge_3 : (@Ring.char_ge (Zmod M) Logic.eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul (BinNat.N.succ_pos BinNat.N.two))}.
+  Context {field:@Algebra.Hierarchy.field (Zmod M) Logic.eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul Zmod.inv Zmod.mdiv}.
+  Context {a b : Zmod M}.
+  Context {zero_a : id a = Zmod.zero}
+          {seven_b : id b = Zmod.of_Z _ 7}.
 
   Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
   Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
@@ -252,37 +252,37 @@ Section WithParameters.
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
   Local Notation word := (BasicC64Semantics.word).
   Local Notation felem := (felem(FieldRepresentation:=frep256k1)).
-  Local Notation point := (Jacobian.point(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
-  Local Notation co_z := (Jacobian.co_z(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
-  Local Notation z_of := (Jacobian.z_of(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fadd:=F.add)(Fmul:=F.mul)(a:=a)(b:=b)(Feq_dec:=F.eq_dec)).
+  Local Notation point := (Jacobian.point(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fadd:=Zmod.add)(Fmul:=Zmod.mul)(a:=a)(b:=b)(Feq_dec:=Zmod.eq_dec)).
+  Local Notation co_z := (Jacobian.co_z(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fadd:=Zmod.add)(Fmul:=Zmod.mul)(a:=a)(b:=b)(Feq_dec:=Zmod.eq_dec)).
+  Local Notation z_of := (Jacobian.z_of(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fadd:=Zmod.add)(Fmul:=Zmod.mul)(a:=a)(b:=b)(Feq_dec:=Zmod.eq_dec)).
   Local Notation jopp :=
-    (Jacobian.opp(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
-       (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
-       (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
+    (Jacobian.opp(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fone:=Zmod.one)
+       (Fopp:=Zmod.opp)(Fadd:=Zmod.add)(Fsub:=Zmod.sub)(Fmul:=Zmod.mul)(Finv:=Zmod.inv)(Fdiv:=Zmod.mdiv)
+       (a:=a)(b:=b)(field:=field)(Feq_dec:=Zmod.eq_dec)).
   Local Notation make_co_z :=
-    (Jacobian.make_co_z(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
-       (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
-       (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
+    (Jacobian.make_co_z(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fone:=Zmod.one)
+       (Fopp:=Zmod.opp)(Fadd:=Zmod.add)(Fsub:=Zmod.sub)(Fmul:=Zmod.mul)(Finv:=Zmod.inv)(Fdiv:=Zmod.mdiv)
+       (a:=a)(b:=b)(field:=field)(Feq_dec:=Zmod.eq_dec)).
   Local Notation zaddu :=
-    (Jacobian.zaddu(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
-       (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
-       (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
+    (Jacobian.zaddu(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fone:=Zmod.one)
+       (Fopp:=Zmod.opp)(Fadd:=Zmod.add)(Fsub:=Zmod.sub)(Fmul:=Zmod.mul)(Finv:=Zmod.inv)(Fdiv:=Zmod.mdiv)
+       (a:=a)(b:=b)(field:=field)(Feq_dec:=Zmod.eq_dec)).
   Local Notation zaddc :=
-    (Jacobian.zaddc(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
-       (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
-       (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
+    (Jacobian.zaddc(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fone:=Zmod.one)
+       (Fopp:=Zmod.opp)(Fadd:=Zmod.add)(Fsub:=Zmod.sub)(Fmul:=Zmod.mul)(Finv:=Zmod.inv)(Fdiv:=Zmod.mdiv)
+       (a:=a)(b:=b)(field:=field)(Feq_dec:=Zmod.eq_dec)).
   Local Notation dblu :=
-    (Jacobian.dblu(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
-       (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
-       (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
+    (Jacobian.dblu(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fone:=Zmod.one)
+       (Fopp:=Zmod.opp)(Fadd:=Zmod.add)(Fsub:=Zmod.sub)(Fmul:=Zmod.mul)(Finv:=Zmod.inv)(Fdiv:=Zmod.mdiv)
+       (a:=a)(b:=b)(field:=field)(Feq_dec:=Zmod.eq_dec)).
   Local Notation tplu :=
-    (Jacobian.tplu(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
-       (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
-       (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
+    (Jacobian.tplu(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fone:=Zmod.one)
+       (Fopp:=Zmod.opp)(Fadd:=Zmod.add)(Fsub:=Zmod.sub)(Fmul:=Zmod.mul)(Finv:=Zmod.inv)(Fdiv:=Zmod.mdiv)
+       (a:=a)(b:=b)(field:=field)(Feq_dec:=Zmod.eq_dec)).
   Local Notation zdau :=
-    (Jacobian.zdau(F:=F M)(Feq:=Logic.eq)(Fzero:=F.zero)(Fone:=F.one)
-       (Fopp:=F.opp)(Fadd:=F.add)(Fsub:=F.sub)(Fmul:=F.mul)(Finv:=F.inv)(Fdiv:=F.div)
-       (a:=a)(b:=b)(field:=field)(Feq_dec:=F.eq_dec)).
+    (Jacobian.zdau(F:=Zmod M)(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fone:=Zmod.one)
+       (Fopp:=Zmod.opp)(Fadd:=Zmod.add)(Fsub:=Zmod.sub)(Fmul:=Zmod.mul)(Finv:=Zmod.inv)(Fdiv:=Zmod.mdiv)
+       (a:=a)(b:=b)(field:=field)(Feq_dec:=Zmod.eq_dec)).
 
   Global Instance spec_of_jopp : spec_of "secp256k1_jopp" :=
     fnspec! "secp256k1_jopp"
@@ -309,7 +309,7 @@ Section WithParameters.
   Global Instance spec_of_make_co_z : spec_of "secp256k1_make_co_z" :=
     fnspec! "secp256k1_make_co_z"
       (OXK OYK XK YK ZK : word) / (OX OY X Y Z : felem)
-      (P Q : point) (HQaff: z_of Q = 1%F) (R : _ -> Prop),
+      (P Q : point) (HQaff: z_of Q = 1%Zmod) (R : _ -> Prop),
     { requires t m :=
         (exists x y, proj1_sig P = (x, y, (feval Z))) /\
         (exists z, proj1_sig Q = ((feval X), (feval Y), z)) /\
@@ -398,7 +398,7 @@ Section WithParameters.
     fnspec! "secp256k1_dblu"
       (OX1K OY1K OX2K OY2K OZK X1K Y1K : word) /
       (OX1 OY1 OX2 OY2 OZ X1 Y1 : felem) (P : point)
-      (HPaff : z_of P = F.one) (R : _ -> Prop),
+      (HPaff : z_of P = Zmod.one) (R : _ -> Prop),
     { requires t m :=
         (exists z, proj1_sig P = ((feval X1), (feval Y1), z)) /\
         bounded_by loose_bounds X1 /\
@@ -425,7 +425,7 @@ Section WithParameters.
     fnspec! "secp256k1_tplu"
       (OX1K OY1K OX2K OY2K OZK X1K Y1K : word) /
       (OX1 OY1 OX2 OY2 OZ X1 Y1 : felem) (P : point)
-      (HPaff : z_of P = F.one) (R : _ -> Prop),
+      (HPaff : z_of P = Zmod.one) (R : _ -> Prop),
     { requires t m :=
         (exists z, proj1_sig P = ((feval X1), (feval Y1), z)) /\
         bounded_by loose_bounds X1 /\
@@ -549,7 +549,7 @@ Section WithParameters.
     ecancel_assumption.
   Qed.
 
-  Add Ring Private_ring : (F.ring_theory M) (morphism (F.ring_morph M), constants [F.is_constant]).
+  Add Ring Private_ring : (Zmod.ring_theory M) (morphism (Zmod.ring_morph M), constants [Zmod.is_constant]).
 
   Lemma secp256k1_make_co_z_ok : program_logic_goal_for_function! secp256k1_make_co_z.
   Proof.
