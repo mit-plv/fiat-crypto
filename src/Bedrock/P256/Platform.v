@@ -123,7 +123,7 @@ Proof.
   all: repeat (((case Z.ltb_spec; [|]; intros)||(case Z.leb_spec; [|]; intros)); rewrite
       ?Bool.andb_true_l, ?Bool.andb_true_r, ?Bool.orb_true_l, ?Bool.orb_true_r,
       ?Bool.andb_false_l, ?Bool.andb_false_r, ?Bool.orb_false_l, ?Bool.orb_false_r,
-      ?Z.testbit_0_l, ?prove_Zeq_bitwise.testbit_minus1, ?Z.testbit_neg_r, ?Z.testbit_high
+      ?Z.testbit_0_l, ?(Z.bits_m1 : forall n, 0 <= n -> Z.testbit (-1) n = true), ?Z.testbit_neg_r, ?Z.testbit_high
     by intuition (idtac;
          match goal with
          | H : ?x < ?y^?a |- ?x < ?y^?b =>

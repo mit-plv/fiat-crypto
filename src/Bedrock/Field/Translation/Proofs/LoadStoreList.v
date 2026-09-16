@@ -693,7 +693,7 @@ Section LoadStoreList.
       repeat match goal with
              | _ => progress sepsimpl
              | H : _ |- _ =>
-               rewrite List.firstn_all, List.skipn_all_exact in H
+               rewrite List.firstn_all, List.skipn_all in H
              | _ => rewrite app_nil_r
              | |- Lift1Prop.ex1 _ _ => eexists
              | |- _ /\ _ => split
@@ -735,7 +735,7 @@ Section LoadStoreList.
         H : Datatypes.length ?x = Datatypes.length (_ :: _) |- _ =>
         destruct x; cbn [Datatypes.length] in H; [ lia | ]
       end.
-      cbn [map array Semantics.interp_binop] in *.
+      cbn [map array Semantics.interp_binop Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts] in *.
 
       (* we now have a Z in context that should be equivalent to the offsetted
          location; destruct WeakestPrecondition.dexpr to expose that equivalence *)
@@ -744,7 +744,7 @@ Section LoadStoreList.
           cbn [WeakestPrecondition.dexpr
                  WeakestPrecondition.expr
                  WeakestPrecondition.expr_body
-                 Semantics.interp_binop] in H;
+                 Semantics.interp_binop Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts] in H;
           cbv [dlet.dlet WeakestPrecondition.literal
                          WeakestPrecondition.get] in H;
           rewrite ?Zmod.of_Z_unsigned in H;
@@ -827,7 +827,7 @@ Section LoadStoreList.
             cbn [WeakestPrecondition.dexpr
                    WeakestPrecondition.expr
                    WeakestPrecondition.expr_body
-                   Semantics.interp_binop].
+                   Semantics.interp_binop Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts].
             cbv [WeakestPrecondition.literal dlet.dlet].
             match goal with
             | |- context[Zmod.add ?x (bits.of_Z _ ?y)] =>
@@ -1020,7 +1020,7 @@ Section LoadStoreList.
           eexists; sepsimpl; try eassumption; [ ].
           eapply WP_get_only_differ_undef; eauto.
           eapply Proper_get; [ repeat intro | eassumption ].
-          cbn [Semantics.interp_binop].
+          cbn [Semantics.interp_binop Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts].
           cbv [WeakestPrecondition.literal dlet.dlet].
           subst.
           apply Zmod.unsigned_inj.

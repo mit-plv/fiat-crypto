@@ -206,7 +206,8 @@ Section Expr.
                                  rep.equiv rep.Z
                                  equivalent_args
                                  locally_equivalent_args
-                                 Semantics.interp_binop] in *
+                                 Semantics.interp_binop
+                                 Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts] in *
                | _ => progress
                         cbn [Language.Compilers.base.interp
                                Compilers.type.interp
@@ -588,7 +589,8 @@ Section Expr.
              equivalent_base rep.equiv rep.Z ident.literal] in *.
       cbv [WeakestPrecondition.dexpr ident.literal] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
-                                    Semantics.interp_binop].
+                                    Semantics.interp_binop
+                                 Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts].
       sepsimpl_hyps.
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
@@ -614,7 +616,8 @@ Section Expr.
              equivalent_base rep.equiv rep.Z ident.literal] in *.
       cbv [WeakestPrecondition.dexpr ident.literal] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
-                                    Semantics.interp_binop].
+                                    Semantics.interp_binop
+                                 Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts].
       sepsimpl; [ lia .. | ].
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
@@ -640,7 +643,8 @@ Section Expr.
              equivalent_base rep.equiv rep.Z ident.literal] in *.
       cbv [WeakestPrecondition.dexpr ident.literal] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
-                                    Semantics.interp_binop].
+                                    Semantics.interp_binop
+                                 Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts].
       sepsimpl_hyps.
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
@@ -662,7 +666,8 @@ Section Expr.
              equivalent_base rep.equiv rep.Z ident.literal] in *.
       cbv [WeakestPrecondition.dexpr ident.literal] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
-                                    Semantics.interp_binop].
+                                    Semantics.interp_binop
+                                 Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts].
       sepsimpl_hyps.
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
@@ -685,7 +690,8 @@ Section Expr.
                   equivalent_base rep.equiv rep.Z ident.literal] in *.
       all: cbv [WeakestPrecondition.dexpr ident.literal] in *.
       all: cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
-                                         Semantics.interp_binop].
+                                         Semantics.interp_binop
+                                 Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts].
       all: sepsimpl_hyps.
       all: eapply Proper_expr; [ | eassumption ].
       all: repeat intro; subst.
@@ -709,7 +715,8 @@ Section Expr.
              equivalent_base rep.equiv rep.Z ident.literal] in *.
       cbv [WeakestPrecondition.dexpr ident.literal] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
-          Semantics.interp_binop Semantics.interp_op1].
+          Semantics.interp_binop Semantics.interp_op1
+          Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts].
       sepsimpl_hyps.
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
@@ -741,7 +748,8 @@ Section Expr.
              equivalent_base rep.equiv rep.Z ident.literal] in *.
       cbv [WeakestPrecondition.dexpr ident.literal] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
-                                    Semantics.interp_binop].
+                                    Semantics.interp_binop
+                                 Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts].
       sepsimpl_hyps.
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.

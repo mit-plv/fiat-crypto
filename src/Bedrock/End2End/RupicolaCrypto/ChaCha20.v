@@ -269,7 +269,7 @@ Section Bedrock2.
 
 Local Notation "a + b" := (Zmod.add (m:=2 ^ 32) a b).
 Local Notation "a ^ b" := (Zmod.xor (m:=2 ^ 32) a b).
-Local Notation "a <<< b" := (word.slu a b + word.sru a (Zmod.sub (bits.of_Z _ 32) b)) (at level 30).
+Local Notation "a <<< b" := (Semantics.slu a b + Semantics.sru a (Zmod.sub (bits.of_Z _ 32) b)) (at level 30).
 
 Definition quarter_gallina a b c d : \<< word, word, word, word \>> :=
   let/n a := a + b in  let/n d := d ^ a in  let/n d := d <<< bits.of_Z _ 16 in
@@ -555,7 +555,7 @@ Lemma quarterround_ok x y z t st :
   quarterround x y z t (List.map (Zmod.of_Z (2 ^ 32)) st).
 Proof.
   unfold Spec.quarterround, quarterround, nlet; intros H.
-  rewrite (forall_in_bounds (width:=32)) in H by lia.
+  rewrite forall_in_bounds in H by lia.
   rewrite !map_nth, !quarter_ok by auto.
   destruct (Spec.quarter _) as (((?&?)&?)&?).
   rewrite !map_upd; reflexivity.
@@ -590,7 +590,7 @@ Lemma quarterround_in_bounds x y z t a:
   Forall (in_bounds 32) (Spec.quarterround x y z t a).
 Proof.
   unfold Spec.quarterround, nlet; intros Ha.
-  pose proof Ha as Ha'; rewrite (forall_in_bounds (width:=32)) in Ha by lia.
+  pose proof Ha as Ha'; rewrite forall_in_bounds in Ha by lia.
   pose proof quarter_in_bounds (nth x a 0) (nth y a 0) (nth z a 0) (nth t a 0)
        ltac:(eauto) ltac:(eauto) ltac:(eauto) ltac:(eauto) as Hb.
   destruct (Spec.quarter _) as (((?&?)&?)&?).
@@ -769,7 +769,7 @@ Qed.
       rewrite !Forall_app.
       repeat split.
       all: change 32 with (8 * Z.of_nat 4).
-      all: apply (Forall_le_combine_in_bounds (width:=32)).
+      all: apply Forall_le_combine_in_bounds.
       all: lia.
     }
     rewrite !app_length, !map_length, !length_chunk, Hlenk by lia.

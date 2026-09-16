@@ -261,7 +261,7 @@ Section WithParameters.
     eexists ?[b]; ssplit.
     eexists; split; [apply map.get_put_same|].
     eapply Core.WeakestPrecondition_dexpr_expr; [|apply ExprCompiler.expr_compile_Z_literal].
-    cbn [interp_binop]. rewrite <- Core.word.morph_ltu by lia.
+    cbn [interp_binop Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts]. rewrite <- Core.word.morph_ltu by lia.
     reflexivity.
     all: pose proof Zlt_cases vi to;
          intros Hnz; destruct (vi <? to);
@@ -275,7 +275,7 @@ Section WithParameters.
     single_step.
     repeat straightline.
     eexists. split.
-    eexists. split. apply map.get_put_same. cbn [expr interp_binop]. reflexivity.
+    eexists. split. apply map.get_put_same. cbn [expr interp_binop Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts]. reflexivity.
     eexists. split. split; [reflexivity|].
     exists (vi + 1). exists (ltac:(lia): 1 <= vi + 1 <= to).
     ssplit; [reflexivity|..]. eexists; ssplit; [ecancel_assumption|..].

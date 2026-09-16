@@ -244,7 +244,7 @@ Section WithParameters.
           tr mem loc post.
   Proof.
     repeat straightline.
-    repeat (eexists; split; repeat Tactics.straightline'; eauto); cbn [Semantics.interp_binop].
+    repeat (eexists; split; repeat Tactics.straightline'; eauto); cbn [Semantics.interp_binop Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts].
 
     - subst wi.
       eapply load_one_of_sep.
@@ -459,7 +459,7 @@ Section WithParameters.
     eexists ?[b]; ssplit.
     eexists; split; [apply map.get_put_same|].
     eapply Core.WeakestPrecondition_dexpr_expr; [|apply ExprCompiler.expr_compile_Z_literal].
-    cbn [interp_binop]. rewrite <- Core.word.morph_ltu by lia.
+    cbn [interp_binop Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts]. rewrite <- Core.word.morph_ltu by lia.
     reflexivity.
     all: pose proof Zlt_cases vi scalarbitsz;
          intros Hnz; destruct (vi <? scalarbitsz);

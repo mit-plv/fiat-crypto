@@ -252,7 +252,7 @@ Section __.
   clear scalarbits_small.
    clear dependent m.
    repeat straightline.
-   repeat (eexists; split; repeat straightline'; eauto); cbn [Semantics.interp_binop].
+   repeat (eexists; split; repeat straightline'; eauto); cbn [Semantics.interp_binop Semantics.slu Semantics.sru Semantics.srs Semantics.ltu Semantics.lts].
 
    eapply load_one_of_sep.
    (*
