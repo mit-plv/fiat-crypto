@@ -4,7 +4,6 @@ Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.Syntax.
 Require Import compiler.Pipeline.
 Require Import compiler.MMIO.
-Require Import compiler.NaiveRiscvWordProperties.
 Require Import coqutil.Map.SortedListWord.
 Require Import coqutil.Map.Z_keyed_SortedListMap.
 Require Import coqutil.Word.Bitwidth32.
@@ -54,5 +53,5 @@ Definition f_rel_pos : Z := ltac:(
   let y := eval vm_compute in (List.find (fun '(name, pos) => String.eqb name "montladder") montladder_finfo) in
   match y with Some (_, ?pos) => exact pos end).
 
-Local Instance mem : map.map (word.rep (width:=32)) Init.Byte.byte := SortedListWord.map _ _.
+Local Instance mem : map.map (bits 32) Init.Byte.byte := SortedListWord.map 32 Init.Byte.byte.
 Local Existing Instance BW32.
