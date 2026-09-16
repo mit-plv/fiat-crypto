@@ -70,18 +70,18 @@ Definition clamp := func! (sk) {
   store1(sk+$31, (load1(sk+$31) & $127) | $64)
 }.
 
-From coqutil Require Import Word.Interface Word.Naive.
+From coqutil Require Import Word.Bitwidth.
 From coqutil Require Import SortedListWord.
 From coqutil Require Import symmetry.
 Require Import bedrock2.FE310CSemantics.
-Local Existing Instances SortedListString.map SortedListWord.map coqutil.Word.Naive.word.
+Local Existing Instances SortedListString.map SortedListWord.map.
 
 From coqutil Require Import LittleEndianList.
 Require Import bedrock2.Syntax bedrock2.WeakestPrecondition bedrock2.Map.SeparationLogic.
 Import Coq.Lists.List. (* TODO: SeparationLogic should not override skipn  and etc *)
 From bedrock2 Require Import ProgramLogic. Import ProgramLogic.Coercions.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
-Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
+Local Notation "xs $@ a" := (Array.array ptsto (bits.of_Z _ 1) a xs) (at level 10, format "xs $@ a").
 Import Byte Word.Properties.
 Local Coercion byte.unsigned : byte >-> Z.
 Local Arguments le_combine !_.
@@ -101,7 +101,7 @@ Proof.
 
   rewrite <-(firstn_skipn 30 s) in H1 |- *.
   seprewrite_in @Array.bytearray_append H1; rewrite ?app_length, ?firstn_length_le in * by lia.
-  rewrite <-!Properties.word.add_assoc, <-!Properties.word.ring_morph_add  in *; simpl Z.add in *.
+  rewrite <-!Zmod.add_assoc, <-!Zmod.of_Z_add  in *; simpl Z.add in *.
 
   assert (length (skipn 30 s) = 1)%nat by (rewrite skipn_length; lia).
   assert (length (firstn 30 s) = 30)%nat by (rewrite firstn_length; lia).
@@ -114,7 +114,7 @@ Proof.
   repeat seprewrite_in Hrw H4.
   repeat seprewrite_in (symmetry! @Array.array_cons) H4.
   seprewrite_in @Array.bytearray_index_merge H4.
-  { cbn [length]; rewrite ?app_length, ?length_firstn, ?Properties.word.unsigned_of_Z_nowrap; try lia. }
+  { cbn [length]; rewrite ?app_length, ?length_firstn, ?bits.unsigned_of_Z_small; try lia. }
 
   eassert (le_split _ _ = _) as ->; [|ecancel_assumption].
   clear -H0 Heql0.
@@ -131,11 +131,11 @@ Proof.
   cbn [length]; rewrite ?firstn_length_le by lia.
   simpl Z.mul at 1 2.
   rewrite ?byte.unsigned_of_Z; cbv [byte.wrap].
-  repeat rewrite ?word.unsigned_and_nowrap, ?word.unsigned_or_nowrap.
+  repeat rewrite ?bits.unsigned_and, ?bits.unsigned_or.
 
   pose proof byte.unsigned_range b.
   pose proof byte.unsigned_range b31.
-  rewrite ?word.unsigned_of_Z_nowrap; try lia.
+  rewrite ?bits.unsigned_of_Z_small; try lia.
   cbv [clamp'].
 
   rewrite <-(byte.wrap_unsigned b);

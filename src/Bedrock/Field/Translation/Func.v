@@ -1,7 +1,7 @@
 From Coq Require Import String.
 From Coq Require Import List.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Syntax.
-Require Import coqutil.Word.Interface.
 Require Import coqutil.Map.Interface.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Translation.Cmd.
@@ -15,8 +15,9 @@ Import Types.Notations.
 
 Section Func.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Existing Instance rep.Z.
 
   (* Feeds arguments to function one by one and then calls translate_cmd *)

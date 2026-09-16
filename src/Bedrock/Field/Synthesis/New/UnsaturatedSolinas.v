@@ -2,6 +2,7 @@ From Coq Require Import Zmod.
 From Coq Require Import String.
 From Coq Require Import List.
 From Coq Require Import ZArith.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Syntax.
 Require Import coqutil.Map.Interface.
 Require Import Crypto.Arithmetic.Core.
@@ -29,8 +30,8 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Import ListNotations API.Compilers Types.Notations.
 
 Class unsaturated_solinas_ops
-  {width BW word mem locals ext_spec varname_gen error}
-  {parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}
+  {width BW mem locals ext_spec varname_gen error}
+  {parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}
   {field_parameters : FieldParameters}
   {n s c} : Type :=
   { mul_op :
@@ -88,17 +89,18 @@ Class unsaturated_solinas_ops
         Field.to_bytes
         to_bytes_insizes to_bytes_outsizes (to_bytes_inlengths n);
   }.
-Arguments unsaturated_solinas_ops {_ _ _ _ _ _ _ _ _ _} n.
+Arguments unsaturated_solinas_ops {_ _ _ _ _ _ _ _ _} n.
 
 (** We need to tell [check_args] that we are requesting these functions in order to get the relevant properties out *)
 Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
 
 Section UnsaturatedSolinas.
   Context
-  {width BW word mem locals ext_spec error}
-  {parameters_sentinel : @parameters width BW word mem locals ext_spec default_varname_gen error}
+  {width BW mem locals ext_spec error}
+  {parameters_sentinel : @parameters width BW mem locals ext_spec default_varname_gen error}
   {field_parameters : FieldParameters}
   {ok : Types.ok}.
+  Local Notation word := (bits width).
 
   Context (n : nat) (s : Z) (c : list (Z * Z))
           (M_eq : M = m s c)
@@ -297,8 +299,8 @@ Section UnsaturatedSolinas.
 
   Ltac simpl_map_unsigned :=
     lazymatch goal with
-    | |- context [map Interface.word.unsigned
-                      (map Interface.word.of_Z _)] =>
+    | |- context [map Zmod.unsigned
+                      (map (Zmod.of_Z _) _)] =>
       rewrite map_unsigned_of_Z;
       erewrite MaxBounds.map_word_wrap_bounded
         by eauto with bounds
@@ -498,17 +500,17 @@ Section UnsaturatedSolinas.
       intros. apply Hcorrect; auto. }
   Qed.
 
-  Lemma list_Z_bounded_by_unsigned (xs : list (@Interface.word.rep _ word)) :
+  Lemma list_Z_bounded_by_unsigned (xs : list (word)) :
     list_Z_bounded_by
       (Primitives.saturated_bounds (List.length xs) width)
-      (map Interface.word.unsigned xs).
+      (map Zmod.unsigned xs).
   Proof using parameters_sentinel ok.
     induction xs; cbn; [reflexivity|].
     eapply list_Z_bounded_by_cons; split; [|assumption].
     eapply Bool.andb_true_iff; split; eapply Z.leb_le;
     cbv [Primitives.word_bound]; cbn.
-    { eapply Properties.word.unsigned_range. }
-    { eapply Le.Z.le_sub_1_iff, Properties.word.unsigned_range. }
+    { eapply (bits.unsigned_range _ width_nonneg). }
+    { eapply Le.Z.le_sub_1_iff, (bits.unsigned_range _ width_nonneg). }
   Qed.
 
   Lemma felem_copy_func_correct :
@@ -527,7 +529,7 @@ Section UnsaturatedSolinas.
     { (* output *value* is correct *)
       unshelve erewrite (proj1 (Hcorrect _ _)); cycle 1.
       { rewrite map_map, List.map_ext_id; trivial; intros.
-        rewrite ?Word.Interface.word.of_Z_unsigned; trivial. }
+        rewrite ?Zmod.of_Z_unsigned; trivial. }
       { rewrite <- H2. exact (list_Z_bounded_by_unsigned x0). } }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
@@ -548,8 +550,8 @@ Section UnsaturatedSolinas.
       repeat handle_side_conditions.
     { (* value *)
       intros.
-      destruct (Hcorrect (Interface.word.unsigned w)); clear Hcorrect.
-      { pose proof Properties.word.unsigned_range w.
+      destruct (Hcorrect (Zmod.unsigned w)); clear Hcorrect.
+      { pose proof (bits.unsigned_range w width_nonneg).
         eapply Bool.andb_true_iff; split; eapply Zle_is_le_bool; Lia.lia. }
       rewrite <- M_eq in *; eapply Zmod.of_Z_inj in H2.
       rewrite <-H2.
@@ -564,10 +566,10 @@ Section UnsaturatedSolinas.
         try eapply tight_bounds_tighter_than; destruct H3.
       eapply List.Forall_In in H4; eauto.
       rewrite MakeAccessSizes.bits_per_word_eq_width in H4.
-      unfold Interface.word.wrap; rewrite Z.mod_small; trivial. }
+ rewrite Z.mod_small; trivial. }
     { intros.
-      destruct (Hcorrect (Interface.word.unsigned w)); clear Hcorrect.
-      { pose proof Properties.word.unsigned_range w.
+      destruct (Hcorrect (Zmod.unsigned w)); clear Hcorrect.
+      { pose proof (bits.unsigned_range w width_nonneg).
         eapply Bool.andb_true_iff; split; eapply Zle_is_le_bool; Lia.lia. }
       rewrite <- M_eq in *; eapply Zmod.of_Z_inj in H2.
       trivial. }

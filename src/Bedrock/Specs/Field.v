@@ -1,3 +1,4 @@
+Require Import coqutil.Word.Bitwidth.
 Require Import Bedrock.Field.Common.Types.
 Require Import coqutil.Byte coqutil.Word.LittleEndianList.
 From coqutil.Macros Require Import symmetry.
@@ -37,11 +38,11 @@ Class FieldParameters_ok {field_parameters : FieldParameters} := {
 
 Class FieldRepresentation
       {field_parameters : FieldParameters}
-      {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
+      {width: Z} {BW: Bitwidth width} {mem: map.map (bits width) Byte.byte}
        :=
   { felem_size_in_words : nat;
-    felem := {x : list word | length x = felem_size_in_words};
-    feval : list word -> Zmod M;
+    felem := {x : list (bits width) | length x = felem_size_in_words};
+    feval : list (bits width) -> Zmod M;
 
     feval_bytes : list byte -> Zmod M;
     felem_size_in_bytes : Z := (Z.of_nat felem_size_in_words) * bytes_per_word width; (* for stack allocation *)
@@ -49,26 +50,28 @@ Class FieldRepresentation
     bytes_in_bounds : list byte -> Prop;
 
     (* Memory layout *)
-    FElem : word -> felem -> mem -> Prop := fun px x =>
-      (array scalar (word.of_Z (bytes_per_word width)) px (proj1_sig x));
-    FElemBytes : word -> list byte -> mem -> Prop :=
+    FElem : bits width -> felem -> mem -> Prop := fun px x =>
+      (array scalar (bits.of_Z _ (bytes_per_word width)) px (proj1_sig x));
+    FElemBytes : bits width -> list byte -> mem -> Prop :=
       fun addr bs =>
         (emp (length bs = encoded_felem_size_in_bytes
               /\ bytes_in_bounds bs)
-         * array ptsto (word.of_Z 1) addr bs)%sep;
+         * array ptsto (bits.of_Z _ 1) addr bs)%sep;
 
     bounds : Type;
-    bounded_by : bounds -> list word -> Prop;
+    bounded_by : bounds -> list (bits width) -> Prop;
     (* for saturated implementations, loose/tight bounds are the same *)
     loose_bounds : bounds;
     tight_bounds : bounds;
   }.
 
 Section FunctionSpecs.
-  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
+  Context {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
-  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
@@ -150,7 +153,7 @@ Section FunctionSpecs.
   Instance spec_of_from_bytes : spec_of from_bytes :=
     fnspec! from_bytes (pout px : word) / (out bs : list byte) Rr,
     { requires tr mem :=
-        (exists Ra, (array ptsto (word.of_Z 1) px bs * Ra)%sep mem)
+        (exists Ra, (array ptsto (bits.of_Z _ 1) px bs * Ra)%sep mem)
         /\ (out$@pout * Rr)%sep mem
         /\ length out = felem_size_in_bytes
         /\ Field.bytes_in_bounds bs;
@@ -163,13 +166,13 @@ Section FunctionSpecs.
   Instance spec_of_to_bytes : spec_of to_bytes :=
     fnspec! to_bytes (pout px : word) / (out : list byte) (x : felem) Rr,
     { requires tr mem :=
-        (array ptsto (word.of_Z 1) pout out * Rr)%sep mem /\
+        (array ptsto (bits.of_Z _ 1) pout out * Rr)%sep mem /\
         length out = encoded_felem_size_in_bytes /\
         (exists Ra, (FElem px x * Ra)%sep mem) /\
         bounded_by tight_bounds x;
       ensures tr' mem' := tr = tr' /\
         let bs := le_split encoded_felem_size_in_bytes (Zmod.unsigned (feval x)) in
-        (array ptsto (word.of_Z 1) pout bs * Rr)%sep mem' /\
+        (array ptsto (bits.of_Z _ 1) pout bs * Rr)%sep mem' /\
         Field.bytes_in_bounds bs }.
 
   Instance spec_of_felem_copy : spec_of felem_copy :=
@@ -188,7 +191,7 @@ Section FunctionSpecs.
         length out = felem_size_in_bytes;
       ensures tr' mem' :=
         tr = tr' /\
-        exists X : felem, feval X = Zmod.of_Z _ (word.unsigned x)
+        exists X : felem, feval X = Zmod.of_Z _ (Zmod.unsigned x)
              /\ bounded_by tight_bounds X
              /\ (FElem pout X * R)%sep mem' }.
 
@@ -202,9 +205,9 @@ Section FunctionSpecs.
         (FElem px x * Rx)%sep mem /\
         (FElem py y * Ry)%sep mem /\
         length out = felem_size_in_bytes /\
-        ZRange.is_bounded_by_bool (word.unsigned pc) bit_range = true;
+        ZRange.is_bounded_by_bool (Zmod.unsigned pc) bit_range = true;
         ensures tr' mem' :=
-        if ((word.unsigned pc) =? 1)
+        if ((Zmod.unsigned pc) =? 1)
             then ((FElem pout y * Rout)%sep mem')
             else ((FElem pout x * Rout)%sep mem')
     }.
@@ -231,7 +234,7 @@ Existing Instances spec_of_UnOp spec_of_BinOp bin_mul un_square bin_add bin_sub
 
 Class FieldRepresentation_ok
       {field_parameters : FieldParameters}
-      {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
+      {width: Z} {BW: Bitwidth width} {mem: map.map (bits width) Byte.byte}
       {field_representation : FieldRepresentation} := {
     relax_bounds :
       forall X : felem, bounded_by tight_bounds X
@@ -240,10 +243,12 @@ Class FieldRepresentation_ok
   }.
 
 Section SpecProperties.
-  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
+  Context {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
-  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
@@ -331,7 +336,7 @@ Section SpecProperties.
   Proof.
     refine (exist _ (if (length ws =? felem_size_in_words)%nat then
       (ws) else
-      (List.repeat (word.of_Z 0) felem_size_in_words)) _).
+      (List.repeat (bits.of_Z _ 0) felem_size_in_words)) _).
     abstract (rewrite NatUtil.beq_nat_eq_nat_dec;
     destruct (Nat.eq_dec (length ws) (felem_size_in_words));
     [ assumption | apply repeat_length]).
@@ -372,7 +377,7 @@ Section SpecProperties.
   Qed.
 
   Lemma felem_to_bytearray p x :
-    Lift1Prop.iff1 (FElem p x) (array ptsto (word.of_Z 1) p (ws2bs (bytes_per_word width) x)).
+    Lift1Prop.iff1 (FElem p x) (array ptsto (bits.of_Z _ 1) p (ws2bs (bytes_per_word width) x)).
   Proof.
     etransitivity. exact (felem_to_bytes _ _).
     exact (iff1_sym (array1_iff_eq_of_list_word_at _ _ (ws2bs_felem_width _))).
@@ -382,7 +387,7 @@ Section SpecProperties.
   Proof.
     refine (exist _ (if (length bs =? felem_size_in_bytes)%nat then
       ((bs2ws (bytes_per_word width) bs)) else
-      (List.repeat (word.of_Z 0) felem_size_in_words)) _).
+      (List.repeat (bits.of_Z _ 0) felem_size_in_words)) _).
     abstract (rewrite NatUtil.beq_nat_eq_nat_dec;
     destruct (Nat.eq_dec (length bs) (felem_size_in_bytes));
     [apply bs2ws_felem_length; assumption | apply repeat_length]).
@@ -430,7 +435,7 @@ Section SpecProperties.
 
   Lemma felem_from_bytearray p bs :
     length bs = felem_size_in_bytes ->
-    Lift1Prop.iff1 (array ptsto (word.of_Z 1) p bs) (FElem p (bs2felem bs)).
+    Lift1Prop.iff1 (array ptsto (bits.of_Z _ 1) p bs) (FElem p (bs2felem bs)).
   Proof.
     intros HL.
 
@@ -449,8 +454,8 @@ Section SpecProperties.
       (FElem p x)
       (Array.array
               (truncated_scalar access_size.word)
-              (word.of_Z (bytes_per_word width))
-              p (List.map word.unsigned x)).
+              (bits.of_Z _ (bytes_per_word width))
+              p (List.map Zmod.unsigned x)).
   Proof.
     pose proof word_size_in_bytes_pos.
     cbv [FElem].
@@ -467,7 +472,7 @@ Section SpecProperties.
                  /\ bytes_in_bounds bs))
            (Array.array
               (Scalars.truncated_scalar access_size.one)
-              (word.of_Z 1) p (List.map byte.unsigned bs))).
+              (bits.of_Z _ 1) p (List.map byte.unsigned bs))).
   Proof.
     cbv [FElemBytes].
     rewrite Util.array_truncated_scalar_ptsto_iff1.
@@ -541,7 +546,7 @@ Ltac ecancel_assumption_preprocess_with length_tac :=
         | context[FElem p _] =>
           seprewrite_in (sizedlistarray_to_felem p v) H; [length_tac |]
       end
-      | context[array ptsto (word.of_Z 1) ?p ?v] => match G with
+      | context[array ptsto (bits.of_Z _ 1) ?p ?v] => match G with
         | context[sepclause_of_map (map.of_list_word_at p _)] =>
             seprewrite_in (array1_iff_eq_of_list_word_at p v) H; [length_tac |]
         | context[FElem p _] =>

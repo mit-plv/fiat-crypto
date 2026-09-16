@@ -124,13 +124,13 @@ Proof.
 Qed.
 
 Require compiler.ToplevelLoop.
-Definition ml: MemoryLayout.MemoryLayout(word:=Naive.word32) := {|
-  MemoryLayout.code_start    := word.of_Z 0x20400000;
-  MemoryLayout.code_pastend  := word.of_Z 0x21400000;
-  MemoryLayout.heap_start    := word.of_Z 0x80000000;
-  MemoryLayout.heap_pastend  := word.of_Z 0x80002000;
-  MemoryLayout.stack_start   := word.of_Z 0x80002000;
-  MemoryLayout.stack_pastend := word.of_Z 0x80004000;
+Definition ml: MemoryLayout.MemoryLayout(width:=32) := {|
+  MemoryLayout.code_start    := bits.of_Z _ 0x20400000;
+  MemoryLayout.code_pastend  := bits.of_Z _ 0x21400000;
+  MemoryLayout.heap_start    := bits.of_Z _ 0x80000000;
+  MemoryLayout.heap_pastend  := bits.of_Z _ 0x80002000;
+  MemoryLayout.stack_start   := bits.of_Z _ 0x80002000;
+  MemoryLayout.stack_pastend := bits.of_Z _ 0x80004000;
 |}.
 
 Lemma ml_ok : MemoryLayout.MemoryLayoutOk ml. Proof. split; cbv; trivial; inversion 1. Qed.
@@ -157,7 +157,6 @@ Compute length garagedoor_bytes.
 Definition garagedoor_symbols : list byte := Symbols.symbols garagedoor_finfo.
 
 Require Import compiler.CompilerInvariant.
-Require Import compiler.NaiveRiscvWordProperties.
 Local Existing Instance SortedListString.map.
 Import TracePredicate TracePredicateNotations SPI lightbulb_spec.
 Import GarageDoor.
@@ -253,29 +252,28 @@ Proof.
   assumption.
 Qed. Optimize Heap.
 
-Import Word.Naive.
 Import ToplevelLoop GoFlatToRiscv regs_initialized LowerPipeline.
 Import bedrock2.Map.Separation. Local Open Scope sep_scope.
 Require Import bedrock2.ReversedListNotations.
 Local Notation run1 := (mcomp_sat (run1 Decode.RV32IM)).
 Local Notation RiscvMachine := MetricRiscvMachine.
-Local Notation MMIO := (string * word.rep * word.rep)%type.
+Local Notation word := (bits 32).
+Local Notation MMIO := (string * word * word)%type.
 Goal True.
-  pose (fun bs => lan9250_writepacket _ (bs : list byte) : list MMIO -> Prop).
+  pose (fun bs => lan9250_writepacket (bs : list byte) : list MMIO -> Prop).
   pose (run1 : RiscvMachine -> (RiscvMachine -> Prop) -> Prop).
   pose (always(iset:=Decode.RV32IM) : (RiscvMachine -> Prop) -> RiscvMachine -> Prop).
 Abort.
 
 Implicit Types mach : RiscvMachine.
-Local Coercion word.unsigned : word.rep >-> Z.
 
 Definition initial_conditions mach :=
   0x20400000 = mach.(getPc) /\
   [] = mach.(getLog) /\
   Some [] = mach.(getTrace) /\
-  mach.(getNextPc) = word.add mach.(getPc) (word.of_Z 4) /\
+  mach.(getNextPc) = Zmod.add mach.(getPc) (bits.of_Z _ 4) /\
   regs_initialized (getRegs mach) /\
-  (forall a : word32, code_start ml <= a < code_pastend ml -> In a (getXAddrs mach)) /\
+  (forall a : word, code_start ml <= a < code_pastend ml -> In a (getXAddrs mach)) /\
   valid_machine mach /\
   (imem (code_start ml) (code_pastend ml) garagedoor_insns ⋆
    mem_available (heap_start ml) (heap_pastend ml) ⋆
@@ -298,7 +296,7 @@ Proof.
   3: instantiate (1:=snd loop).
   1,3: exact eq_refl.
   1,2: cbv [hl_inv]; intros; eapply metricleakage_to_leakage_exec; eapply LeakageWeakestPreconditionProperties.sound_cmd.
-  3: { eapply word.unsigned_inj. rewrite <-H. trivial. }
+  3: { eapply Zmod.unsigned_inj. rewrite <-H. trivial. }
 
   all : repeat straightline; subst args.
   { cbv [LowerPipeline.mem_available LowerPipeline.ptsto_bytes] in *.
@@ -355,7 +353,6 @@ Theorem garagedoor_invariant_proof: exists invariant: RiscvMachine -> Prop,
 Proof.
   exists (ll_inv compile_ext_call ml garagedoor_spec).
   unshelve epose proof compiler_invariant_proofs _ _ _ _ _ _ garagedoor_spec as HCI; shelve_unifiable; try exact _.
-  { exact (naive_word_riscv_ok 5%nat). }
   { eapply SortedListString.ok. }
   { eapply @compile_ext_call_correct; try exact _; eapply @SortedListString.ok. }
   { intros. cbv [compile_ext_call compile_interact]; BreakMatch.break_match; trivial. }
@@ -369,8 +366,7 @@ Theorem garagedoor_correct : forall mach : RiscvMachine, initial_conditions mach
   always run1 (eventually run1 (fun mach' => io_spec mach'.(getLog))) mach.
 Proof.
   intros ? H%initial_conditions_sufficient; revert H.
-  unshelve Tactics.rapply @always_eventually_good_trace; trivial using ml_ok, @Naive.word32_ok; cycle 1.
-  { eapply (naive_word_riscv_ok 5%nat). }
+  unshelve Tactics.rapply @always_eventually_good_trace; trivial using ml_ok; cycle 1.
   { eapply @SortedListString.ok. }
   { eapply @compile_ext_call_correct; try exact _. eapply @SortedListString.ok. }
 Qed.

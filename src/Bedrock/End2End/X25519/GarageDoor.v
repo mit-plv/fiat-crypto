@@ -110,19 +110,19 @@ Definition loopfn := func! {
 }.
 
 Import TracePredicate TracePredicateNotations SPI lightbulb_spec.
-Notation OP := (lightbulb_spec.OP _).
+Notation OP := lightbulb_spec.OP.
 Definition iocfg : list OP -> Prop :=
-  one ("st", word.of_Z (0x10012038), word.of_Z (Z.lor (Z.shiftl (0xf) 2) (Z.shiftl 1 9))) +++
-  one ("st", word.of_Z (0x10012008), word.of_Z (Z.lor (Z.shiftl 1 11) (Z.shiftl 1 12))) +++
-  one ("st", word.of_Z (0x10024010), word.of_Z 2).
+  one ("st", bits.of_Z _ (0x10012038), bits.of_Z _ (Z.lor (Z.shiftl (0xf) 2) (Z.shiftl 1 9))) +++
+  one ("st", bits.of_Z _ (0x10012008), bits.of_Z _ (Z.lor (Z.shiftl 1 11) (Z.shiftl 1 12))) +++
+  one ("st", bits.of_Z _ (0x10024010), bits.of_Z _ 2).
 Definition BootSeq : list OP -> Prop :=
-  iocfg +++ (lan9250_init_trace _
-               ||| lan9250_boot_timeout _
-               ||| (any+++spi_timeout _)).
+  iocfg +++ (lan9250_init_trace
+               ||| lan9250_boot_timeout
+               ||| (any+++spi_timeout)).
 
 Import LeakageSemantics LeakageWeakestPrecondition LeakageProgramLogic SeparationLogic.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
-Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
+Local Notation "xs $@ a" := (Array.array ptsto (bits.of_Z _ 1) a xs) (at level 10, format "xs $@ a").
 
 Ltac fwd :=
   repeat match goal with
@@ -137,8 +137,8 @@ Context {pick_sp: PickSp}.
 
 Global Instance spec_of_initfn : spec_of "initfn" :=
   fnspec! "initfn" / bs R,
-  { requires k t m := m =* bs $@(word.of_Z PK) * R /\ length bs = 32%nat;
-    ensures k' t' m' := m' =* garageowner$@(word.of_Z PK) * R /\
+  { requires k t m := m =* bs $@(bits.of_Z _ PK) * R /\ length bs = 32%nat;
+    ensures k' t' m' := m' =* garageowner$@(bits.of_Z _ PK) * R /\
       exists iol, t' = iol ++ t /\
       exists ioh, mmio_trace_abstraction_relation ioh iol /\
       BootSeq ioh }.
@@ -178,18 +178,19 @@ Local Coercion Z.b2z : bool >-> Z.
 
 Record state := { prng_state : list byte ; x25519_ephemeral_secret : list byte }.
 
-Local Notation MMIO := (string * word.rep * word.rep)%type.
+Local Notation word := (bits 32).
+Local Notation MMIO := (string * word * word)%type.
 Goal True.
-  pose (lightbulb_spec.lan9250_writepacket Naive.word32 :
+  pose (lightbulb_spec.lan9250_writepacket :
    list Init.Byte.byte -> list MMIO -> Prop).
 Abort.
 
 Definition protocol_step : state -> list MMIO -> state -> Prop :=
   fun '(Build_state seed x25519_ephemeral_secret) ioh '(Build_state SEED SK) =>
-  (lightbulb_spec.lan9250_recv_no_packet _ ioh \/
-    lightbulb_spec.lan9250_recv_packet_too_long _ ioh \/
-    TracePredicate.concat TracePredicate.any (lightbulb_spec.spi_timeout _) ioh) /\ SEED=seed /\ SK=x25519_ephemeral_secret \/
-  (exists incoming, lightbulb_spec.lan9250_recv _ incoming ioh /\
+  (lightbulb_spec.lan9250_recv_no_packet ioh \/
+    lightbulb_spec.lan9250_recv_packet_too_long ioh \/
+    TracePredicate.concat TracePredicate.any lightbulb_spec.spi_timeout ioh) /\ SEED=seed /\ SK=x25519_ephemeral_secret \/
+  (exists incoming, lightbulb_spec.lan9250_recv incoming ioh /\
   let ethertype := le_combine (rev (firstn 2 (skipn 12 incoming))) in ethertype < 1536 \/
   let ipproto := nth 23 incoming x00 in (ipproto <> x11 \/
   length incoming <> 14+20+8 +2+16 +4 /\ length incoming <> 14+20+8 +2+32 +4)%nat) /\ SEED=seed /\ SK=x25519_ephemeral_secret \/
@@ -206,23 +207,23 @@ Definition protocol_step : state -> list MMIO -> state -> Prop :=
      udp_remote ++ udp_local ++
      be2 udp_length ++ be2 udp_checksum ++
      garagedoor_header ++ garagedoor_payload) in
-  (exists doorstate action : Naive.word32,
+  (exists doorstate action : word,
   TracePredicate.concat
-      (lightbulb_spec.lan9250_recv _ incoming) (TracePredicate.concat
-      (TracePredicate.one ("ld", lightbulb_spec.GPIO_DATA_ADDR _, doorstate))
-      (TracePredicate.one ("st", lightbulb_spec.GPIO_DATA_ADDR _, action))) ioh
+      (lightbulb_spec.lan9250_recv incoming) (TracePredicate.concat
+      (TracePredicate.one ("ld", lightbulb_spec.GPIO_DATA_ADDR, doorstate))
+      (TracePredicate.one ("st", lightbulb_spec.GPIO_DATA_ADDR, action))) ioh
    /\ (
     let m := firstn 16 garagedoor_payload in
     let v := x25519_spec x25519_ephemeral_secret garageowner_P in
-    exists set0 set1 : Naive.word32,
-    (word.unsigned set0 = 1 <-> firstn 16 v = m) /\
-    (word.unsigned set1 = 1 <->  skipn 16 v = m) /\
-    action = word.or (word.and doorstate (word.of_Z (Z.clearbit (Z.clearbit (2^32-1) 11) 12))) (word.slu (word.or (word.slu set1 (word.of_Z 1)) set0) (word.of_Z 11)) /\
-    (word.unsigned (word.or set0 set1) = 0 -> SEED=seed /\ SK=x25519_ephemeral_secret) /\
-    (word.unsigned (word.or set0 set1) <> 0 -> SEED++SK = RupicolaCrypto.Spec.chacha20_block seed (ChaCha20.le_split 4 (word.of_Z 0) ++ firstn 12 garageowner))
+    exists set0 set1 : word,
+    (Zmod.unsigned set0 = 1 <-> firstn 16 v = m) /\
+    (Zmod.unsigned set1 = 1 <->  skipn 16 v = m) /\
+    action = Zmod.or (Zmod.and doorstate (bits.of_Z _ (Z.clearbit (Z.clearbit (2^32-1) 11) 12))) (Zmod.slu (Zmod.or (Zmod.slu set1 1) set0) 11) /\
+    (Zmod.unsigned (Zmod.or set0 set1) = 0 -> SEED=seed /\ SK=x25519_ephemeral_secret) /\
+    (Zmod.unsigned (Zmod.or set0 set1) <> 0 -> SEED++SK = RupicolaCrypto.Spec.chacha20_block seed (ChaCha20.le_split 4 (bits.of_Z _ 0) ++ firstn 12 garageowner))
     )) \/
-  TracePredicate.concat (lightbulb_spec.lan9250_recv _ incoming)
-  (lightbulb_spec.lan9250_send _
+  TracePredicate.concat (lightbulb_spec.lan9250_recv incoming)
+  (lightbulb_spec.lan9250_send
     (let ip_length := 62 in
      let udp_length := 42 in
 
@@ -243,12 +244,12 @@ Local Instance spec_of_memswap : spec_of "memswap" := spec_of_memswap.
 Local Instance spec_of_memequal : spec_of "memequal" := spec_of_memequal.
 
 
-Definition memrep bs R : state -> map.rep(map:=SortedListWord.map _ _) -> Prop := fun '(Build_state seed sk) m =>
+Definition memrep bs R : state -> map.rep(map:=SortedListWord.map 32 _) -> Prop := fun '(Build_state seed sk) m =>
   m =*
-    seed$@(word.of_Z ST) *
-    sk$@(word.add (word.of_Z ST) (word.of_Z 32)) *
-    garageowner$@(word.of_Z PK) *
-    bs $@(word.of_Z BUF) * R /\
+    seed$@(bits.of_Z _ ST) *
+    sk$@(Zmod.add (bits.of_Z _ ST) (bits.of_Z _ 32)) *
+    garageowner$@(bits.of_Z _ PK) *
+    bs $@(bits.of_Z _ BUF) * R /\
   length seed = 32%nat /\
   length sk = 32%nat /\
   length bs = 1520%nat.
@@ -283,8 +284,8 @@ Proof.
   seprewrite_in @bytearray_index_merge Hbuf. { ZnWords. }
 
   eexists; eexists; split; repeat straightline.
-  rewrite word.unsigned_ltu, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords;
-  destr Z.ltb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate;
+  rewrite ?bits.unsigned_of_Z_small by ZnWords.ZnWords;
+  destr Z.ltb; rewrite ?Zmod.unsigned_0, ?bits.unsigned_1 by lia; intuition try discriminate;
   autoforward with typeclass_instances in E.
   2: { fwd; slv. right. left. fwd; slv; intuition try ZnWords. }
 
@@ -305,26 +306,26 @@ Proof.
 
   destruct pp as [|ethertype_lo pp]; cbn [length app Array.array] in *.
   { exfalso; ZnWords. }
-  Import SetEvars coqutil.Tactics.eplace Word.Naive LittleEndianList.
-  eplace (word.add (word.add buf _) _) with (word.add buf _) in H12 by (ring_simplify; trivial).
+  Import SetEvars coqutil.Tactics.eplace LittleEndianList.
+  eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H12 by (ring_simplify; trivial).
   repeat straightline.
 
   let v := match goal with l := map.put _ "ethertype" ?v |- _ => v end in
   remember v as ethertype in *;
-  assert (word.unsigned ethertype = le_combine [ethertype_lo; ethertype_hi]);
+  assert (Zmod.unsigned ethertype = le_combine [ethertype_lo; ethertype_hi]);
    [ rewrite Heqethertype | ]; clear Heqethertype.
   { pose proof byte.unsigned_range ethertype_hi.
     pose proof byte.unsigned_range ethertype_lo.
     subst_words.
     cbn [le_combine]. rewrite ?Z.shiftl_0_l, ?Z.lor_0_r.
-    rewrite_strat (bottomup (terms word.unsigned_or_nowrap word.unsigned_and_nowrap word.unsigned_of_Z word.unsigned_slu)).
-    2: ZnWords.
-    cbv [word.wrap]; (rewrite_strat (bottomup (terms (Zmod_small)))); try ZnWords.ZnWords.
+    rewrite_strat (bottomup (terms bits.unsigned_or bits.unsigned_and bits.unsigned_of_Z Zmod.unsigned_slu)).
+    change (2 ^ Z.log2 32) with 32.
+ (rewrite_strat (bottomup (terms (Zmod_small)))); try ZnWords.ZnWords.
     { rewrite Z.lor_comm; reflexivity. } }
 
   eexists; eexists; split; repeat straightline.
-  rewrite word.unsigned_ltu, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords;
-  destr Z.ltb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate;
+  rewrite ?bits.unsigned_of_Z_small by ZnWords.ZnWords;
+  destr Z.ltb; rewrite ?Zmod.unsigned_0, ?bits.unsigned_1 by lia; intuition try discriminate;
   autoforward with typeclass_instances in E0.
   2: {
     fwd; slv; [].
@@ -342,14 +343,14 @@ Proof.
   change (Z.of_nat 9) with 9 in *.
   change (Z.of_nat 1) with 1 in *.
 
-  repeat eplace (word.add (word.add buf _) _) with (word.add buf _) in H12 by (ring_simplify; trivial).
+  repeat eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H12 by (ring_simplify; trivial).
 
   repeat straightline.
   eexists; eexists; split; repeat straightline.
   subst protocol.
   pose proof byte.unsigned_range ipproto.
-  rewrite word.unsigned_eqb, ?word.unsigned_and_nowrap, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords.
-  destr Z.eqb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate; autoforward with typeclass_instances in E1.
+  cbv [Zmod.eqb]; rewrite ?bits.unsigned_and, ?bits.unsigned_of_Z_small by ZnWords.ZnWords.
+  destr Z.eqb; rewrite ?Zmod.unsigned_0, ?bits.unsigned_1 by lia; intuition try discriminate; autoforward with typeclass_instances in E1.
   2: {
     fwd; slv; [].
     right. left. ssplit; trivial; []. eexists. ssplit; try eassumption. right. left.
@@ -361,14 +362,14 @@ Proof.
 
   repeat straightline.
   eexists; eexists; split; repeat straightline.
-  rewrite word.unsigned_eqb, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords.
-  destr Z.eqb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate; autoforward with typeclass_instances in E2.
+  cbv [Zmod.eqb]; rewrite ?bits.unsigned_of_Z_small by ZnWords.ZnWords.
+  destr Z.eqb; rewrite ?Zmod.unsigned_0, ?bits.unsigned_1 by lia; intuition try discriminate; autoforward with typeclass_instances in E2.
 
   2: {
     repeat straightline.
     eexists; eexists; split; repeat straightline.
-    rewrite word.unsigned_eqb, ?word.unsigned_of_Z_nowrap by ZnWords.ZnWords.
-    destr Z.eqb; rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; intuition try discriminate; autoforward with typeclass_instances in E3.
+    cbv [Zmod.eqb]; rewrite ?bits.unsigned_of_Z_small by ZnWords.ZnWords.
+    destr Z.eqb; rewrite ?Zmod.unsigned_0, ?bits.unsigned_1 by lia; intuition try discriminate; autoforward with typeclass_instances in E3.
     2: {
       fwd; slv.
       right. left. ssplit; trivial; []. eexists. ssplit; try eassumption. right. right. SepAutoArray.listZnWords. }
@@ -457,7 +458,7 @@ Proof.
     assert (length (vv0 ++ vv1) = 32%nat) by SepAutoArray.listZnWords.
 
 
-    change (word.of_Z 134217728) with st in H33.
+    change (bits.of_Z _ 134217728) with st in H33.
     repeat straightline.
     eexists; eexists; ssplit; repeat straightline.
     { (* chacha20 *)
@@ -476,7 +477,7 @@ Proof.
 
       rewrite <-(List.firstn_skipn 32 x6) in H48.
       seprewrite_in_by (Array.bytearray_append (List.firstn 32 x6)) H48 SepAutoArray.listZnWords.
-      replace (word.of_Z (BinInt.Z.of_nat (Datatypes.length (List.firstn 32 x6)))) with (word.of_Z 32 : word32) in * by SepAutoArray.listZnWords.
+      replace (bits.of_Z _ (BinInt.Z.of_nat (Datatypes.length (List.firstn 32 x6)))) with (bits.of_Z 32 32) in * by SepAutoArray.listZnWords.
 
       ssplit; trivial.
       eexists _, _, _; ssplit; try ecancel_assumption; try SepAutoArray.listZnWords.
@@ -643,7 +644,7 @@ Optimize Proof. Optimize Heap.
     rewrite ?H28 in *.
     change (Z.of_nat 24) with 24 in *.
     change (Z.of_nat 2) with 2 in *.
-    eplace (word.add (word.add buf _) _) with (word.add buf _) in H29 by (ring_simplify; trivial).
+    eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H29 by (ring_simplify; trivial).
 
     pose proof (List.firstn_skipn 4 pppp) as HH.
     pose proof (@firstn_length_le _ pppp 4 ltac:(ZnWords)).
@@ -654,7 +655,7 @@ Optimize Proof. Optimize Heap.
     rewrite ?H30 in *.
     change (Z.of_nat 28) with 28 in *.
     change (Z.of_nat 4) with 4 in *.
-    eplace (word.add (word.add buf _) _) with (word.add buf _) in H29 by (ring_simplify; trivial).
+    eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H29 by (ring_simplify; trivial).
 
     pose proof (List.firstn_skipn 4 ppppp) as HH.
     pose proof (@firstn_length_le _ ppppp 4 ltac:(ZnWords)).
@@ -665,7 +666,7 @@ Optimize Proof. Optimize Heap.
     rewrite ?H31 in *.
     change (Z.of_nat 30) with 30 in *.
     change (Z.of_nat 4) with 4 in *.
-    eplace (word.add (word.add buf _) _) with (word.add buf _) in H29 by (ring_simplify; trivial).
+    eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H29 by (ring_simplify; trivial).
 
     straightline_call; ssplit; try ecancel_assumption; try ZnWords.
 
@@ -680,7 +681,7 @@ Optimize Proof. Optimize Heap.
     rewrite ?H32 in *.
     change (Z.of_nat 34) with 34 in *.
     change (Z.of_nat 4) with 4 in *.
-    eplace (word.add (word.add buf _) _) with (word.add buf _) in H33 by (ring_simplify; trivial).
+    eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H33 by (ring_simplify; trivial).
 
     pose proof (List.firstn_skipn 2 pP) as HH.
     pose proof (@firstn_length_le _ pP 2 ltac:(ZnWords)).
@@ -691,7 +692,7 @@ Optimize Proof. Optimize Heap.
     rewrite ?H34 in *.
     change (Z.of_nat 36) with 36 in *.
     change (Z.of_nat 4) with 4 in *.
-    eplace (word.add (word.add buf _) _) with (word.add buf _) in H33 by (ring_simplify; trivial).
+    eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H33 by (ring_simplify; trivial).
 
     straightline_call; ssplit; try ecancel_assumption; try ZnWords.
 
@@ -706,20 +707,20 @@ Optimize Proof. Optimize Heap.
     rewrite ?app_length in *; cbn [length] in *; rewrite ?LL in *.
     change (Z.of_nat 1) with 1 in *.
     change (Z.of_nat 2) with 2 in *.
-    eplace (word.add (word.add buf _) _) with (word.add buf _) in H36 by (ring_simplify; trivial).
-    eplace (word.add (word.add buf _) _) with (word.add buf _) in H36 by (ring_simplify; trivial).
+    eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H36 by (ring_simplify; trivial).
+    eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H36 by (ring_simplify; trivial).
 
     repeat straightline.
 
     destruct ip_length_lo as [|ip_length_lo ip_idff ].
     { cbn [length] in *. exfalso; Lia.lia. }
     cbn [Array.array] in *.
-    eplace (word.add (word.add buf _) _) with (word.add buf _) in H35 by (ring_simplify; trivial).
+    eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H35 by (ring_simplify; trivial).
 
     repeat straightline.
     destruct ip_checksum as [|ip_checksum_0 [|ip_checksum_1 [|] ] ];
         try (cbn [length] in *; discriminate); cbn [Array.array] in *.
-    eplace (word.add (word.add buf _) _) with (word.add buf _) in H37 by (ring_simplify; trivial).
+    eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H37 by (ring_simplify; trivial).
 
     straightline.
     straightline.
@@ -730,50 +731,45 @@ Optimize Proof. Optimize Heap.
     straightline.
     repeat straightline.
     assert (ptsto_to_array :
-      forall {width : Z} {word : Interface.word width},
-      word.ok word ->
-      forall mem : map.map (word.rep(word:=word)) Byte.byte,
+      forall {width : Z} (mem : map.map (bits width) Byte.byte),
       map.ok mem -> forall a b,
-      Lift1Prop.iff1 (ptsto a b) (Array.array(mem:=mem) ptsto (word.of_Z 1) a [b])).
+      Lift1Prop.iff1 (ptsto a b) (Array.array(mem:=mem) ptsto (bits.of_Z _ 1) a [b])).
     { cbn [Array.array]. intros. cancel. }
 
     assert (bytearray_address_merge :
-  forall {width : Z} {word : Interface.word width},
-  word.ok word ->
-  forall mem : map.map (word.rep(word:=word)) Byte.byte,
+  forall {width : Z} {BW : Bitwidth width} (mem : map.map (bits width) Byte.byte),
   map.ok mem ->
-  forall (xs ys : list byte) (start b : word.rep),
-  word.unsigned (word.sub b start) = Z.of_nat (Datatypes.length xs) ->
+  forall (xs ys : list byte) (start b : bits width),
+  Zmod.unsigned (Zmod.sub b start) = Z.of_nat (Datatypes.length xs) ->
   Lift1Prop.iff1 (xs$@start ⋆ ys$@b) ((xs ++ ys)$@start : mem -> Prop)).
   { intros.
-    replace b with (word.add start (word.sub b start)).
+    replace b with (Zmod.add start (Zmod.sub b start)).
     { eapply Array.bytearray_index_merge; trivial. }
-    eapply word.unsigned_inj. rewrite ?word.unsigned_add, ?word.unsigned_sub.
-    cbv [word.wrap].
+    eapply Zmod.unsigned_inj. rewrite ?Zmod.unsigned_add, ?Zmod.unsigned_sub.
     rewrite Zplus_mod_idemp_r.
-    transitivity (word.unsigned b mod 2^width).
+    transitivity (Zmod.unsigned b mod 2^width).
     { f_equal.  ring. }
-    rewrite Z.mod_small; trivial; eapply word.unsigned_range. }
+    rewrite Z.mod_small; trivial; eapply bits.unsigned_range, width_nonneg. }
 
 Optimize Proof. Optimize Heap.
 
   repeat seprewrite_in @ptsto_to_array H39.
-  rewrite ?word.unsigned_of_Z_nowrap in H39 by ZnWords.
-  seprewrite_in_by (@bytearray_address_merge _ _ _ _ _ ih_const) H39 ZnWords.
-  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
+  rewrite ?bits.unsigned_of_Z_small in H39 by ZnWords.
+  seprewrite_in_by (@bytearray_address_merge _ _ _ _ ih_const) H39 ZnWords.
+  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
   rewrite <-app_assoc in H39.
-  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
   rewrite <-!app_assoc in H39.
   cbn [length] in *.
-  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
   rewrite <-!app_assoc in H39.
-  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
   rewrite <-!app_assoc in H39.
-  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
   rewrite <-!app_assoc in H39.
-  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
   rewrite <-!app_assoc in H39.
-  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun x=>@bytearray_address_merge _ _ _ _ (ih_const++x)%list) H39 SepAutoArray.listZnWords.
 
   straightline_call; [(ssplit; cycle -1)|];
     cbv [Arrays.listarray_value Arrays.ai_repr Arrays._access_info Arrays.ai_width Arrays.ai_size Arrays.ai_type Memory.bytes_per] in *;
@@ -785,23 +781,23 @@ Optimize Proof. Optimize Heap.
 
   repeat straightline.
 
-  repeat match goal with x := word.of_Z 0 |- _ => subst x end.
-  repeat match goal with x := word.of_Z 62 |- _ => subst x end.
-  rewrite !word.unsigned_of_Z_nowrap in H42 by Lia.lia.
+  repeat match goal with x := bits.of_Z _ 0 |- _ => subst x end.
+  repeat match goal with x := bits.of_Z _ 62 |- _ => subst x end.
+  rewrite !bits.unsigned_of_Z_small in H42 by Lia.lia.
   progress replace  ((ih_const ++ [byte.of_Z 0] ++ [byte.of_Z 62] ++ ip_idff ++ [ipproto] ++ [byte.of_Z 0] ++ [byte.of_Z 0] ++ ip_local) ++ ip_remote)%list
     with ((ih_const ++ [byte.of_Z 0] ++ [byte.of_Z 62] ++ ip_idff ++ [ipproto]) ++ [byte.of_Z 0] ++ [byte.of_Z 0] ++ ip_local ++ ip_remote)%list
     in * by (rewrite ?app_assoc; trivial).
   seprewrite_in @Array.bytearray_append H42.
-  seprewrite_in (@Array.bytearray_append _ _ _ _ _ [byte.of_Z 0]) H42.
-  seprewrite_in (@Array.bytearray_append _ _ _ _ _ [byte.of_Z 0]) H42.
+  seprewrite_in (@Array.bytearray_append _ _ _ _ [byte.of_Z 0]) H42.
+  seprewrite_in (@Array.bytearray_append _ _ _ _ [byte.of_Z 0]) H42.
   rewrite ?app_length in H42; cbn [length] in H42; rewrite ?LL in H42.
   replace (Datatypes.length ip_idff) with 5%nat in H42 by ZnWords.
   cbn [plus] in H42.
-  repeat eplace (word.add (word.add buf _) _) with (word.add buf _) in H42 by (ring_simplify; trivial).
+  repeat eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H42 by (ring_simplify; trivial).
 
   Import symmetry.
-  seprewrite_in (symmetry! (fun a=>@ptsto_to_array _ _ _ _ _ a (byte.of_Z 0))) H42.
-  seprewrite_in (symmetry! (fun a=>@ptsto_to_array _ _ _ _ _ a (byte.of_Z 0))) H42.
+  seprewrite_in (symmetry! (fun a=>@ptsto_to_array 32 _ _ a (byte.of_Z 0))) H42.
+  seprewrite_in (symmetry! (fun a=>@ptsto_to_array 32 _ _ a (byte.of_Z 0))) H42.
 
   repeat straightline.
   match goal with H : ?P ?m |- LeakageWeakestPrecondition.store _ ?m _ _ _ => revert H end.
@@ -809,9 +805,9 @@ Optimize Proof. Optimize Heap.
   repeat straightline.
 
   do 6 (destruct pPP as [|? pPP]; (cbn [Datatypes.length] in *; try Lia.lia)).
-  set ((b :: b0 :: b1 :: b2 :: b3 :: b4 :: pPP)$@(word.add buf (word.of_Z 38))) as X in H40.
+  set ((b :: b0 :: b1 :: b2 :: b3 :: b4 :: pPP)$@(Zmod.add buf (bits.of_Z _ 38))) as X in H40.
   cbn [Array.array] in X. subst X.
-  repeat eplace (word.add (word.add buf _) _) with (word.add buf _) in H40 by (ring_simplify; trivial).
+  repeat eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H40 by (ring_simplify; trivial).
 
   repeat straightline.
   pose proof (List.firstn_skipn 32 pPP) as HH.
@@ -819,10 +815,10 @@ Optimize Proof. Optimize Heap.
   forget (List.firstn 32 pPP) as _pkpad.
   forget(List.skipn 32 pPP) as pPPP.
   subst pPP; rewrite ?app_length in *.
-  repeat seprewrite_in (@Array.bytearray_append _ _ _ _ _ _pkpad) H29.
+  repeat seprewrite_in (@Array.bytearray_append _ _ _ _ _pkpad) H29.
   rewrite ?H33 in *.
   change (Z.of_nat 32) with 32 in *.
-  repeat eplace (word.add (word.add buf _) _) with (word.add buf _) in H29 by (ring_simplify; trivial).
+  repeat eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H29 by (ring_simplify; trivial).
   straightline_call; ssplit; try ecancel_assumption; trivial.
 
 Optimize Proof. Optimize Heap.
@@ -833,37 +829,37 @@ Optimize Proof. Optimize Heap.
   repeat match goal with H : sep _ _ _ |- _ => clear H end.
   intros.
   repeat seprewrite_in @ptsto_to_array H37.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 ZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 ZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
 Optimize Proof. Optimize Heap.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
 Optimize Proof. Optimize Heap.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
 Optimize Proof. Optimize Heap.
 
   rename x3 into ipchk.
-  match goal with x := word.sru ipchk _ |- _ => subst x end.
-  progress rewrite ?word.unsigned_sru_nowrap, ?word.unsigned_of_Z_nowrap in H37 by ZnWords.
+  match goal with x := Zmod.sru ipchk _ |- _ => subst x end.
+  progress rewrite ?Zmod.unsigned_sru, ?bits.unsigned_of_Z_small in H37 by ZnWords.
 
   straightline_call; [ssplit; cycle -1|]; try ecancel_assumption.
   { rewrite ?app_length, ?length_x25519_spec. SepAutoArray.listZnWords. }
   { ZnWords. }
 
   pose proof length_x25519_spec sk Curve25519.M.B as Hpkl.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
-  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
+  seprewrite_in_by (fun xs ys=>@bytearray_address_merge _ _ _ _ xs ys buf) H37 SepAutoArray.listZnWords.
 
   repeat straightline.
   destruct H35; repeat straightline; [intuition idtac | ].
@@ -909,7 +905,7 @@ Optimize Proof. Optimize Heap.
   all : trivial; repeat (f_equal; []).
 
   match goal with c := Impl.ip_checksum_impl ?y |- context[Spec.ip_checksum ?x] =>
-    progress rewrite <-(Impl.ip_checksum_impl_ok' y : _ = word.unsigned c) in *;
+    progress rewrite <-(Impl.ip_checksum_impl_ok' y : _ = Zmod.unsigned c) in *;
     progress replace x with y in * end.
   2: {
     repeat (rewrite <-?app_assoc, ?app_nil_l, ?app_singleton_l, <-?app_comm_cons).

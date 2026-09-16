@@ -1,5 +1,6 @@
 From Coq Require Import List.
 From Coq Require Import Lia.
+Require Import coqutil.Word.Bitwidth coqutil.Word.Bitwidth64 coqutil.Word.Properties.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.
 From Coq Require Import NArith.
 From Coq Require Import ZArith.
@@ -21,49 +22,49 @@ Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.Memory. Import coqutil.Map.Memory.
 Require Import coqutil.Map.Interface. (* coercions *)
-Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndianList.
-Import Word.Naive.
 
 Section Memory.
   (* bedrock2/src/bedrock2/Memory.v Section WithoutTuples *)
-  Import Word.Properties Word.Interface Coq.Init.Byte coqutil.Map.OfListWord Map.Properties coqutil.Tactics.Tactics.
-  Context {width: Z} {word: word width} {mem: map.map word byte}.
-  Context {mem_ok: map.ok mem} {word_ok: word.ok word}.
+  Import Word.Properties Coq.Init.Byte coqutil.Map.OfListWord Map.Properties coqutil.Tactics.Tactics.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
+  Context {mem: map.map word byte}.
+  Context {mem_ok: map.ok mem}.
 
   Import (notations) coqutil.Map.Memory.
-  Local Notation unchecked_store_bytes := (unchecked_store_bytes (mem:=mem) (word:=word)).
+  Local Notation unchecked_store_bytes := (unchecked_store_bytes (mem:=mem)).
   Lemma unchecked_store_bytes_unchecked_store_bytes m a bs1 bs2 :
     length bs1 = length bs2 ->
     unchecked_store_bytes (unchecked_store_bytes m a bs1) a bs2 =
     unchecked_store_bytes m a bs2.
-  Proof using mem_ok word_ok.
+  Proof using BW mem_ok.
     cbv [unchecked_store_bytes]; intros.
     eapply map.map_ext; intros.
-    rewrite !map.get_putmany_dec, !map.get_of_list_word_at;
+    rewrite !map.get_putmany_dec, !(map.get_of_list_word_at width_pos);
       repeat (destruct_one_match; trivial).
-    epose proof proj1 (List.nth_error_Some bs1 (BinInt.Z.to_nat (word.unsigned (word.sub k a)))) ltac:(congruence).
+    epose proof proj1 (List.nth_error_Some bs1 (BinInt.Z.to_nat (Zmod.unsigned (Zmod.sub k a)))) ltac:(congruence).
     rewrite H in H0.
     eapply List.nth_error_Some in E; intuition idtac.
   Qed.
 
   (* not sure where to put this since depends on sep *)
-  Import Map.Interface Word.Interface BinInt.
+  Import Map.Interface BinInt.
   Local Coercion Z.of_nat : nat >-> Z.
-  Local Coercion word.unsigned : word.rep >-> Z.
+  Local Coercion Zmod.unsigned : Zmod >-> Z.
 
   Lemma unchecked_store_bytes_of_sep
     m a bs1 bs2 R (Hsep : sep R (bs1$@a) m)
     (Hlen : length bs1 = length bs2)
     : sep R (bs2$@a) (unchecked_store_bytes m a bs2).
-  Proof using mem_ok word_ok.
+  Proof using BW mem_ok.
     destruct Hsep as (?&?&(?&Hd)&HR&?);
       cbv [sepclause_of_map] in *; subst.
     setoid_rewrite unchecked_store_bytes_unchecked_store_bytes; trivial.
     eexists _, _; split; split; try exact HR; try exact eq_refl.
     cbv [map.disjoint] in *; intros k v1 v2 Hv1 Hv2.
-    pose proof map.get_of_list_word_at_domain a bs1 k as HA.
-    pose proof map.get_of_list_word_at_domain a bs2 k as HB.
+    pose proof map.get_of_list_word_at_domain width_pos a bs1 k as HA.
+    pose proof map.get_of_list_word_at_domain width_pos a bs2 k as HB.
     rewrite Hlen, <-HB in HA; clear HB.
     destruct (map.get (bs2$@a) k) in *; try congruence.
     pose proof proj2 HA ltac:(congruence).
@@ -105,7 +106,7 @@ Definition R_flags : Symbolic.flag_state -> Semantics.flag_state -> Prop :=
 Definition R_cell64 (ia iv : idx) : mem_state -> Prop :=
   Lift1Prop.ex1 (fun a =>
   Lift1Prop.ex1 (fun bs => sep (emp (
-      eval ia (word.unsigned a) /\
+      eval ia (Zmod.unsigned a) /\
       length bs = 8%nat /\ eval iv (le_combine bs)))
     (eq (OfListWord.map.of_list_word_at a bs)))).
 
@@ -245,7 +246,6 @@ Proof using Type.
     intuition eauto using R_reg_subsumed.
 Qed.
 
-Local Existing Instance Naive.word64_ok.
 Local Existing Instance SortedListWord.ok.
 
 Lemma R_cell64_subsumed d i i0 d' (Hd' : d :< d') m :
@@ -262,7 +262,7 @@ Proof using Type.
   eapply SeparationLogic.Proper_sep_impl1; try eassumption.
   intro; eauto using R_cell64_subsumed.
   Unshelve.
-  { refine (SortedListWord.ok _ _). }
+  { exact (SortedListWord.ok 64 Init.Byte.byte). }
 Qed.
 
 Lemma R_subsumed s m (HR : R s m) d' (Hd' : gensym_dag_ok' d') (Hlt : s :< d')
@@ -289,7 +289,6 @@ Local Notation R := (R G).
 Notation subsumed d1 d2 := (forall i v, eval d1 i v -> eval d2 i v).
 Local Infix ":<" := subsumed (at level 70, no associativity).
 
-Local Existing Instance Naive.word64_ok.
 Local Existing Instance SortedListWord.ok.
 
 Lemma R_mem_Permutation d s1 m (HR : R_mem d s1 m) s2
@@ -301,14 +300,12 @@ Proof using Type.
   refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ HR); clear HR.
   SeparationLogic.cancel.
   SeparationLogic.cancel_seps_at_indices 0%nat 1%nat; try exact _.
-  { refine (SortedListWord.ok _ _). }
-  2: { epose proof Properties.word.eqb_spec. exact H. }
+  { exact (SortedListWord.ok 64 Init.Byte.byte). }
   trivial.
   reflexivity.
   Unshelve.
-  { refine (SortedListWord.ok _ _). }
-  { refine (SortedListWord.ok _ _). }
-  2: { epose proof Properties.word.eqb_spec. exact H. }
+  { exact (SortedListWord.ok 64 Init.Byte.byte). }
+  { exact (SortedListWord.ok 64 Init.Byte.byte). }
 Qed.
 
 Lemma get_reg_R_regs d s m (HR : R_regs d s m) ri :
@@ -526,7 +523,7 @@ Ltac step_symex ::= step_symex4.
 Lemma load_bytes_Rcell64 d
   (a:idx) va (Ha : eval d a va)
   i m fr (HR : (R_cell64 d a i ⋆ fr)%sep m)
-  : exists bs, load_bytes m (word.of_Z va) 8 = Some bs /\ eval d i (le_combine bs).
+  : exists bs, load_bytes m (bits.of_Z _ va) 8 = Some bs /\ eval d i (le_combine bs).
 Proof using Type.
   cbn in HR. eapply SeparationLogic.sep_comm in HR.
   destruct HR as (?&?&(?&?)&?&?). rewrite H.
@@ -534,12 +531,11 @@ Proof using Type.
     destruct_head'_and.
   eapply eval_eval in Ha; [|eauto]; []; subst.
   eexists; split; try eassumption; cbv [get_mem Crypto.Util.Option.bind] in *.
-  rewrite word.of_Z_unsigned.
-  unshelve epose proof load_bytes_of_putmany_bytes_at _ x1 x _ H4 ltac:(clear;lia).
+  rewrite Zmod.of_Z_unsigned.
+  unshelve epose proof load_bytes_of_putmany_bytes_at width_pos _ x1 x _ H4 ltac:(clear;lia).
   destruct load_bytes eqn:?; simpl in *; try congruence; eassumption.
   Unshelve.
-  { refine (SortedListWord.ok _ _). }
-  2: { epose proof Properties.word.eqb_spec. exact H. }
+  { exact (SortedListWord.ok 64 Init.Byte.byte). }
 Qed.
 
 Lemma Load64_R s m (HR : R s m) (a : idx)
@@ -615,7 +611,7 @@ Proof using Type.
   eapply eval_eval in Ha; [|eauto]; []; subst.
   eapply SeparationLogic.sep_ex1_l; eexists.
   eapply SeparationLogic.sep_ex1_l; eexists.
-  rewrite word.of_Z_unsigned.
+  rewrite Zmod.of_Z_unsigned.
   eapply SeparationLogic.sep_assoc, SeparationLogic.sep_emp_l; split.
   2:{ eapply SeparationLogic.sep_comm in HR.
     eapply SeparationLogic.sep_comm, unchecked_store_bytes_of_sep; eauto. }
@@ -624,8 +620,7 @@ Proof using Type.
   clear -Hv; cbn in *; Z.div_mod_to_equations; lia.
 
   all : fail. Unshelve. all : shelve_unifiable.
-  all : try refine (SortedListWord.ok _ _).
-  all : try (epose proof Properties.word.eqb_spec as HH; exact HH).
+  all : try exact (SortedListWord.ok 64 Init.Byte.byte).
 Qed.
 
 Lemma Store64_R s m (HR : R s m)
@@ -663,10 +658,10 @@ Proof using Type.
   f_equal; rewrite <-Hm'; clear Hm'.
   cbv [unchecked_store_bytes]; eapply map.map_ext; intros k.
   setoid_rewrite OfListWord.map.of_list_word_singleton.
-  rewrite 2 Properties.map.get_putmany_dec, Properties.map.get_put_dec, map.get_empty, OfListWord.map.get_of_list_word_at.
+  rewrite 2 Properties.map.get_putmany_dec, Properties.map.get_put_dec, map.get_empty, (OfListWord.map.get_of_list_word_at width_pos).
   break_innermost_match_step;
     autoforward with typeclass_instances in Heqb8; subst.
-  { rewrite word.unsigned_sub, word.unsigned_of_Z, Z.sub_diag.
+  { rewrite Zmod.unsigned_sub, bits.unsigned_of_Z, Z.sub_diag.
     cbv [le_split]; cbn -[Z.ones]; f_equal.
     eapply Byte.byte.unsigned_inj;
       rewrite !Byte.byte.unsigned_of_Z; cbv [Byte.byte.wrap];
@@ -675,21 +670,20 @@ Proof using Type.
   destruct_one_match; trivial.
   epose proof Crypto.Util.ListUtil.nth_error_value_length _ _ _ _ E1 as I.
   rewrite length_le_split in *. specialize (H _ I); clear I.
-  rewrite Z2Nat.id in H by (eapply Properties.word.unsigned_range).
-  rewrite word.of_Z_unsigned in H.
-  replace (word.add (word.of_Z a) (word.sub k (word.of_Z a)))
+  rewrite Z2Nat.id in H by (eapply (bits.unsigned_range _ width_nonneg)).
+  rewrite Zmod.of_Z_unsigned in H.
+  replace (Zmod.add (bits.of_Z _ a) (Zmod.sub k (bits.of_Z _ a)))
      with k in H by ring.
   rewrite <-H, <-E1; clear H E1.
-  remember (Z.to_nat (word.unsigned (word.sub k (word.of_Z a)))) as i.
+  remember (Z.to_nat (Zmod.unsigned (Zmod.sub k (bits.of_Z _ a)))) as i.
   destruct i.
-  { destruct Heqb8. eapply Properties.word.unsigned_inj.
-    epose proof Properties.word.unsigned_range (word.sub k (word.of_Z a)).
-    assert (word.unsigned (word.sub k (word.of_Z a)) = 0) by lia.
-    change (word.unsigned (word.sub k (word.of_Z a)) = word.unsigned (word.of_Z 0: Naive.word 64)) in H0.
-    rewrite word.unsigned_sub, Properties.word.unsigned_of_Z_0 in H0.
-    cbv [word.wrap] in H0.
-    pose proof Properties.word.unsigned_range k.
-    pose proof Properties.word.unsigned_range (word.of_Z a).
+  { destruct Heqb8. eapply Zmod.unsigned_inj.
+    epose proof (bits.unsigned_range (Zmod.sub k (bits.of_Z _ a)) width_nonneg).
+    assert (Zmod.unsigned (Zmod.sub k (bits.of_Z _ a)) = 0) by lia.
+    change (Zmod.unsigned (Zmod.sub k (bits.of_Z _ a)) = Zmod.unsigned (bits.of_Z _ 0: bits 64)) in H0.
+    rewrite Zmod.unsigned_sub, Zmod.unsigned_0 in H0.
+    pose proof (bits.unsigned_range k width_nonneg).
+    pose proof (bits.unsigned_range (bits.of_Z _ a) width_nonneg).
     Z.div_mod_to_equations.
     lia. }
   cbv [get_mem Crypto.Util.Option.bind] in *;
@@ -706,6 +700,7 @@ Proof using Type.
   rewrite Z.shiftr_lor, Z.shiftr_land, Z.land_0_r, Z.lor_0_l.
   rewrite Z.shiftr_shiftl_l, Z.shiftl_0_r by lia.
   setoid_rewrite (split_le_combine [b1; b2; b3; b4; b5; b6; b7]); trivial.
+  all: first [exact width_pos | exact (SortedListWord.ok 64 Init.Byte.byte)].
 Qed.
 
 
@@ -1091,16 +1086,16 @@ Proof using Type.
     inversion Hs; clear Hs; subst; f_equal.
     clear E0.
     change (@map.putmany ?K ?V ?M ?m) with (@map.putmany K V M machine_mem_state).
-    set (word.of_Z _) as a in *; clearbody a.
+    set (bits.of_Z _ _) as a in *; clearbody a.
     rename n into n'; set (N.to_nat (operand_size m0 n' / 8)) as n in *; clearbody n; clear n'.
     epose proof (length_load_bytes _ _ _ _ E1) as Hl; rewrite <-Hl, split_le_combine.
     eapply (@map.map_ext _ _ mem_state _); intro k.
-    rewrite Properties.map.get_putmany_dec, OfListWord.map.get_of_list_word_at.
+    rewrite Properties.map.get_putmany_dec, (OfListWord.map.get_of_list_word_at width_pos).
     destruct_one_match; trivial.
     epose proof ListUtil.nth_error_value_length _ _ _ _ E.
     rewrite <-E; clear E.
-    rewrite (nth_error_load_bytes _ _ _ _ E1 (Z.to_nat (word.unsigned (word.sub k a))) ltac:(lia)).
-    rewrite Z2Nat.id, word.of_Z_unsigned by (eapply Properties.word.unsigned_range).
+    rewrite (nth_error_load_bytes _ _ _ _ E1 (Z.to_nat (Zmod.unsigned (Zmod.sub k a))) ltac:(lia)).
+    rewrite Z2Nat.id, Zmod.of_Z_unsigned by (eapply (bits.unsigned_range _ width_nonneg)).
     f_equal. ring. }
 Qed.
 

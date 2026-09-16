@@ -69,7 +69,7 @@ From Coq.Init Require Import Byte.
 Require Import coqutil.Byte.
 Import ProgramLogic.Coercions.
 Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
-Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
+Local Notation "xs $@ a" := (Array.array ptsto (bits.of_Z _ 1) a xs) (at level 10, format "xs $@ a").
 
 Local Existing Instance field_parameters.
 Local Existing Instance frep25519.
@@ -97,10 +97,7 @@ Local Instance spec_of_fe25519_to_bytes : spec_of "fe25519_to_bytes" := Field.sp
 Local Instance spec_of_montladder : spec_of "montladder" :=
   spec_of_montladder (Z.to_nat (Z.log2 Curve25519.order)).
 
-Local Arguments word.rep : simpl never.
-Local Arguments word.wrap : simpl never.
-Local Arguments word.unsigned : simpl never.
-Local Arguments word.of_Z : simpl never.
+Local Arguments Zmod.of_Z : simpl never.
 
 Local Ltac solve_length :=
   try listZnWords;
@@ -238,11 +235,10 @@ Proof.
   reflexivity.
 Qed.
 
-Require Import coqutil.Word.Naive.
 Require Import coqutil.Macros.WithBaseName.
 
-Definition felem_cswap := CSwap.felem_cswap(word:=word32)(field_parameters:=field_parameters)(field_representaton:=field_representation n s c).
-Definition fe25519_inv := fe25519_inv(word:=word32)(field_parameters:=field_parameters).
+Definition felem_cswap := CSwap.felem_cswap(width:=32)(field_parameters:=field_parameters)(field_representaton:=field_representation n s c).
+Definition fe25519_inv := fe25519_inv(field_parameters:=field_parameters).
 
 Definition funcs :=
   &[,x25519; x25519_base;

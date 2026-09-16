@@ -1,4 +1,5 @@
 From Coq Require Import String.
+Require Import coqutil.Word.Bitwidth.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Language.API.
 Local Open Scope Z_scope.
@@ -8,9 +9,10 @@ Import Types.Notations.
 
 Section VarnameSet.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
+    {width BW mem locals ext_spec varname_gen error}
    `{parameters_sentinel : @parameters
-     width BW word mem locals ext_spec varname_gen error}.
+     width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Context {listZ : rep.rep base_listZ}.
   Existing Instance rep.Z.
 

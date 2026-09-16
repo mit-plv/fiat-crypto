@@ -1,11 +1,11 @@
 From Coq Require Import ZArith.
 From Coq Require Import String.
 From Coq Require Import List.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Semantics.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Array bedrock2.Scalars.
 Require Import coqutil.Map.Interface.
-Require Import coqutil.Word.Interface.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Language.API.
 Local Open Scope Z_scope.
@@ -15,9 +15,10 @@ Import Types.Notations.
 
 Section Equivalent.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
+    {width BW mem locals ext_spec varname_gen error}
    `{parameters_sentinel : @parameters
-     width BW word mem locals ext_spec varname_gen error}.
+     width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
   Context {listZ : rep.rep base_listZ}.
   Existing Instance rep.Z.
@@ -120,9 +121,10 @@ End Equivalent.
 (* equivalence with flat lists of words *)
 Section EquivalentFlat.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
+    {width BW mem locals ext_spec varname_gen error}
    `{parameters_sentinel : @parameters
-     width BW word mem locals ext_spec varname_gen error}.
+     width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Local Notation parameters := (ltac:(let t := type of parameters_sentinel in exact t)) (only parsing).
   Existing Instances rep.listZ_mem rep.Z.
 
@@ -147,7 +149,7 @@ Section EquivalentFlat.
         sep
           (map:=mem)
           (emp (length words = 1%nat))
-          (let addr := word.unsigned (hd (word.of_Z 0%Z) words) in
+          (let addr := Zmod.unsigned (hd (bits.of_Z _ 0%Z) words) in
            rep.equiv (rep:=rep.listZ_mem)
                      x (Syntax.expr.literal addr) sizes map.empty)
     | base_Z =>
@@ -155,7 +157,7 @@ Section EquivalentFlat.
         sep
           (map:=mem)
           (emp (length words = 1%nat))
-          (let w := word.unsigned (hd (word.of_Z 0%Z) words) in
+          (let w := Zmod.unsigned (hd (bits.of_Z _ 0%Z) words) in
            rep.equiv (rep:=rep.Z) x
                      (Syntax.expr.literal w) sizes map.empty)
     | _ => fun _ _ _ => emp False

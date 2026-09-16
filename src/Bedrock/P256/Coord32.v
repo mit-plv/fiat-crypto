@@ -111,7 +111,7 @@ Jacobian
 Coq.Strings.String Coq.Lists.List
 ProgramLogic WeakestPrecondition
 ProgramLogic.Coercions
-Word.Interface OfListWord Separation SeparationLogic SeparationMemory
+OfListWord Separation SeparationLogic SeparationMemory
 letexists
 ListIndexNotations
 SepAutoArray
@@ -168,9 +168,8 @@ Proof.
 
   subst x1. f_equal. f_equal. apply Bool.eq_true_iff_eq.
   rewrite Z.eqb_eq, Zmod.eqb_eq.
-  rewrite <-word.unsigned_of_Z_0, !word.unsigned_inj_iff by exact _.
   subst nz nz'0 nz'1 nz'2 v.
-  rewrite !word.lor_0_iff, !word.zero_of_Z_iff, !Zdiv.Zmod_mod by exact _.
+  rewrite Zmod.unsigned_0_iff, !word.lor_0_iff, <-!(Zmod.unsigned_inj_iff (m:=2 ^ 32)), !bits.unsigned_of_Z, !Zmod.unsigned_0, !Zdiv.Zmod_mod.
 
   rewrite coord.zero_iff; fold xR.
   rewrite <-Zmod.unsigned_0_iff.
@@ -232,10 +231,13 @@ Proof.
   eapply le_combine_inj; rewrite ?app_length, ?length_le_combine, ?length_le_split; trivial.
   rewrite !le_combine_app, !le_combine_split, ?length_le_split; change (2^(8%nat*8)) with (2^64).
   rewrite ?Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
-  subst y7; rewrite word.unsigned_sru_nowrap, Z.shiftr_div_pow2  by ZnWords.ZnWords.
+  subst y7.
+  change (2 ^ Z.log2 32) with 32 in *.
+  rewrite !(Z.mod_small (Zmod.unsigned n) 32) by (pose proof (bits.unsigned_range n width_nonneg); ZnWords.ZnWords).
+  rewrite Zmod.unsigned_sru, Z.shiftr_div_pow2 by ZnWords.ZnWords.
   subst x7 x6 x5 x4 x3 x2 x1 x0.
-  progress rewrite ?word.unsigned_of_Z in *; cbv [word.wrap] in *; rewrite <-?Z.land_ones in * by lia.
-  pose proof word.unsigned_range n.
+  progress rewrite ?bits.unsigned_of_Z in *; rewrite <-?Z.land_ones in * by lia.
+  pose proof (bits.unsigned_range n width_nonneg).
   DestructHead.destruct_head' @and.
   simpl Z.mul.
   all : rewrite !H11, !H12, !H13, !H14', !H15, !H16, !H17.

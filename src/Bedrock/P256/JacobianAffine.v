@@ -17,7 +17,7 @@ Jacobian
 Coq.Strings.String Coq.Lists.List
 ProgramLogic WeakestPrecondition
 ProgramLogic.Coercions
-Word.Interface OfListWord Separation SeparationLogic
+OfListWord Separation SeparationLogic
 letexists
 BasicC64Semantics
 ListIndexNotations
@@ -38,8 +38,8 @@ Local Open Scope list_scope.
 
 Local Notation "xs $@ a" := (map.of_list_word_at a xs)
   (at level 10, format "xs $@ a").
-Local Notation "$ n" := (match word.of_Z n return word with w => w end) (at level 9, format "$ n").
-Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
+Local Notation "$ n" := (match bits.of_Z _ n return word with w => w end) (at level 9, format "$ n").
+Local Notation "p .+ n" := (Zmod.add p (bits.of_Z _ n)) (at level 50, format "p .+ n", left associativity).
 
 
 Import Coq.micromega.Lia.
@@ -190,9 +190,9 @@ Proof.
   destruct Q as ([[]|[]]&?) in HeqQ, H59; [|contradiction]; apply (f_equal (@proj1_sig _ _)) in HeqQ;
       cbv [of_affine Jacobian.of_affine Jacobian.of_affine_impl fst snd Jacobian.eq proj1_sig] in HeqQ; Prod.inversion_prod; subst.
 
-  case (Properties.word.eqb_spec x3 $0); subst x3; rewrite word.lor_0_iff; [right|left]; split; trivial.
+  case (Zmod.eqb_spec x3 $0); subst x3; rewrite word.lor_0_iff; [right|left]; split; trivial.
   { subst x x0.
-    rewrite !word.broadcast_0_iff in *.
+    rewrite !(word.broadcast_0_iff _ width_pos) in *.
     rewrite !Bool.negb_false_iff, !Zmod.eqb_eq in *.
     cbv [of_affine Jacobian.of_affine fst snd Jacobian.eq Jacobian.iszero proj1_sig] in *.
     case H60 as [Hx Hy].
@@ -207,7 +207,7 @@ Proof.
     { intros HX; cbv [Jacobian.eq Jacobian.iszero of_affine Jacobian.of_affine Jacobian.of_affine_impl proj1_sig fst snd] in H59, H60, HX.
       destruct Decidable.dec in HX; try contradiction; case HX as (Hz&Hx&Hy).
       apply H60. subst x x0.
-      rewrite !word.broadcast_0_iff in *.
+      rewrite !(word.broadcast_0_iff _ width_pos) in *.
       rewrite !Bool.negb_false_iff, !Zmod.eqb_eq.
       rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r, ?Hx, ?Hy, ?(proj2 (Ring.sub_zero_iff _ _)); ssplit; (ring || Field.fsatz). }
     cbv [Jacobian.add_inequal_nz_nz Jacobian.add_inequal_impl of_affine Jacobian.of_affine Jacobian.of_affine_impl proj1_sig fst snd point.to_bytes]; cbn [fst snd proj1_sig].
@@ -269,9 +269,9 @@ Proof.
   { rewrite ?repeat_length; trivial. }
   { rewrite length_point; trivial. }
   clear_nonsymex_sephyps.
-  progress rewrite ?word.unsigned_mul_nowrap, ?word.unsigned_of_Z_nowrap in * by ZnWords.ZnWords.
+  progress rewrite ?word.unsigned_mul_nowrap, ?bits.unsigned_of_Z_small in * by ZnWords.ZnWords.
 
-assert (word__and_broadcast : forall a b, word.and (word.broadcast a) (word.broadcast b) = word.broadcast (andb a b)). {
+assert (word__and_broadcast : forall a b, Zmod.and (word.broadcast a) (word.broadcast b) = (word.broadcast (andb a b) : word)). {
   clear; intros a b; case a, b; cbv [word.broadcast]; trivial.
 }
 
@@ -293,13 +293,13 @@ assert (word__and_broadcast : forall a b, word.and (word.broadcast a) (word.broa
     assert (Datatypes.length x2 = 96%nat) by (length_tac_rewrites; listZnWords).
     repeat straightline; clear_nongoal_sephyps.
 
-    rewrite <-word.unsigned_of_Z_0, !word.unsigned_inj_iff in H16 by exact _.
-    rewrite !word.lor_0_iff, !word.broadcast_0_iff in H16.
-    destruct (iszero P) eqn:HP in *; (destruct (word.eqb_spec c2 (word.of_Z 0)) as [|HQ] in *; [subst c2|]);
+    rewrite <-(Zmod.unsigned_0 (2 ^ 64)), !Zmod.unsigned_inj_iff in H16 by exact _.
+    rewrite !word.lor_0_iff, !(word.broadcast_0_iff _ width_pos) in H16.
+    destruct (iszero P) eqn:HP in *; (destruct (Zmod.eqb_spec c2 (bits.of_Z _ 0)) as [|HQ] in *; [subst c2|]);
       repeat (cbn [Z.eqb negb andb] in *; rewrite ?Z.eqb_refl in *; rewrite ?(proj2 (Z.eqb_neq _ _)) in * by ZnWords.ZnWords;
         match goal with
-           | H : word.broadcast false = word.of_Z 0 -> _ |- _ => specialize (H eq_refl)
-           | H : word.broadcast true = word.of_Z (-1) -> _ |- _ => specialize (H eq_refl)
+           | H : word.broadcast false = bits.of_Z _ 0 -> _ |- _ => specialize (H eq_refl)
+           | H : word.broadcast true = bits.of_Z _ (-1) -> _ |- _ => specialize (H eq_refl)
            end); subst; rewrite ?Byte.map_xor_0_l in * by (rewrite ?length_point; ZnWords.ZnWords).
     { (* 0 + 0 *)
       apply Decidable.dec_bool, Jacobian.iszero_iff in HP.
@@ -325,10 +325,10 @@ assert (word__and_broadcast : forall a b, word.and (word.broadcast a) (word.broa
       destruct Q as ([(?&?)|[]]&?); intuition idtac.
     } }
   { (* if !ok *)
-    rewrite <-word.unsigned_of_Z_0, word.unsigned_inj_iff in * by exact _.
-    rewrite !word.lor_0_iff, !word.broadcast_0_iff in *.
+    rewrite <-(Zmod.unsigned_0 (2 ^ 64)), Zmod.unsigned_inj_iff in * by exact _.
+    rewrite !word.lor_0_iff, !(word.broadcast_0_iff _ width_pos) in *.
     DestructHead.destruct_head' @and; subst.
-    rewrite ?word.not_broadcast, ?word__and_broadcast, ?Bool.negb_involutive, ?word.broadcast_0_iff, ?Z.eqb_neq, ?word.unsigned_of_Z_0 in *.
+    rewrite ?word.not_broadcast, ?word__and_broadcast, ?Bool.negb_involutive, ?(word.broadcast_0_iff _ width_pos), ?Z.eqb_neq, ?Zmod.unsigned_0 in *.
 
     straightline_call; repeat straightline.
     { split. { ecancel_assumption. } { length_tac. } }
@@ -347,13 +347,13 @@ assert (word__and_broadcast : forall a b, word.and (word.broadcast a) (word.broa
     repeat straightline; clear_nongoal_sephyps.
 
     eexists; ssplit. { ecancel_assumption. }
-    destruct (word.eqb_spec c2 (word.of_Z 0)); [subst; rewrite ?word.unsigned_of_Z_0 in *; contradiction|].
+    destruct (Zmod.eqb_spec c2 (bits.of_Z _ 0)); [subst; rewrite ?Zmod.unsigned_0 in *; contradiction|].
     rewrite <-Jacobian.double_minus_3_eq_double.
     rewrite Jacobian.eq_iff, Jacobian.to_affine_double, Jacobian.to_affine_add; Morphisms.f_equiv.
     enough (Jacobian.eq P Q) as -> by reflexivity.
 
     cbv [iszero] in *; case Decidable.dec in *; try congruence.
-    destruct (H18 ltac:(trivial) ltac:(intros HX; specialize (H11 HX); congruence)) as [ [? (?&HE)] |]; [congruence|intuition fail]. }
+    destruct (H18 ltac:(trivial) ltac:(intros HX; specialize (H11 HX); congruence)) as [ [? (?&HE)] |]; [pose proof (Zmod.of_Z_0 (2 ^ 64)); congruence|intuition fail]. }
 Qed.
 
 

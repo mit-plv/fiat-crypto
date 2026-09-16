@@ -1,4 +1,5 @@
 From Coq Require Import Utf8.
+Require Import coqutil.Word.Bitwidth.
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.Loops.
 
@@ -141,11 +142,48 @@ Qed.
 
 
 
+Lemma split_hd_tl {A} (a:A) (l:list A)
+  : 0 < length l ->
+    l = hd a l :: tl l.
+Proof.
+  destruct l; simpl in *; [lia | auto].
+Qed.
+
+Lemma map_upd A B (f : A -> B) i (a : A) l
+  : map f (upd l i a) = upd (map f l) i (f a).
+Proof.
+  eapply nth_error_ext;
+    intros i0.
+  destruct (Nat.compare_spec i0 (length l)); subst.
+  1,3: rewrite !ListUtil.nth_error_length_error; eauto;
+  repeat rewrite ?List.map_length, ?List.upd_length; lia.
+  assert A as default.
+  {
+    destruct l; simpl in*; try lia; auto.
+  }
+  rewrite !nth_error_nth' with (d:= f default)
+    by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
+  f_equal.
+  destruct (Nat.eq_dec i i0); subst.
+  {
+    repeat rewrite ?nth_upd_same, ?map_nth
+      by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
+    auto.
+  }
+  {
+    repeat rewrite ?nth_upd_diff, ?map_nth
+      by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
+    auto.
+  }
+Qed.
+
 Section with_parameters.
-  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
+  Context {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
-  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
 
@@ -155,7 +193,7 @@ Section with_parameters.
     : map.get l x = None ->
       WeakestPrecondition.expr m l exp P ->
       WeakestPrecondition.expr m (map.put l x v) exp P.
-  Proof using locals_ok word_ok.
+  Proof using locals_ok.
     intros.
     eapply Util.expr_only_differ_undef; eauto.
     eapply Util.only_differ_sym; eauto.
@@ -171,7 +209,7 @@ Section with_parameters.
     : map.get l x = None ->
       DEXPR m l exp w ->
       DEXPR m (map.put l x v) exp w.
-  Proof using locals_ok word_ok.
+  Proof using locals_ok.
     intros.
     eapply expr_locals_put; eauto.
   Qed.
@@ -204,11 +242,11 @@ Section with_parameters.
 
     Declare Scope word_scope.
     Delimit Scope word_scope with word.
-    Local Infix "+" := word.add : word_scope.
-    Local Infix "*" := word.mul : word_scope.
+    Local Infix "+" := Zmod.add : word_scope.
+    Local Infix "*" := Zmod.mul : word_scope.
 
 
-    Definition sz_word : word := (word.of_Z (Z.of_nat (Memory.bytes_per (width:=width) szT))).
+    Definition sz_word : word := (bits.of_Z _ (Z.of_nat (Memory.bytes_per (width:=width) szT))).
 
     Local Notation "xs $@ a" :=
       (array predT sz_word a%word xs%list) (at level 10, format "xs $@ a").
@@ -233,7 +271,7 @@ Section with_parameters.
     forall (m : mem) (lstl : list T),
       length lstl < length old_data ->
       ((lstl ++ skipn (length lstl) old_data)$@ptr * R)%sep m ->
-      DEXPR m (map.put l idx_var (word.of_Z (length lstl)))
+      DEXPR m (map.put l idx_var (bits.of_Z _ (length lstl)))
             expr (word_of_T (nth (length lstl) lst default)).
 
 
@@ -335,34 +373,6 @@ Section with_parameters.
   Qed.
 
 
-  Lemma map_upd A B (f : A -> B) i (a : A) l
-    : map f (upd l i a) = upd (map f l) i (f a).
-  Proof.
-    eapply nth_error_ext;
-      intros i0.
-    destruct (Nat.compare_spec i0 (length l)); subst.
-    1,3: rewrite !ListUtil.nth_error_length_error; eauto;
-    repeat rewrite ?List.map_length, ?List.upd_length; lia.
-    assert A as default.
-    {
-      destruct l; simpl in*; try lia; auto.
-    }
-    rewrite !nth_error_nth' with (d:= f default)
-      by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
-    f_equal.
-    destruct (Nat.eq_dec i i0); subst.
-    {
-      repeat rewrite ?nth_upd_same, ?map_nth
-        by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
-      auto.
-    }
-    {
-      repeat rewrite ?nth_upd_diff, ?map_nth
-        by (repeat rewrite ?List.map_length, ?List.upd_length; lia).
-      auto.
-    }
-  Qed.
-
   Lemma compile_broadcast_expr' {t m l e} (len : nat) (lst scratch : list T) :
     len = length scratch ->
     len = length lst ->
@@ -428,8 +438,8 @@ Section with_parameters.
     let x := open_constr:(fun from' lst tr mem locals =>
                             (lst$@a_ptr ⋆ R) mem
                             /\ tr = t
-                            /\ locals = map.put (map.put l idx_var (word.of_Z from'))
-                                                to_var (word.of_Z (Z.of_nat (length scratch)))) in
+                            /\ locals = map.put (map.put l idx_var (bits.of_Z _ from'))
+                                                to_var (bits.of_Z _ (Z.of_nat (length scratch)))) in
     instantiate(1:= x).
     {
       cbn beta.
@@ -457,7 +467,7 @@ Section with_parameters.
       cbn beta.
       repeat compile_step.
       repeat straightline'.
-      exists (word.add a_ptr (word.mul (word.of_Z from') sz_word)); repeat compile_step.
+      exists (Zmod.add a_ptr (Zmod.mul (bits.of_Z _ from') sz_word)); repeat compile_step.
       {
         eapply Util.dexpr_put_diff; repeat compile_step.
         eapply Util.dexpr_put_diff; repeat compile_step.
@@ -521,8 +531,8 @@ Section with_parameters.
           f_equal.
           rewrite Z2Nat.id by lia.
           rewrite Z.mul_comm.
-          rewrite word.ring_morph_mul.
-          rewrite word.of_Z_unsigned.
+          rewrite Zmod.of_Z_mul.
+          rewrite Zmod.of_Z_unsigned.
           reflexivity.
         }
         {
@@ -585,7 +595,7 @@ Section with_parameters.
              lst_expr)
           k_impl
       <{ pred (nlet_eq [a_var] v k) }>.
-  Proof using T_Fits_ok ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using T_Fits_ok ext_spec_ok locals_ok mem_ok.
     eauto using compile_broadcast_expr'.
   Qed.
 
@@ -597,7 +607,7 @@ Section with_parameters.
       Context (word_morph : forall a b, word_of_T (op a b) = word_op (word_of_T a) (word_of_T b)).
 
       Context (expr_compile_word_op
-                 : forall {m l} (w1 w2 : word.rep) (e1 e2 : expr),
+                 : forall {m l} (w1 w2 : word) (e1 e2 : expr),
                   DEXPR m l e1 w1 ->
                   DEXPR m l e2 w2 ->
                   DEXPR m l (expr_op e1 e2) (word_op w1 w2)).
@@ -639,7 +649,7 @@ Section with_parameters.
                                 (expr.op bopname.add a_var
                                                  (expr.op bopname.mul idx_var sz_word)))
                      scratch.
-  Proof using BW T_Fits_ok locals_ok mem_ok word_ok.
+  Proof using BW T_Fits_ok locals_ok mem_ok.
     unfold broadcast_expr; intuition idtac.
     repeat straightline.
     exists a_ptr; intuition idtac.
@@ -647,7 +657,7 @@ Section with_parameters.
       rewrite map.get_put_diff by assumption.
       assumption.
     }
-    exists (word.of_Z (Z.of_nat (length lstl))).
+    exists (bits.of_Z _ (Z.of_nat (length lstl))).
     intuition idtac.
     {
       rewrite map.get_put_same; eauto.
@@ -681,17 +691,10 @@ Section with_parameters.
     ecancel_assumption.
     f_equal.
     rewrite Z.mul_comm.
-    rewrite word.ring_morph_mul.
+    rewrite Zmod.of_Z_mul.
     reflexivity.
   Qed.
 
-
-  Lemma split_hd_tl {A} (a:A) (l:list A)
-    : 0 < length l ->
-      l = hd a l :: tl l.
-  Proof.
-    destruct l; simpl in *; [lia | auto].
-  Qed.
 
   Lemma broadcast_var l idx_var scratch a_ptr b_ptr a_var a_data R' R
     : Lift1Prop.iff1 R' (a_data$@a_ptr * R)%sep ->
@@ -703,7 +706,7 @@ Section with_parameters.
            (expr.op bopname.add a_var
               (expr.op bopname.mul idx_var sz_word)))
         a_data.
-  Proof using T_Fits_ok locals_ok mem_ok word_ok BW.
+  Proof using T_Fits_ok locals_ok mem_ok BW.
     unfold broadcast_expr; intuition idtac.
     repeat straightline.
     exists a_ptr; intuition idtac.
@@ -711,7 +714,7 @@ Section with_parameters.
       rewrite map.get_put_diff by assumption.
       assumption.
     }
-    exists (word.of_Z (Z.of_nat (length lstl))).
+    exists (bits.of_Z _ (Z.of_nat (length lstl))).
     intuition idtac.
     {
       rewrite map.get_put_same; eauto.
@@ -746,7 +749,7 @@ Section with_parameters.
     rewrite (split_hd_tl default (skipn (length lstl) a_data)) in H5 by (rewrite skipn_length; lia).
     simpl in H5.
     rewrite Z.mul_comm in H5.
-    rewrite word.ring_morph_mul in H5.
+    rewrite Zmod.of_Z_mul in H5.
     rewrite <- hd_skipn_nth_default in H5.
     rewrite nth_default_eq in H5.
     ecancel_assumption.
@@ -784,7 +787,7 @@ Section with_parameters.
 
 
   Instance byte_ac_ok : FitsInLocal_ok byte byte_ac.
-  Proof using BW mem_ok word_ok.
+  Proof using BW mem_ok.
     constructor; unfold word_of_T, szT, predT, byte_ac.
     {
       intros; unfold truncate_word.
@@ -792,8 +795,8 @@ Section with_parameters.
       unfold truncate_Z.
       simpl.
       rewrite word.morph_and.
-      rewrite word.unsigned_of_Z_nowrap; [| apply byte_in_word_bounds].
-      change (word.of_Z (Z.ones 8)) with (word_of_byte xff : word).
+      rewrite bits.unsigned_of_Z_small; [| apply byte_in_word_bounds].
+      change (bits.of_Z _ (Z.ones 8)) with (word_of_byte xff : word).
       rewrite <- byte_morph_and.
       rewrite byte_and_xff.
       reflexivity.
@@ -801,8 +804,8 @@ Section with_parameters.
     intros ptr t m.
     cbv [truncated_word truncated_scalar].
     simpl le_split.
-    rewrite word.unsigned_of_Z_nowrap, word.byte_of_Z_unsigned by apply byte_in_word_bounds.
-    rewrite OfListWord.map.of_list_word_singleton.
+    rewrite bits.unsigned_of_Z_small, word.byte_of_Z_unsigned by apply byte_in_word_bounds.
+    rewrite OfListWord.map.of_list_word_singleton by first [exact width_pos | exact mem_ok].
     split; cbv [sepclause_of_map ptsto] in *; auto.
   Qed.
 
@@ -827,12 +830,12 @@ Section with_parameters.
       unfold truncate_Z.
       simpl.
       rewrite word.morph_and.
-      rewrite !word.of_Z_unsigned.
+      rewrite !Zmod.of_Z_unsigned.
       rewrite Z2Nat.id.
       unfold Memory.bytes_per_word.
       replace ((width + 7) / 8 * 8) with width.
       {
-        rewrite <- (word.of_Z_unsigned t).
+        rewrite <- (Zmod.of_Z_unsigned t).
         rewrite <- word.morph_and.
         rewrite word.of_Z_land_ones.
         auto.
@@ -843,7 +846,7 @@ Section with_parameters.
       }
       {
         unfold Memory.bytes_per_word.
-        pose proof (word.width_pos).
+        pose proof (width_pos).
         pose proof width_mul_8 as Hw; destruct Hw as [x Hw]; subst.
         lia.
       }
@@ -871,7 +874,7 @@ Section with_parameters.
     unfold broadcast_expr.
     intros.
     repeat straightline.
-    exists (word.of_Z (length lstl)); split; auto.
+    exists (bits.of_Z _ (length lstl)); split; auto.
     {
       rewrite map.get_put_same; eauto.
     }
@@ -881,16 +884,16 @@ Section with_parameters.
     eapply load_one_of_sep.
     instantiate (1:= fun _ => True).
 
-    exists (map.put map.empty (word.of_Z (Z.of_nat (length lstl))) (nth (length lstl) const_list x00)).
-    exists (map.remove (OfListWord.map.of_list_word const_list) (word.of_Z (Z.of_nat (length lstl)))).
+    exists (map.put map.empty (bits.of_Z _ (Z.of_nat (length lstl))) (nth (length lstl) const_list x00)).
+    exists (map.remove (OfListWord.map.of_list_word const_list) (bits.of_Z _ (Z.of_nat (length lstl)))).
     intuition idtac.
     {
       eapply map.split_comm.
       eapply map.split_remove_put.
       rewrite map.split_empty_r; auto.
-      rewrite OfListWord.map.get_of_list_word.
-      rewrite word.unsigned_of_Z.
-      rewrite word.wrap_small.
+      rewrite (OfListWord.map.get_of_list_word width_pos).
+      rewrite bits.unsigned_of_Z.
+      rewrite Z.mod_small.
       rewrite Nat2Z.id.
       eapply nth_error_nth'.
       lia.
@@ -909,7 +912,7 @@ Section with_parameters.
       broadcast_expr byte l idx_var scratch a_ptr R
                      (expr.op bopname.and l1_expr l2_expr)
                      (List.map (fun '(w1, w2) => byte.and w1 w2) (combine l1 l2)).
-  Proof using BW word_ok.
+  Proof using BW.
     eapply broadcast_binop.
     - exact byte_morph_and.
     - intros; eapply expr_compile_word_and; eauto.
@@ -923,14 +926,13 @@ Section with_parameters.
       broadcast_expr word l idx_var scratch a_ptr R l2_expr l2 ->
       broadcast_expr word l idx_var scratch a_ptr R
                      (expr.op bopname.add l1_expr l2_expr)
-                     (List.map (fun '(w1, w2) => word.add w1 w2) (combine l1 l2)).
-  Proof using word_ok.
+                     (List.map (fun '(w1, w2) => Zmod.add w1 w2) (combine l1 l2)).
+  Proof using.
     eapply broadcast_binop.
     - intros; reflexivity.
     - intros; eapply expr_compile_word_add; eauto.
     - unfold default, HasDefault_word.
-      rewrite <- word.ring_morph_add.
-      reflexivity.
+      apply Zmod.add_0_l.
   Qed.
 
 End with_parameters.

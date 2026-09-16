@@ -5,6 +5,7 @@ From Coq Require Import String.
 From Coq Require Import List.
 From Coq Require Import Morphisms.
 From Coq Require Import Bool.
+Require Import coqutil.Word.Bitwidth.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Bool.Reflect.
@@ -82,18 +83,16 @@ Module Byte.
   Notation x00 := 0%Z (only parsing).
 End Byte.
 
-Require Import coqutil.Word.Interface.
 Require Import coqutil.Map.Interface. (* coercions *)
 Require Import coqutil.Word.LittleEndianList.
 Require Import bedrock2.Memory. Import coqutil.Map.Memory.
-Require coqutil.Word.Naive coqutil.Map.SortedListWord.
-Import (hints) Word.Naive.
-Definition mem_state := (SortedListWord.map (Naive.word 64) Byte.byte).
+Require coqutil.Map.SortedListWord.
+Definition mem_state := (SortedListWord.map 64 Byte.byte).
 
 Definition get_mem (st : mem_state) (addr : Z) (nbytes : nat) : option Z
-  := (bs <- load_bytes st (word.of_Z addr) nbytes; Some (LittleEndianList.le_combine bs))%option.
+  := (bs <- load_bytes st (bits.of_Z _ addr) nbytes; Some (LittleEndianList.le_combine bs))%option.
 Definition set_mem (st : mem_state) (addr : Z) (nbytes : nat) (v : Z) : option mem_state
-  := store_bytes st (word.of_Z addr) (LittleEndianList.le_split nbytes v).
+  := store_bytes st (bits.of_Z _ addr) (LittleEndianList.le_split nbytes v).
 
 Record machine_state := { machine_reg_state :> reg_state ; machine_flag_state :> flag_state ; machine_mem_state :> mem_state }.
 Definition update_reg_with (st : machine_state) (f : reg_state -> reg_state) : machine_state

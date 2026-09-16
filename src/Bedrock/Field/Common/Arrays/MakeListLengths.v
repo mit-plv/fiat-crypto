@@ -1,5 +1,6 @@
 From Coq Require Import ZArith.
 From Coq Require Import List.
+Require Import coqutil.Word.Bitwidth.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Language.API.
@@ -12,8 +13,9 @@ Existing Instances rep.Z rep.listZ_mem.
 
 Section with_parameters.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
 
   Fixpoint list_lengths_repeat_base (n : nat) t : base_listonly nat t :=
     match t as t0 return base_listonly nat t0 with

@@ -14,7 +14,7 @@ Require Import Crypto.Bedrock.Specs.Field.
 Import ListNotations.
 
 #[export]
-Existing Instances Naive.word Naive.word32_ok BW32.
+Existing Instances BW32.
 #[export]
 Existing Instances SortedListWord.map SortedListWord.ok.
 

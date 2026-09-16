@@ -1,7 +1,7 @@
 From Coq Require Import ZArith.
 From Coq Require Import List.
 From Coq Require Import Lia.
-Require Import coqutil.Word.Interface.
+Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Word.Properties.
 Require Import coqutil.Datatypes.List.
 Require Import bedrock2.Syntax.
@@ -20,8 +20,9 @@ Import ListNotations.
 
 Section MaxBounds.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Context {ok : ok}.
   Context (n : nat).
 
@@ -72,7 +73,7 @@ Section MaxBounds.
   Lemma map_word_wrap_bounded' r x m :
     ZRange.is_tighter_than_bool r max_range = true ->
     list_Z_bounded_by (repeat (Some r) m) x ->
-    map word.wrap x = x.
+    map (fun z => (z mod 2 ^ width)%Z) x = x.
   Proof.
     intros.
     pose proof length_list_Z_bounded_by _ x ltac:(eassumption).
@@ -90,11 +91,11 @@ Section MaxBounds.
                                   repeat map] in *
              | H : (_ && _)%bool = true |- _ =>
                apply Bool.andb_true_iff in H
-             | IH : context [map word.wrap ?x = ?x] |- _ =>
+             | IH : context [map (fun z => (z mod 2 ^ width)%Z) ?x = ?x] |- _ =>
                rewrite IH with (m:=m) by (try eassumption; lia)
              | _ => progress Z.ltb_to_lt
-             | |- word.wrap ?x :: ?y = ?x :: ?y =>
-               cbv [word.wrap]; Z.rewrite_mod_small;
+             | |- (?x mod 2 ^ width)%Z :: ?y = ?x :: ?y =>
+               Z.rewrite_mod_small;
                  reflexivity
              | _ => congruence
              end.
@@ -102,7 +103,7 @@ Section MaxBounds.
 
   Lemma map_word_wrap_bounded x :
     list_Z_bounded_by max_bounds x ->
-    map word.wrap x = x.
+    map (fun z => (z mod 2 ^ width)%Z) x = x.
   Proof.
     intros. eapply map_word_wrap_bounded'; [ | eassumption ].
     apply ZRange.is_tighter_than_bool_Reflexive.
@@ -131,7 +132,7 @@ Section MaxBounds.
              (Partition.partition
                 (UniformWeight.uweight width) n x).
   Proof.
-    pose proof word.width_pos. cbv zeta.
+    pose proof width_pos. cbv zeta.
     induction n; intros; [ solve [constructor] | ].
     rewrite partition_step. apply Forall_snoc; auto; [ ].
     rewrite UniformWeight.uweight_S by lia.

@@ -9,7 +9,7 @@ Local Open Scope string_scope. Local Open Scope Z_scope.
 (** * Specification *)
 
 Local Notation eval := (fold_right (fun (a : word) (s : Z) => a + 2^64*s) 0).
-Local Notation array := (array scalar (word.of_Z 8)).
+Local Notation array := (array scalar (bits.of_Z _ 8)).
 
 #[export] Instance spec_of_u320_muladd : spec_of "u320_muladd" := 
     fnspec! "u320_muladd" (p_v p_m c_prime : word) / (v m : list word) R ~> c,

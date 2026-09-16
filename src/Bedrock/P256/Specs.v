@@ -159,7 +159,7 @@ End point.
 From Coq Require Import String List. Local Open Scope string_scope. Local Open Scope list_scope.
 From bedrock2 Require Import ProgramLogic WeakestPrecondition.
 Import ProgramLogic.Coercions.
-From coqutil Require Import Word.Interface OfListWord Separation SeparationLogic.
+From coqutil Require Import OfListWord Separation SeparationLogic.
 From coqutil Require Import letexists.
 
 
@@ -185,7 +185,8 @@ Local Open Scope bool_scope.
 Import micromega.Lia Word.Properties.
 
 Section WithSemantics.
-Context {width} {BW : Bitwidth.Bitwidth width} {word : word.word width}.
+Context {width} {BW : Bitwidth.Bitwidth width}.
+Local Notation word := (bits width).
 Context {locals : Interface.map.map string word}.
 Context {mem : Interface.map.map word byte}.
 Context {ext_spec : Semantics.ExtSpec}.
@@ -209,7 +210,7 @@ Context {ext_spec : Semantics.ExtSpec}.
 #[export] Instance spec_of_br_broadcast_negative : spec_of "br_broadcast_negative" :=
   fnspec! "br_broadcast_negative" x ~> y,
   { requires t m := True;
-    ensures t' m' := t' = t /\ m' = m /\ y = word.broadcast (word.lts x (word.of_Z 0)) }.
+    ensures t' m' := t' = t /\ m' = m /\ y = word.broadcast (Zmod.signed x <? 0) }.
 
 #[export] Instance spec_of_br_broadcast_nonzero : spec_of "br_broadcast_nonzero" :=
   fnspec! "br_broadcast_nonzero" x ~> y,
@@ -272,8 +273,8 @@ Context {ext_spec : Semantics.ExtSpec}.
     ensures t' m := t' = t /\ exists out,
     m =* out$@p_out * P$@p_P * Q$@p_Q * R /\ length out = length P /\ (
         ~ Jacobian.iszero P -> ~ Jacobian.iszero Q ->
-        (ok <> word.of_Z 0 /\ exists pfPneqQ, out = (Jacobian.add_inequal_nz_nz P Q pfPneqQ : point)) \/
-        (ok = word.of_Z 0) /\ Jacobian.eq P Q)
+        (ok <> bits.of_Z _ 0 /\ exists pfPneqQ, out = (Jacobian.add_inequal_nz_nz P Q pfPneqQ : point)) \/
+        (ok = bits.of_Z _ 0) /\ Jacobian.eq P Q)
   }%sep.
 
 #[export] Instance spec_of_br_memset : spec_of "br_memset" :=
@@ -287,8 +288,8 @@ Context {ext_spec : Semantics.ExtSpec}.
     ensures t' m := t' = t /\
     exists out, length out = n :> Z /\
     m =* out$@p_d * s$@p_s * R /\
-    (mask = word.of_Z 0 -> out = d) /\
-    (mask = word.of_Z (-1) -> out = map (uncurry Byte.xor) (combine d s))
+    (mask = bits.of_Z _ 0 -> out = d) /\
+    (mask = bits.of_Z _ (-1) -> out = map (uncurry Byte.xor) (combine d s))
     }.
 
 #[export] Instance spec_of_p256_point_double : spec_of "p256_point_double" :=
@@ -330,15 +331,15 @@ Context {ext_spec : Semantics.ExtSpec}.
     ensures t' m := t' = t /\ exists out,
     m =* out$@p_out * P$@p_P * Q$@p_Q * R /\ length out = length P /\ (
       ~ Jacobian.iszero P -> not (affine_point.iszero Q) ->
-        (ok <> word.of_Z 0 /\ exists pfPneqQ, out = (Jacobian.add_inequal_nz_nz P Q pfPneqQ : point)) \/
-        (ok = word.of_Z 0) /\ Jacobian.eq P Q)
+        (ok <> bits.of_Z _ 0 /\ exists pfPneqQ, out = (Jacobian.add_inequal_nz_nz P Q pfPneqQ : point)) \/
+        (ok = bits.of_Z _ 0) /\ Jacobian.eq P Q)
   }%sep.
 
 #[export] Instance spec_of_p256_point_add_affinenz_conditional_vartime_if_doubling : spec_of "p256_point_add_affinenz_conditional_vartime_if_doubling" :=
   fnspec! "p256_point_add_affinenz_conditional_vartime_if_doubling" p_out p_P p_Q c / out (P : point) (Q : affine_point),
-  { requires t m := m =* out$@p_out * P$@p_P * (Jacobian.of_affine)Q$@p_Q /\ length out = length P /\ (affine_point.iszero Q -> c = word.of_Z 0);
+  { requires t m := m =* out$@p_out * P$@p_P * (Jacobian.of_affine)Q$@p_Q /\ length out = length P /\ (affine_point.iszero Q -> c = bits.of_Z _ 0);
     ensures t' m := t' = t /\ exists out : point,
-      m =* out$@p_out * P$@p_P * Q$@p_Q /\ Jacobian.eq out (if word.eqb c (word.of_Z 0) then P else Jacobian.add P Q)
+      m =* out$@p_out * P$@p_P * Q$@p_Q /\ Jacobian.eq out (if Zmod.eqb c (bits.of_Z _ 0) then P else Jacobian.add P Q)
   }%sep.
 
 #[export] Instance spec_of_br_cmov : spec_of "br_cmov" :=
@@ -348,15 +349,15 @@ Context {ext_spec : Semantics.ExtSpec}.
 
 #[export] Instance spec_of_br_abs : spec_of "br_abs" :=
   fnspec! "br_abs" (k sign_mask : word) ~> r,
-  { requires t m := word.unsigned sign_mask = if Z.ltb (word.signed k) 0 then Z.ones width else 0;
-    ensures t' m' := t' = t /\ m' = m /\ word.unsigned r = Z.abs (word.signed k) }.
+  { requires t m := Zmod.unsigned sign_mask = if Z.ltb (Zmod.signed k) 0 then Z.ones width else 0;
+    ensures t' m' := t' = t /\ m' = m /\ Zmod.unsigned r = Z.abs (Zmod.signed k) }.
 
 (* Internal intermediate functions for field arithmetic: *)
 
 #[export] Instance spec_of_u256_shr : spec_of "u256_shr" :=
   fnspec! "u256_shr" p_out p_x n / out (x : Z) R,
   { requires t m := m =*> (le_split 32 x)$@p_x /\ m =* out$@p_out * R /\ length out = 32%nat /\
-    0 <= x < 2^256 /\ word.unsigned n < width;
+    0 <= x < 2^256 /\ Zmod.unsigned n < width;
     ensures t' m := let r : Z := x/2^n in
           t' = t /\ m =* (le_split 32 r)$@p_out * R }.
 
@@ -379,31 +380,27 @@ From bedrock2Examples Require shrd full_sub full_add full_mul memmove memcpy.
 #[export] Existing Instance shrd.spec_of_shrd.
 #[export] Instance spec_of_memmove : spec_of "memmove". apply memmove.spec_of_memmove. Defined.
 #[export] Hint Mode Interface.map.map - - : typeclass_instances.
-#[export] Hint Mode word.word - : typeclass_instances.
 
 Goal spec_of "p256_coord_nonzero". exact _. all : fail. Abort.
 
 Module word.
-  Lemma signed_opp_nowrap (x : word) : word.signed x <> -2^63 -> word.signed (word.opp x) = - word.signed x.
+  Lemma signed_opp_nowrap (x : word) : Zmod.signed x <> -2^63 -> Zmod.signed (Zmod.opp x) = - Zmod.signed x.
   Proof.
-    pose proof word.signed_range x.
-    rewrite word.signed_opp.
-    rewrite word.swrap_as_div_mod.
+    pose proof bits.signed_range' x ltac:(lia).
+    rewrite Zmod.signed_opp, word.smodulo_pow2.
     PreOmega.Z.div_mod_to_equations; lia.
   Qed.
 
-  Lemma nz_signed (x : word) : word.signed x <> 0 <-> word.unsigned x <> 0.
+  Lemma nz_signed (x : word) : Zmod.signed x <> 0 <-> Zmod.unsigned x <> 0.
   Proof.
-    rewrite word.signed_eq_swrap_unsigned.
-    rewrite word.swrap_as_div_mod.
+    rewrite <-Zmod.smod_unsigned, word.smodulo_pow2.
     intuition ZnWords.ZnWords.
   Qed.
 
-  Lemma and_m1_l (x : word) : word.and (word.opp (word.of_Z (1))) x = x.
+  Lemma and_m1_l (x : word) : Zmod.and (Zmod.opp (bits.of_Z _ (1))) x = x.
   Proof.
-    apply word.unsigned_inj.
-    rewrite word.unsigned_and_nowrap, word.unsigned_opp_nowrap, Z.sub_1_r, <-Z.ones_equiv.
-    2: { rewrite word.unsigned_of_Z_1; inversion 1. }
-    rewrite Z.land_comm, Z.land_ones, word.wrap_unsigned; trivial; blia.
+    apply Zmod.unsigned_inj.
+    rewrite bits.unsigned_and, bits.unsigned_m1.
+    rewrite Z.land_comm, Z.land_ones, bits.mod_to_Z; trivial; blia.
   Qed.
 End word.

@@ -3,6 +3,7 @@ From Coq Require Import String.
 From Coq Require Import Lia.
 From Coq Require Import Morphisms.
 From Coq Require Import RelationClasses.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Array.
 Require Import bedrock2.Scalars.
 Require Import bedrock2.Syntax.
@@ -12,7 +13,7 @@ Require Import bedrock2.WeakestPrecondition.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Tactics.destr.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
-Require Import coqutil.Word.Interface coqutil.Word.Properties.
+Require Import coqutil.Word.Properties.
 Require Import coqutil.Word.LittleEndianList.
 Require Import coqutil.Datatypes.PropSet.
 Require Import coqutil.Datatypes.List.
@@ -597,17 +598,18 @@ Section ListZBoundedBy.
 End ListZBoundedBy.
 
 Section Bytes.
-  Context {width : Z} {word : word width} {word_ok : word.ok word}.
+  Context {width : Z} {BW : Bitwidth.Bitwidth width}.
+  Local Notation word := (bits width).
   Local Notation bytes_per_word := (Z.to_nat (Memory.bytes_per_word width)).
 
   Definition eval_bytes bs := map le_combine (chunk bytes_per_word bs).
 
   Definition encode_bytes (xs : list word) : list Byte.byte :=
-    flat_map (fun w => le_split bytes_per_word (word.unsigned w)) xs.
+    flat_map (fun w => le_split bytes_per_word (Zmod.unsigned w)) xs.
 
   Lemma bytes_per_word_nz : bytes_per_word <> 0%nat.
   Proof.
-    pose proof word.width_pos.
+    pose proof width_pos.
     cbv [Memory.bytes_per]. change 0%nat with (Z.to_nat 0).
     rewrite Z2Nat.inj_iff by (try apply Z.div_pos; lia).
     apply not_eq_sym. apply Z.lt_neq, Z.div_str_pos.
@@ -654,13 +656,15 @@ Section Bytes.
 End Bytes.
 
 Section Scalars.
+  Context {width: Z} {BW: Bitwidth.Bitwidth width}.
+  Local Notation word := (bits width).
   Context
-  {width: Z} {BW: Bitwidth.Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}
+  {mem: map.map word Byte.byte}
   {locals: map.map String.string word}
   {env: map.map String.string (list String.string * list String.string * Syntax.cmd)}
   {ext_spec: bedrock2.Semantics.ExtSpec}
   {varname_gen : nat -> String.string}
-  {word_ok : word.ok word} {mem_ok : map.ok mem}
+  {mem_ok : map.ok mem}
   {locals_ok : map.ok locals}
   {env_ok : map.ok env}
   {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
@@ -671,9 +675,9 @@ Section Scalars.
   Lemma scalar_to_bytes (a x : word) :
     Lift1Prop.iff1
       (scalar a x)
-      (array ptsto (word.of_Z 1) a
+      (array ptsto (bits.of_Z _ 1) a
              (LittleEndianList.le_split (Z.to_nat bytes_per_word)
-             (word.unsigned x))).
+             (Zmod.unsigned x))).
   Proof.
     unfold scalar, truncated_word, truncated_scalar.
     symmetry; eapply array1_iff_eq_of_list_word_at; trivial.
@@ -700,7 +704,7 @@ Section Scalars.
     forall xs (start : word) size,
       Lift1Prop.iff1
         (array (truncated_scalar access_size.word)
-               size start (map word.unsigned xs))
+               size start (map Zmod.unsigned xs))
         (array scalar size start xs).
   Proof.
     induction xs; cbn [array map]; intros; [ reflexivity | ].
@@ -721,41 +725,41 @@ Section Scalars.
 End Scalars.
 
 Section Words.
-  Local Hint Mode word.word - : typeclass_instances.
-  Context {width} {word : word.word width} {ok : word.ok word}.
+  Context {width : Z} {BW : Bitwidth.Bitwidth width}.
+  Local Notation word := (bits width).
 
   Lemma map_of_Z_unsigned x :
-    map word.of_Z (map word.unsigned x) = x.
+    map (Zmod.of_Z (2 ^ width)) (map Zmod.unsigned x) = x.
   Proof.
     rewrite map_map.
     rewrite map_ext with (g:=id);
       [ solve [apply map_id] | ].
-    intros. rewrite word.of_Z_unsigned.
+    intros. rewrite Zmod.of_Z_unsigned.
     reflexivity.
   Qed.
 
   Lemma map_unsigned_of_Z x :
-    map word.unsigned (map word.of_Z x) = map word.wrap x.
+    map Zmod.unsigned (map (Zmod.of_Z (2 ^ width)) x) = map (fun z => (z mod 2 ^ width)%Z) x.
   Proof.
     rewrite map_map. apply map_ext.
-    exact word.unsigned_of_Z.
+    exact (bits.unsigned_of_Z (n:=width)).
   Qed.
 
-  Lemma Forall_map_unsigned x :
+  Lemma Forall_map_unsigned (x : list word) :
     Forall (fun z : Z => (0 <= z < 2 ^ width)%Z)
-           (map word.unsigned x).
+           (map Zmod.unsigned x).
   Proof.
     induction x; intros; cbn [map]; constructor;
-      auto using word.unsigned_range.
+      auto using (bits.unsigned_range _ width_nonneg).
   Qed.
 
   Local Notation bytes_per_word := (Z.to_nat (Memory.bytes_per_word width)).
   Lemma Forall_word_unsigned_within_access_size
-    {bits_per_word_eq_width : (Z.of_nat bytes_per_word * 8 = width)%Z} x :
+    {bits_per_word_eq_width : (Z.of_nat bytes_per_word * 8 = width)%Z} (x : list word) :
     Forall
       (fun z : Z =>
          0 <= z < 2 ^ (Z.of_nat (Memory.bytes_per (width:=width) access_size.word) * 8))%Z
-      (map word.unsigned x).
+      (map Zmod.unsigned x).
   Proof.
     intros.
     eapply Forall_impl; [ | apply Forall_map_unsigned ].
@@ -800,10 +804,12 @@ End Separation.
 (* These lemmas should be moved to bedrock2, not coqutil *)
 Section WeakestPrecondition.
   Import Bitwidth bedrock2.WeakestPrecondition.
-  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
+  Context {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
-  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
 
@@ -874,7 +880,7 @@ Section WeakestPrecondition.
       { eapply IHe1; eauto.
         eapply Proper_expr; [ repeat intro | eassumption ].
         cbv beta in *.
-        destr (word.eqb a (word.of_Z 0)); eauto. }
+        destr (Zmod.eqb a (bits.of_Z _ 0)); eauto. }
     Qed.
 
     Lemma expr_untouched mem1 mem2 (l1 l2 : locals) vars v P :
@@ -919,7 +925,7 @@ Section WeakestPrecondition.
         cbv beta in *. eapply IHe2; eauto. }
       { eapply IHe1; eauto.
         eapply Proper_expr; [ repeat intro | eassumption ].
-        cbv beta in *. destr (word.eqb a (word.of_Z 0)); eauto. }
+        cbv beta in *. destr (Zmod.eqb a (bits.of_Z _ 0)); eauto. }
     Qed.
   End Expr.
 

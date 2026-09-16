@@ -9,7 +9,6 @@ Import coqutil.Word.LittleEndianList (le_combine, le_split).
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Interface.Compilation2.
-Require Import coqutil.Word.Naive.
 Require Import bedrock2.FE310CSemantics.
 Require Import coqutil.Map.SortedListWord.
 Import Syntax.Coercions ProgramLogic.Coercions.
@@ -19,14 +18,12 @@ Import Lists.List.
 Import Loops.
 Import LoopCompiler.
 
-#[local] Hint Extern 0 (Interface.word _) => exact (Naive.word 32%Z) : typeclass_instances.
-#[local] Hint Extern 0 (word.ok _) => exact word32_ok : typeclass_instances. 
-Notation word := (Naive.word 32).
-Notation locals := (FE310CSemantics.locals (word:=word)).
-Notation mem :=(@SortedListWord.map 32 (Naive.word 32) Naive.word32_ok Init.Byte.byte).
-Notation predicate := (predicate (word:=word) (locals:=locals) (mem:=mem)).
+Notation word := (bits 32).
+Notation locals := FE310CSemantics.locals.
+Notation mem := (SortedListWord.map 32 Init.Byte.byte).
+Notation predicate := (predicate (width:=32) (locals:=locals) (mem:=mem)).
 
-Local Instance locals_ok : map.ok locals := (FE310CSemantics.locals_ok (word:=word)).
+Local Instance locals_ok : map.ok locals := FE310CSemantics.locals_ok.
 
 (*TODO: connect to Broadcast?*)
 (* Tooling for representing a fixed-length array in local variables *)
@@ -88,7 +85,7 @@ Proof.
   repeat straightline.
   subst v0.
   subst l0.
-  rewrite word.of_Z_unsigned.
+  rewrite Zmod.of_Z_unsigned.
   eapply H.
 Qed.
 
@@ -97,7 +94,7 @@ Fixpoint array_locs (vars : list string) offset (lst : list word) :=
   match vars with
   | [] => []
   | v::vars =>
-      (v, (nth offset lst (word.of_Z 0)))::(array_locs vars (S offset) lst)
+      (v, (nth offset lst (bits.of_Z _ 0)))::(array_locs vars (S offset) lst)
   end.
 
 
@@ -258,58 +255,58 @@ Section Bedrock2.
 
   Declare Scope word_scope.
   Delimit Scope word_scope with word.
-  Local Infix "+" := word.add : word_scope.
-  Local Infix "*" := word.mul : word_scope.
+  Local Infix "+" := Zmod.add : word_scope.
+  Local Infix "*" := Zmod.mul : word_scope.
 
   Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing) (* experiment*).
-  Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
+  Local Notation "xs $@ a" := (Array.array ptsto (bits.of_Z _ 1) a xs) (at level 10, format "xs $@ a").
 
-  Definition le_combine l : word := word.of_Z (le_combine l).
-  Definition le_split n (l : word) := le_split n (word.unsigned l).
+  Definition le_combine l : word := bits.of_Z _ (le_combine l).
+  Definition le_split n (l : word) := le_split n (Zmod.unsigned l).
 
   (* copied from Low.v, anticipating its removal *)
   Section Low.
 
-Local Notation "a + b" := (word.add (word := word) a b).
-Local Notation "a ^ b" := (word.xor (word := word) a b).
-Local Notation "a <<< b" := (word.slu a b + word.sru a (word.sub (word.of_Z 32) b)) (at level 30).
+Local Notation "a + b" := (Zmod.add (m:=2 ^ 32) a b).
+Local Notation "a ^ b" := (Zmod.xor (m:=2 ^ 32) a b).
+Local Notation "a <<< b" := (word.slu a b + word.sru a (Zmod.sub (bits.of_Z _ 32) b)) (at level 30).
 
 Definition quarter_gallina a b c d : \<< word, word, word, word \>> :=
-  let/n a := a + b in  let/n d := d ^ a in  let/n d := d <<< word.of_Z 16 in
-  let/n c := c + d in  let/n b := b ^ c in  let/n b := b <<< word.of_Z 12 in
-  let/n a := a + b in  let/n d := d ^ a in  let/n d := d <<< word.of_Z 8 in
-  let/n c := c + d in  let/n b := b ^ c in  let/n b := b <<< word.of_Z 7 in
+  let/n a := a + b in  let/n d := d ^ a in  let/n d := d <<< bits.of_Z _ 16 in
+  let/n c := c + d in  let/n b := b ^ c in  let/n b := b <<< bits.of_Z _ 12 in
+  let/n a := a + b in  let/n d := d ^ a in  let/n d := d <<< bits.of_Z _ 8 in
+  let/n c := c + d in  let/n b := b ^ c in  let/n b := b <<< bits.of_Z _ 7 in
                                             \< a, b, c, d \>.
 
-Hint Rewrite (word.Z_land_ones_rotate (word := word)) using (split; reflexivity) : quarter.
-Hint Rewrite <- (word.unsigned_xor_nowrap (word := word)) : quarter.
-Hint Rewrite (word.Z_land_ones_word_add (word:=word)) : quarter.
+Hint Rewrite (word.Z_land_ones_rotate (width:=32)) using (split; reflexivity) : quarter.
+Hint Rewrite <- (bits.unsigned_xor (n:=32)) : quarter.
+Hint Rewrite (word.Z_land_ones_word_add (width:=32)) : quarter.
 
 Lemma quarter_ok0 a b c d:
-  Spec.quarter (word.unsigned a, word.unsigned b, word.unsigned c, word.unsigned d) =
+  Spec.quarter (Zmod.unsigned a, Zmod.unsigned b, Zmod.unsigned c, Zmod.unsigned d) =
   let '\<a', b', c', d'\> := quarter_gallina a b c d in
-  (word.unsigned a', word.unsigned b', word.unsigned c', word.unsigned d').
+  (Zmod.unsigned a', Zmod.unsigned b', Zmod.unsigned c', Zmod.unsigned d').
 Proof.
   unfold Spec.quarter.
-  repeat rewrite ?word.Z_land_ones_word_add, <- ?word.unsigned_xor_nowrap,
+  repeat rewrite ?word.Z_land_ones_word_add, <- ?bits.unsigned_xor,
     ?word.Z_land_ones_rotate by (split; reflexivity).
   reflexivity.
 Qed.
 
 Lemma quarter_ok a b c d:
   in_bounds 32 a -> in_bounds 32 b -> in_bounds 32 c -> in_bounds 32 d ->
-  quarter_gallina (word.of_Z (word:=word) a) (word.of_Z b) (word.of_Z c) (word.of_Z d) =
+  quarter_gallina (bits.of_Z 32 a) (bits.of_Z _ b) (bits.of_Z _ c) (bits.of_Z _ d) =
   let '(a', b', c', d') := Spec.quarter (a, b, c, d) in
-  \< word.of_Z a', word.of_Z b', word.of_Z c', word.of_Z d' \>.
+  \< bits.of_Z _ a', bits.of_Z _ b', bits.of_Z _ c', bits.of_Z _ d' \>.
 Proof.
   unfold in_bounds; intros.
-  set (wa := word.of_Z a); set (wb := word.of_Z b); set (wc := word.of_Z c); set (wd := word.of_Z d).
-  rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  a),
-    <- (word.unsigned_of_Z_nowrap (word:=word) b) by assumption.
-  rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  c),
-    <- (word.unsigned_of_Z_nowrap (word:=word) d) by assumption.
-  rewrite quarter_ok0; subst wa wb wc wd; destruct (quarter_gallina _ _ _ _) as (?&?&?&?); cbn -[word.of_Z word.unsigned].
-  rewrite !word.of_Z_unsigned; reflexivity.
+  set (wa := bits.of_Z _ a); set (wb := bits.of_Z _ b); set (wc := bits.of_Z _ c); set (wd := bits.of_Z _ d).
+  rewrite <- (bits.unsigned_of_Z_small (n:=32) a),
+    <- (bits.unsigned_of_Z_small (n:=32) b) by assumption.
+  rewrite <- (bits.unsigned_of_Z_small (n:=32) c),
+    <- (bits.unsigned_of_Z_small (n:=32) d) by assumption.
+  rewrite quarter_ok0; subst wa wb wc wd; destruct (quarter_gallina _ _ _ _) as (?&?&?&?); cbn -[Zmod.of_Z Zmod.unsigned].
+  rewrite !Zmod.of_Z_unsigned; reflexivity.
 Qed.
 
 
@@ -319,25 +316,25 @@ Lemma quarter_in_bounds a b c d:
   in_bounds 32 a' /\ in_bounds 32 b' /\ in_bounds 32 c' /\ in_bounds 32 d'.
 Proof.
   unfold in_bounds; intros.
-  rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  a),
-    <- (word.unsigned_of_Z_nowrap (word:=word) b) by assumption.
-  rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  c),
-    <- (word.unsigned_of_Z_nowrap (word:=word) d) by assumption.
-  rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  a),
-    <- (word.unsigned_of_Z_nowrap (word:=word) b) by assumption.
-  rewrite <- (word.unsigned_of_Z_nowrap (word:=word)  c),
-    <- (word.unsigned_of_Z_nowrap (word:=word) d) by assumption.
-  rewrite quarter_ok0; destruct (quarter_gallina _ _ _ _) as (?&?&?&?); cbn -[word.of_Z word.unsigned Z.pow].
-  repeat (split; try apply word.unsigned_range).
+  rewrite <- (bits.unsigned_of_Z_small (n:=32) a),
+    <- (bits.unsigned_of_Z_small (n:=32) b) by assumption.
+  rewrite <- (bits.unsigned_of_Z_small (n:=32) c),
+    <- (bits.unsigned_of_Z_small (n:=32) d) by assumption.
+  rewrite <- (bits.unsigned_of_Z_small (n:=32) a),
+    <- (bits.unsigned_of_Z_small (n:=32) b) by assumption.
+  rewrite <- (bits.unsigned_of_Z_small (n:=32) c),
+    <- (bits.unsigned_of_Z_small (n:=32) d) by assumption.
+  rewrite quarter_ok0; destruct (quarter_gallina _ _ _ _) as (?&?&?&?); cbn -[Zmod.of_Z Zmod.unsigned Z.pow].
+  repeat (split; try apply (bits.unsigned_range _ width_nonneg)).
 Qed.
 
   End Low.
 
 Definition quarterround x y z t (st : list word) :=
-  let '\<a,b,c,d\> := quarter_gallina (nth x st (word.of_Z 0))
-                        (nth y st (word.of_Z 0))
-                        (nth z st (word.of_Z 0))
-                        (nth t st (word.of_Z 0)) in
+  let '\<a,b,c,d\> := quarter_gallina (nth x st (bits.of_Z _ 0))
+                        (nth y st (bits.of_Z _ 0))
+                        (nth z st (bits.of_Z _ 0))
+                        (nth t st (bits.of_Z _ 0)) in
   upd (upd (upd (upd st x a) y b) z c) t d.
 
   (*Want: local_alloc; put a fixed-length array in local variables,
@@ -380,27 +377,27 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
          "qv8"; "qv9"; "qv10"; "qv11"; "qv12"; "qv13"; "qv14"; "qv15"] (*512bit*)
     (map le_combine (chunk 4 (list_byte_of_string"expand 32-byte k"))
     ++ map le_combine (chunk 4 key)
-    ++ (word.of_Z 0)::(map le_combine (chunk 4 nonce))) (fun st =>
+    ++ (bits.of_Z _ 0)::(map le_combine (chunk 4 nonce))) (fun st =>
     let '\<qv0, qv1, qv2, qv3,
       qv4, qv5, qv6, qv7,
       qv8, qv9, qv10,qv11,
       qv12,qv13,qv14,qv15\> :=
-                       \<(nth 0 st (word.of_Z 0)),
-      (nth 1 st (word.of_Z 0)),
-      (nth 2 st (word.of_Z 0)),
-      (nth 3 st (word.of_Z 0)),
-      (nth 4 st (word.of_Z 0)),
-      (nth 5 st (word.of_Z 0)),
-      (nth 6 st (word.of_Z 0)),
-      (nth 7 st (word.of_Z 0)),
-      (nth 8 st (word.of_Z 0)),
-      (nth 9 st (word.of_Z 0)),
-      (nth 10 st (word.of_Z 0)),
-      (nth 11 st (word.of_Z 0)),
-      (nth 12 st (word.of_Z 0)),
-      (nth 13 st (word.of_Z 0)),
-      (nth 14 st (word.of_Z 0)),
-      (nth 15 st (word.of_Z 0))\>
+                       \<(nth 0 st (bits.of_Z _ 0)),
+      (nth 1 st (bits.of_Z _ 0)),
+      (nth 2 st (bits.of_Z _ 0)),
+      (nth 3 st (bits.of_Z _ 0)),
+      (nth 4 st (bits.of_Z _ 0)),
+      (nth 5 st (bits.of_Z _ 0)),
+      (nth 6 st (bits.of_Z _ 0)),
+      (nth 7 st (bits.of_Z _ 0)),
+      (nth 8 st (bits.of_Z _ 0)),
+      (nth 9 st (bits.of_Z _ 0)),
+      (nth 10 st (bits.of_Z _ 0)),
+      (nth 11 st (bits.of_Z _ 0)),
+      (nth 12 st (bits.of_Z _ 0)),
+      (nth 13 st (bits.of_Z _ 0)),
+      (nth 14 st (bits.of_Z _ 0)),
+      (nth 15 st (bits.of_Z _ 0))\>
     in
     let/n (qv0,qv1,qv2,qv3,
          qv4,qv5,qv6,qv7,
@@ -434,7 +431,7 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
          "qv8"; "qv9"; "qv10"; "qv11"; "qv12"; "qv13"; "qv14"; "qv15"] (*512bit*)
     (map (fun '(s, t) => s + t)%word (combine ss (map le_combine (chunk 4 (list_byte_of_string"expand 32-byte k"))
             ++ map le_combine (chunk 4 key)
-            ++ (word.of_Z 0)::(map le_combine (chunk 4 nonce))))) (fun ss =>
+            ++ (bits.of_Z _ 0)::(map le_combine (chunk 4 nonce))))) (fun ss =>
     let/n st := flat_map (le_split 4) ss in st)).
 
   (*TODO: don't hardcode 0*)
@@ -446,15 +443,15 @@ Notation "'let/n' ( x0 , y0 , z0 , t0 , x1 , y1 , z1 , t1 , x2 , y2 , z2 , t2 , 
             (*TODO: account for difference in nonce length*)
             m =* n$@nonce * Rn /\ length n = 12%nat;
         ensures T m := T = t /\ exists ct, m =* ct$@out * R /\ length ct = 64%nat /\
-                                             ct = Spec.chacha20_block k (le_split 4 (word.of_Z 0) ++ n) }.
+                                             ct = Spec.chacha20_block k (le_split 4 (bits.of_Z _ 0) ++ n) }.
 
 
 Lemma word_add_pair_eqn st:
   (let '(s, t) := st in Z.land (s + t) (Z.ones 32)) =
-  word.unsigned (word.of_Z (word:=word) (fst st) + word.of_Z (snd st))%word.
+  Zmod.unsigned (bits.of_Z 32 (fst st) + bits.of_Z _ (snd st))%word.
 Proof.
   destruct st.
-  rewrite Z.land_ones, <- word.ring_morph_add, word.unsigned_of_Z by lia.
+  rewrite Z.land_ones, <- Zmod.of_Z_add, bits.unsigned_of_Z by lia.
   reflexivity.
 Qed.
 
@@ -554,11 +551,11 @@ End Derive.
 
 Lemma quarterround_ok x y z t st :
   Forall (in_bounds 32) st ->
-  List.map word.of_Z (Spec.quarterround x y z t st) =
-  quarterround x y z t (List.map word.of_Z st).
+  List.map (Zmod.of_Z (2 ^ 32)) (Spec.quarterround x y z t st) =
+  quarterround x y z t (List.map (Zmod.of_Z (2 ^ 32)) st).
 Proof.
   unfold Spec.quarterround, quarterround, nlet; intros H.
-  rewrite forall_in_bounds in H by lia.
+  rewrite (forall_in_bounds (width:=32)) in H by lia.
   rewrite !map_nth, !quarter_ok by auto.
   destruct (Spec.quarter _) as (((?&?)&?)&?).
   rewrite !map_upd; reflexivity.
@@ -593,7 +590,7 @@ Lemma quarterround_in_bounds x y z t a:
   Forall (in_bounds 32) (Spec.quarterround x y z t a).
 Proof.
   unfold Spec.quarterround, nlet; intros Ha.
-  pose proof Ha as Ha'; rewrite forall_in_bounds in Ha by lia.
+  pose proof Ha as Ha'; rewrite (forall_in_bounds (width:=32)) in Ha by lia.
   pose proof quarter_in_bounds (nth x a 0) (nth y a 0) (nth z a 0) (nth t a 0)
        ltac:(eauto) ltac:(eauto) ltac:(eauto) ltac:(eauto) as Hb.
   destruct (Spec.quarter _) as (((?&?)&?)&?).
@@ -606,10 +603,10 @@ Qed.
     match l with
     | [car; car0; car1; car2; car3; car4; car5; car6; car7; car8; car9; car10; car11; car12; car13; x0] =>
         \< car, car0, car1, car2, car3, car4, car5, car6, car7, car8, car9, car10, car11, car12, car13, x0 \>
-    | _ => \< word.of_Z 0,word.of_Z 0,word.of_Z 0,word.of_Z 0,
-             word.of_Z 0,word.of_Z 0,word.of_Z 0,word.of_Z 0,
-             word.of_Z 0,word.of_Z 0,word.of_Z 0,word.of_Z 0,
-             word.of_Z 0,word.of_Z 0,word.of_Z 0,word.of_Z 0 \>
+    | _ => \< bits.of_Z _ 0,bits.of_Z _ 0,bits.of_Z _ 0,bits.of_Z _ 0,
+             bits.of_Z _ 0,bits.of_Z _ 0,bits.of_Z _ 0,bits.of_Z _ 0,
+             bits.of_Z _ 0,bits.of_Z _ 0,bits.of_Z _ 0,bits.of_Z _ 0,
+             bits.of_Z _ 0,bits.of_Z _ 0,bits.of_Z _ 0,bits.of_Z _ 0 \>
     end.
 
   Lemma list_to_tuple_16_injective l1 l2
@@ -641,7 +638,7 @@ Qed.
   Lemma chacha20_block_ok key nonce
     : length key = 32%nat ->
       length nonce = 12%nat ->
-      Spec.chacha20_block key ((le_split 4 (word.of_Z 0))++nonce) = chacha20_block' key nonce.
+      Spec.chacha20_block key ((le_split 4 (bits.of_Z _ 0))++nonce) = chacha20_block' key nonce.
   Proof.
     intros Hlenk Hlenn.
   unfold Spec.chacha20_block, chacha20_block'.
@@ -654,17 +651,17 @@ Qed.
                unfold nlet at 1
          end.
   subst x2.
-  rewrite <- ListUtil.flat_map_map with (f:=word.unsigned(word:=word)).
+  rewrite <- ListUtil.flat_map_map with (f:=Zmod.unsigned (m:=2 ^ 32)).
   f_equal.
   subst x1.
 
   revert dependent x0;  intro x0; simple apply destruct_16 with (a:=x0); intros.
 
   erewrite (map_ext _ _ word_add_pair_eqn).
-  rewrite <- map_map with (g:= word.unsigned (word:=word)).
+  rewrite <- map_map with (g:= Zmod.unsigned (m:=2 ^ 32)).
   f_equal.
-  change (λ x1 : Z * Z, (word.of_Z (fst x1) + word.of_Z (snd x1))%word)
-    with (fun x2 => (fun x => (fst x) + (snd x))%word ((fun x1 => (word.of_Z (word:=word)(fst x1), word.of_Z (snd x1))) x2)).
+  change (λ x1 : Z * Z, (bits.of_Z _ (fst x1) + bits.of_Z _ (snd x1))%word)
+    with (fun x2 => (fun x => (fst x) + (snd x))%word ((fun x1 => (bits.of_Z 32(fst x1), bits.of_Z _ (snd x1))) x2)).
 
 
   rewrite <- map_map.
@@ -684,7 +681,7 @@ Qed.
   }
 
 
-  lazymatch goal with |- map word.of_Z ?lhs = _ => set lhs end.
+  lazymatch goal with |- map (Zmod.of_Z _) ?lhs = _ => set lhs end.
   assert (length l = 16%nat) as Hlen.
   {
     subst l.
@@ -713,7 +710,7 @@ Qed.
 
   subst l; rewrite Heqx0; clear Heqx0.
   eapply Nat_iter_rew_inv
-    with (g:=fun l => list_to_tuple_16 (map word.of_Z l))
+    with (g:=fun l => list_to_tuple_16 (map (Zmod.of_Z _) l))
          (P := fun l => Forall (in_bounds 32) l /\ length l = 16%nat); intros.
   {
     destruct H.
@@ -744,7 +741,7 @@ Qed.
     set (quarter_gallina _ _ _ _) as l2;
     destruct l2 as [? [? [? ?]]];
     intro Heql;
-    cbn-[word.of_Z] in Heql;
+    cbn -[Zmod.of_Z] in Heql;
           subst l).
 
     unfold nlet.
@@ -762,7 +759,7 @@ Qed.
     set (quarter_gallina _ _ _ _) as l2;
     destruct l2 as [? [? [? ?]]];
     intro Heql;
-    cbn-[word.of_Z] in Heql;
+    cbn -[Zmod.of_Z] in Heql;
           subst l).
     reflexivity.
   }
@@ -772,7 +769,7 @@ Qed.
       rewrite !Forall_app.
       repeat split.
       all: change 32 with (8 * Z.of_nat 4).
-      all: apply Forall_le_combine_in_bounds.
+      all: apply (Forall_le_combine_in_bounds (width:=32)).
       all: lia.
     }
     rewrite !app_length, !map_length, !length_chunk, Hlenk by lia.
@@ -781,13 +778,13 @@ Qed.
   }
   {
     rewrite !map_app, !map_map.
-    change  (λ x : list Init.Byte.byte, word.of_Z (LittleEndianList.le_combine x)) with le_combine.
+    change  (λ x : list Init.Byte.byte, bits.of_Z _ (LittleEndianList.le_combine x)) with le_combine.
     rewrite chunk_app_chunk; try lia.
     2:{ rewrite LittleEndianList.length_le_split; auto. }
     cbn [map].
-    change (le_combine (LittleEndianList.le_split 4 (word.unsigned (word.of_Z 0)))) with (word.of_Z (word:=word) 0).
+    change (le_combine (LittleEndianList.le_split 4 (Zmod.unsigned (bits.of_Z _ 0)))) with (bits.of_Z 32 0).
     remember ((map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k")) ++
-                 map le_combine (chunk 4 key) ++ word.of_Z 0 :: map le_combine (chunk 4 nonce))).
+                 map le_combine (chunk 4 key) ++ bits.of_Z _ 0 :: map le_combine (chunk 4 nonce))).
     assert (length l = 16%nat).
     {
       subst l.
@@ -840,11 +837,11 @@ Proof.
   unfold truncate_word.
   unfold truncate_Z.
   rewrite Z.land_ones_low.
-  { apply word.of_Z_unsigned. }
-  { pose proof (word.unsigned_range w); lia. }
-  { pose proof (word.unsigned_range w).
+  { apply Zmod.of_Z_unsigned. }
+  { pose proof (bits.unsigned_range w width_nonneg); lia. }
+  { pose proof (bits.unsigned_range w width_nonneg).
     change (Z.of_nat (Memory.bytes_per access_size.word) * 8) with 32.
-    destruct (Z.eqb_spec (word.unsigned w) 0).
+    destruct (Z.eqb_spec (Zmod.unsigned w) 0).
     {
       rewrite e; cbn; lia.
     }
@@ -1010,7 +1007,7 @@ Qed.
 Lemma expr_load_word_of_array_helper m l len lst e ptr R (n : nat)
   : length lst = len ->
     n <= len ->
-    (array scalar (word.of_Z (word:=word) 4) ptr lst * R)%sep m ->
+    (array scalar (bits.of_Z 32 4) ptr lst * R)%sep m ->
     forall vars,
       DEXPR m (map_remove_many l vars) e ptr ->
       length vars = (len - n)%nat ->
@@ -1045,23 +1042,21 @@ Proof.
     {
       unfold load_offset.
       unfold DEXPR.
-      cbn.
+      cbn -[Z.pow].
       unfold literal.
       unfold dlet.
       intros ? ?; subst.
       eapply WeakestPrecondition_dexpr_expr; eauto.
       unfold load.
       eexists; split; eauto.
-      instantiate (1:= word.of_Z 0).
-      change (@nth (@Naive.rep 32) n lst (@word.of_Z 32 word 0))
-        with (@nth (@word.rep _ word) n lst (@word.of_Z 32 word 0)).
-      replace (nth n lst (word.of_Z 0))
-        with (truncate_word access_size.word (nth n lst (word.of_Z 0))).
+      instantiate (1:= bits.of_Z _ 0).
+      replace (nth n lst (bits.of_Z _ 0))
+        with (truncate_word access_size.word (nth n lst (bits.of_Z _ 0))).
       eapply array_load_of_sep; eauto.
       {
-        rewrite word.unsigned_of_Z.
-        change (word.wrap 4) with 4.
-        rewrite (Radd_comm word.ring_theory ptr).
+        rewrite bits.unsigned_of_Z.
+        change (4 mod 2 ^ 32) with 4.
+        rewrite (Radd_comm (Zmod.ring_theory (2 ^ 32)) ptr).
         instantiate (1:=ptr).
         reflexivity.
       }
@@ -1098,7 +1093,7 @@ Qed.
 Lemma expr_load_word_of_array m l len lst e ptr R vars
   : length lst = len ->
     length vars = len ->
-    (array scalar (word.of_Z (word:=word) 4) ptr lst * R)%sep m ->
+    (array scalar (bits.of_Z 32 4) ptr lst * R)%sep m ->
     DEXPR m (map_remove_many l vars) e ptr ->
     locals_array_expr m l vars (map (load_offset e) (count_to len)) lst.
 Proof.
@@ -1136,7 +1131,7 @@ Proof.
 
   unfold le_combine.
   unfold bs2ws, zs2ws, bs2zs in *.
-  rewrite <- map_map with (g:= word.of_Z (word:=word)).
+  rewrite <- map_map with (g:= Zmod.of_Z (2 ^ 32)).
   change (Z.of_nat (Memory.bytes_per access_size.word)) with 4 in *.
   change (Memory.bytes_per access_size.word) with 4%nat in *.
   ecancel_assumption.
@@ -1264,7 +1259,7 @@ Lemma compile_store_locals_array' {t} {m : mem} {l e} (lst : list word) :
       length out = (4* (length lst + n))%nat ->
       DEXPR m l (expr.var var) ptr ->
       (forall m,
-          ((firstn (4*n)%nat out)$@ptr * (array scalar (word.of_Z 4) (ptr + word.of_Z(4*n))%word lst) * R)%sep m ->
+          ((firstn (4*n)%nat out)$@ptr * (array scalar (bits.of_Z _ 4) (ptr + bits.of_Z _(4*n))%word lst) * R)%sep m ->
        <{ Trace := t; Memory := m; Locals := l; Functions := e }>
            k_impl
          <{ P }>) ->
@@ -1324,7 +1319,7 @@ Proof.
       ecancel_assumption.
     }
     3:{
-      rewrite Radd_comm by apply word.ring_theory.
+      rewrite Zmod.add_comm.
       reflexivity.
     }
     {
@@ -1348,9 +1343,9 @@ Proof.
     {
       unfold scalar.
       unfold bs2ws, zs2ws, bs2zs in *.
-      rewrite <- word.of_Z_unsigned with (x:=a) in H0.
-      replace (word.unsigned a)
-        with (word.unsigned a mod 2 ^ (Z.of_nat 4 * 8)) in H0.
+      rewrite <- Zmod.of_Z_unsigned with (x:=a) in H0.
+      replace (Zmod.unsigned a)
+        with (Zmod.unsigned a mod 2 ^ (Z.of_nat 4 * 8)) in H0.
 Import coqutil.Word.LittleEndianList (le_combine_split).
       rewrite <- le_combine_split in H0.
       rewrite <- !map_upd in H0.
@@ -1364,7 +1359,7 @@ Import coqutil.Word.LittleEndianList (le_combine_split).
       lia.
       {
         rewrite Z.mod_small; auto.
-        apply word.unsigned_range.
+        apply (bits.unsigned_range _ width_nonneg).
       }
     }
     {
@@ -1400,10 +1395,10 @@ Import coqutil.Word.LittleEndianList (le_combine_split).
     cbn [firstn] in Hm'.
     rewrite app_nil_r in Hm'.
     replace (4 * Z.of_nat (n + 1)) with (4 * Z.of_nat n + 4) in Hm' by lia.
-    rewrite word.ring_morph_add in Hm'.
-    seprewrite_in (bytearray_append (firstn (4*n) out) (LittleEndianList.le_split 4 (word.unsigned a)) ptr) Hm'.
-    seprewrite_in (scalar_of_bytes (ptr + word.of_Z (Z.of_nat (length (firstn (4 * n) out))))%word
-                     (LittleEndianList.le_split 4 (word.unsigned a))) Hm'.
+    rewrite Zmod.of_Z_add in Hm'.
+    seprewrite_in (bytearray_append (firstn (4*n) out) (LittleEndianList.le_split 4 (Zmod.unsigned a)) ptr) Hm'.
+    seprewrite_in (scalar_of_bytes (ptr + bits.of_Z _ (Z.of_nat (length (firstn (4 * n) out))))%word
+                     (LittleEndianList.le_split 4 (Zmod.unsigned a))) Hm'.
     {
       rewrite length_le_split.
       reflexivity.
@@ -1414,15 +1409,15 @@ Import coqutil.Word.LittleEndianList (le_combine_split).
     rewrite le_combine_split in Hm'.
     {
       rewrite Z.mod_small in Hm'; auto.
-      2:apply word.unsigned_range.
-      rewrite word.of_Z_unsigned in Hm'.
-      replace (ptr + (word.of_Z (4 * Z.of_nat n) + word.of_Z 4))%word
-        with (ptr + word.of_Z (4 * Z.of_nat n) + word.of_Z 4)%word in Hm'.
+      2:apply (bits.unsigned_range _ width_nonneg).
+      rewrite Zmod.of_Z_unsigned in Hm'.
+      replace (ptr + (bits.of_Z _ (4 * Z.of_nat n) + bits.of_Z _ 4))%word
+        with (ptr + bits.of_Z _ (4 * Z.of_nat n) + bits.of_Z _ 4)%word in Hm'.
       ecancel_assumption.
       {
         rewrite Radd_assoc.
         reflexivity.
-        apply word.ring_theory.
+        apply (Zmod.ring_theory (2 ^ 32)).
       }
     }
     {
@@ -1444,7 +1439,7 @@ Lemma compile_store_locals_array {t m l e} (lst : list word):
       (out$@ptr * R)%sep m ->
       (let v := v in
        forall m,
-       (array scalar (word.of_Z 4) ptr v * R)%sep m ->
+       (array scalar (bits.of_Z _ 4) ptr v * R)%sep m ->
        <{ Trace := t; Memory := m; Locals := l; Functions := e }>
            k_impl
          <{ pred (k v eq_refl) }>) ->
@@ -1464,16 +1459,16 @@ Proof.
   }
   intros; apply H3.
   change (4*0)%nat with 0%nat in H4.
-  replace (ptr + word.of_Z (4 * Z.of_nat 0))%word with ptr in H4.
+  replace (ptr + bits.of_Z _ (4 * Z.of_nat 0))%word with ptr in H4.
   {
     cbn [firstn array] in H4.
     ecancel_assumption.
   }
   {
-    rewrite <- word.of_Z_unsigned with (x := ptr) at 2.
-    rewrite <- word.ring_morph_add.
-    replace ((word.unsigned ptr + 4 * Z.of_nat 0)) with (word.unsigned ptr) by lia.
-    rewrite word.of_Z_unsigned.
+    rewrite <- Zmod.of_Z_unsigned with (x := ptr) at 2.
+    rewrite <- Zmod.of_Z_add.
+    replace ((Zmod.unsigned ptr + 4 * Z.of_nat 0)) with (Zmod.unsigned ptr) by lia.
+    rewrite Zmod.of_Z_unsigned.
     reflexivity.
   }
 Qed.
@@ -1593,7 +1588,7 @@ Derive chacha20_block SuchThat
   As chacha20_block_body_correct.
 Proof.
   compile_setup.
-  replace (pred _) with (pred (Spec.chacha20_block k (le_split 4 (word.of_Z 0) ++ n))) by reflexivity.
+  replace (pred _) with (pred (Spec.chacha20_block k (le_split 4 (bits.of_Z _ 0) ++ n))) by reflexivity.
   rewrite chacha20_block_ok.
   unfold chacha20_block'.
   compile_step.
@@ -1749,7 +1744,7 @@ Proof.
 
       repeat (apply locals_array_expr_app; intros).
       {
-        let x := eval cbn -[word.of_Z] in (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) in
+        let x := eval cbn -[Zmod.of_Z] in (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) in
           change (map le_combine (chunk 4 (list_byte_of_string "expand 32-byte k"))) with x.
         unfold le_combine.
         cbn [firstn length].
@@ -1810,7 +1805,7 @@ Proof.
   subst l0.
   change (array_locs ?a ?b ?c) with (array_locs a b v1).
   set (array_locs _ _ _) as l0.
-  let l' := eval cbn -[v1 combine word.of_Z word.rep] in l0 in change l0 with l'.
+  let l' := eval cbn -[v1 combine Zmod.of_Z Z.pow] in l0 in change l0 with l'.
   cbv [map.putmany_of_list gs].
   dedup  "_gs_from0".
   dedup  "_gs_to0".
@@ -1843,10 +1838,10 @@ Proof.
   simple eapply compile_nlet_as_nlet_eq.
   change (pred (let/n x as "st" eq:_ := _ in x))
     with (pred (let/n v1 as "st" eq:_ := v1 in
-                let/n x as "st" eq:_ := flat_map (LittleEndianList.le_split 4) (map word.unsigned v1) in x)).
+                let/n x as "st" eq:_ := flat_map (LittleEndianList.le_split 4) (map Zmod.unsigned v1) in x)).
   simple eapply compile_store_locals_array.
   {
-    rewrite unroll_len with (l:=v1) (a:= word.of_Z 0) at 1.
+    rewrite unroll_len with (l:=v1) (a:= bits.of_Z _ 0) at 1.
     replace (length v1) with 16%nat.
     cbn [unroll app].
     {

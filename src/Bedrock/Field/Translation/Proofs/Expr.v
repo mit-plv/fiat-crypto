@@ -1,9 +1,10 @@
 From Coq Require Import ZArith.
 From Coq Require Import List.
 From Coq Require Import Lia.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.WeakestPreconditionProperties.
-Require Import coqutil.Word.Interface coqutil.Word.Properties.
+Require Import coqutil.Word.Properties.
 Require Import coqutil.Map.Interface.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.Bedrock.Field.Common.Types.
@@ -31,8 +32,9 @@ Import Types.Notations.
 
 Section Expr.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Context {ok : ok}.
 
   Local Existing Instance Types.rep.Z.
@@ -187,7 +189,7 @@ Section Expr.
           let y2 := fst (snd y) in
           WeakestPrecondition.dexpr
             map.empty locals (op y1 y2)
-            (word.of_Z (f x1 x2))
+            (bits.of_Z _ (f x1 x2))
       | _ => fun _ _ _ _ => False
        end) op (Compilers.ident_interp i) xargs yargs.
   Proof.
@@ -213,26 +215,28 @@ Section Expr.
                         (cbv [WeakestPrecondition.dexpr] in *;
                          cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body])
                | H : Some _ = Some _ |- _ => inversion H; subst; clear H
-               | H : word.unsigned _ = _ |- _ => rewrite <-H
+               | H : Zmod.unsigned _ = _ |- _ => rewrite <-H
                | _ => break_match; [ ]; cbn [fst snd]
                end.
     all: (do 2 (eapply Proper_expr; [ | eassumption]; repeat intro; subst)).
     (* solves ring operations *)
     all:autorewrite with rew_word_morphism.
-    all:rewrite ?word.of_Z_unsigned; try reflexivity.
+    all:rewrite ?Zmod.of_Z_unsigned; try reflexivity.
 
     (* solves and/or/xor *)
-    all:apply word.unsigned_inj; rewrite ?word.unsigned_of_Z.
-    all:first [ rewrite word.unsigned_and
-              | rewrite word.unsigned_ltu
-              | rewrite word.unsigned_xor
-              | rewrite word.unsigned_or ].
+    all:apply Zmod.unsigned_inj; rewrite ?bits.unsigned_of_Z.
+    all:first [ rewrite bits.unsigned_and
+              | rewrite bits.unsigned_xor
+              | rewrite bits.unsigned_or
+              | idtac ].
     all: try reflexivity.
 
     (* last goal: ltu *)
     { cbv [Definitions.Z.ltz].
-      rewrite Bool.pull_bool_if, word.unsigned_of_Z.
-      reflexivity. }
+      pose proof width_pos. assert (1 < 2 ^ width) by (apply Z.pow_gt_1; lia).
+      rewrite word.unsigned_if; destruct (Z.ltb _ _).
+      { rewrite bits.unsigned_1, Z.mod_small by lia; reflexivity. }
+      { rewrite Zmod.unsigned_0, Z.mod_0_l by lia; reflexivity. } }
   Qed.
 
   Lemma translate_binop_correct
@@ -245,7 +249,7 @@ Section Expr.
     locally_equivalent (t:=type_Z) x2 y2 l ->
     WeakestPrecondition.dexpr
       map.empty l
-      (op y1 y2) (word.of_Z (Compilers.ident_interp i x1 x2)).
+      (op y1 y2) (bits.of_Z _ (Compilers.ident_interp i x1 x2)).
   Proof.
     intros.
     apply (translate_binop_correct'
@@ -273,10 +277,10 @@ Section Expr.
         locally_equivalent_nobounds_base (snd x) (snd y) locals
     | base_Z =>
       fun x y locals =>
-        WeakestPrecondition.dexpr map.empty locals y (word.of_Z x)
+        WeakestPrecondition.dexpr map.empty locals y (bits.of_Z _ x)
     | base_nat =>
       fun x y locals =>
-        WeakestPrecondition.dexpr map.empty locals y (word.of_Z (Z.of_nat x))
+        WeakestPrecondition.dexpr map.empty locals y (bits.of_Z _ (Z.of_nat x))
     | base_listZ =>
       (* we never assign to lists, so they get a pass *)
       fun _ _ _ => True
@@ -301,7 +305,7 @@ Section Expr.
              locally_equivalent_nobounds_base
              rep.equiv rep.Z rep.listZ_local];
       break_match; intros; sepsimpl; subst;
-        rewrite ?word.of_Z_unsigned; eauto.
+        rewrite ?Zmod.of_Z_unsigned; eauto.
   Qed.
 
   Lemma require_cast_for_arg_binop {var t} :
@@ -367,16 +371,16 @@ Section Expr.
 
   (* useful fact to say anything in width_range is also in max_range *)
   Lemma width_lt_pow2width : width < 2 ^ width.
-  Proof. pose proof word.width_pos. apply Z.pow_gt_lin_r; lia. Qed.
+  Proof. pose proof width_pos. apply Z.pow_gt_lin_r; lia. Qed.
 
   Lemma pow2width_pos : 0 < 2 ^ width.
   Proof.
-    pose proof word.width_pos.
+    pose proof width_pos.
     apply Z.pow_pos_nonneg; lia.
   Qed.
 
   (** TODO: Find a better place for this *)
-  Hint Rewrite word.testbit_wrap : Ztestbit_full.
+  Hint Rewrite Z.testbit_mod_pow2 using (pose proof width_pos; lia) : Ztestbit_full.
   Lemma translate_expr_correct' {t}
         (* three exprs, representing the same Expr with different vars *)
         (e1 : @API.expr (fun _ => unit) (type.base t))
@@ -457,12 +461,11 @@ Section Expr.
       rewrite ident.cast_out_of_bounds_simple_0_mod by lia.
       cleanup.
       rewrite Z.sub_simpl_r.
-      erewrite word.of_Z_inj_mod
-        by (rewrite Z.mod_mod by lia; reflexivity).
+      rewrite bits.of_Z_mod.
       destruct rc; try eexists; sepsimpl;
         try apply Z.mod_pos_bound; try lia;
           eauto; [ ].
-      rewrite word.unsigned_of_Z. reflexivity. }
+      rewrite bits.unsigned_of_Z. reflexivity. }
     { (* cast2 *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
@@ -475,13 +478,10 @@ Section Expr.
       rewrite Z.sub_simpl_r.
       destruct rc; repeat match goal with
                           | _ => progress sepsimpl
-                          | _ => rewrite word.unsigned_of_Z
+                          | _ => rewrite bits.unsigned_of_Z
                           | _ => eassumption
                           | _ => eexists
-                          | _ =>
-                            erewrite word.of_Z_inj_mod
-                              by (rewrite Z.mod_mod by lia; reflexivity);
-                              solve [eauto]
+                          | _ => rewrite bits.of_Z_mod; solve [eauto]
                           end. }
     { (* fst *)
       specialize (IHvalid_expr _ _ _ _
@@ -492,9 +492,9 @@ Section Expr.
              equivalent_base rep.equiv rep.Z] in *.
       sepsimpl; eauto.
       match goal with
-      | H : word.unsigned _ = _ |- _ => rewrite <-H
+      | H : Zmod.unsigned _ = _ |- _ => rewrite <-H
       end.
-      rewrite word.of_Z_unsigned. auto. }
+      rewrite Zmod.of_Z_unsigned. auto. }
     { (* snd *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
@@ -504,9 +504,9 @@ Section Expr.
              equivalent_base rep.equiv rep.Z] in *.
       sepsimpl; eauto.
       match goal with
-      | H : word.unsigned _ = _ |- _ => rewrite <-H
+      | H : Zmod.unsigned _ = _ |- _ => rewrite <-H
       end.
-      rewrite word.of_Z_unsigned. auto. }
+      rewrite Zmod.of_Z_unsigned. auto. }
     { (* literal Z *)
       cbn [locally_equivalent_nobounds_base
              locally_equivalent equivalent_base rep.equiv rep.Z].
@@ -522,7 +522,7 @@ Section Expr.
              end; Z.ltb_to_lt.
       all:destruct rc; cbn [negb] in *; try congruence.
       all:eexists; sepsimpl; try reflexivity.
-      all:rewrite ?word.unsigned_of_Z; cbv [word.wrap].
+      all:rewrite ?bits.unsigned_of_Z.
       all:Z.rewrite_mod_small; try reflexivity. }
     { (* literal nat *)
       reflexivity. }
@@ -575,7 +575,7 @@ Section Expr.
                locally_equivalent equivalent_base
                equivalent rep.equiv rep.Z ident.literal] in *.
         eexists; sepsimpl; try reflexivity; [ ].
-        rewrite word.unsigned_of_Z. cbv [word.wrap].
+        rewrite bits.unsigned_of_Z.
         Z.rewrite_mod_small; reflexivity. } }
     { (* shiftr *)
       specialize (IHvalid_expr _ _ _ _
@@ -593,12 +593,16 @@ Section Expr.
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
       cbv [WeakestPrecondition.literal dlet.dlet ident.literal].
-      apply word.unsigned_inj.
-      rewrite word.unsigned_sru, !word.unsigned_of_Z
-         by (rewrite word.unsigned_of_Z; cbv [word.wrap];
-             Z.rewrite_mod_small; lia).
-      cbv [word.wrap]; Z.rewrite_mod_small.
-      congruence. }
+      apply Zmod.unsigned_inj.
+      rewrite shamt_of_Z_small by lia.
+      rewrite Zmod.unsigned_sru, !bits.unsigned_of_Z by lia.
+      Z.rewrite_mod_small.
+      match goal with H : Zmod.unsigned _ = _ |- _ => rewrite <-H end.
+      apply Z.mod_small.
+      pose proof (bits.unsigned_range a width_nonneg).
+      rewrite Z.shiftr_div_pow2 by lia.
+      pose proof (Z.pow_pos_nonneg 2 n ltac:(lia) ltac:(lia)).
+      Z.div_mod_to_equations; nia. }
     { (* shiftl *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
@@ -615,11 +619,10 @@ Section Expr.
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
       cbv [WeakestPrecondition.literal dlet.dlet ident.literal].
-      apply word.unsigned_inj.
-      rewrite word.unsigned_slu, !word.unsigned_of_Z
-        by (rewrite word.unsigned_of_Z; cbv [word.wrap];
-            Z.rewrite_mod_small; lia).
-      cbv [word.wrap]. Z.rewrite_mod_small.
+      apply Zmod.unsigned_inj.
+      rewrite shamt_of_Z_small by lia.
+      rewrite Zmod.unsigned_slu, !bits.unsigned_of_Z.
+      Z.rewrite_mod_small.
       congruence. }
     { (* mul_high *)
       cbv [ident.literal rmul_high literal_eqb invert_literal].
@@ -644,9 +647,9 @@ Section Expr.
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
       rewrite MulSplit.Z.mul_high_div.
-      apply word.unsigned_inj.
-      rewrite word.unsigned_mulhuu, !word.unsigned_of_Z.
-      cbv [word.wrap]. Z.rewrite_mod_small.
+      apply Zmod.unsigned_inj.
+      rewrite !bits.unsigned_of_Z.
+ Z.rewrite_mod_small.
       congruence. }
     { (* truncating_shiftl *)
       cbv [rtruncating_shiftl literal_eqb literal_ltwidth invert_literal].
@@ -665,11 +668,10 @@ Section Expr.
       repeat intro; subst.
       cbv [WeakestPrecondition.literal dlet.dlet].
       rewrite TruncatingShiftl.Z.truncating_shiftl_correct.
-      apply word.unsigned_inj.
-      rewrite word.unsigned_slu, !word.unsigned_of_Z
-        by (rewrite word.unsigned_of_Z; cbv [word.wrap];
-            Z.rewrite_mod_small; lia).
-      cbv [word.wrap]. Z.rewrite_mod_small.
+      apply Zmod.unsigned_inj.
+      rewrite shamt_of_Z_small by lia.
+      rewrite Zmod.unsigned_slu, !bits.unsigned_of_Z.
+      Z.rewrite_mod_small.
       congruence. }
     { (* lnot_modulo *)
       cbv [rlnot_modulo invert_literal].
@@ -688,10 +690,11 @@ Section Expr.
       all: eapply Proper_expr; [ | eassumption ].
       all: repeat intro; subst.
       all: cbv [WeakestPrecondition.literal dlet.dlet].
-      all: apply word.unsigned_inj.
+      all: apply Zmod.unsigned_inj.
       all: let H := match goal with H : 2^Z.log2 _ = ?m |- context[Definitions.Z.lnot_modulo _ ?m] => H end in
            rewrite <- H, Z.lnot_modulo_correct, <- Z.land_ones, -> ?H by auto using Z.log2_nonneg.
-      all: rewrite word.unsigned_xor, ?word.unsigned_and_nowrap, !word.unsigned_of_Z.
+      all: rewrite <-(bits.mod_to_Z (Zmod.xor _ _)); try rewrite <-(bits.mod_to_Z (Zmod.and _ _)).
+      all: rewrite bits.unsigned_xor, ?bits.unsigned_and, !bits.unsigned_of_Z.
       all: apply Z.bits_inj'; intros; autorewrite with Ztestbit Ztestbit_full.
       all: cbv [xorb negb andb orb]; break_innermost_match; Z.ltb_to_lt; try congruence; try lia. }
 
@@ -711,17 +714,20 @@ Section Expr.
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
       rewrite Zselect.Z.zselect_correct.
-      apply word.unsigned_inj.
-      rewrite word.unsigned_add, word.unsigned_eqb.
-      rewrite <-Bool.pull_bool_if, !word.unsigned_of_Z.
-      cbv [word.wrap]. Z.rewrite_mod_small.
-      pose proof word.width_pos.
+      apply Zmod.unsigned_inj.
+      rewrite Zmod.unsigned_add; unfold Zmod.eqb.
+      rewrite <-Bool.pull_bool_if, !bits.unsigned_of_Z.
+ Z.rewrite_mod_small.
+      pose proof width_pos.
       break_match; subst; Z.rewrite_mod_small;
         Z.ltb_to_lt; try lia.
       all:pull_Zmod.
       all:autorewrite with zsimplify_fast.
-      all:rewrite <-?word.ring_morph_opp, ?word.unsigned_of_Z.
-      all:cbv [word.wrap]; rewrite ?Zplus_mod_idemp_l, ?Zmod_mod; trivial.
+      all:rewrite <-?Zmod.of_Z_opp, ?bits.unsigned_of_Z.
+      all: rewrite ?Zplus_mod_idemp_l, ?Zmod_mod; trivial.
+      all: rewrite ?bits.unsigned_1, ?Zmod.unsigned_0 by lia.
+      { replace (- (1) + 1) with 0 by lia; rewrite Zmod_0_l; reflexivity. }
+      replace (- (1) + 0) with (- (1)) by lia.
       rewrite Z.mod_opp_l_nz
         by (rewrite ?Z.mod_1_l; auto with zarith).
       Z.rewrite_mod_small.
@@ -739,9 +745,9 @@ Section Expr.
       sepsimpl_hyps.
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
-      apply word.unsigned_inj.
-      rewrite word.unsigned_sub, word.unsigned_of_Z_0.
-      rewrite !word.unsigned_of_Z.
+      apply Zmod.unsigned_inj.
+      rewrite Zmod.unsigned_sub, Zmod.unsigned_0.
+      rewrite !bits.unsigned_of_Z.
       f_equal. lia. }
   Qed.
 
