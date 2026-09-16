@@ -4,6 +4,7 @@ From Coq Require Import Lia.
 From Coq Require Import NArith.
 From Coq Require Import ZArith.
 From Coq Require Import Morphisms.
+Require Import coqutil.Word.Bitwidth coqutil.Word.Bitwidth64.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.Language.API.
 Require Import Crypto.Language.APINotations.
@@ -68,25 +69,23 @@ Local Set Keyed Unification.
 Import Map.Interface Map.Separation. (* for coercions *)
 Require Import bedrock2.Array.
 Require Import bedrock2.ZnWords.
-Require Import coqutil.Word.Naive.
 Require Import Rupicola.Lib.Tactics. (* for sepsimpl *)
 Import LittleEndianList.
-Import coqutil.Word.Interface.
 Definition cell64 wa (v : Z) : Semantics.mem_state -> Prop :=
   Lift1Prop.ex1 (fun bs => sep (emp (
       length bs = 8%nat /\ v = le_combine bs))
                                (eq (OfListWord.map.of_list_word_at wa bs))).
 
 Definition R_scalar_or_array {dereference_scalar:bool}
-           (val : Z + list Z) (asm_val : Naive.word 64)
+           (val : Z + list Z) (asm_val : bits 64)
   := match val with
-     | inr array_vals => array cell64 (word.of_Z 8) asm_val array_vals
+     | inr array_vals => array cell64 (bits.of_Z _ 8) asm_val array_vals
      | inl scalar_val => if dereference_scalar
                          then cell64 asm_val scalar_val
-                         else emp (word.unsigned asm_val = scalar_val)
+                         else emp (Zmod.unsigned asm_val = scalar_val)
      end.
 Definition R_list_scalar_or_array_nolen {dereference_scalar:bool}
-           (Z_vals : list (Z + list Z)) (asm_vals : list (Naive.word 64))
+           (Z_vals : list (Z + list Z)) (asm_vals : list (bits 64))
   := List.fold_right
        sep
        (emp True)
@@ -94,7 +93,7 @@ Definition R_list_scalar_or_array_nolen {dereference_scalar:bool}
           (fun '(val, asm_val) => R_scalar_or_array (dereference_scalar:=dereference_scalar) val asm_val)
           (List.combine Z_vals asm_vals)).
 Definition R_list_scalar_or_array {dereference_scalar:bool}
-           (Z_vals : list (Z + list Z)) (asm_vals : list (Naive.word 64))
+           (Z_vals : list (Z + list Z)) (asm_vals : list (bits 64))
   := sep (emp (List.length Z_vals = List.length asm_vals))
          (R_list_scalar_or_array_nolen (dereference_scalar:=dereference_scalar) Z_vals asm_vals).
 
@@ -105,8 +104,8 @@ Definition R_runtime_input_mem
            {output_scalars_are_pointers:bool}
            (frame : Semantics.mem_state -> Prop)
            (output_types : type_spec) (runtime_inputs : list (Z + list Z))
-           (stack_size : nat) (stack_base : Naive.word 64)
-           (asm_arguments_out asm_arguments_in : list (Naive.word 64))
+           (stack_size : nat) (stack_base : bits 64)
+           (asm_arguments_out asm_arguments_in : list (bits 64))
            (runtime_reg : list Z)
            (m : Semantics.mem_state)
   : Prop
@@ -131,30 +130,30 @@ Definition R_runtime_input_mem
     /\ ((frame *
            R_list_scalar_or_array (dereference_scalar:=output_scalars_are_pointers) output_placeholder_values asm_arguments_out *
            R_list_scalar_or_array (dereference_scalar:=false) runtime_inputs asm_arguments_in *
-           array cell64 (word.of_Z 8) stack_base stack_placeholder_values)%sep)
+           array cell64 (bits.of_Z _ 8) stack_base stack_placeholder_values)%sep)
          m.
 
 Definition R_runtime_input
            {output_scalars_are_pointers:bool}
            (frame : Semantics.mem_state -> Prop)
            (output_types : type_spec) (runtime_inputs : list (Z + list Z))
-           (stack_size : nat) (stack_base : Naive.word 64)
-           (asm_pointer_arguments_out asm_pointer_arguments_in : list (Naive.word 64))
+           (stack_size : nat) (stack_base : bits 64)
+           (asm_pointer_arguments_out asm_pointer_arguments_in : list (bits 64))
            (reg_available : list REG) (runtime_reg : list Z)
            (callee_saved_registers : list REG) (runtime_callee_saved_registers : list Z)
            (m : machine_state)
   : Prop
-  := exists (asm_arguments_out asm_arguments_in : list (Naive.word 64)),
+  := exists (asm_arguments_out asm_arguments_in : list (bits 64)),
     Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state))
     /\ (Nat.min (List.length output_types + List.length runtime_inputs) (List.length reg_available) <= List.length runtime_reg)%nat
     /\ get_asm_reg m reg_available = runtime_reg
     /\ get_asm_reg m callee_saved_registers = runtime_callee_saved_registers
     /\ List.length asm_arguments_out = List.length output_types
-    /\ List.map word.unsigned asm_arguments_out = List.firstn (List.length output_types) runtime_reg
-    /\ List.map word.unsigned asm_arguments_in = List.firstn (List.length runtime_inputs) (List.skipn (List.length output_types) runtime_reg)
+    /\ List.map Zmod.unsigned asm_arguments_out = List.firstn (List.length output_types) runtime_reg
+    /\ List.map Zmod.unsigned asm_arguments_in = List.firstn (List.length runtime_inputs) (List.skipn (List.length output_types) runtime_reg)
     /\ List.map fst (List.filter (fun '(_, v) => output_scalars_are_pointers || Option.is_Some v)%bool (List.combine asm_arguments_out output_types)) = asm_pointer_arguments_out
     /\ List.map fst (List.filter (fun '(_, v) => match v with inl _ => false | inr _ => true end)%bool (List.combine asm_arguments_in runtime_inputs)) = asm_pointer_arguments_in
-    /\ (Semantics.get_reg m rsp - 8 * Z.of_nat stack_size)%Z = word.unsigned stack_base
+    /\ (Semantics.get_reg m rsp - 8 * Z.of_nat stack_size)%Z = Zmod.unsigned stack_base
     /\ (* it must be the case that all the scalars in the real input values match what's in registers / the calling convention *)
       Forall2
         (fun v1 v2 => match v1 with
@@ -170,8 +169,8 @@ Definition R_runtime_output_mem
            {output_scalars_are_pointers:bool}
            (frame : Semantics.mem_state -> Prop)
            (runtime_outputs : list (Z + list Z)) (input_types : type_spec)
-           (stack_size : nat) (stack_base : Naive.word 64)
-           (asm_arguments_out asm_arguments_in : list (Naive.word 64))
+           (stack_size : nat) (stack_base : bits 64)
+           (asm_arguments_out asm_arguments_in : list (bits 64))
            (m : Semantics.mem_state)
   : Prop
   := exists (stack_placeholder_values : list Z) (input_placeholder_values : list (Z + list Z)),
@@ -185,19 +184,19 @@ Definition R_runtime_output_mem
     /\ ((frame *
            R_list_scalar_or_array (dereference_scalar:=output_scalars_are_pointers) runtime_outputs asm_arguments_out *
            R_list_scalar_or_array (dereference_scalar:=false) input_placeholder_values asm_arguments_in *
-           array cell64 (word.of_Z 8) stack_base stack_placeholder_values)%sep)
+           array cell64 (bits.of_Z _ 8) stack_base stack_placeholder_values)%sep)
          m.
 
 Definition R_runtime_output
            {output_scalars_are_pointers:bool}
            (frame : Semantics.mem_state -> Prop)
            (runtime_outputs : list (Z + list Z)) (input_types : type_spec)
-           (stack_size : nat) (stack_base : Naive.word 64)
-           (asm_pointer_arguments_out asm_pointer_arguments_in : list (Naive.word 64))
+           (stack_size : nat) (stack_base : bits 64)
+           (asm_pointer_arguments_out asm_pointer_arguments_in : list (bits 64))
            (callee_saved_registers : list REG) (runtime_callee_saved_registers : list Z)
            (m : machine_state)
   : Prop
-  := exists (asm_arguments_out asm_arguments_in : list (Naive.word 64)),
+  := exists (asm_arguments_out asm_arguments_in : list (bits 64)),
     Forall (fun v => (0 <= v < 2^64)%Z) (Tuple.to_list _ m.(machine_reg_state))
     /\ get_asm_reg m callee_saved_registers = runtime_callee_saved_registers
     /\ List.map fst (List.filter (fun '(_, v) => output_scalars_are_pointers || match v with inl _ => false | inr _ => true end)%bool (List.combine asm_arguments_out runtime_outputs)) = asm_pointer_arguments_out
@@ -205,10 +204,10 @@ Definition R_runtime_output
     /\ R_runtime_output_mem (output_scalars_are_pointers:=output_scalars_are_pointers) frame runtime_outputs input_types stack_size stack_base asm_arguments_out asm_arguments_in m.
 
 Definition word_args_to_Z_args
-  : list (Naive.word 64 + list (Naive.word 64)) -> list (Z + list Z)
+  : list (bits 64 + list (bits 64)) -> list (Z + list Z)
   := List.map (fun v => match v with
-                        | inl v => inl (word.unsigned v)
-                        | inr vs => inr (List.map word.unsigned vs)
+                        | inl v => inl (Zmod.unsigned v)
+                        | inr vs => inr (List.map Zmod.unsigned vs)
                         end).
 
 Lemma word_args_to_Z_args_bounded args
@@ -221,7 +220,7 @@ Proof.
   repeat first [ progress intros
                | rewrite Forall_map_iff, Forall_forall
                | progress break_innermost_match
-               | apply Word.Properties.word.unsigned_range ].
+               | apply (bits.unsigned_range _ width_nonneg) ].
 Qed.
 
 Lemma word_args_to_Z_args_length args
@@ -702,7 +701,7 @@ Lemma R_cell64_ex_cell64_iff G d ia iv
                       (fun a
                        => Lift1Prop.ex1
                             (fun v
-                             => emp (eval_idx_Z G d ia (word.unsigned a) /\ eval_idx_Z G d iv v /\ 0 <= v < 2^64)%Z * cell64 a v)%sep)).
+                             => emp (eval_idx_Z G d ia (Zmod.unsigned a) /\ eval_idx_Z G d iv v /\ 0 <= v < 2^64)%Z * cell64 a v)%sep)).
 Proof.
   apply Lift1Prop.Proper_ex1_iff1; intro.
   split; intros.
@@ -757,11 +756,11 @@ Qed.
 Lemma R_mem_combine_ex_array_iff frame G d n addrs val_idxs base_value base_word_value init
       (Haddrs : Forall2 (eval_idx_Z G d) addrs (List.map (fun i => Z.land (base_value + 8 * Z.of_nat i) (Z.ones 64)) (seq init n)))
       (*(Hn : List.length val_idxs = n)*)
-      (Hbase : base_value = word.unsigned base_word_value)
+      (Hbase : base_value = Zmod.unsigned base_word_value)
   : Lift1Prop.iff1
       (R_mem frame G d (List.combine addrs val_idxs))
       (Lift1Prop.ex1 (fun vals
-                      => emp (Forall2 (eval_idx_Z G d) (firstn n val_idxs) vals /\ Forall (fun v => 0 <= v < 2^64)%Z vals) * frame * array cell64 (word.of_Z 8) (word.add base_word_value (word.of_Z (8 * Z.of_nat init))) vals))%sep.
+                      => emp (Forall2 (eval_idx_Z G d) (firstn n val_idxs) vals /\ Forall (fun v => 0 <= v < 2^64)%Z vals) * frame * array cell64 (bits.of_Z _ 8) (Zmod.add base_word_value (bits.of_Z _ (8 * Z.of_nat init))) vals))%sep.
 Proof.
   subst.
   revert val_idxs n init Haddrs.
@@ -814,16 +813,16 @@ Proof.
                       | rewrite !SeparationLogic.sep_comm_emp_r
                       | lazymatch goal with
                         | [ |- Lift1Prop.impl1 _ (Lift1Prop.ex1 (fun h : ?T => _)) ]
-                          => lazymatch T with word.rep => idtac | Z => idtac end;
+                          => lazymatch T with bits 64 => idtac | Z => idtac end;
                              eapply Lift1Prop.impl1_ex1_r
                         end ].
     all: rewrite !SeparationLogic.sep_assoc; apply SeparationLogic.impl1_r_sep_emp.
     all: repeat first [ solve [ eauto 10 ]
                       | match goal with
                         | [ |- _ /\ _ ] => split
-                        | [ H : eval_idx_Z ?G ?d ?i ?v |- eval_idx_Z ?G ?d ?i (word.unsigned ?v') ]
-                          => let _ := open_constr:(eq_refl : v' = word.of_Z v) in
-                             replace (word.unsigned v') with v; [ exact H | rewrite ?Z.land_ones by lia; ZnWords ]
+                        | [ H : eval_idx_Z ?G ?d ?i ?v |- eval_idx_Z ?G ?d ?i (Zmod.unsigned ?v') ]
+                          => let _ := open_constr:(eq_refl : v' = bits.of_Z _ v) in
+                             replace (Zmod.unsigned v') with v; [ exact H | rewrite ?Z.land_ones by lia; ZnWords ]
                         end ].
     all: match goal with |- Lift1Prop.impl1 ?A ?B => cut (Lift1Prop.iff1 A B); [ intros ->; reflexivity | ] end.
     all: repeat first [ rewrite Z.land_ones in * by lia
@@ -841,19 +840,19 @@ Qed.
 Lemma R_mem_combine_array_impl1 frame G d n addrs val_idxs base_value base_word_value init
       (Haddrs : Forall2 (eval_idx_Z G d) addrs (List.map (fun i => Z.land (base_value + 8 * Z.of_nat i) (Z.ones 64)) (seq init n)))
       (*(Hn : List.length val_idxs = n)*)
-      (Hbase : base_value = word.unsigned base_word_value)
+      (Hbase : base_value = Zmod.unsigned base_word_value)
   : Lift1Prop.impl1
       (R_mem frame G d (List.combine addrs val_idxs))
       (Lift1Prop.ex1 (fun vals
-                      => emp (Forall2 (eval_idx_Z G d) (firstn n val_idxs) vals /\ Forall (fun v => 0 <= v < 2^64)%Z vals) * frame * array cell64 (word.of_Z 8) (word.add base_word_value (word.of_Z (8 * Z.of_nat init))) vals))%sep.
+                      => emp (Forall2 (eval_idx_Z G d) (firstn n val_idxs) vals /\ Forall (fun v => 0 <= v < 2^64)%Z vals) * frame * array cell64 (bits.of_Z _ 8) (Zmod.add base_word_value (bits.of_Z _ (8 * Z.of_nat init))) vals))%sep.
 Proof. rewrite R_mem_combine_ex_array_iff by eassumption; reflexivity. Qed.
 
 Lemma R_mem_combine_array_iff_helper frame G d addrs val_idxs base_value base_word_value vals init
       (Haddrs : Forall2 (eval_idx_Z G d) addrs (List.map (fun i => Z.land (base_value + 8 * Z.of_nat i) (Z.ones 64)) (seq init (List.length vals))))
       (Hvals : Forall2 (eval_idx_Z G d) val_idxs vals)
-      (Hbase : base_value = word.unsigned base_word_value)
+      (Hbase : base_value = Zmod.unsigned base_word_value)
   : Lift1Prop.iff1 (R_mem frame G d (List.combine addrs val_idxs))
-                   (frame * (emp (Forall (fun v => 0 <= v < 2^64)%Z vals) * array cell64 (word.of_Z 8) (word.add base_word_value (word.of_Z (8 * Z.of_nat init))) vals))%sep.
+                   (frame * (emp (Forall (fun v => 0 <= v < 2^64)%Z vals) * array cell64 (bits.of_Z _ 8) (Zmod.add base_word_value (bits.of_Z _ (8 * Z.of_nat init))) vals))%sep.
 Proof.
   rewrite (@sep_emp_holds_l _ _ (@bounded_of_array_cell64 _ _ _)).
   rewrite R_mem_combine_ex_array_iff by eassumption.
@@ -874,9 +873,9 @@ Lemma R_mem_combine_array_iff frame G d n addrs val_idxs base_value base_word_va
       (Haddrs : Forall2 (eval_idx_Z G d) addrs (List.map (fun i => Z.land (base_value + 8 * Z.of_nat i) (Z.ones 64)) (seq 0 n)))
       (Hvals : Forall2 (eval_idx_Z G d) val_idxs vals)
       (Hn : n = List.length vals)
-      (Hbase : base_value = word.unsigned base_word_value)
+      (Hbase : base_value = Zmod.unsigned base_word_value)
   : Lift1Prop.iff1 (R_mem frame G d (List.combine addrs val_idxs))
-                   (frame * (emp (Forall (fun v => 0 <= v < 2^64)%Z vals) * array cell64 (word.of_Z 8) base_word_value vals))%sep.
+                   (frame * (emp (Forall (fun v => 0 <= v < 2^64)%Z vals) * array cell64 (bits.of_Z _ 8) base_word_value vals))%sep.
 Proof.
   subst n.
   rewrite R_mem_combine_array_iff_helper by eassumption.
@@ -912,7 +911,7 @@ Lemma bounded_of_R_scalar_or_array {dereference_scalar:bool} v
 Proof.
   cbv [R_scalar_or_array]; intros *; break_innermost_match; cbv [emp]; intros; destruct_head'_and; subst.
   all: try solve [ eapply bounded_of_cell64; eassumption
-                 | apply Properties.word.unsigned_range
+                 | apply (bits.unsigned_range _ width_nonneg)
                  | eapply bounded_of_array_cell64; eassumption ].
 Qed.
 
@@ -981,7 +980,7 @@ Lemma R_mem_flat_map_ex_R_list_scalar_or_array_iff_emp {dereference_scalar:bool}
                                         | _ => True
                                         end)
                                  addr_idxs base_vals)
-           (Hbase_vals_words : List.map word.unsigned base_vals_words = base_vals),
+           (Hbase_vals_words : List.map Zmod.unsigned base_vals_words = base_vals),
     Lift1Prop.iff1
       (R_mem (emp True) G d
              (List.flat_map
@@ -1115,25 +1114,25 @@ Proof.
                         => eapply eval_eval in H2; [ | exact H1 ]
                       | [ H : context[(?v mod ?m)%Z] |- _ ]
                         => lazymatch v with
-                           |  word.unsigned ?x
+                           |  Zmod.unsigned ?x
                               => replace ((v mod m)%Z) with v in * by ZnWords
                            end
-                      | [ H : word.unsigned _ = word.unsigned _ |- _ ]
-                        => apply Properties.word.unsigned_inj in H
+                      | [ H : Zmod.unsigned _ = Zmod.unsigned _ |- _ ]
+                        => apply Zmod.unsigned_inj in H
                       | [ H : context[firstn ?n ?l] |- _ ]
                         => rewrite firstn_all in H by congruence
                       | [ |- context[?v] ]
                         => lazymatch v with
-                           | word.add ?x (word.of_Z 0)
+                           | Zmod.add ?x (bits.of_Z _ 0)
                              => replace v with x by ZnWords
                            end
                       end
                     | progress autorewrite with zsimplify_const ].
   all: repeat match goal with
-              | [ H : context[word.unsigned ?x] |- _ ]
-                => unique pose proof (Properties.word.unsigned_range x)
-              | [ |- context[word.unsigned ?x] ]
-                => unique pose proof (Properties.word.unsigned_range x)
+              | [ H : context[Zmod.unsigned ?x] |- _ ]
+                => unique pose proof (bits.unsigned_range x width_nonneg)
+              | [ |- context[Zmod.unsigned ?x] ]
+                => unique pose proof (bits.unsigned_range x width_nonneg)
               end.
   all: repeat first [ match goal with
                       | [ |- Lift1Prop.impl1 _ (Lift1Prop.ex1 (fun _ => ?A)) ]
@@ -1192,7 +1191,7 @@ Lemma R_mem_flat_map_ex_R_list_scalar_or_array_impl_emp {dereference_scalar:bool
                                         | _ => True
                                         end)
                                  addr_idxs base_vals)
-           (Hbase_vals_words : List.map word.unsigned base_vals_words = base_vals),
+           (Hbase_vals_words : List.map Zmod.unsigned base_vals_words = base_vals),
     Lift1Prop.impl1
       (R_mem (emp True) G d
              (List.flat_map
@@ -1253,7 +1252,7 @@ Lemma R_mem_flat_map_R_list_scalar_or_array_iff_emp {dereference_scalar:bool} G 
                                         | _ => True
                                         end)
                                  addr_idxs base_vals)
-           (Hbase_vals_words : List.map word.unsigned base_vals_words = base_vals),
+           (Hbase_vals_words : List.map Zmod.unsigned base_vals_words = base_vals),
     Lift1Prop.iff1
       (R_mem (emp True) G d
              (List.flat_map
@@ -1311,7 +1310,7 @@ Lemma R_mem_flat_map_R_list_scalar_or_array_iff {dereference_scalar:bool} frame 
                                 | _ => True
                                 end)
                             addr_idxs base_vals)
-      (Hbase_vals_words : List.map word.unsigned base_vals_words = base_vals)
+      (Hbase_vals_words : List.map Zmod.unsigned base_vals_words = base_vals)
   : Lift1Prop.iff1
       (R_mem frame G d
              (List.flat_map
@@ -1459,8 +1458,8 @@ Lemma build_merge_stack_placeholders_ok_R {opts : symbolic_options_computed_opt}
       (Hstack_vals_bounded : Forall (fun v : Z => (0 <= v < 2 ^ 64)%Z) stack_vals)
       (stack_addr_vals := List.map (fun i => Z.land (rsp_val - 8 * Z.of_nat (List.length stack_vals) + 8 * Z.of_nat i) (Z.ones 64)) (seq 0 (List.length stack_vals)))
       (HR : R frame' G s ms)
-      (Hrsp : (rsp_val - 8 * Z.of_nat (List.length stack_vals))%Z = word.unsigned base_stack_word_val)
-      (Hframe : Lift1Prop.iff1 frame' (frame * array cell64 (word.of_Z 8) base_stack_word_val stack_vals)%sep)
+      (Hrsp : (rsp_val - 8 * Z.of_nat (List.length stack_vals))%Z = Zmod.unsigned base_stack_word_val)
+      (Hframe : Lift1Prop.iff1 frame' (frame * array cell64 (bits.of_Z _ 8) base_stack_word_val stack_vals)%sep)
       (Hreg_good : forall reg, Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
       (Hrsp_val : Z.land rsp_val (Z.ones 64) = Z.land (Semantics.get_reg ms rsp) (Z.ones 64))
   : exists G',
@@ -1710,7 +1709,7 @@ Local Ltac handle_simple_R_mem :=
                       [
                       | lazymatch goal with
                         | [ |- Forall2 _ _ _ ] => eapply Forall2_weaken; [ | eassumption ]; eauto using lift_eval_idx_Z_impl
-                        | [ |- (Tuple.nth_default 0 (reg_index _) _ - 8 * Z.of_nat (Datatypes.length _))%Z = word.unsigned _ ]
+                        | [ |- (Tuple.nth_default 0 (reg_index _) _ - 8 * Z.of_nat (Datatypes.length _))%Z = Zmod.unsigned _ ]
                           => erewrite <- Semantics_get_reg_eq_nth_default_of_R_regs by (eassumption + reflexivity); (*try*) eassumption
                         end .. ]
                  | [ |- Lift1Prop.impl1 ?P _ ]
@@ -1783,7 +1782,7 @@ Lemma build_merge_base_addresses_ok_R
       (Hreg_good : forall reg, Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
       (Hruntime_reg : get_asm_reg ms reg_available = runtime_reg)
       addr_vals addr_ptr_vals
-      (Haddr_ptr_vals : List.map word.unsigned addr_ptr_vals = List.firstn (List.length idxs) runtime_reg)
+      (Haddr_ptr_vals : List.map Zmod.unsigned addr_ptr_vals = List.firstn (List.length idxs) runtime_reg)
       (Hframe : Lift1Prop.iff1 frame' (frame * R_list_scalar_or_array (dereference_scalar:=dereference_scalar) addr_vals addr_ptr_vals)%sep)
       (Heval_addr_vals : Forall2 (eval_idx_or_list_idx G d) idxs addr_vals)
       (Hruntime_reg_bounded : Forall (fun v => (0 <= v < 2^64)%Z) runtime_reg)
@@ -2111,7 +2110,7 @@ Lemma LoadArray_ok_R {opts : symbolic_options_computed_opt} {descr:description} 
       (m' := s'.(symbolic_mem_state))
       (HR : R frame G s ms)
       (Hbase : eval_idx_Z G d base (Z.land base_val (Z.ones 64)))
-      (Hbase_word_val : base_val = word.unsigned base_word_val)
+      (Hbase_word_val : base_val = Zmod.unsigned base_word_val)
       (Hreg_good : forall reg, Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
   : ((exists (addrs : list idx),
          Permutation m (List.combine addrs idxs ++ m')
@@ -2125,11 +2124,11 @@ Lemma LoadArray_ok_R {opts : symbolic_options_computed_opt} {descr:description} 
     /\ ((exists vals,
             Forall2 (eval_idx_Z G d') idxs vals
             /\ Forall (fun v => 0 <= v < 2^64)%Z vals
-            /\ R (frame * array cell64 (word.of_Z 8) base_word_val vals)%sep G s' ms)
+            /\ R (frame * array cell64 (bits.of_Z _ 8) base_word_val vals)%sep G s' ms)
         /\ (forall reg, Option.is_Some (Symbolic.get_reg r' (reg_index reg)) = true)).
 Proof.
   replace (Z.land base_val (Z.ones 64)) with base_val in Hbase
-      by now (subst; rewrite Z.land_ones by lia; rewrite Z.mod_small by apply Properties.word.unsigned_range).
+      by now (subst; rewrite Z.land_ones by lia; rewrite Z.mod_small by apply (bits.unsigned_range _ width_nonneg)).
   eapply LoadArray_ok in H; [ | try eassumption .. ]; [ | destruct s; apply HR .. ].
   repeat (destruct_head'_and; destruct_head'_ex).
   subst r r'.
@@ -2217,7 +2216,7 @@ Lemma R_mem_flat_map_no_opt_ex_R_list_scalar_or_array_iff_emp {dereference_scala
                                         | _ => True
                                         end)
                                  val_idxs base_vals)*)
-           (Hbase_vals_words : List.map word.unsigned base_vals_words = base_vals),
+           (Hbase_vals_words : List.map Zmod.unsigned base_vals_words = base_vals),
     Lift1Prop.iff1
       (R_mem (emp True) G d
              (List.flat_map
@@ -2351,25 +2350,25 @@ Proof.
                         => eapply eval_eval in H2; [ | exact H1 ]
                       | [ H : context[(?v mod ?m)%Z] |- _ ]
                         => lazymatch v with
-                           |  word.unsigned ?x
+                           |  Zmod.unsigned ?x
                               => replace ((v mod m)%Z) with v in * by ZnWords
                            end
-                      | [ H : word.unsigned _ = word.unsigned _ |- _ ]
-                        => apply Properties.word.unsigned_inj in H
+                      | [ H : Zmod.unsigned _ = Zmod.unsigned _ |- _ ]
+                        => apply Zmod.unsigned_inj in H
                       | [ H : context[firstn ?n ?l] |- _ ]
                         => rewrite firstn_all in H by congruence
                       | [ |- context[?v] ]
                         => lazymatch v with
-                           | word.add ?x (word.of_Z 0)
+                           | Zmod.add ?x (bits.of_Z _ 0)
                              => replace v with x by ZnWords
                            end
                       end
                     | progress autorewrite with zsimplify_const ].
   all: repeat match goal with
-              | [ H : context[word.unsigned ?x] |- _ ]
-                => unique pose proof (Properties.word.unsigned_range x)
-              | [ |- context[word.unsigned ?x] ]
-                => unique pose proof (Properties.word.unsigned_range x)
+              | [ H : context[Zmod.unsigned ?x] |- _ ]
+                => unique pose proof (bits.unsigned_range x width_nonneg)
+              | [ |- context[Zmod.unsigned ?x] ]
+                => unique pose proof (bits.unsigned_range x width_nonneg)
               end.
   all: repeat first [ progress split_iff
                     | match goal with
@@ -2426,7 +2425,7 @@ Lemma LoadOutputs_ok_R {opts : symbolic_options_computed_opt} {descr:description
                                      end) outputaddrs)
       (Hreg_good : forall reg, Option.is_Some (Symbolic.get_reg r (reg_index reg)) = true)
   : (exists output_vals_words (output_vals' : list Z) (outputaddrs' : list (idx + list idx)) vals,
-        output_vals' = List.map word.unsigned output_vals_words
+        output_vals' = List.map Zmod.unsigned output_vals_words
         /\ Forall (fun v => (0 <= v < 2^64)%Z) output_vals'
         /\ List.length output_vals = List.length output_vals'
         /\ (Forall2 (fun idxs '((base, len), (base_val, base_val'))
@@ -2545,12 +2544,12 @@ Proof.
        cut Q
   end.
   { intros [H'0 [output_vals_words [vals H'1] ] ].
-    eexists output_vals_words, (List.map word.unsigned output_vals_words), _, vals.
+    eexists output_vals_words, (List.map Zmod.unsigned output_vals_words), _, vals.
     repeat match goal with |- _ /\ _ => split | |- ex _ => esplit end.
     all: lazymatch goal with
          | [ |- List.length _ = List.length (List.map _ _) ]
            => rewrite map_length
-         | [ |- Forall (fun v => (0 <= v < _)%Z) (List.map word.unsigned _) ]
+         | [ |- Forall (fun v => (0 <= v < _)%Z) (List.map Zmod.unsigned _) ]
            => rewrite Forall_map_iff, Forall_forall; intros; ZnWords
          | [ |- Permutation _ _ ] => reflexivity
          | [ |- ?x = ?x ] => reflexivity
@@ -2747,11 +2746,11 @@ Proof.
                              | [ |- ?f ?x -> ?f ?y ] => cut (x = y); [ intros ->; exact id | ]
                              end;
                              rewrite !Z.land_ones by (clear; lia); push_Zmod;
-                             rewrite (Z.mod_small (word.unsigned _)) by apply Properties.word.unsigned_range;
-                             rewrite Properties.word.unsigned_of_Z_nowrap; [ reflexivity | apply Z.mod_pos_bound; lia ] .. ];
+                             rewrite (Z.mod_small (Zmod.unsigned _)) by apply (bits.unsigned_range _ width_nonneg);
+                             rewrite bits.unsigned_of_Z_small; [ reflexivity | apply Z.mod_pos_bound; lia ] .. ];
                            []
-                      | [ H : context[word.add ?x (word.of_Z (8 * Z.of_nat 0))] |- _ ]
-                        => replace (word.add x (word.of_Z (8 * Z.of_nat 0))) with x in * |- by ZnWords
+                      | [ H : context[Zmod.add ?x (bits.of_Z _ (8 * Z.of_nat 0))] |- _ ]
+                        => replace (Zmod.add x (bits.of_Z _ (8 * Z.of_nat 0))) with x in * |- by ZnWords
                       end
                     | rewrite <- !Z.land_ones in * |-  by (clear; lia)
                     | break_innermost_match_hyps_step ].
@@ -2784,18 +2783,18 @@ Proof.
                            rewrite <- (ex_intro (fun mp => exists mq, map.split m mp mq /\ array cell64 _ base' len' mp /\ _) ma : Basics.impl _ _)
                       | [ H : map.split ?m ?mp ?mqv |- context[exists mq, map.split ?m ?mp mq /\ _ /\ _] ]
                         => rewrite <- (ex_intro (fun mq => map.split m mp mq /\ _ /\ _) mqv : Basics.impl _ _)
-                      | [ |- context[?x = word.unsigned ?ev] ]
+                      | [ |- context[?x = Zmod.unsigned ?ev] ]
                         => lazymatch x with
                            | Z.land ?x (Z.ones ?n) => idtac
                            end;
                            is_evar ev;
-                           let __unif := open_constr:(eq_refl : ev = word.of_Z x) in
-                           rewrite Properties.word.unsigned_of_Z_nowrap
+                           let __unif := open_constr:(eq_refl : ev = bits.of_Z _ x) in
+                           rewrite bits.unsigned_of_Z_small
                              by (rewrite Z.land_ones by (clear; lia); apply Z.mod_pos_bound; clear; lia)
-                      | [ H : eval_idx_Z _ _ ?i ?x |- context[eval_idx_Z _ _ ?i (word.unsigned ?ev)] ]
+                      | [ H : eval_idx_Z _ _ ?i ?x |- context[eval_idx_Z _ _ ?i (Zmod.unsigned ?ev)] ]
                         => is_evar ev;
-                           let __unif := open_constr:(eq_refl : ev = word.of_Z x) in
-                           rewrite Properties.word.unsigned_of_Z_nowrap by lia
+                           let __unif := open_constr:(eq_refl : ev = bits.of_Z _ x) in
+                           rewrite bits.unsigned_of_Z_small by lia
                       | [ H : eval_idx_Z _ _ ?i ?x |- context[eval_idx_Z _ _ ?i ?y] ]
                         => has_evar y; progress unify x y
                       end ].
@@ -2813,7 +2812,7 @@ Proof.
                       end
                     | solve [ cbv [emp]; auto ]
                     | rewrite !Z.land_ones by (clear; lia)
-                    | rewrite Properties.word.unsigned_of_Z_nowrap by (apply Z.mod_pos_bound; clear; lia) ].
+                    | rewrite bits.unsigned_of_Z_small by (apply Z.mod_pos_bound; clear; lia) ].
 Qed.
 (* turn off once proof is finished *)
 Local Ltac debug_run tac := tac ().
@@ -2822,11 +2821,11 @@ Theorem symex_asm_func_M_correct
         {opts : symbolic_options_computed_opt}
         {output_scalars_are_pointers:bool}
         d frame asm_args_out asm_args_in (G : symbol -> option Z) (s := init_symbolic_state d)
-        (s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat) (stack_base : Naive.word 64)
+        (s' : symbolic_state) (m : machine_state) (output_types : type_spec) (stack_size : nat) (stack_base : bits 64)
         (inputs : list (idx + list idx)) (callee_saved_registers : list REG) (reg_available : list REG) (asm : Lines)
         (rets : list (idx + list idx))
         (H : symex_asm_func_M (dereference_output_scalars:=output_scalars_are_pointers) callee_saved_registers output_types stack_size inputs reg_available asm s = Success (Success rets, s'))
-        (word_runtime_inputs : list (Naive.word 64 + list (Naive.word 64)))
+        (word_runtime_inputs : list (bits 64 + list (bits 64)))
         (runtime_inputs := word_args_to_Z_args word_runtime_inputs)
         (runtime_reg : list Z)
         (*(Hasm_reg : get_asm_reg m reg_available = runtime_reg)*)
@@ -2936,7 +2935,7 @@ Proof.
                         end .. ];
                       [
                       | lazymatch goal with
-                        | [ |- List.map word.unsigned _ = _ ]
+                        | [ |- List.map Zmod.unsigned _ = _ ]
                           => saturate_lengths;
                              adjust_Foralls_firstn_skipn;
                              try rewrite ListUtil.List.firstn_firstn, Nat.min_idempotent;
@@ -3142,7 +3141,7 @@ Proof.
        | [ H : nth_error ?ls ?i = Some None, H' : nth_error ?ls' ?i = Some (inr _) |- False ]
          => revert H H'
        | [ H : nth_error _ _ = Some ?r, H' : nth_error _ _ = Some ?r0 |- ?r = ?r0 ]
-         => apply Properties.word.unsigned_inj; revert H H'
+         => apply Zmod.unsigned_inj; revert H H'
        end.
   all: repeat match goal with
               | [ H : Forall2 _ ?x _ |- context[nth_error ?x _] ] => revert H
@@ -3223,7 +3222,7 @@ Proof.
          => revert H' H''
        | [ H : eval_idx_Z _ _ ?i ?v, H' : nth_error ?ls _ = Some (inl ?i) |- ?v = _ ]
          => revert H'
-       | [ H : nth_error _ _ = Some ?r |- word.unsigned ?r = _ ]
+       | [ H : nth_error _ _ = Some ?r |- Zmod.unsigned ?r = _ ]
          => revert H
        end.
   all: repeat match goal with
@@ -3266,14 +3265,14 @@ Time Qed. (* Finished transaction in 14.751 secs (14.751u,0.s) *)
 Theorem symex_asm_func_correct
         {opts : symbolic_options_computed_opt}
         {output_scalars_are_pointers:bool}
-        frame asm_args_out asm_args_in (G : symbol -> option Z) (d : dag) (output_types : type_spec) (stack_size : nat) (stack_base : Naive.word 64)
+        frame asm_args_out asm_args_in (G : symbol -> option Z) (d : dag) (output_types : type_spec) (stack_size : nat) (stack_base : bits 64)
         (inputs : list (idx + list idx)) (callee_saved_registers : list REG) (reg_available : list REG) (asm : Lines)
         (rets : list (idx + list idx))
         (s' : symbolic_state)
         (H : symex_asm_func (dereference_output_scalars:=output_scalars_are_pointers) d callee_saved_registers output_types stack_size inputs reg_available asm = Success (rets, s'))
         (d' := s'.(dag_state))
         (m : machine_state)
-        (word_runtime_inputs : list (Naive.word 64 + list (Naive.word 64)))
+        (word_runtime_inputs : list (bits 64 + list (bits 64)))
         (runtime_inputs := word_args_to_Z_args word_runtime_inputs)
         (runtime_reg : list Z)
         (runtime_callee_saved_registers : list Z)
@@ -3315,20 +3314,20 @@ Theorem check_equivalence_correct
         (Hwf : API.Wf expr)
         (H : check_equivalence asm expr arg_bounds out_bounds = Success tt)
         (PHOAS_args : type.for_each_lhs_of_arrow API.interp_type t)
-        (word_args : list (Naive.word 64 + list (Naive.word 64)))
+        (word_args : list (bits 64 + list (bits 64)))
         (args := word_args_to_Z_args word_args)
         (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
         (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
         (output_types : type_spec := match simplify_base_type (type.final_codomain t) out_bounds with Success output_types => output_types | Error _ => nil end)
         (st : machine_state)
-        (asm_args_out asm_args_in : list (Naive.word 64))
+        (asm_args_out asm_args_in : list (bits 64))
         (runtime_regs := get_asm_reg st assembly_calling_registers)
         (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers)
   : Forall
       (fun '(_fname, asm)
        => forall
            (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
-           (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
+           (stack_base := bits.of_Z _ (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
            (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
          exists asm' st' (retvals : list (Z + list Z)),
            strip_ret asm = Success asm'
@@ -3462,18 +3461,18 @@ Theorem generate_assembly_of_hinted_expr_correct
     /\ forall (st : machine_state)
               (frame : Semantics.mem_state -> Prop)
               (PHOAS_args : type.for_each_lhs_of_arrow API.interp_type t)
-              (word_args : list (Naive.word 64 + list (Naive.word 64)))
+              (word_args : list (bits 64 + list (bits 64)))
               (args := word_args_to_Z_args word_args)
               (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
               (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
               (output_types : type_spec := match simplify_base_type (type.final_codomain t) out_bounds with Success output_types => output_types | Error _ => nil end)
-              (asm_args_out asm_args_in : list (Naive.word 64))
+              (asm_args_out asm_args_in : list (bits 64))
               (runtime_regs := get_asm_reg st assembly_calling_registers)
               (runtime_callee_saved_registers := get_asm_reg st assembly_callee_saved_registers),
              Forall
          (fun '(_fname, asm)
           => forall (stack_size := N.to_nat (assembly_stack_size match strip_ret asm with Success asm => asm | Error _ => asm end))
-                    (stack_base := word.of_Z (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
+                    (stack_base := bits.of_Z _ (Semantics.get_reg st rsp - 8 * Z.of_nat stack_size))
                     (HR : R_runtime_input (output_scalars_are_pointers:=output_scalars_are_pointers) frame output_types args stack_size stack_base asm_args_out asm_args_in assembly_calling_registers runtime_regs assembly_callee_saved_registers runtime_callee_saved_registers st),
             (* Should match check_equivalence_correct exactly *)
             exists asm' st' (retvals : list (Z + list Z)),
