@@ -19,7 +19,6 @@ Require Import coqutil.Map.OfListWord.
 From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference_to_string ident_of_string.
 Require Import coqutil.Word.Bitwidth64.
 Require Import coqutil.Word.Bitwidth.
-Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
 Require Import Coq.Init.Byte.
 Require Import Coq.Lists.List.
@@ -233,7 +232,7 @@ Definition secp256k1_zdau :=
     secp256k1_sub(Y2, T7, T5)     (* let t5 := t7 - t5 in *)
 }.
 
-Definition secp256k1_felem_cswap := CSwap.felem_cswap(word:=Naive.word64)(field_parameters:=field_parameters)(field_representaton:=frep256k1).
+Definition secp256k1_felem_cswap := CSwap.felem_cswap(width:=64)(field_parameters:=field_parameters)(field_representaton:=frep256k1).
 
 (* Compute ToCString.c_func ("secp256k1_zaddu", secp256k1_zaddu). *)
 (* Compute ToCString.c_func ("secp256k1_felem_cswap", secp256k1_felem_cswap). *)
@@ -247,7 +246,7 @@ Section WithParameters.
           {seven_b : id b = Zmod.of_Z _ 7}.
 
   Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
-  Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
+  Local Notation "xs $@ a" := (Array.array ptsto (bits.of_Z _ 1) a xs) (at level 10, format "xs $@ a").
 
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
   Local Notation word := (BasicC64Semantics.word).
@@ -484,10 +483,7 @@ Section WithParameters.
   Local Instance spec_of_secp256k1_sub : spec_of "secp256k1_sub" := Field.spec_of_BinOp bin_sub.
   Local Instance spec_of_secp256k1_felem_copy : spec_of "secp256k1_felem_copy" := Field.spec_of_felem_copy.
 
-  Local Arguments word.rep : simpl never.
-  Local Arguments word.wrap : simpl never.
-  Local Arguments word.unsigned : simpl never.
-  Local Arguments word.of_Z : simpl never.
+  Local Arguments Zmod.of_Z : simpl never.
 
   Local Ltac solve_length :=
     try lia;

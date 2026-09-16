@@ -18,7 +18,6 @@ Require Import coqutil.Map.Properties.
 Require Import coqutil.Map.OfListWord.
 From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference_to_string ident_of_string.
 Require Import coqutil.Word.Bitwidth.
-Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
 Require Import Coq.Init.Byte.
 Require Import Coq.Lists.List.
@@ -183,10 +182,7 @@ Section WithParameters.
         m' =* (FElem zK z') * (FElem xK x) * R
     }.
 
-  Local Arguments word.rep : simpl never.
-  Local Arguments word.wrap : simpl never.
-  Local Arguments word.unsigned : simpl never.
-  Local Arguments word.of_Z : simpl never.
+  Local Arguments Zmod.of_Z : simpl never.
 
   Local Ltac solve_length :=
     try lia;
@@ -231,7 +227,7 @@ Section WithParameters.
       bounded_by un_outbounds vvar ->
       (forall tr' mem' loc',
           (tr' = tr /\
-           loc' = map.put loc "i" (word.of_Z to) /\
+           loc' = map.put loc "i" (bits.of_Z _ to) /\
            exists vvar',
              (FElem pvar vvar' * R)%sep mem' /\
              feval vvar' = Zmod.pow (feval vvar) (2 ^ (to - 1)) /\
@@ -253,7 +249,7 @@ Section WithParameters.
                           (exists vx, ((FElem pvar vx) * R)%sep m /\
                                    feval vx = Zmod.pow (feval vvar) (2 ^ (i - 1)) /\
                                    bounded_by un_outbounds vx) /\
-                          l = map.put loc "i" (word.of_Z i)).
+                          l = map.put loc "i" (bits.of_Z _ i)).
     eapply wp_while. exists nat, lt, inv. ssplit; [eapply lt_wf|..].
     eexists. unfold inv; ssplit; [reflexivity|..].
     exists 1. exists (ltac:(lia): 1 <= 1 <= to). ssplit; [reflexivity|..].
@@ -269,7 +265,7 @@ Section WithParameters.
     reflexivity.
     all: pose proof Zlt_cases vi to;
          intros Hnz; destruct (vi <? to);
-         try (rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1 in Hnz;
+         try (rewrite ?Zmod.unsigned_0, ?(bits.unsigned_1 (n:=64) ltac:(lia)) in Hnz;
               congruence); [].
     repeat straightline.
     eexists. split. eexists. split.
@@ -289,7 +285,7 @@ Section WithParameters.
     rewrite <-Zmod.pow_mul_r_nonneg by (try apply Z.pow_nonneg; lia).
     rewrite Z.mul_comm, <- Z.pow_succ_r by lia.
     f_equal. f_equal. lia. auto.
-    unfold l'. rewrite <- word.ring_morph_add, map.put_put_same. reflexivity.
+    unfold l'. rewrite <- Zmod.of_Z_add, map.put_put_same. reflexivity.
     lia. assert (vi = to) as -> by lia.
     destruct Hmem as (? & ? & ? & ?).
     apply H3.

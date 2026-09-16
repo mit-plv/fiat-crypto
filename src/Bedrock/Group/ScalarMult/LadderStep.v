@@ -1,3 +1,4 @@
+Require Import coqutil.Word.Bitwidth.
 Require Import Rupicola.Lib.Api. Import bedrock2.WeakestPrecondition.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Specs.Field.
@@ -31,10 +32,12 @@ Section Gallina.
 End Gallina.
 
 Section __.
-  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
+  Context {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
-  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}
@@ -113,7 +116,7 @@ Section __.
       <{ pred (nlet_eq
                  [X2_var; Z2_var; X3_var; Z3_var]
                  v k) }>.
-  Proof using ext_spec_ok locals_ok mem_ok word_ok.
+  Proof using ext_spec_ok locals_ok mem_ok.
     repeat straightline'.
     handle_call.
     apply H6.
