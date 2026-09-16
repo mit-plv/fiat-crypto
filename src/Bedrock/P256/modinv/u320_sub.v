@@ -6,7 +6,7 @@ From coqutil Require Import Tactics.Tactics WithBaseName.
 Local Open Scope string_scope. Local Open Scope Z_scope.
 
 Local Notation eval := (fold_right (fun (a : word) (s : Z) => a + 2^64*s) 0).
-Local Notation array := (array scalar (word.of_Z 8)).
+Local Notation array := (array scalar (bits.of_Z _ 8)).
 
 (** * Specification *)
 

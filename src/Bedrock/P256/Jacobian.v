@@ -19,7 +19,7 @@ Jacobian
 Coq.Strings.String Coq.Lists.List
 ProgramLogic WeakestPrecondition
 ProgramLogic.Coercions
-Word.Interface OfListWord Separation SeparationLogic
+OfListWord Separation SeparationLogic
 letexists
 BasicC64Semantics
 ListIndexNotations
@@ -186,7 +186,7 @@ Proof.
   set (x*coord.R)%Zmod as xR; set (Zmod.inv (1 + 1)) as i2.
 
   (* NOTE: back-and-forth rewrite between Z.modulo and Z.odd *)
-  rewrite word.unsigned_of_Z; cbv [word.wrap]; rewrite Zmod_mod, Zdiv.Zodd_mod, Z.mod_mod_divide by (apply Divide.Z.divide_pow_le with (n:=1); lia).
+  rewrite bits.unsigned_of_Z; rewrite Zmod_mod, Zdiv.Zodd_mod, Z.mod_mod_divide by (apply Divide.Z.divide_pow_le with (n:=1); lia).
   symmetry; rewrite <-(Zmod.of_Z_unsigned xR) at 1; rewrite (Z.div_mod xR 2) at 1 by lia.
   rewrite Div.Z.div_sub_mod_exact, Zdiv.Zmod_odd by lia.
 
@@ -281,10 +281,10 @@ rewrite ?app_length, ?length_coord in *.
     ecancel_assumption. }
   { rewrite ?app_length, ?length_point, ?length_coord; trivial. }
 
-  case (Properties.word.eqb_spec x3 (word.of_Z 0)); subst x3; rewrite word.lor_0_iff; [right|left]; split; trivial.
+  case (Zmod.eqb_spec x3 (bits.of_Z _ 0)); subst x3; rewrite word.lor_0_iff; [right|left]; split; trivial.
   { case H121 as [Hx Hy].
     subst x x0.
-    rewrite !word.broadcast_0_iff in *.
+    rewrite !(word.broadcast_0_iff _ width_pos) in *.
     rewrite !Bool.negb_false_iff, !Zmod.eqb_eq in *.
     cbv [fst snd Jacobian.eq Jacobian.iszero proj1_sig] in *.
     case Decidable.dec; intros; try contradiction; split; trivial.
@@ -298,7 +298,7 @@ rewrite ?app_length, ?length_coord in *.
     { intros HX; cbv [Jacobian.eq Jacobian.iszero proj1_sig fst snd] in H122, H123, HX.
       destruct Decidable.dec in HX; try contradiction; case HX as (Hz&Hx&Hy).
       apply H121. subst x x0.
-      rewrite !word.broadcast_0_iff in *.
+      rewrite !(word.broadcast_0_iff _ width_pos) in *.
       rewrite !Bool.negb_false_iff, !Zmod.eqb_eq.
       rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r, ?Hx, ?Hy, ?(proj2 (Ring.sub_zero_iff _ _)); ssplit; (ring || Field.fsatz). }
     cbv [Jacobian.add_inequal_nz_nz point.to_bytes]; cbn [fst snd proj1_sig].
@@ -378,8 +378,8 @@ Proof.
     progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at)
         ltac:(newest_memory_hyp) ltac:(lia || ZnWords.ZnWords).
     let Hzero := match goal with H: _ <> 0 |- _ => H end in
-      rewrite <-word.unsigned_of_Z_0, !word.unsigned_inj_iff in Hzero by exact _;
-      rewrite !word.lor_0_iff, !word.broadcast_0_iff in Hzero.
+      rewrite <-(Zmod.unsigned_0 (2 ^ 64)), !Zmod.unsigned_inj_iff in Hzero by exact _;
+      rewrite !word.lor_0_iff, !(word.broadcast_0_iff _ width_pos) in Hzero.
     destruct (iszero P) eqn:HP, (iszero Q) eqn:HQ in *; try intuition discriminate;
       repeat match goal with
              | H : _ = _ -> _ |- _ => specialize (H eq_refl)
@@ -417,8 +417,8 @@ Proof.
       eexists; split; [ecancel_assumption|].
       rewrite Jacobian.eq_iff, Jacobian.to_affine_add, Jacobian.to_affine_add_inequal_nz_nz; trivial; reflexivity. } }
   { (* if !ok *)
-    rewrite <-word.unsigned_of_Z_0, !word.unsigned_inj_iff in H27 by exact _.
-    rewrite !word.lor_0_iff, !word.broadcast_0_iff in H27.
+    rewrite <-(Zmod.unsigned_0 (2 ^ 64)), !Zmod.unsigned_inj_iff in H27 by exact _.
+    rewrite !word.lor_0_iff, !(word.broadcast_0_iff _ width_pos) in H27.
     case H27 as ((HP&HQ)&->); rewrite ?HP, ?HQ in *;
       repeat match goal with
              | H : _ = _ -> _ |- _ => specialize (H eq_refl)
@@ -444,7 +444,7 @@ Proof.
     (* stackdealloc *)
     progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at)
         ltac:(newest_memory_hyp) ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
-    progress repeat match type of H31 with context [Array.array ptsto _ _ (point.to_bytes ?x)] =>
+    progress repeat match goal with H : context [Array.array ptsto _ _ (point.to_bytes ?x)] |- _ =>
     unique pose proof (length_point x) end.
     repeat straightline.
     progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at)

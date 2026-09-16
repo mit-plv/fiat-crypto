@@ -13,7 +13,6 @@ From coqutil Require Import
   OfListWord
   Tactics
   Tactics.Tactics
-  Word.Interface
   Word.Properties.
 
 From bedrock2 Require Import
@@ -67,10 +66,10 @@ Import LittleEndianList.
 
 #[local] Notation "xs $@ a" := (map.of_list_word_at a xs) (at level 10, format "xs $@ a").
 
-#[local] Notation bytearray := (Array.array ptsto (word.of_Z 1)).
+#[local] Notation bytearray := (Array.array ptsto (bits.of_Z _ 1)).
 #[local] Notation sizeof_point := 96%nat.
-#[local] Notation pointarray := (Array.array (fun (p : word.rep) (Q : point) =>
-  ((to_bytes Q)$@p)) (word.of_Z (Z.of_nat sizeof_point))).
+#[local] Notation pointarray := (Array.array (fun (p : word) (Q : point) =>
+  ((to_bytes Q)$@p)) (bits.of_Z _ (Z.of_nat sizeof_point))).
 (* w is limb size (nonzero). *)
 Definition w := 5.
 Definition num_bits := Eval cbv in Z.log2_up p256_group_order.
@@ -140,7 +139,7 @@ Definition p256_point_mul :=
     m =* ptsto p_b b * R;
     ensures T M :=
     M =* ptsto p_b b * R /\ T = t /\
-    word.signed r = byte.signed b
+    Zmod.signed r = byte.signed b
   }.
 
 #[export] Instance spec_of_p256_mul_by_pow2 : spec_of "p256_mul_by_pow2" :=
@@ -185,13 +184,14 @@ Proof.
   ssplit; try ecancel_assumption; trivial.
   cbv [r Semantics.interp_op1].
   rewrite eval_wsize'.
-  rewrite <-word.ring_morph_sub.
-  rewrite word.signed_srs_nowrap by ZnWords.
-  rewrite word.signed_eq_swrap_unsigned.
-  rewrite word.unsigned_slu_shamtZ by lia.
-  rewrite ?word.unsigned_of_Z_nowrap by (pose proof byte.unsigned_range b; lia).
+  rewrite <-Zmod.of_Z_sub.
+  rewrite !shamt_of_Z_small by lia.
+  rewrite Zmod.signed_srs by lia.
+  rewrite <-Zmod.smod_unsigned, Zmod.unsigned_slu.
+  rewrite ?bits.unsigned_of_Z_small by (pose proof byte.unsigned_range b; lia).
   rewrite Z.shiftr_div_pow2, Z.shiftl_mul_pow2 by lia.
-  cbv [byte.signed word.wrap byte.swrap word.swrap].
+  rewrite word.smodulo_pow2.
+  cbv [byte.signed byte.swrap].
   PreOmega.Z.div_mod_to_equations.
   lia.
 Qed.
@@ -218,7 +218,7 @@ Proof.
                                   HList.polymorphic_list.nil))
     (* program variables *) (["p_P";"n"] : list String.string))
     (fun v (P : point) R t m p_P n => PrimitivePair.pair.mk (* precondition *)
-      (v = word.unsigned n /\
+      (v = Zmod.unsigned n /\
       m =* P$@p_P * R)
     (fun                 T M P_P N => (* postcondition *)
       exists (Q : point),
@@ -244,11 +244,11 @@ Proof.
       { ssplit; [ecancel_assumption | | | ]; ZnWords. }
       repeat straightline.
       (* Deallocate stack. *)
-      seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ _ (Byte.byte) _ _ a) ltac:(newest_memory_hyp) lia.
+      seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ Init.Byte.byte _ _ a) ltac:(newest_memory_hyp) lia.
       pose proof (length_point (Jacobian.Jacobian.double_minus_3 eq_refl kP)).
       (* Restore loop invariant. *)
       repeat straightline.
-      eexists _, _, (word.unsigned n).
+      eexists _, _, (Zmod.unsigned n).
       repeat straightline.
       { ecancel_assumption. }
       split.
@@ -309,7 +309,7 @@ Proof.
     (* program variables *) (["p_out";"p_sscalar";"p_P";"p_table";"i"] : list String.string))
     (fun (n:nat) processed_limbs remaining_limbs (curr_out : point) t m p_out p_sscalar p_P p_table i => PrimitivePair.pair.mk
         (m =* curr_out$@p_out * bytearray p_sscalar remaining_limbs *
-            bytearray (word.add p_sscalar (word.of_Z(length remaining_limbs))) processed_limbs * P$@p_P *
+            bytearray (Zmod.add p_sscalar (bits.of_Z _(length remaining_limbs))) processed_limbs * P$@p_P *
             pointarray p_table x * R /\
         sscalar = remaining_limbs ++ processed_limbs /\
         length processed_limbs = i :> Z /\
@@ -368,7 +368,7 @@ Proof.
     eexists _.
     ssplit; trivial.
     { seprewrite @Array.array_append.
-      rewrite word.unsigned_of_Z_1, Z.mul_1_l.
+      rewrite bits.unsigned_1, Z.mul_1_l by lia.
       ecancel_assumption. }
     assert (length processed_limbs = length sscalar) by ZnWords.
     destruct remaining_limbs. 2: { subst sscalar. lia. }
@@ -429,13 +429,13 @@ Proof.
     intros Hnotbothzero.
     subst_weq.
     rewrite ScalarMult.scalarmult_assoc.
-    rewrite Z.mul_comm, word.unsigned_of_Z_nowrap by lia.
+    rewrite Z.mul_comm, bits.unsigned_of_Z_small by lia.
     rewrite p256_mul_mod_n. 2: {
       intros HPzero. apply Hnotbothzero.
       subst_weq.
       rewrite !ScalarMult.scalarmult_zero_r. split; reflexivity.
     }
-    let H := ltac:(hyp_containing (Logic.eq (word.signed k))) in rewrite H.
+    let H := ltac:(hyp_containing (Logic.eq (Zmod.signed k))) in rewrite H.
     eapply (fixed_window_no_doubling') with (xs := (map byte.signed remaining_limbs')).
     all: try ZnWords.
     { apply Forall_map. apply HForallRem. }
@@ -448,7 +448,7 @@ Proof.
         rewrite ScalarMult.scalarmult_0_l, ScalarMult.scalarmult_zero_r.
         reflexivity. }
       { subst_weq.
-        let H := ltac:(hyp_containing (Logic.eq (word.signed k))) in rewrite H.
+        let H := ltac:(hyp_containing (Logic.eq (Zmod.signed k))) in rewrite H.
         rewrite N1.
         apply ScalarMult.scalarmult_0_l. } }
     { change (?f ?x::?xs) with (map f [x]++xs); rewrite <-?map_app.
@@ -462,10 +462,10 @@ Proof.
   repeat straightline.
 
   (* Deallocate stack. *)
-  seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ _ (Byte.byte) _ _ p_kP)
+  seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ Init.Byte.byte _ _ p_kP)
       ltac:(newest_memory_hyp) lia.
   assert (length (to_bytes kP) = sizeof_point) by (rewrite length_point; trivial).
-  seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ _ (Byte.byte) _ _ a3)
+  seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ Init.Byte.byte _ _ a3)
       ltac:(newest_memory_hyp) lia.
   assert (length (to_bytes curr_out_new) = sizeof_point%nat) by (rewrite length_point; trivial).
 
@@ -488,10 +488,10 @@ Proof.
     { let H := ltac:(hyp_containing (add shifted_cur_out kP)) in rewrite H.
       rewrite Jacobian.to_affine_add.
       subst_weq.
-      let H := ltac:(hyp_containing (Logic.eq (word.signed k))) in rewrite H.
+      let H := ltac:(hyp_containing (Logic.eq (Zmod.signed k))) in rewrite H.
       rewrite ScalarMult.scalarmult_assoc.
       rewrite <-ScalarMult.scalarmult_add_l.
-      rewrite word.unsigned_of_Z_nowrap by lia.
+      rewrite bits.unsigned_of_Z_small by lia.
       cbv delta [positional_signed_bytes].
       Morphisms.f_equiv.
       rewrite map_cons.
@@ -508,8 +508,8 @@ Proof.
   let H := ltac:(hyp_containing (Jacobian.eq curr_out_new)) in rewrite H.
   rewrite Jacobian.to_affine_add.
   subst_weq.
-  rewrite word.unsigned_of_Z_nowrap by lia.
-  let H := ltac:(hyp_containing (Logic.eq (word.signed k))) in rewrite H.
+  rewrite bits.unsigned_of_Z_small by lia.
+  let H := ltac:(hyp_containing (Logic.eq (Zmod.signed k))) in rewrite H.
   subst i.
   repeat rewrite ?ScalarMult.scalarmult_assoc, <-?ScalarMult.scalarmult_add_l.
   Morphisms.f_equiv.
@@ -534,14 +534,14 @@ Proof.
   straightline_call. (* call limbs_unpack *)
   { (* Solve limbs_unpack assumptions. *)
     ssplit; try ecancel_assumption; try ZnWords.
-    rewrite word.unsigned_of_Z_nowrap; lia. }
+    rewrite bits.unsigned_of_Z_small; lia. }
   repeat straightline.
   straightline_call. (* call recode_wrap *)
   { (* Solve recode_wrap assumptions. *)
     ssplit; try ecancel_assumption; trivial.
     { ZnWords. }
     { let H := (hyp_containing (le_combine scalar)) in rewrite H.
-      rewrite word.unsigned_of_Z_nowrap; lia. }
+      rewrite bits.unsigned_of_Z_small; lia. }
     { Decidable.vm_decide. } }
   repeat straightline.
   straightline_call. (* call p256_point_mul_signed *)

@@ -14,7 +14,7 @@ Jacobian
 Coq.Strings.String Coq.Lists.List
 ProgramLogic WeakestPrecondition
 ProgramLogic.Coercions
-Word.Interface OfListWord Separation SeparationLogic
+OfListWord Separation SeparationLogic
 letexists
 BasicC64Semantics
 ListIndexNotations
@@ -69,11 +69,12 @@ Proof.
   repeat straightline.
   straightline_call; repeat straightline.
   subst x0 y.
-  try rewrite word.sub_0_l.
+  try rewrite Zmod.sub_0_l.
   cbv [word.broadcast]; apply f_equal.
-  apply word.unsigned_inj, Z.bits_inj'; intros i Hi.
-  rewrite word.unsigned_and, !word.unsigned_of_Z, !word.testbit_wrap.
-  f_equal. f_equal. change (word.wrap 1) with (Z.ones 1). rewrite Z.land_ones by lia.
+  apply Zmod.unsigned_inj.
+  rewrite bits.unsigned_and, !bits.unsigned_of_Z.
+  change (1 mod 2 ^ 64) with (Z.ones 1). rewrite Z.land_ones by lia.
+  rewrite (Z.mod_small (Z.b2z _)) by (case Z.odd; cbn; lia).
   rewrite <-Z.bit0_mod, Z.bit0_odd; trivial.
 Qed.
 
@@ -83,9 +84,10 @@ Proof.
   repeat straightline.
   straightline_call; repeat straightline.
   subst y.
-  rewrite word.signed_lts, <-word.testbit_msb.
+  rewrite <-bits.testbit_sign by lia.
   setoid_rewrite eval_wmask'.
   setoid_rewrite word.srs_msb; trivial.
+  all: lia.
 Qed.
 
 Lemma br_broadcast_nonzero_ok : program_logic_goal_for_function! br_broadcast_nonzero.
@@ -94,9 +96,8 @@ Proof.
   repeat straightline.
   straightline_call; repeat straightline.
   apply f_equal, Bool.eq_true_iff_eq; rewrite Bool.negb_true_iff, Z.eqb_neq, <-word.nz_signed.
-  try rewrite word.sub_0_l.
-  rewrite word.signed_lts, word.signed_of_Z_nowrap by lia.
-  rewrite <-word.testbit_msb, word.unsigned_or_nowrap, Z.lor_spec, !word.testbit_msb.
+  try rewrite Zmod.sub_0_l.
+  rewrite <-bits.testbit_sign, bits.unsigned_or, Z.lor_spec, !bits.testbit_sign by lia.
   case Z.ltb_spec; intros; cbn [orb]; try lia.
   setoid_rewrite word.signed_opp_nowrap; intuition ZnWords.ZnWords.
 Qed.
@@ -112,13 +113,13 @@ Proof.
   cbv [spec_of_br_cmov].
   repeat (straightline || straightline_call).
   subst r x; cbn [Semantics.interp_op1] in *.
-  pose proof word.unsigned_range vz.
-  pose proof word.unsigned_range vnz.
+  pose proof (bits.unsigned_range vz width_nonneg).
+  pose proof (bits.unsigned_range vnz width_nonneg).
   case Z.eqb_spec; intros; unfold word.broadcast in *; cbn [Z.b2z negb].
-  all : apply word.unsigned_inj;
-    repeat rewrite ?word.unsigned_or, word.unsigned_and, ?word.unsigned_opp, ?word.unsigned_not, ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1; cbv [word.wrap].
+  all : apply Zmod.unsigned_inj;
+    repeat rewrite ?bits.unsigned_or, bits.unsigned_and, ?Zmod.unsigned_opp, ?bits.unsigned_not, ?Zmod.unsigned_0, ?(bits.unsigned_1 (n:=64) ltac:(lia)).
   all : apply Z.bits_inj'; intros i Hi;
-    repeat rewrite <-?Z.land_ones, ?Z.land_spec, ?Z.lor_spec, ?Z.testbit_ones, ?Z.lnot_spec, ?Z.testbit_0_l by try ZnWords.ZnWords.
+    repeat rewrite <-?Z.land_ones, ?Z.land_spec, ?Z.lor_spec, ?Z.ldiff_spec, ?Z.testbit_ones, ?Z.lnot_spec, ?Z.testbit_0_l by try ZnWords.ZnWords.
   all: repeat (((case Z.ltb_spec; [|]; intros)||(case Z.leb_spec; [|]; intros)); rewrite
       ?Bool.andb_true_l, ?Bool.andb_true_r, ?Bool.orb_true_l, ?Bool.orb_true_r,
       ?Bool.andb_false_l, ?Bool.andb_false_r, ?Bool.orb_false_l, ?Bool.orb_false_r,
@@ -137,7 +138,7 @@ Definition br_abs := func! (k, sign_mask) ~> r {
   r = (k ^ sign_mask) + (sign_mask & $1)
 }.
 
-#[local] Ltac div_mod_lia := rewrite ?word.signed_eq_swrap_unsigned, ?word.swrap_as_div_mod in *;
+#[local] Ltac div_mod_lia := rewrite <-?Zmod.smod_unsigned, ?word.smodulo_pow2 in *;
       PreOmega.Z.to_euclidean_division_equations; lia.
 
 Lemma opp_sub_opp_add n m : - n - m = - (n + m). Proof. lia. Qed.
@@ -147,22 +148,19 @@ Proof.
   cbv [spec_of_br_abs]. repeat straightline.
 
   subst r.
-  pose proof word.unsigned_range k.
-  destruct (Z.abs_spec (word.signed k)) as [[? ->] | [? ->]].
+  pose proof (bits.unsigned_range k width_nonneg).
+  destruct (Z.abs_spec (Zmod.signed k)) as [[? ->] | [? ->]].
     { repeat (rewrite ?H, ?word.unsigned_add_nowrap, ?unsigned_xor_nowrap,
-      ?word.unsigned_and_nowrap, ?word.unsigned_of_Z_nowrap,
-      ?word.unsigned_xor_nowrap, ?Z.land_0_l, ?Z.lxor_0_r;
+      ?bits.unsigned_and, ?bits.unsigned_of_Z_small,
+      ?bits.unsigned_xor, ?Z.land_0_l, ?Z.lxor_0_r;
       try (lia || ZnWords.ZnWords); try (case Z.ltb_spec; intros)).
       div_mod_lia. }
     { repeat rewrite ?H, ?word.unsigned_add_nowrap, ?unsigned_xor_nowrap,
-      ?word.unsigned_and_nowrap, ?word.unsigned_of_Z_nowrap,
-      ?word.unsigned_xor_nowrap, ?Hsign, ?Z.land_ones; try (lia || ZnWords.ZnWords);
+      ?bits.unsigned_and, ?bits.unsigned_of_Z_small,
+      ?bits.unsigned_xor, ?Hsign, ?Z.land_ones; try (lia || ZnWords.ZnWords);
       try (case Z.ltb_spec; intros); try div_mod_lia.
       all: rewrite Z.land_comm, Z.land_ones_low by (lia || cbv; trivial).
-      all: rewrite Z.lxor_comm, <- word.unsigned_not_nowrap, word.unsigned_not;
-        rewrite Zbitwise.Z.lnot_eq_pred_opp.
-      all: unfold word.wrap;
-        rewrite opp_sub_opp_add, Modulo.Z.mod_opp_small by ZnWords.ZnWords.
+      all: rewrite Z.lxor_comm, <-bits.unsigned_m1, <-bits.unsigned_xor, word.xor_m1_l, bits.unsigned_not', Z.ones_equiv by lia.
       all: div_mod_lia. }
 Qed.
 

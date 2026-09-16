@@ -1,4 +1,5 @@
 From Coq Require Import BinInt String List InitialRing ZArith Lia.
+Require Import coqutil.Word.Properties.
 From bedrock2 Require Import BasicC64Semantics WeakestPrecondition ProgramLogic NotationsCustomEntry ZnWords ArrayCasts.
 Import ListNotations ProgramLogic.Coercions SeparationLogic Array Scalars.
 From coqutil Require Import Tactics.Tactics WithBaseName Map.SeparationLogic.
@@ -9,7 +10,7 @@ Require Import coqutil.Z.PushPullMod.
 Local Open Scope string_scope. Local Open Scope Z_scope.
 
 Local Notation eval := (fold_right (fun (a : word) (s : Z) => a + 2^64*s) 0).
-Local Notation array := (array scalar (word.of_Z 8)).
+Local Notation array := (array scalar (bits.of_Z _ 8)).
 
 #[export] Instance spec_of_beeu_normalize : spec_of "beeu_normalize" :=
     fnspec! "beeu_normalize" (p_y p_m : word) / (y MOD : list word) R,
@@ -66,15 +67,15 @@ Definition beeu_normalize := func! (p_y, p_m) {
 }.
 
 Lemma array_to_bytes ptr ws :
-    Lift1Prop.iff1 (array ptr ws) (@Array.array _ word _ mem _ ptsto (word.of_Z 1) ptr (ws2bs 8 ws)).
+    Lift1Prop.iff1 (array ptr ws) (@Array.array _ _ mem _ ptsto (bits.of_Z _ 1) ptr (ws2bs 8 ws)).
 Proof.
-    eapply (@bytes_of_words 64 _ word mem _ _).
+    eapply (@bytes_of_words 64 _ mem _ _).
 Qed.
 
 Lemma bytes_to_array ptr bs :
     (length bs mod 8)%nat = 0%nat ->
-    Lift1Prop.iff1 (@Array.array _ word _ mem _ ptsto (word.of_Z 1) ptr bs) (array ptr (bs2ws 8 bs)).
-Proof. intros H. eapply (@words_of_bytes 64 _ word mem _ _).
+    Lift1Prop.iff1 (@Array.array _ _ mem _ ptsto (bits.of_Z _ 1) ptr bs) (array ptr (bs2ws 8 bs)).
+Proof. intros H. eapply (@words_of_bytes 64 _ mem _ _).
     cbn. replace (PosDef.Pos.to_nat 8) with 8%nat by lia.
     lia.
 Qed.
@@ -110,17 +111,17 @@ Qed.
             match T with
             | ?A -> False =>
                 match A with
-                | context m [if (word.eqb ?x ?y) then _ else _] =>
+                | context m [if (Zmod.eqb ?x ?y) then _ else _] =>
                     let Heq := fresh "Heq" in
-                    destruct (word.eqb x y) eqn:Heq; [| contradiction];
-                    eapply Properties.word.eqb_true in Heq
+                    destruct (Zmod.eqb x y) eqn:Heq; [| contradiction];
+                    eapply Zmod.eqb_eq in Heq
                 end
             | ?A =>
                 match A with
-                | context m [if (word.eqb ?x ?y) then _ else _] =>
+                | context m [if (Zmod.eqb ?x ?y) then _ else _] =>
                     let Heq := fresh "Heq" in
-                    destruct (word.eqb x y) eqn:Heq; [discriminate |];
-                    eapply Properties.word.eqb_false in Heq
+                    destruct (Zmod.eqb x y) eqn:Heq; [discriminate |];
+                    eapply word.eqb_false in Heq
                 end
             end
         end.
