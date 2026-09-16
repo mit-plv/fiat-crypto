@@ -45,6 +45,7 @@ Require Import Crypto.Util.ListUtil.FoldMap. Import FoldMap.List.
 Require Import Crypto.Util.ListUtil.IndexOf. Import IndexOf.List.
 Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ListUtil.Permutation.
+Require Import Crypto.Util.ListUtil.Injective. Import Injective.List.
 Require Import Crypto.Util.ListUtil.Partition.
 Require Import Crypto.Util.ListUtil.Filter.
 Require Import Crypto.Util.NUtil.Sorting.
@@ -402,8 +403,12 @@ Module Export Options.
   Class rewriting_passes_opt := rewriting_passes : list rewrite_pass.
   (** Should we symex the assembly first, even though this may be more inefficient? *)
   Class debug_symex_asm_first_opt := debug_symex_asm_first : bool.
-  (** How deep should we reveal nodes? *)
+  (** How deep should we preemptively reveal nodes? *)
   Class node_reveal_depth_opt := node_reveal_depth : nat.
+  (** How much should we reveal expressions when deriving bounds for expressions via structure? *)
+  Class symex_bounds_reveal_depth_opt := symex_bounds_reveal_depth : nat.
+  Definition default_node_reveal_depth := 1%nat.
+  Definition default_symex_bounds_reveal_depth := 1%nat.
   Definition default_rewriting_passes
              {rewriting_pipeline : rewriting_pipeline_opt}
              {rewriting_pass_filter : rewriting_pass_filter_opt}
@@ -415,15 +420,15 @@ Module Export Options.
     ; asm_rewriting_pass_filter : rewriting_pass_filter_opt
     ; asm_debug_symex_asm_first : debug_symex_asm_first_opt
     ; asm_node_reveal_depth : node_reveal_depth_opt
+    ; asm_symex_bounds_reveal_depth : symex_bounds_reveal_depth_opt
     }.
-
-  Definition default_node_reveal_depth := 3%nat.
 
   (* This holds the list of computed options, which are passed around between methods *)
   Class symbolic_options_computed_opt :=
     { asm_rewriting_passes : rewriting_passes_opt
     ; asm_debug_symex_asm_first_computed : debug_symex_asm_first_opt
     ; asm_node_reveal_depth_computed : node_reveal_depth_opt
+    ; asm_symex_bounds_reveal_depth_computed : symex_bounds_reveal_depth_opt
     }.
 
   (* N.B. The default rewriting pass filter should not be changed here, but instead changed in CLI.v where it is derived from a default string *)
@@ -432,6 +437,7 @@ Module Export Options.
        ; asm_rewriting_pass_filter := fun _ => true
        ; asm_debug_symex_asm_first := false
        ; asm_node_reveal_depth := default_node_reveal_depth
+       ; asm_symex_bounds_reveal_depth := default_symex_bounds_reveal_depth
        |}.
 End Options.
 Module Export Hints.
@@ -446,6 +452,8 @@ Module Export Hints.
          asm_debug_symex_asm_first_computed
          asm_node_reveal_depth
          asm_node_reveal_depth_computed
+         asm_symex_bounds_reveal_depth
+         asm_symex_bounds_reveal_depth_computed
   .
   #[global]
    Hint Cut [
@@ -457,6 +465,8 @@ Module Export Hints.
         | asm_debug_symex_asm_first_computed
         | asm_node_reveal_depth
         | asm_node_reveal_depth_computed
+        | asm_symex_bounds_reveal_depth
+        | asm_symex_bounds_reveal_depth_computed
         ) ( _ * )
         (Build_symbolic_options_opt
         | Build_symbolic_options_computed_opt
@@ -511,6 +521,12 @@ Definition Show_expr : Show expr
   := Eval cbv -[String.append show_N concat List.map Show_op] in
       fix Show_expr e := Show_expr_body Show_expr e.
 Global Existing Instance Show_expr.
+
+Fixpoint expr_depth (e : expr) : nat :=
+  match e with
+  | ExprRef _ => 0
+  | ExprApp (_, args) => S (List.fold_right Nat.max 0 (List.map expr_depth args))
+  end.
 
 Local Notation max_powers_of_two := 5%nat (only parsing).
 Local Notation max_decimal := 256%Z (only parsing).
@@ -1840,6 +1856,13 @@ Section WithDag.
   Definition reveal_node n '(op, args) :=
     ExprApp (op, List.map (reveal n) args).
 
+  Fixpoint reveal_expr n (e : expr) {struct e} :=
+    match e, n with
+    | ExprRef i, _ => reveal n i
+    | ExprApp (op, args), S n => ExprApp (op, List.map (reveal_expr n) args)
+    | _, _ => e
+    end.
+
   (** given a set of indices, get the set of indices of their arguments *)
   Definition reveal_gather_deps_args (ls : NSet.t) : NSet.t
     := fold_right
@@ -1888,6 +1911,13 @@ Section WithDag.
   Definition reveal_node_at_least n '(op, args) :=
     ExprApp (op, List.map (reveal_at_least n) args).
 
+  Fixpoint reveal_expr_at_least n (e : expr) {struct e} : expr :=
+    match e, n with
+    | ExprRef i, _ => reveal_at_least n i
+    | ExprApp (op, args), S n => ExprApp (op, List.map (reveal_expr_at_least n) args)
+    | _, _ => e
+    end.
+
   Local Unset Elimination Schemes.
   Inductive eval : expr -> Z -> Prop :=
   | ERef i op args args' n
@@ -1906,6 +1936,28 @@ Section WithDag.
     (_:interp_op ctx op args' = Some n)
     : eval_node (op, args) n.
 
+  Definition expr_dag_beq_fueled_step (expr_dag_beq_fueled : expr -> expr -> bool) :=
+    fix expr_dag_beq (e1 e2 : expr) : bool :=
+      match e1, e2 with
+      | ExprRef i, ExprRef j => N.eqb i j
+      | ExprApp (op1, args1), ExprApp (op2, args2) =>
+          op_beq op1 op2 && list_beq _ expr_dag_beq args1 args2
+      | _, _ => match reveal_expr 1 e1, reveal_expr 1 e2 with
+      | ExprRef i, ExprRef j => N.eqb i j
+      | ExprApp (op1, args1), ExprApp (op2, args2) =>
+          op_beq op1 op2 && list_beq _ expr_dag_beq_fueled args1 args2
+      | _, _ => false
+      end end.
+
+  Fixpoint expr_dag_beq_fueled (fuel : nat) (e1 e2 : expr) : bool :=
+    expr_dag_beq_fueled_step
+      match fuel with
+      | O => expr_beq
+      | S fuel => expr_dag_beq_fueled fuel
+      end
+      e1 e2.
+
+  Definition expr_dag_beq e1 e2 := expr_dag_beq_fueled (S (N.to_nat (dag.size dag))) e1 e2.
 
   Section eval_ind.
     Context (P : expr -> Z -> Prop)
@@ -1967,6 +2019,19 @@ Section WithDag.
     eapply eval_reveal; eauto.
   Qed.
 
+  Lemma eval_reveal_expr : forall n e, forall v, eval e v ->
+    forall f, reveal_expr n e = f -> eval f v.
+  Proof using Type.
+    intros n e v H; revert e v H n.
+    induction 1; cbn; intros; subst; [ eapply eval_reveal; econstructor; eauto | ].
+    { eapply Forall2_weaken; [ | eassumption ]; cbv beta.
+      intros; destruct_head'_and; eauto. }
+    { break_innermost_match_step; econstructor; try eassumption.
+      all: rewrite ?Forall2_map_l.
+      all: eapply Forall2_weaken; [ | eassumption ]; cbv beta.
+      all: intros; destruct_head'_and; eauto. }
+  Qed.
+
   Lemma eval_reveal_from_deps_fueled deps : forall n i, forall v, eval (ExprRef i) v ->
     forall e, reveal_from_deps_fueled n deps i = e -> eval e v.
   Proof using Type.
@@ -1995,6 +2060,178 @@ Section WithDag.
     eapply Forall2_weaken; try eassumption; []; cbv beta; intros.
     eapply eval_reveal_at_least; eauto.
   Qed.
+
+  Lemma eval_reveal_expr_at_least : forall n e, forall v, eval e v ->
+    forall f, reveal_expr_at_least n e = f -> eval f v.
+  Proof using Type.
+    intros n e v H; revert e v H n.
+    induction 1; cbn; intros; subst; [ eapply eval_reveal_at_least; econstructor; eauto | ].
+    { eapply Forall2_weaken; [ | eassumption ]; cbv beta.
+      intros; destruct_head'_and; eauto. }
+    { break_innermost_match_step; econstructor; try eassumption.
+      all: rewrite ?Forall2_map_l.
+      all: eapply Forall2_weaken; [ | eassumption ]; cbv beta.
+      all: intros; destruct_head'_and; eauto. }
+  Qed.
+
+  Lemma reveal0 : forall e, reveal 0 e = ExprRef e.
+  Proof using Type. reflexivity. Qed.
+
+  Lemma reveal_expr0 : forall e, reveal_expr 0 e = e.
+  Proof using Type. destruct e; cbn [reveal_expr]; break_innermost_match; now rewrite ?reveal0. Qed.
+
+  Lemma expr_dag_beq_fueled_step_refl
+    expr_dag_beq_fueled (Hexpr_dag_beq_fueled : forall e, expr_dag_beq_fueled e e = true)
+    : forall e, expr_dag_beq_fueled_step expr_dag_beq_fueled e e = true.
+  Proof using Type.
+    induction e; cbn; break_innermost_match; rewrite ?Bool.andb_true_iff; try split.
+    all: try apply unreflect_bool; try reflexivity.
+    cbn in *.
+    let H := match goal with H : Forall _ _ |- _ => H end in
+    induction H; cbn; trivial.
+    rewrite Bool.andb_true_iff.
+    split; eauto.
+  Qed.
+
+  Lemma expr_dag_beq_fueled_refl : forall fuel e, expr_dag_beq_fueled fuel e e = true.
+  Proof using Type.
+    induction fuel as [|fuel IH]; cbn.
+    all: apply expr_dag_beq_fueled_step_refl; eauto.
+    intros; apply unreflect_bool; reflexivity.
+  Qed.
+
+  Lemma expr_dag_beq_fueled_step_sym_iff
+    expr_dag_beq_fueled (Hexpr_dag_beq_fueled : forall e1 e2, expr_dag_beq_fueled e1 e2 = true <-> expr_dag_beq_fueled e2 e1 = true)
+    : forall e1 e2, expr_dag_beq_fueled_step expr_dag_beq_fueled e1 e2 = true <-> expr_dag_beq_fueled_step expr_dag_beq_fueled e2 e1 = true.
+  Proof using Type.
+    clear ctx.
+    induction e1, e2; cbn; break_innermost_match; try tauto.
+    all: rewrite ?Bool.andb_true_iff.
+    all: try (split; intro; reflect_hyps; subst; try apply unreflect_bool; try reflexivity; assumption).
+    all: match goal with
+         | [ |- ?a /\ ?b <-> ?a' /\ ?b' ]
+           => cut ((a <-> a') /\ (b <-> b')); [ tauto | ]
+         end.
+    all: split; [ split; intros; reflect_hyps; subst; apply unreflect_bool; reflexivity | ].
+    all: cbv [reveal_step] in *; break_innermost_match_hyps.
+    all: lazymatch goal with
+         | [ H : ExprApp _ = ExprApp _ |- _ ] => inversion H; clear H
+         | [ H : ExprRef _ = ExprApp _ |- _ ] => inversion H
+         | [ H : ExprApp _ = ExprRef _ |- _ ] => inversion H
+         | _ => idtac
+         end.
+    all: subst.
+    all: try erewrite (@map_ext _ _ (reveal_expr 0)), map_id in * by (intros; apply reveal_expr0).
+    all: cbn [snd] in *.
+    all: match goal with
+         | [ |- list_beq _ _ ?x ?y = true <-> list_beq _ _ ?y ?x = true ]
+           => generalize y; induction x as [|?? IH']; let y := fresh in intro y; destruct y
+         end.
+    all: cbn [list_beq snd]; try tauto.
+    all: try match goal with H : Forall _ (_ :: _) |- _ => inversion H; clear H end.
+    all: rewrite !Bool.andb_true_iff, IH'.
+    all: cbn [snd] in *.
+    all: try (eapply Forall_weaken; [ | eassumption ]).
+    all: eauto.
+    all: lazymatch goal with
+         | [ |- ?a /\ ?b <-> ?a' /\ ?b' ]
+           => cut ((a <-> a') /\ (b <-> b')); [ tauto | ]
+         end.
+    all: try (split; try tauto; eauto).
+  Qed.
+
+  Lemma expr_dag_beq_fueled_sym_iff : forall fuel e1 e2, expr_dag_beq_fueled fuel e1 e2 = true <-> expr_dag_beq_fueled fuel e2 e1 = true.
+  Proof using Type.
+    induction fuel as [|fuel IH]; cbn.
+    all: apply expr_dag_beq_fueled_step_sym_iff; eauto.
+    intros; split; intros; reflect_hyps; apply unreflect_bool; subst; reflexivity.
+  Qed.
+
+  Lemma expr_dag_beq_fueled_sym : forall fuel e1 e2, expr_dag_beq_fueled fuel e1 e2 = expr_dag_beq_fueled fuel e2 e1.
+  Proof using Type.
+    intros fuel e1 e2.
+    generalize (@expr_dag_beq_fueled_sym_iff fuel e1 e2).
+    do 2 destruct expr_dag_beq_fueled; intros; repeat split; destruct_head' iff; try tauto.
+    symmetry; tauto.
+  Qed.
+
+  Lemma eval_expr_dag_beq_fueled_step_impl
+    expr_dag_beq_fueled (Hexpr_dag_beq_fueled : forall e v, eval e v -> forall e', expr_dag_beq_fueled e e' = true -> eval e' v)
+
+    : forall e v, eval e v -> forall e', expr_dag_beq_fueled_step expr_dag_beq_fueled e e' = true -> eval e' v.
+  Proof using Type.
+    induction 1, e'; cbn; cbv [reveal_step].
+    all: break_innermost_match; intros; reflect_hyps; subst.
+    all: try now exfalso.
+    all: repeat first [ progress subst
+                      | progress inversion_option
+                      | progress inversion_pair
+                      | progress destruct_head'_and
+                      | exfalso; assumption
+                      | rewrite Bool.andb_true_iff in *
+                      | progress cbv [reveal_step] in *
+                      | progress reflect_hyps
+                      | progress break_innermost_match_hyps
+                      | erewrite (@map_ext _ _ (reveal_expr 0)), map_id in * by (intros; apply reveal_expr0) ].
+    all: try solve [ econstructor; try eassumption; eapply Forall2_weaken; [ | eassumption ]; cbv beta; try tauto ].
+    all: econstructor; try eassumption.
+    all: rewrite ?Forall2_map_l in *.
+    all: try match goal with H : dag.lookup _ _ = Some _ |- _ => clear H end.
+    all: try match goal with H : interp_op _ _ _ = Some _ |- _ => clear H end.
+    all: lazymatch goal with
+         | [ H : Forall2 _ ?x ?y |- Forall2 _ ?x' ?y' ]
+           => (revert dependent x' + idtac); (revert dependent y' + idtac); induction H; cbn in *; intros
+         end.
+    all: subst.
+    all: break_innermost_match_hyps; try congruence.
+    all: try solve [ constructor ].
+    all: lazymatch goal with
+         | [ H : List.map _ ?x = [] |- _ ] => is_var x; destruct x
+         | [ H : List.map _ ?x = _ :: _ |- _ ] => is_var x; destruct x
+         | _ => idtac
+         end.
+    all: cbn in *.
+    all: inversion_list.
+    all: repeat first [ progress subst
+                      | progress inversion_option
+                      | progress inversion_pair
+                      | progress destruct_head'_and
+                      | exfalso; assumption
+                      | rewrite Bool.andb_true_iff in *
+                      | progress cbv [reveal_step] in *
+                      | progress reflect_hyps
+                      | progress break_innermost_match_hyps
+                      | solve [ constructor; eauto ]
+                      | erewrite (@map_ext _ _ (reveal_expr 0)), map_id in * by (intros; apply reveal_expr0) ].
+  Qed.
+
+  Lemma eval_expr_dag_beq_fueled_impl : forall fuel e v, eval e v -> forall e', expr_dag_beq_fueled fuel e e' = true -> eval e' v.
+  Proof using Type.
+    induction fuel as [|fuel IH]; cbn.
+    all: apply eval_expr_dag_beq_fueled_step_impl; eauto.
+    intros; intros; reflect_hyps; subst; eauto.
+  Qed.
+
+  Lemma eval_expr_dag_beq_fueled : forall fuel e e', expr_dag_beq_fueled fuel e e' = true -> forall v, eval e v <-> eval e' v.
+  Proof using Type.
+    split; intro; eapply eval_expr_dag_beq_fueled_impl; eauto.
+    eapply expr_dag_beq_fueled_sym_iff; eauto.
+  Qed.
+
+  Lemma expr_dag_beq_refl : forall e, expr_dag_beq e e = true.
+  Proof using Type. apply expr_dag_beq_fueled_refl. Qed.
+
+  Lemma expr_dag_beq_sym_iff : forall e1 e2, expr_dag_beq e1 e2 = true <-> expr_dag_beq e2 e1 = true.
+  Proof using Type. apply expr_dag_beq_fueled_sym_iff. Qed.
+
+  Lemma expr_dag_beq_sym : forall e1 e2, expr_dag_beq e1 e2 = expr_dag_beq e2 e1.
+  Proof using Type. apply expr_dag_beq_fueled_sym. Qed.
+
+  Lemma eval_expr_dag_beq_impl : forall e v, eval e v -> forall e', expr_dag_beq e e' = true -> eval e' v.
+  Proof using Type. apply eval_expr_dag_beq_fueled_impl. Qed.
+
+  Lemma eval_expr_dag_beq : forall e e', expr_dag_beq e e' = true -> forall v, eval e v <-> eval e' v.
+  Proof using Type. apply eval_expr_dag_beq_fueled. Qed.
 End WithDag.
 
 Definition merge_node {descr : description} (n : node idx) : dag.M idx
@@ -2241,44 +2478,46 @@ Section bound_expr_via_PHOAS.
 
   Local Notation interp_PHOAS_op := (ZRange.ident.option.interp true).
 
-  Fixpoint bound_expr_via_PHOAS (d : dag) (e : Symbolic.expr) : option zrange
+  Fixpoint bound_expr_via_PHOAS_noreveal (d : dag) (e : Symbolic.expr) : option zrange
     := match e with
        | ExprApp (o, args)
          => match op_to_PHOAS_bounds o with
             | Some o
-              => o (List.map (fun e 'tt => bound_expr_via_PHOAS d e) args)
+              => o (List.map (fun e 'tt => bound_expr_via_PHOAS_noreveal d e) args)
             | None => None
             end
        | ExprRef i => dag.lookup_bounds d i
        end.
+  Definition bound_expr_via_PHOAS {symex_bounds_reveal_depth:symex_bounds_reveal_depth_opt} (d : dag) (e : Symbolic.expr) : option zrange :=
+    bound_expr_via_PHOAS_noreveal d (reveal_expr_at_least d symex_bounds_reveal_depth e).
 
   Local Coercion is_true : bool >-> Sortclass.
 
-  Fixpoint eval_bound_expr_via_PHOAS' G d (Hok : gensym_dag_ok G d) e b
+  Fixpoint eval_bound_expr_via_PHOAS_noreveal' G d (Hok : gensym_dag_ok G d) e b
            (H_dag : forall i b, dag.lookup_bounds d i = Some b -> forall v, eval G d (ExprRef i) v -> is_bounded_by_bool v b = true)
            {struct e}
-    : bound_expr_via_PHOAS d e = Some b ->
+    : bound_expr_via_PHOAS_noreveal d e = Some b ->
       forall v, eval G d e v -> is_bounded_by_bool v b = true.
   Proof using Type.
     intros H v.
     assert (dag.ok d) by apply Hok.
-    specialize (fun e v b H H_dag => eval_bound_expr_via_PHOAS' G d Hok e b H_dag H v).
-    destruct e as [?|[n args] ]; cbn [bound_expr_via_PHOAS] in *.
-    { clear eval_bound_expr_via_PHOAS'; intros; inversion_option; eauto. }
-    let P := lazymatch type of eval_bound_expr_via_PHOAS' with forall e v, @?P e v => P end in
-    assert (eval_bound_expr_via_PHOAS'_Forall : forall args', List.length args = List.length args' -> Forall2 P args args').
-    { clear -eval_bound_expr_via_PHOAS'.
+    specialize (fun e v b H H_dag => eval_bound_expr_via_PHOAS_noreveal' G d Hok e b H_dag H v).
+    destruct e as [?|[n args] ]; cbn [bound_expr_via_PHOAS_noreveal] in *.
+    { clear eval_bound_expr_via_PHOAS_noreveal'; intros; inversion_option; eauto. }
+    let P := lazymatch type of eval_bound_expr_via_PHOAS_noreveal' with forall e v, @?P e v => P end in
+    assert (eval_bound_expr_via_PHOAS_noreveal'_Forall : forall args', List.length args = List.length args' -> Forall2 P args args').
+    { clear -eval_bound_expr_via_PHOAS_noreveal'.
       induction args as [|arg args IH], args'; cbn [List.length];
         first [ constructor; try apply IH | clear; intro; exfalso; congruence ].
-      { apply eval_bound_expr_via_PHOAS'. }
-      { clear eval_bound_expr_via_PHOAS'; congruence. } }
-    clear eval_bound_expr_via_PHOAS'.
+      { apply eval_bound_expr_via_PHOAS_noreveal'. }
+      { clear eval_bound_expr_via_PHOAS_noreveal'; congruence. } }
+    clear eval_bound_expr_via_PHOAS_noreveal'.
     break_innermost_match_hyps; inversion_option.
     inversion 1; subst.
     eapply (@interp_op_op_to_PHOAS_bounds G n); try (eassumption || reflexivity).
     rewrite !Forall2_map_r_iff.
     eassert (H' : List.length _ = List.length _) by (eapply eq_length_Forall2; eassumption).
-    specialize (eval_bound_expr_via_PHOAS'_Forall _ H').
+    specialize (eval_bound_expr_via_PHOAS_noreveal'_Forall _ H').
     rewrite !Forall2_forall_iff_nth_error.
     intro i;
       repeat match goal with
@@ -2287,6 +2526,16 @@ Section bound_expr_via_PHOAS.
              end.
     cbv [option_eq] in *.
     break_innermost_match; break_innermost_match_hyps; inversion_option; auto; tauto.
+  Qed.
+
+  Lemma eval_bound_expr_via_PHOAS' {symex_bounds_reveal_depth:symex_bounds_reveal_depth_opt} G d (Hok : gensym_dag_ok G d) e b
+    (H_dag : forall i b, dag.lookup_bounds d i = Some b -> forall v, eval G d (ExprRef i) v -> is_bounded_by_bool v b = true)
+    : bound_expr_via_PHOAS d e = Some b ->
+      forall v, eval G d e v -> is_bounded_by_bool v b = true.
+  Proof using Type.
+    cbv [bound_expr_via_PHOAS]; intros.
+    eapply eval_bound_expr_via_PHOAS_noreveal'; eauto.
+    eapply eval_reveal_expr_at_least; eauto.
   Qed.
 
   Lemma eval_bound_expr_via_PHOAS_dag G d (Hok : gensym_dag_ok G d)
@@ -2315,7 +2564,14 @@ Section bound_expr_via_PHOAS.
     eauto.
   Qed.
 
-  Lemma eval_bound_expr_via_PHOAS G d (Hok : gensym_dag_ok G d) e b
+  Lemma eval_bound_expr_via_PHOAS_noreveal G d (Hok : gensym_dag_ok G d) e b
+    : bound_expr_via_PHOAS_noreveal d e = Some b ->
+      forall v, eval G d e v -> is_bounded_by_bool v b = true.
+  Proof using Type.
+    eauto using eval_bound_expr_via_PHOAS_noreveal', eval_bound_expr_via_PHOAS_dag.
+  Qed.
+
+  Lemma eval_bound_expr_via_PHOAS {symex_bounds_reveal_depth:symex_bounds_reveal_depth_opt} G d (Hok : gensym_dag_ok G d) e b
     : bound_expr_via_PHOAS d e = Some b ->
       forall v, eval G d e v -> is_bounded_by_bool v b = true.
   Proof using Type.
@@ -2324,7 +2580,7 @@ Section bound_expr_via_PHOAS.
 End bound_expr_via_PHOAS.
 
 Notation bound_expr := bound_expr_via_PHOAS.
-Lemma eval_bound_expr G d e b : bound_expr d e = Some b ->
+Lemma eval_bound_expr {symex_bounds_reveal_depth:symex_bounds_reveal_depth_opt} G d e b : bound_expr d e = Some b ->
   forall v, gensym_dag_ok G d -> eval G d e v -> (ZRange.lower b <= v <= ZRange.upper b)%Z.
 Proof using Type.
   intros H v Hok He.
@@ -2354,7 +2610,7 @@ Ltac t:= match goal with
   | _ => progress subst
   end.
 
-Lemma bound_sum' G d
+Lemma bound_sum' {symex_bounds_reveal_depth:symex_bounds_reveal_depth_opt} G d
   es (He : Forall (fun e => forall b, bound_expr d e = Some b ->
        forall (v : Z), eval G d e v -> (ZRange.lower b <= v <= ZRange.upper b)%Z) es)
   : forall
@@ -2372,7 +2628,7 @@ Qed.
 
 Import Crypto.Util.ZRange.
 
-Lemma bound_sum G d es
+Lemma bound_sum {symex_bounds_reveal_depth:symex_bounds_reveal_depth_opt} G d es
   (Hok : gensym_dag_ok G d)
   bs (Hb : Option.List.lift (map (bound_expr d) es) = Some bs)
   vs (Hv : Forall2 (eval G d) es vs)
@@ -2387,8 +2643,8 @@ Definition isCst (e : expr) :=
   match e with ExprApp ((const _), []) => true | _ => false end.
 
 Module Rewrite.
-Class Ok r := rwok : forall G d e v, gensym_dag_ok G d -> eval G d e v -> eval G d (r d e) v.
-Class description_of (r : dag -> expr -> expr) := describe : string.
+Class Ok r := rwok : forall {opts : symbolic_options_computed_opt} G d e v, gensym_dag_ok G d -> eval G d e v -> eval G d (r opts d e) v.
+Class description_of (r : symbolic_options_computed_opt -> dag -> expr -> expr) := describe : string.
 #[global] Bind Scope string_scope with description_of.
 #[global] Typeclasses Opaque description_of.
 Ltac resolve_match_using_hyp :=
@@ -2402,6 +2658,11 @@ Ltac resolve_match_using_hyp :=
 Create HintDb step_db discriminated.
 
 Ltac step := match goal with
+  | H : eval ?G ?d ?e ?v |- context[reveal_expr_at_least ?d ?n ?e] =>
+      assert (eval G d (reveal_expr_at_least d n e) v)
+      by (once (eapply eval_reveal_expr_at_least; (exact H + reflexivity)));
+      generalize dependent (reveal_expr_at_least d n e); intros
+  | [ H : eval _ _ ?e _ |- _ ] => is_var e; clear e H
   | |- Ok ?r => cbv [Ok r]; intros
   | _ => solve [trivial | contradiction]
   |  _ => resolve_match_using_hyp
@@ -2455,8 +2716,8 @@ Ltac t := repeat (step || Econstructor || eauto || (progress cbn [interp0_op int
 
 #[local] Hint Rewrite Z.fold_right_land_ones_id : step_db.
 
-Definition slice0 (d : dag) :=
-  fun e => match e with
+Definition slice0 [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 2 e with
     ExprApp (slice 0 s, [(ExprApp ((addZ|mulZ|negZ|shlZ|shrZ|andZ|orZ|xorZ) as o, args))]) =>
         ExprApp ((match o with addZ=>add s|mulZ=>mul s|negZ=>neg s|shlZ=>shl s|shrZ => shr s|andZ => and s| orZ => or s|xorZ => xor s |_=>old 0%N 999999%N end), args)
       | _ => e end.
@@ -2464,8 +2725,8 @@ Definition slice0 (d : dag) :=
   := "Merges (slice 0 s) into addZ,mulZ,negZ,shlZ,shrZ,andZ,orZ,xorZ".
 Global Instance slice0_ok : Ok slice0. Proof using Type. t. Qed.
 
-Definition slice01_addcarryZ (d : dag) :=
-  fun e => match e with
+Definition slice01_addcarryZ [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 2 e with
     ExprApp (slice 0 1, [(ExprApp (addcarryZ s, args))]) =>
         ExprApp (addcarry s, args)
       | _ => e end.
@@ -2474,8 +2735,8 @@ Definition slice01_addcarryZ (d : dag) :=
 Global Instance slice01_addcarryZ_ok : Ok slice01_addcarryZ.
 Proof using Type. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.lia. Qed.
 
-Definition slice01_subborrowZ (d : dag) :=
-  fun e => match e with
+Definition slice01_subborrowZ [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 2 e with
     ExprApp (slice 0 1, [(ExprApp (subborrowZ s, args))]) =>
         ExprApp (subborrow s, args)
       | _ => e end.
@@ -2484,8 +2745,8 @@ Definition slice01_subborrowZ (d : dag) :=
 Global Instance slice01_subborrowZ_ok : Ok slice01_subborrowZ.
 Proof using Type. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.lia. Qed.
 
-Definition slice_set_slice (d : dag) :=
-  fun e => match e with
+Definition slice_set_slice [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 2 e with
     ExprApp (slice 0 s1, [ExprApp (set_slice 0 s2, [_; e'])]) =>
       if N.leb s1 s2 then ExprApp (slice 0 s1, [e']) else e | _ => e end.
 #[local] Instance describe_slice_set_slice : description_of Rewrite.slice_set_slice
@@ -2493,8 +2754,8 @@ Definition slice_set_slice (d : dag) :=
 Global Instance slice_set_slice_ok : Ok slice_set_slice.
 Proof using Type. t. f_equal. Z.bitblast. Qed.
 
-Definition set_slice_set_slice (d : dag) :=
-  fun e => match e with
+Definition set_slice_set_slice [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 2 e with
     ExprApp (set_slice lo1 s1, [ExprApp (set_slice lo2 s2, [x; e']); y]) =>
       if andb (N.eqb lo1 lo2) (N.leb s2 s1) then ExprApp (set_slice lo1 s1, [x; y]) else e | _ => e end.
 #[local] Instance describe_set_slice_set_slice : description_of Rewrite.set_slice_set_slice
@@ -2502,8 +2763,8 @@ Definition set_slice_set_slice (d : dag) :=
 Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice.
 Proof using Type. t. f_equal. Z.bitblast. Qed.
 
-Definition set_slice0_small (d : dag) :=
-  fun e => match e with
+Definition set_slice0_small [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 1 e with
     ExprApp (set_slice 0 s, [x; y]) =>
       match bound_expr d x, bound_expr d y with Some a, Some b =>
       if Z.leb 0 (ZRange.lower a) && Z.leb 0 (ZRange.lower b) && Z.leb (ZRange.upper a) (Z.ones (Z.of_N s)) && Z.leb (ZRange.upper b) (Z.ones (Z.of_N s)) then y
@@ -2524,8 +2785,8 @@ Proof using Type.
   eapply Z.log2_lt_pow2; Lia.lia.
 Qed.
 
-Definition truncate_small (d : dag) :=
-  fun e => match e with
+Definition truncate_small [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 1 e with
     ExprApp (slice 0%N s, [e']) =>
       match bound_expr d e' with Some b =>
       if Z.leb 0 (ZRange.lower b) && Z.leb (ZRange.upper b) (Z.ones (Z.of_N s))
@@ -2535,8 +2796,8 @@ Definition truncate_small (d : dag) :=
   := "Simplifies slice when it's a no-op".
 Global Instance truncate_small_ok : Ok truncate_small. Proof using Type. t; []. cbn in *; eapply Z.land_ones_low_alt_ones; eauto. lia. Qed.
 
-Definition addcarry_bit (d : dag) :=
-  fun e => match e with
+Definition addcarry_bit [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 2 e with
     ExprApp (addcarry s, ([ExprApp (const a, nil);b])) =>
       if option_beq zrange_beq (bound_expr d b) (Some r[0~>1]%zrange) then
       match interp0_op (addcarry s) [a; 0], interp0_op (addcarry s) [a; 1] with
@@ -2555,8 +2816,8 @@ Proof using Type.
       subst; repeat step; repeat Econstructor; cbn; congruence.
 Qed.
 
-Definition addoverflow_bit (d : dag) :=
-  fun e => match e with
+Definition addoverflow_bit [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 2 e with
     ExprApp (addoverflow s, ([ExprApp (const a, nil);b])) =>
       if option_beq zrange_beq (bound_expr d b) (Some r[0~>1]%zrange) then
       match interp0_op (addoverflow s) [a; 0] , interp0_op (addoverflow s) [a; 1] with
@@ -2575,8 +2836,8 @@ Proof using Type.
       subst; repeat step; repeat Econstructor; cbn; congruence.
 Qed.
 
-Definition addbyte_small (d : dag) :=
-  fun e => match e with
+Definition addbyte_small [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 1 e with
     ExprApp (add (8%N as s), args) =>
       match Option.List.lift (List.map (bound_expr d) args) with
       | Some bounds =>
@@ -2595,8 +2856,8 @@ Proof using Type.
     replace (Z.of_N 64) with 64 in * by (vm_compute; reflexivity); lia.
 Qed.
 
-Definition addcarry_small (d : dag) :=
-  fun e => match e with
+Definition addcarry_small [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 1 e with
     ExprApp (addcarry s, args) =>
       match Option.List.lift (List.map (bound_expr d) args) with
       | Some bounds =>
@@ -2613,8 +2874,8 @@ Proof using Type.
   rewrite Z.ones_equiv in * |- ; rewrite Z.shiftr_div_pow2, Z.div_small; cbn; lia.
 Qed.
 
-Definition addoverflow_small (d : dag) :=
-  fun e => match e with
+Definition addoverflow_small [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 1 e with
     ExprApp (addoverflow s, ([_]|[_;_]|[_;_;_]) as args) =>
       match Option.List.lift (List.map (bound_expr d) args) with
       | Some bounds =>
@@ -2636,8 +2897,8 @@ Proof using Type.
   all : destruct s; cbn in * |- ; lia.
 Qed.
 
-Definition constprop (d : dag) :=
-  fun e => match interp0_expr e with
+Definition constprop [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match interp0_expr (reveal_expr_at_least d 2 e) with
            | Some v => ExprApp (const v, nil)
            | _ => e end.
 #[local] Instance describe_constprop : description_of Rewrite.constprop
@@ -2646,8 +2907,8 @@ Global Instance constprop_ok : Ok constprop.
 Proof using Type. t. f_equal; eauto using eval_eval. Qed.
 
 (* convert unary operations to slice *)
-Definition unary_truncate (d : dag) :=
-  fun e => match e with
+Definition unary_truncate [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 1 e with
     ExprApp (o, [x]) =>
     match unary_truncate_size o with
     | Some (-1)%Z => x
@@ -2898,8 +3159,8 @@ Proof using Type.
   reflexivity.
 Qed.
 
-Definition flatten_associative (d : dag) :=
-  fun e => match e with
+Definition flatten_associative [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 2 e with
     ExprApp (o, args) =>
     if associative o then
       ExprApp (o, List.flat_map (fun e' =>
@@ -2916,9 +3177,11 @@ Proof using Type.
   let H := match goal with H : Forall2 (eval _ _) _ _ |- _ => H end in
   revert dependent v; induction H; cbn.
   { econstructor; eauto. }
-  intros ? H4.
-  pose proof H4.
-  eapply invert_interp_op_associative in H4; eauto. destruct H4 as (?&?&?).
+  intros.
+  let H := match goal with H : interp_op _ _ _ = _ |- _ => H end in
+  rename H into H'.
+  pose proof H'.
+  eapply invert_interp_op_associative in H'; eauto. destruct H' as (?&?&?).
   specialize (IHForall2 _ ltac:(eassumption)).
   inversion IHForall2; subst.
   let x := match goal with |- context[match x with ExprRef _ => _ | _ => _ end] => x end in
@@ -2934,8 +3197,8 @@ Proof using Type.
     erewrite interp_op_associative_app; eauto. }
 Qed.
 
-Definition flatten_bounded_associative (d : dag) :=
-  fun e => match e with
+Definition flatten_bounded_associative [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 2 e with
     ExprApp (o, args) =>
     ExprApp (o, List.flat_map (fun e' =>
         match e' with
@@ -2953,12 +3216,10 @@ Proof. induction ls; cbn; lia. Qed.
 
 Global Instance flatten_bounded_associative_ok : Ok flatten_bounded_associative.
 Proof using Type.
-  cbv [Ok flatten_bounded_associative].
-  intros G d e v Hok He.
-  destruct He; try solve [ t ]; [].
+  repeat step; [].
   lazymatch goal with
   | [ H0 : Forall2 ?P ?args ?args', H1 : interp_op _ _ ?args' = _
-      |- eval _ _ (ExprApp (_, flat_map ?f args)) _ ]
+      |- eval _ _ (ExprApp (_, flat_map ?f ?args)) _ ]
     => epose [] as preargs; epose [] as preargs';
        assert (Hpre : Forall2 P preargs preargs') by constructor;
        change (flat_map f args) with (preargs ++ flat_map f args); change args' with (preargs' ++ args') in H1;
@@ -3013,8 +3274,8 @@ Proof using Type.
     all: try reflexivity. }
 Qed.
 
-Definition consts_commutative (d : dag) :=
-  fun e => match e with
+Definition consts_commutative [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 2 e with
     ExprApp (o, args) =>
     if commutative o then
     let csts_exprs := List.partition isCst args in
@@ -3030,10 +3291,7 @@ Definition consts_commutative (d : dag) :=
 
 Global Instance consts_commutative_ok : Ok consts_commutative.
 Proof using Type.
-  step.
-  destruct_one_head' @expr; trivial.
-  destruct_one_head' node.
-  destruct commutative eqn:?; trivial.
+  repeat (step; trivial; []).
   inversion_one_head' @eval.
   let l := match goal with l : list expr |- _ => l end in
   epose proof Permutation_partition l isCst.
@@ -3046,7 +3304,6 @@ Proof using Type.
   set (fst (partition isCst l)) as csts in *; clearbody csts.
   set (snd (partition isCst l)) as exps in *; clearbody exps.
   clear dependent l. clear dependent args'.
-  move o at top; move Heqb0 at top; move Heqb at top.
   let H := match goal with H : interp0_expr _ = Some _ |- _ => H end in
   eapply eval_interp0_expr in H; instantiate (1:=d) in H; instantiate (1:=G) in H.
 
@@ -3068,8 +3325,8 @@ Proof using Type.
 Qed.
 
 Definition neqconst i := fun a : expr => negb (option_beq Z.eqb (interp0_expr a) (Some i)).
-Definition drop_identity (d : dag) :=
-  fun e => match e with ExprApp (o, args) =>
+Definition drop_identity [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 2 e with ExprApp (o, args) =>
     match identity o with
     | Some i =>
         let args := List.filter (neqconst i) args in
@@ -3162,7 +3419,7 @@ Proof using Type.
                     | solve [ t ] ].
 Qed.
 
-Definition fold_consts_to_and (d : dag) :=
+Definition fold_consts_to_and [opts : symbolic_options_computed_opt] (d : dag) :=
   fun e => match consts_commutative d e with
            | ExprApp ((and _ | andZ) as o, ExprApp (const v, nil) :: args)
              => let v' := match o with
@@ -3241,8 +3498,8 @@ Proof using Type.
                     | t ].
 Qed.
 
-Definition xor_same (d : dag) :=
-  fun e => match e with ExprApp (xor _,[x;y]) =>
+Definition xor_same [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 1 e with ExprApp (xor _,[x;y]) =>
     if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end.
 #[local] Instance describe_xor_same : description_of Rewrite.xor_same
   := "Replaces xor x x with 0".
@@ -3251,8 +3508,8 @@ Proof using Type.
   t; cbn [fold_right]. rewrite Z.lxor_0_r, Z.lxor_nilpotent; trivial.
 Qed.
 
-Definition shift_to_mul (d : dag) :=
-  fun e => match e with
+Definition shift_to_mul [opts : symbolic_options_computed_opt] (d : dag) :=
+  fun e => match reveal_expr_at_least d 2 e with
     ExprApp ((shl _ | shlZ) as o, [e'; ExprApp (const v, [])]) =>
       let o' := match o with shl bitwidth => mul bitwidth | shlZ => mulZ | _ => o (* impossible *) end in
       let bw := match o with shl bitwidth => Some bitwidth | shlZ => None | _ => None (* impossible *) end in
@@ -3275,7 +3532,7 @@ Proof. t; cbn in *; rewrite ?Z.shiftl_mul_pow2, ?Z.land_0_r by lia; repeat (lia 
 Definition split_consts (d : dag) (o : op) (i : Z) : list expr -> list (expr * Z)
   := List.map
        (fun e
-        => match e with
+        => match reveal_expr_at_least d 2 e with
            | ExprApp (o', args)
              => if op_beq o' o
                 then
@@ -3310,7 +3567,7 @@ Definition group_consts (d : dag) (ls : list (expr * Z)) : list (expr * list Z)
                   | [] => None
                   | (e, z) :: xs => Some (e, z :: List.map snd xs)
                   end)
-       (List.groupAllBy (fun x y => expr_beq (fst x) (fst y)) ls).
+       (List.groupAllBy (fun x y => expr_dag_beq d (fst x) (fst y)) ls).
 
 (* o is like add *)
 (* spec: if interp0_op o zs is always Some _, then Forall2 (fun '(e, zs) '(e', z) => e = e' /\ interp0_op o zs = Some z) input output *)
@@ -3328,7 +3585,7 @@ Definition app_consts (d : dag) (o : op) (ls : list (expr * Z)) : list expr
   := List.map (fun '(e, z) => let z := ExprApp (const z, []) in
                               let default := ExprApp (o, [e; z]) in
                               if associative o
-                              then match e with
+                              then match reveal_expr_at_least d 1 e with
                                    | ExprApp (o', args)
                                      => if op_beq o' o
                                         then ExprApp (o, args ++ [z])
@@ -3336,22 +3593,22 @@ Definition app_consts (d : dag) (o : op) (ls : list (expr * Z)) : list expr
                                    | _ => default end else default)
               ls.
 
-Definition combine_consts_pre (d : dag) : expr -> expr :=
-  fun e => match e with ExprApp (o, args) =>
+Definition combine_consts_pre [opts : symbolic_options_computed_opt] (d : dag) : expr -> expr :=
+  fun e => match reveal_expr_at_least d 1 e with ExprApp (o, args) =>
     if commutative o && associative o && op_always_interps o then match combines_to o with
     | Some o' => match identity o' with
     | Some idv =>
         ExprApp (o, app_consts d o' (compress_consts d o (group_consts d (split_consts d o' idv args))))
     | None => e end | None => e end else e | _ => e end%bool.
 
-Definition cleanup_combine_consts (d : dag) : expr -> expr :=
+Definition cleanup_combine_consts [opts : symbolic_options_computed_opt] (d : dag) : expr -> expr :=
   let simp_outside := List.fold_left (fun e f => f e) [flatten_associative d] in
   let simp_inside := List.fold_left (fun e f => f e) [constprop d;drop_identity d;unary_truncate d;truncate_small d] in
-  fun e => simp_outside match e with ExprApp (o, args)  =>
+  fun e => simp_outside match reveal_expr_at_least d 1 e with ExprApp (o, args)  =>
     ExprApp (o, List.map simp_inside args)
                    | _ => e end.
 
-Definition combine_consts (d : dag) : expr -> expr := fun e => cleanup_combine_consts d (combine_consts_pre d e).
+Definition combine_consts [opts : symbolic_options_computed_opt] (d : dag) : expr -> expr := fun e => cleanup_combine_consts d (combine_consts_pre d e).
 #[local] Instance describe_combine_consts : description_of Rewrite.combine_consts
   := "Rewrites expressions like (x + x * 5) into (x * 6)".
 
@@ -3713,11 +3970,13 @@ Qed.
 
 Global Instance cleanup_combine_consts_Ok : Ok cleanup_combine_consts.
 Proof.
-  repeat (step; eauto; []); cbn [fold_left].
-  repeat match goal with
-         | [ |- eval _ _ (?r ?d ?e) _ ]
-           => apply (_:Ok r); try assumption
-         end.
+  repeat first [ match goal with
+                 | [ |- eval _ _ (?r ?opts ?d ?e) _ ]
+                    => apply (_:Ok r); try assumption
+                 end
+                | progress cbn [fold_left]
+                | step; eauto; [] ].
+  all: [ > ].
   econstructor; [ | eassumption ].
   rewrite Forall2_map_l.
   rewrite !@Forall2_forall_iff_nth_error in *; cbv [option_eq] in *.
@@ -3728,8 +3987,8 @@ Proof.
   break_innermost_match; eauto.
   cbn [fold_left].
   repeat lazymatch goal with
-  | H : eval ?c ?d ?e _ |- context[?r ?d ?e] =>
-    let Hr := fresh in epose proof ((_:Ok r) _ _ _ _ ltac:(eassumption) H) as Hr; clear H
+  | H : eval ?c ?d ?e _ |- context[?r ?opts ?d ?e] =>
+    let Hr := fresh in epose proof ((_:Ok r) _ _ _ _ _ ltac:(eassumption) H) as Hr; clear H
   end.
   assumption.
 Qed.
@@ -3765,7 +4024,7 @@ Global Instance combine_consts_Ok : Ok combine_consts.
 Proof. repeat step; apply cleanup_combine_consts_Ok, combine_consts_pre_Ok; assumption. Qed.
 
 (* M-x query-replace-regex RET \(| RewritePass\.\)\([^ ]*\) => _ RET \1\2 => \2 *)
-Definition named_pass (name : RewritePass.rewrite_pass) : dag -> expr -> expr
+Definition named_pass (name : RewritePass.rewrite_pass) : forall [opts : symbolic_options_computed_opt], dag -> expr -> expr
   := match name with
      | RewritePass.addbyte_small => addbyte_small
      | RewritePass.addcarry_bit => addcarry_bit
@@ -3800,17 +4059,20 @@ Proof.
   all: fail_if_goals_remain ().
 Defined.
 
-Definition expr {rewriting_passes : rewriting_passes_opt} (d : dag) : expr -> expr :=
-  List.fold_left (fun e f => f d e)
-                 (List.map named_pass rewriting_passes).
+Notation named_passf := (fun n => @named_pass n _).
 
-Local Instance expr_Ok {rewriting_passes : rewriting_passes_opt} : Ok expr.
+Definition expr [opts : symbolic_options_computed_opt] (d : dag) : expr -> expr :=
+  List.fold_left (fun e f => f d e)
+                 (List.map named_passf rewriting_passes).
+
+Local Instance expr_Ok : Ok expr.
 Proof.
   pose proof (@named_pass_Ok).
-  cbv [expr]; induction rewriting_passes; cbn [map fold_left]; cbv [Ok] in *; eauto.
+  cbv [expr]; intro opts.
+  induction rewriting_passes; cbn [map fold_left]; cbv [Ok] in *; eauto.
 Qed.
 
-Lemma eval_expr {rewriting_passes : rewriting_passes_opt} c d e v : gensym_dag_ok c d -> eval c d e v -> eval c d (expr d e) v.
+Lemma eval_expr {opts : symbolic_options_computed_opt} c d e v : gensym_dag_ok c d -> eval c d e v -> eval c d (expr d e) v.
 Proof.
   apply expr_Ok.
 Qed.
