@@ -15,7 +15,7 @@ Jacobian
 Coq.Strings.String Coq.Lists.List
 ProgramLogic WeakestPrecondition
 ProgramLogic.Coercions
-Word.Interface OfListWord Separation SeparationLogic
+OfListWord Separation SeparationLogic
 letexists
 BasicC64Semantics
 ListIndexNotations
@@ -35,8 +35,8 @@ Local Open Scope list_scope.
 
 Local Notation "xs $@ a" := (map.of_list_word_at a xs)
   (at level 10, format "xs $@ a").
-Local Notation "$ n" := (match word.of_Z n return word with w => w end) (at level 9, format "$ n").
-Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
+Local Notation "$ n" := (match bits.of_Z _ n return word with w => w end) (at level 9, format "$ n").
+Local Notation "p .+ n" := (Zmod.add p (bits.of_Z _ n)) (at level 50, format "p .+ n", left associativity).
 
 Import coqutil.Map.Interface.
 Import bedrock2.ToCString.

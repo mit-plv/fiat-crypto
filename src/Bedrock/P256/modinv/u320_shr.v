@@ -9,7 +9,7 @@ Local Open Scope string_scope. Local Open Scope Z_scope.
 
 Local Notation eval := (fold_right (fun (a : word) (s : Z) => a + 2^64*s) 0).
 Local Notation eval_bool := (fold_right (fun (a : word) (s : Z) => Z.lor a (Z.shiftl s 64)) 0).
-Local Notation array := (array scalar (word.of_Z 8)).
+Local Notation array := (array scalar (bits.of_Z _ 8)).
 
 #[export] Instance spec_of_u320_shr : spec_of "u320_shr" :=
 fnspec! "u320_shr" (p_x carry shift : word) / (x : list word) R,
@@ -75,10 +75,11 @@ Proof.
     cbv [fold_right v sr1 sr2 sr3 sr4 app].
 
     (* Arithmetic proof starts here *)
-    repeat rewrite !word.unsigned_or, !word.unsigned_slu, !word.unsigned_sub, !word.unsigned_sru, !word.unsigned_of_Z by ZnWords.
-    cbv [word.wrap].
+    repeat rewrite !bits.unsigned_or, !Zmod.unsigned_slu, !Zmod.unsigned_sub, !Zmod.unsigned_sru, !bits.unsigned_of_Z by ZnWords.
+
     rewrite Z.shiftl_0_l, !Z.lor_0_r.
     rewrite !(Z.mod_small 64), !(Z.mod_small (64 - shift)) by lia.
+    rewrite !(Z.mod_small _ (2 ^ Z.log2 64)) by (change (2 ^ Z.log2 64) with 64; lia).
 
     apply Z.bits_inj'; intros;
     repeat rewrite

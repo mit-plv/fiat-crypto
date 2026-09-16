@@ -11,7 +11,7 @@ Local Open Scope string_scope. Local Open Scope Z_scope.
 Require Import Lia ZArith Zdiv.
 
 Local Notation eval := (fold_right (fun (a : word) (s : Z) => a + 2^64*s) 0).
-Local Notation array := (array scalar (word.of_Z 8)).
+Local Notation array := (array scalar (bits.of_Z _ 8)).
 
 (** * Specification *)
 
@@ -139,9 +139,10 @@ Proof.
 Qed.
 
 Lemma mask_pow2_sub_1 (x : word) (H : x < 64) :
-    word.unsigned (word.sub (word.slu (word.of_Z 1) x) (word.of_Z 1)) = 2^x - 1.
+    Zmod.unsigned (Zmod.sub (Semantics.slu (bits.of_Z 64 1) x) (bits.of_Z _ 1)) = 2^x - 1.
 Proof.
-    rewrite word.unsigned_sub, word.unsigned_slu, Z.shiftl_mul_pow2 by ZnWords.
+    cbv [Semantics.slu]; change (2 ^ Z.log2 64) with 64.
+    rewrite Zmod.unsigned_sub, Zmod.unsigned_slu, Z.shiftl_mul_pow2 by ZnWords.
     ZnWords_pre. rewrite_strat bottomup Z.mod_small. all: ssplit; rewrite ?Z.mul_1_l;
     repeat match goal with
     | [|- 2^?x - 1 < 2^_] => eapply Z.lt_le_trans with (m := 2^x); [ZnWords| ]
@@ -162,7 +163,7 @@ Proof.
     straightline_call; eauto; repeat straightline. eexists; ssplit; repeat straightline.
     {
         straightline_call; intuition try ecancel_assumption; try ZnWords.
-        { rewrite Properties.word.unsigned_or_nowrap, word.unsigned_slu, !word.unsigned_of_Z in * by ZnWords; cbv [word.wrap] in *;
+        { change (2 ^ Z.log2 64) with 64 in *; rewrite bits.unsigned_or, Zmod.unsigned_slu, !bits.unsigned_of_Z in * by ZnWords;
             rewrite Z.shiftl_mul_pow2, !Z.mod_small in H9 by (try rewrite !Z.mod_small; ZnWords);
             rewrite <- (eval_mod [a1; a2;a3] a0) in H9;
             rewrite lctz_or in H9 by (eapply Z.mod_pos_bound; ZnWords).
@@ -175,8 +176,8 @@ Proof.
         fold (array p_m [MOD0; MOD1; MOD2; MOD3]) in *.
         repeat straightline. straightline_call; intuition try ecancel_assumption.
         repeat straightline. straightline_call; intuition try ecancel_assumption.
-        all:rewrite Properties.word.unsigned_or_nowrap, word.unsigned_slu, !word.unsigned_of_Z in * by ZnWords;
-        cbv [word.wrap] in *; rewrite Z.shiftl_mul_pow2, !Z.mod_small in H9 by (try rewrite !Z.mod_small; ZnWords);
+        all:change (2 ^ Z.log2 64) with 64 in *; rewrite bits.unsigned_or, Zmod.unsigned_slu, !bits.unsigned_of_Z in * by ZnWords;
+        rewrite Z.shiftl_mul_pow2, !Z.mod_small in H9 by (try rewrite !Z.mod_small; ZnWords);
         rewrite <- (eval_mod [a1; a2;a3] a0) in H9;
         rewrite lctz_or in H9 by (eapply Z.mod_pos_bound; ZnWords);
         try ZnWords.
@@ -191,13 +192,13 @@ Proof.
         end.
 
         match goal with
-        | [H : 2^320 * (word.unsigned ?x) + fold_right _ 0 ?y = _ |- _] =>
+        | [H : 2^320 * (Zmod.unsigned ?x) + fold_right _ 0 ?y = _ |- _] =>
             replace (2^320 * x + eval y) with (eval (y ++ [x])) in H by
                 (lists_into_elements; cbv [app eval]; ZnWords)
         end.
 
 
-        assert (word.unsigned mask = 2 ^ x - 1) by
+        assert (Zmod.unsigned mask = 2 ^ x - 1) by
         (cbv [mask]; eapply mask_pow2_sub_1; ZnWords).
 
         remember (eval [MOD0; MOD1; MOD2; MOD3]) as MOD.
@@ -208,17 +209,17 @@ Proof.
             f_equal; lia.
         }
 
-        assert (word.unsigned v = ((eval [y0; y1; y2; y3; y4]) * inv_m) mod 2^x).
+        assert (Zmod.unsigned v = ((eval [y0; y1; y2; y3; y4]) * inv_m) mod 2^x).
         {
             cbv [v] in *.
-            rewrite Properties.word.unsigned_and_nowrap.
-            rewrite word.unsigned_mul.
+            rewrite bits.unsigned_and.
+            rewrite Zmod.unsigned_mul.
             match goal with
             | [H : ?x = 2^_ - 1|- context [Z.land _ ?x]]
                 => rewrite H
             end.
             rewrite Z.sub_1_r, <- Z.ones_equiv, Z.land_ones by ZnWords.
-            cbv [word.wrap].
+
             rewrite <- (eval_mod [y1;y2;y3;y4]).
             rewrite Zmult_mod_idemp_l, Z.mod_mod_divide; try lia.
             exists (2^(64-x)). rewrite <- Z.pow_add_r by ZnWords.
@@ -228,7 +229,7 @@ Proof.
 
         eexists _, _, _; intuition try ecancel_assumption.
         {
-            rewrite H12, H9, Z.shiftr_div_pow2, ZLib.Z.div_mul_undo; try ZnWords.
+            rewrite H12, H9, Z.shiftr_div_pow2, (Z.mul_comm (_ / _)), <-Z_div_exact_full_2; try ZnWords.
             pose proof (lctz_nonneg 64 (eval [a0;a1;a2;a3])).
             eapply mod_pow2_divides with (a := (lctz 64 (eval [a0;a1;a2;a3]))); ssplit;
             try lia; try eapply Z.min_l.
@@ -237,7 +238,7 @@ Proof.
         }
         {
             rewrite H19, H14, Z.shiftr_div_pow2, H9 in * by ZnWords.
-            rewrite ZLib.Z.div_mul_undo; try lia.
+            rewrite (Z.mul_comm (_ / _)), <-Z_div_exact_full_2; try lia.
             { rewrite Z_mod_plus_full. eauto. }
             rewrite H23, <- H9 in *. Z.push_pull_mod.
             rewrite <- Z.mul_assoc. do 2 Z.push_mod_step. rewrite H22.
@@ -246,16 +247,15 @@ Proof.
             lia.
         }
         {
-            assert (word.unsigned v <= 2^x - 1) by
+            assert (Zmod.unsigned v <= 2^x - 1) by
                 (pose proof (Z.mod_pos_bound (y * inv_m) (2^x)) as Hbound; ZnWords).
             rewrite Z.shiftr_div_pow2, <- H9, H19 in * by ZnWords.
-            eapply Z.le_trans. 1: eapply ZLib.Z.div_mul_undo_le; ZnWords.
+            eapply Z.le_trans. 1: rewrite (Z.mul_comm (_ / _)); eapply Z.mul_div_le; ZnWords.
             rewrite H14. eapply Zorder.Zplus_le_compat_l, Z.mul_le_mono_nonneg_r;
             rewrite ?HeqMOD; cbv [eval]; ZnWords.
         }
     }
-    {   rewrite Properties.word.unsigned_or_nowrap, word.unsigned_slu, !word.unsigned_of_Z in * by ZnWords;
-        cbv [word.wrap] in *.
+    {   change (2 ^ Z.log2 64) with 64 in *; rewrite bits.unsigned_or, Zmod.unsigned_slu, !bits.unsigned_of_Z in * by ZnWords;
         rewrite Z.shiftl_mul_pow2 in * by ZnWords.
         rewrite !Z.mod_small in H9 by (try rewrite !Z.mod_small; ZnWords).
         rewrite <- (eval_mod [a1;a2;a3] a0), H6, lctz_or in H9 by (eapply Z.mod_pos_bound; ZnWords).

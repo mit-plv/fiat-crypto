@@ -49,7 +49,7 @@ Local Open Scope list_scope.
 Require Import bedrock2.BasicC64Semantics.
 #[local] Notation width := 64%nat.
 
-Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
+Local Notation "p .+ n" := (Zmod.add p (bits.of_Z _ n)) (at level 50, format "p .+ n", left associativity).
 
 Definition p256_precompute_multiples := func! (p_table, p_P) {
   p256_point_set_zero(p_table);
@@ -126,8 +126,8 @@ Proof.
   rewrite ListUtil.nth_default_seq_inbounds by lia; trivial.
 Qed.
 
-#[local] Notation pointarray := (array (fun (p : word.rep) (Q : point) =>
-  sepclause_of_map ((to_bytes Q)$@p)) (word.of_Z (Z.of_nat sizeof_point))).
+#[local] Notation pointarray := (array (fun (p : word) (Q : point) =>
+  sepclause_of_map ((to_bytes Q)$@p)) (bits.of_Z _ (Z.of_nat sizeof_point))).
 
 #[local] Notation to_affine := Jacobian.to_affine.
 #[local] Notation of_affine := Jacobian.of_affine.
@@ -148,7 +148,7 @@ Qed.
       m =* (out_old)$@p_out * pointarray p_table multiples * R /\
       length out_old = sizeof_point /\
       length multiples = 17%nat /\
-      0 <= word.unsigned idx < 17;
+      0 <= Zmod.unsigned idx < 17;
     ensures t' m := t' = t /\
       m =* (nth_default (of_affine W.zero) multiples (Z.to_nat idx))$@p_out *
           pointarray p_table multiples * R
@@ -161,18 +161,18 @@ Qed.
       length out_old = length P /\
       length multiples = 17%nat /\
       Forall2 W.eq (map to_affine multiples) (W.multiples 17 (to_affine P)) /\
-      -17 < (word.signed k) < 17;
+      -17 < (Zmod.signed k) < 17;
     ensures t' m := t' = t /\ exists (out_point : point),
       m =* out_point$@p_out * pointarray p_table multiples * R /\
-      W.eq (to_affine out_point) (W.mul (word.signed k) (to_affine P))
+      W.eq (to_affine out_point) (W.mul (Zmod.signed k) (to_affine P))
   }.
 
 (* Matches up word additions in a simple equation. *)
 Ltac match_up_pointers :=
   match goal with |- eq ?A ?B =>
-    match A with context [word.add ?a1 ?a2] =>
-    match B with context [word.add ?b1 ?b2] =>
-      replace (word.add a1 a2) with (word.add b1 b2) by solve_num
+    match A with context [Zmod.add ?a1 ?a2] =>
+    match B with context [Zmod.add ?b1 ?b2] =>
+      replace (Zmod.add a1 a2) with (Zmod.add b1 b2) by solve_num
     end end
   end.
 
@@ -226,7 +226,7 @@ Proof.
     ))
     (fun v' v => v < v' <= 17)%nat
     _ _ _ _ _); Loops.loop_simpl.
-  { cbv [Loops.enforce]; cbn -[word.of_Z]. split; exact eq_refl. }
+  { cbv [Loops.enforce]; cbn -[Zmod.of_Z]. split; exact eq_refl. }
   { apply PeanoNat.Nat.gt_wf. }
 
   (* Initial state matches invariant. *)
@@ -234,8 +234,8 @@ Proof.
     ssplit; cycle -1.
     { rewrite Znat.Z2Nat.id; [exact eq_refl|ZnWords]. }
     { case Z.ltb_spec0; try (intros; ecancel_assumption).
-      intros Hl. subst i. rewrite word.unsigned_of_Z_0 in Hl. cbn [Z.to_nat Z.of_nat] in Hl.
-      pose proof word.unsigned_range idx. lia. }
+      intros Hl. subst i. rewrite Zmod.unsigned_0 in Hl. cbn [Z.to_nat Z.of_nat] in Hl.
+      pose proof (bits.unsigned_range idx width_nonneg). lia. }
     { ZnWords. }
     { ZnWords. }
     { trivial. }
@@ -250,14 +250,14 @@ Proof.
 
   (* Handle the loop termination case. *)
   2:{ replace v with 17%nat in * by ZnWords.
-    destruct (Z.ltb_spec0 (word.unsigned idx) (Z.of_nat 17)); [ecancel_assumption | lia].
+    destruct (Z.ltb_spec0 (Zmod.unsigned idx) (Z.of_nat 17)); [ecancel_assumption | lia].
   }
 
   (* Inside the loop. *)
   assert (v < 17%nat) by ZnWords.
 
   (* Extract the point at i0. *)
-  seprewrite_in_by (pointarray_split_nth p_table0 multiples (Z.to_nat (word.unsigned i0)))
+  seprewrite_in_by (pointarray_split_nth p_table0 multiples (Z.to_nat (Zmod.unsigned i0)))
         ltac:(hyp_containing (m0)) solve_num.
 
   (* constant time select of the point *)
@@ -275,12 +275,12 @@ Proof.
   exists (S v). split; ssplit; trivial; try solve_num.
   2:{ split; [solve_num|]. repeat straightline. assumption. }
 
-  seprewrite_by (pointarray_split_nth p_table0 multiples (Z.to_nat (word.unsigned i0))) solve_num.
+  seprewrite_by (pointarray_split_nth p_table0 multiples (Z.to_nat (Zmod.unsigned i0))) solve_num.
 
   cbv [Semantics.interp_op1] in *.
   subst ineq.
-  repeat (let H := hyp_containing (word.xor) in
-  rewrite word.unsigned_xor_nowrap, ? word.not_broadcast in H).
+  repeat match goal with H : context [Zmod.xor _ _] |- _ =>
+    rewrite bits.unsigned_xor, ? word.not_broadcast in H end.
 
   destruct (Z.eqb_spec (Z.lxor i0 idx) 0); rewrite Z.lxor_eq_0_iff in *;
   match goal with H : word.broadcast _ = _ -> _ |- _ => specialize (H eq_refl) end.
@@ -305,11 +305,10 @@ Proof.
   straightline_call; trivial; repeat straightline.
   rename x into sign.
 
-  assert (word.unsigned sign = if (word.signed k) <? 0 then (Z.ones width) else 0)
+  assert (Zmod.unsigned sign = if (Zmod.signed k) <? 0 then (Z.ones width) else 0)
    as Hsign. {
     subst sign.
-    case word.lts_spec; rewrite word.signed_of_Z_nowrap by solve_num; intros;
-    case Z.ltb_spec; intros; try solve_num.
+    case Z.ltb_spec; intros.
     { exact word.unsigned_broadcast_true. }
     { exact word.unsigned_broadcast_false. }
   }
@@ -322,20 +321,20 @@ Proof.
   { ecancel_assumption. }
   1-4: solve_num.
   rename x into idx.
-  let H := hyp_containing (eq (word.unsigned idx)) in rename H into Hidx.
+  let H := hyp_containing (eq (Zmod.unsigned idx)) in rename H into Hidx.
 
   repeat straightline.
 
   let H := hyp_containing (@Forall2) in rename H into HForall.
 
-  eapply ListUtil.Forall2_forall_iff' with (d:=(W.zero)) (i:=(Z.to_nat (Z.abs (word.signed k)))) in HForall;
+  eapply ListUtil.Forall2_forall_iff' with (d:=(W.zero)) (i:=(Z.to_nat (Z.abs (Zmod.signed k)))) in HForall;
     [|solve_num|solve_num].
   rewrite multiples_nth in HForall by lia;
   rewrite <- (Jacobian.to_affine_of_affine W.zero) in HForall.
   rewrite ListUtil.map_nth_default_always in *.
 
   rewrite Hidx in *.
-  set (nth_default (of_affine W.zero) multiples (Z.to_nat (Z.abs (word.signed k)))) as idxP in *.
+  set (nth_default (of_affine W.zero) multiples (Z.to_nat (Z.abs (Zmod.signed k)))) as idxP in *.
 
   (* Remember the inverted point before destructing. Gives easy access to the proof that it's on the curve. *)
   pose (proj2_sig (Jacobian.opp idxP)) as HidxPopp.
@@ -380,7 +379,7 @@ Proof.
   repeat straightline.
 
   (* Final postcondition verification. *)
-  unshelve eexists (exist _ (x, if Z.ltb (word.signed k) 0 then Zmod.opp y else y, z) _);
+  unshelve eexists (exist _ (x, if Z.ltb (Zmod.signed k) 0 then Zmod.opp y else y, z) _);
   ssplit.
 
   { case Z.ltb_spec; intros; assumption. }
@@ -394,7 +393,7 @@ Proof.
     cancel. case Z.ltb_spec; case Z.eqb_spec; try lia; intros; ecancel. }
 
   case Z.ltb_spec; intros.
-  { rewrite <- (Z.opp_involutive (word.signed k)).
+  { rewrite <- (Z.opp_involutive (Zmod.signed k)).
     rewrite ScalarMult.scalarmult_opp_l.
     match goal with H: W.eq _ ?v |- context [W.opp (?w)] =>
       assert (W.eq v w) as <-; [repeat Morphisms.f_equiv; lia | rewrite <- H]
@@ -443,7 +442,7 @@ Proof.
               Forall2 W.eq (map to_affine multiples) ((W.multiples 17 (Jacobian.to_affine P)))))
       (fun v' v => v < v' <= 17)%nat
       _ _ _ _ _); Loops.loop_simpl.
-  { cbv [Loops.enforce]; cbn -[word.of_Z]. split; exact eq_refl. }
+  { cbv [Loops.enforce]; cbn -[Zmod.of_Z]. split; exact eq_refl. }
   { apply Nat.gt_wf. }
   { repeat straightline.
     eexists [(Jacobian.of_affine W.zero); P], _; ssplit.
@@ -479,10 +478,10 @@ Proof.
 
   (* Loop invariant is preserved. *)
 
-  assert (word.unsigned i0 < 17) by ZnWords.
+  assert (Zmod.unsigned i0 < 17) by ZnWords.
 
   (* Split it out the first element of todo, which is the one we will fill in this iteration. *)
-  seprewrite_in_by (Array.list_word_at_firstn_skipn (p_table0.+word.unsigned i0 * Z.of_nat 96) todo sizeof_point)
+  seprewrite_in_by (Array.list_word_at_firstn_skipn (p_table0.+Zmod.unsigned i0 * Z.of_nat 96) todo sizeof_point)
       ltac:(hyp_containing (m0)) solve_num.
 
   unfold1_cmd_goal; cbv beta match delta [cmd_body].
@@ -490,7 +489,7 @@ Proof.
   split; repeat straightline.
 
   (* i is odd -> addition. *)
-  { assert (3 <= word.unsigned i0). {
+  { assert (3 <= Zmod.unsigned i0). {
       let H := unsigned.zify_expr v0 in try rewrite H in *; clear H.
       ZnWords.
     }
@@ -560,7 +559,7 @@ Proof.
     split; repeat ssplit; try trivial; lia.
   }
   (* i is even -> doubling. *)
-  { assert (word.unsigned (word.sru i0 (word.of_Z 1)) = (v / 2)%nat) as Idiv2. {
+  { assert (Zmod.unsigned (Zmod.sru i0 (Zmod.unsigned (bits.of_Z 64 1) mod 2 ^ Z.log2 64)) = (v / 2)%nat) as Idiv2. {
       rewrite Znat.Nat2Z.inj_div. ZnWords.
     }
     let H := unsigned.zify_expr v0 in rewrite H in *; clear H.

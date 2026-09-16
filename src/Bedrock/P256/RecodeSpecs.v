@@ -133,15 +133,15 @@ Lemma positional_bytes_cons h t :
 Proof. constructor. Qed.
 End WithBase.
 
-#[local] Notation bytearray := (Array.array ptsto (word.of_Z 1)).
+#[local] Notation bytearray := (Array.array ptsto (bits.of_Z _ 1)).
 
 #[export] Instance spec_of_ctime_ltu : spec_of "ctime_ltu" :=
   fnspec! "ctime_ltu" a b ~> r,
   { requires t m := True;
     ensures T M :=
       M = m /\ T = t /\
-      word.unsigned r < 2 /\
-      r = if word.ltu a b then word.of_Z 1 else word.of_Z 0
+      Zmod.unsigned r < 2 /\
+      r = if Zmod.unsigned a <? Zmod.unsigned b then bits.of_Z _ 1 else bits.of_Z _ 0
   }.
 
 #[export] Instance spec_of_extract_limb_at_bit : spec_of "extract_limb_at_bit" :=
@@ -177,13 +177,13 @@ End WithBase.
 #[export] Instance spec_of_signed_recode_carry : spec_of "signed_recode_carry" :=
   fnspec! "signed_recode_carry" (p_limbs ci n : word) / limbs R ~> CO,
     { requires t m :=
-        m =* bytearray p_limbs limbs * R /\ length limbs = word.unsigned n :>Z /\
+        m =* bytearray p_limbs limbs * R /\ length limbs = Zmod.unsigned n :>Z /\
         Forall (fun b => (0 <= byte.unsigned b < 2^w)) limbs /\
         0 <= ci <= 1;
       ensures T M := exists LIMBS,
-        M =* bytearray p_limbs LIMBS * R /\ length LIMBS = word.unsigned n :>Z /\
+        M =* bytearray p_limbs LIMBS * R /\ length LIMBS = Zmod.unsigned n :>Z /\
         T = t /\
-        positional_signed_bytes (2^w) LIMBS + 2^(w*n)*CO = word.unsigned ci + positional_bytes (2^w) limbs /\
+        positional_signed_bytes (2^w) LIMBS + 2^(w*n)*CO = Zmod.unsigned ci + positional_bytes (2^w) limbs /\
         Forall (fun b => (-2^w + 2 <= 2*(byte.signed b) <= 2^w)) LIMBS /\
         0 <= CO <= 1
     }.
@@ -191,12 +191,12 @@ End WithBase.
 #[export] Instance spec_of_signed_recode : spec_of "signed_recode" :=
   fnspec! "signed_recode" (p_limbs n : word) / limbs R,
   { requires t m :=
-      m =* bytearray p_limbs limbs * R /\ length limbs = word.unsigned n :>Z /\
+      m =* bytearray p_limbs limbs * R /\ length limbs = Zmod.unsigned n :>Z /\
       Forall (fun b => (0 <= byte.unsigned b < 2^w)) limbs /\
       2 * (positional_bytes (2^w) limbs) < 2^(w*n) /\
       -2^(w*n) <= positional (2^w) (repeat (-2^w + 2) (Z.to_nat n));
     ensures T M := exists LIMBS,
-      M =* bytearray p_limbs LIMBS * R /\ length LIMBS = word.unsigned n :>Z /\
+      M =* bytearray p_limbs LIMBS * R /\ length LIMBS = Zmod.unsigned n :>Z /\
       T = t /\
       positional_signed_bytes (2^w) LIMBS = positional_bytes (2^w) limbs /\
       Forall (fun b => (-2^w + 2 <= 2*(byte.signed b) <= 2^w)) LIMBS
