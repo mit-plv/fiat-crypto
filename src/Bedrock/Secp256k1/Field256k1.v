@@ -36,7 +36,7 @@ Section Field.
   Definition from_mont_string := (prefix ++ "from_mont")%string.
 
   (* Call fiat-crypto pipeline on all field operations *)
-  Instance secp256k1_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m machine_wordsize) m.
+  Instance secp256k1_ops : @word_by_word_Montgomery_ops from_mont_string to_mont_string _ _ _ _ _ _ _ _ _ (WordByWordMontgomery.n m machine_wordsize) m.
   Proof using Type. Time constructor; make_computed_op. Defined.
 
   (**** Translate each field operation into bedrock2 and apply bedrock2 backend

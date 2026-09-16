@@ -1,4 +1,5 @@
 From Coq Require Import Zmod.
+Require Import coqutil.Word.Bitwidth.
 Require Crypto.Bedrock.Group.Loops.
 Require Import Crypto.Curves.Montgomery.XZ.
 Require Import Crypto.Curves.Montgomery.XZProofs.
@@ -163,10 +164,12 @@ End Gallina.
 
 Section __.
 
-  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
+  Context {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
-  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
+  Context {mem_ok : map.ok mem}.
   Context {locals_ok : map.ok locals}.
   Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
   Context {field_parameters : FieldParameters}.
@@ -175,8 +178,8 @@ Section __.
   Hint Resolve relax_bounds : compiler.
 
   Section MontLadder.
-    Context scalarbits (scalarbits_small : word.wrap (Z.of_nat scalarbits) = Z.of_nat scalarbits).
-    Local Notation "bs $@ a" := (array ptsto (word.of_Z 1) a bs) (at level 20).
+    Context scalarbits (scalarbits_small : (Z.of_nat scalarbits) mod 2 ^ width = Z.of_nat scalarbits).
+    Local Notation "bs $@ a" := (array ptsto (bits.of_Z _ 1) a bs) (at level 20).
     Let m : Z := M.
     Context
       (field : @Hierarchy.field (Zmod m) eq Zmod.zero Zmod.one Zmod.opp Zmod.add Zmod.sub Zmod.mul Zmod.inv Zmod.mdiv) (Hm' : (28 <= m)%Z)
@@ -207,14 +210,14 @@ Section __.
                * FElem (Some tight_bounds) pU U
                * R)%sep mem') }.
 
-    (* Adding word.unsigned_of_Z_1 and word.unsigned_of_Z_0 as hints to
+    (* Adding bits.unsigned_1 and Zmod.unsigned_0 as hints to
        compiler doesn't work, presumably because of the typeclass
        preconditions. This is a hacky workaround. *)
     (* TODO: figure out a cleaner way to do this *)
-    Lemma unsigned_of_Z_1 : word.unsigned (@word.of_Z _ word 1) = 1.
-    Proof using word_ok. exact word.unsigned_of_Z_1. Qed.
-    Lemma unsigned_of_Z_0 : word.unsigned (@word.of_Z _ word 0) = 0.
-    Proof using word_ok. exact word.unsigned_of_Z_0. Qed.
+    Lemma unsigned_of_Z_1 : Zmod.unsigned (bits.of_Z width 1) = 1.
+    Proof using BW. apply bits.unsigned_1. clear -BW. pose proof width_pos. lia. Qed.
+    Lemma unsigned_of_Z_0 : Zmod.unsigned (bits.of_Z width 0) = 0.
+    Proof using. apply Zmod.unsigned_0. Qed.
     Hint Resolve unsigned_of_Z_0 unsigned_of_Z_1 : compiler.
     Import bedrock2.NotationsCustomEntry.
  Lemma compile_sctestbit : forall {tr mem locals functions} bs x i,
@@ -227,7 +230,7 @@ Section __.
 
      LittleEndianList.le_combine bs = x ->
 
-     wi = word.of_Z (Z.of_nat i) ->
+     wi = bits.of_Z _ (Z.of_nat i) ->
      0 <= Z.of_nat i < 2 ^ width ->
      Z.of_nat i < 8 * Z.of_nat (length bs) ->
      map.get locals i_var = Some wi ->
@@ -245,7 +248,8 @@ Section __.
         Functions := functions }>
      bedrock_cmd:($out_var = (load1($x_var+$i_var>>coq:(3))>>($i_var&coq:(7)))&coq:(1); coq:(k_impl))
      <{ pred (nlet_eq [out_var] v k) }>.
- Proof using mem_ok scalarbits word_ok.
+ Proof using mem_ok scalarbits.
+  clear scalarbits_small.
    clear dependent m.
    repeat straightline.
    repeat (eexists; split; repeat straightline'; eauto); cbn [Semantics.interp_binop].
@@ -257,16 +261,16 @@ Section __.
     let t := eval cbv zeta in t in
     *)
    unshelve (
-   let Hrw := open_constr:(@bytearray_index_inbounds _ _ _ _ _ _ _ _ _ : Lift1Prop.iff1 _ _) in
+   let Hrw := open_constr:(@bytearray_index_inbounds _ _ _ _ _ _ _ _ : Lift1Prop.iff1 _ _) in
    seprewrite0_in Hrw H; ecancel_assumption).
    all : cycle 1.
 
-   all: try eapply word.unsigned_inj.
+   all: try eapply Zmod.unsigned_inj.
    all: unfold word.b2w.
    all: subst_lets_in_goal; subst.
    all : repeat rewrite
-     ?word.unsigned_of_Z_b2z, ?word.unsigned_of_Z, ?word.unsigned_and_nowrap, ?word.unsigned_sru_nowrap.
-   all : cbv [word.wrap]; rewrite ?Z.mod_small.
+     ?word.unsigned_b2w, ?bits.unsigned_of_Z, ?bits.unsigned_and, ?Zmod.unsigned_sru.
+   all : rewrite ?Z.mod_small.
    all : change 7 with (Z.ones 3); change 1 with (Z.ones 1); rewrite ?Z.land_ones.
    all : rewrite ?Z.shiftr_div_pow2; change (2^3) with 8; change (2^1) with 2.
    all : rewrite <-?hd_skipn_nth_default.
@@ -275,6 +279,11 @@ Section __.
    all : try match goal with |- 0 <= byte.unsigned ?x < _ => epose proof byte.unsigned_range x end.
    all : try (destruct Bitwidth.width_cases as [E|E]; rewrite ?E in *; Lia.lia).
    all : try (destruct Bitwidth.width_cases as [E|E]; rewrite ?E in *; cbn in *; Lia.lia).
+   all : try (rewrite (Z.mod_small (Z.ones 3)) by (destruct Bitwidth.width_cases as [E|E]; rewrite E; cbn; Lia.lia);
+              rewrite Z.land_ones by Lia.lia;
+              match goal with |- 0 <= ?a mod 2 ^ 3 < _ => pose proof Z.mod_pos_bound a (2 ^ 3) ltac:(Lia.lia) end;
+              destruct Bitwidth.width_cases as [E|E]; rewrite E; cbn; Lia.lia).
+   all : try (destruct Bitwidth.width_cases as [E|E]; rewrite ?E in *; case Z.testbit; cbn; Lia.lia).
 
    (*
       Z.testbit (LittleEndianList.le_combine bs) (Z.of_nat i) =
@@ -306,12 +315,12 @@ Section __.
   Local Ltac ecancel_assumption ::= ecancel_assumption_impl.
 
   Lemma scalarbits_bound : Z.of_nat scalarbits < 2 ^ width.
-  Proof using scalarbits_small.
+  Proof using BW scalarbits_small.
     clear dependent m.
     rewrite <- scalarbits_small.
-    unfold word.wrap.
+
     apply Z_mod_lt.
-    pose proof word.width_pos.
+    pose proof width_pos.
     pose proof (Z.pow_pos_nonneg 2 width ltac:(lia)).
     lia.
   Qed.
@@ -319,7 +328,7 @@ Section __.
   (* TODO: why doesn't `Existing Instance` work?
   Existing Instance spec_of_sctestbit.*)
   Hint Extern 1 (spec_of "ladderstep") =>
-  (simple refine (@spec_of_ladderstep _ _ _ _ _ _ _ _)) : typeclass_instances.
+  (simple refine (@spec_of_ladderstep _ _ _ _ _ _ _)) : typeclass_instances.
 
 
   Hint Extern 1 (spec_of "cswap") =>
@@ -342,14 +351,14 @@ Section __.
 
 
   Lemma word_unsigned_of_Z_eq z
-    : 0 <= z < 2 ^ width -> word.unsigned (word.of_Z z : word) = z.
-  Proof using word_ok.
+    : 0 <= z < 2 ^ width -> Zmod.unsigned (bits.of_Z width z) = z.
+  Proof using.
     intros.
-    rewrite word.unsigned_of_Z.
-    rewrite word.wrap_small; auto.
+    rewrite bits.unsigned_of_Z.
+    rewrite Z.mod_small; auto.
   Qed.
 
-  Hint Extern 8 (word.unsigned (word.of_Z _) = _) =>
+  Hint Extern 8 (Zmod.unsigned (bits.of_Z _ _) = _) =>
   simple eapply word_unsigned_of_Z_eq; [ ZnWords |] : compiler.
 
   (*TODO: should this go in core rupicola?*)
@@ -359,12 +368,12 @@ Section __.
            (k: nlet_eq_k P v) k_impl
            x_expr var,
 
-      WeakestPrecondition.dexpr _m l x_expr (word.of_Z (Z.b2z v)) ->
+      WeakestPrecondition.dexpr _m l x_expr (bits.of_Z _ (Z.b2z v)) ->
 
       (let v := v in
        <{ Trace := tr;
           Memory := _m;
-          Locals := map.put l var (word.of_Z (Z.b2z v));
+          Locals := map.put l var (bits.of_Z _ (Z.b2z v));
           Functions := functions }>
        k_impl
        <{ pred (k v eq_refl) }>) ->
@@ -424,7 +433,7 @@ Section __.
   End MontLadder.
 End __.
 
-Global Hint Extern 1 (spec_of "montladder") => (simple refine (@spec_of_montladder _ _ _ _ _ _ _ _ _ _)) : typeclass_instances.
+Global Hint Extern 1 (spec_of "montladder") => (simple refine (@spec_of_montladder _ _ _ _ _ _ _ _ _)) : typeclass_instances.
 
 Import bedrock2.Syntax.Coercions.
 Local Unset Printing Coercions.

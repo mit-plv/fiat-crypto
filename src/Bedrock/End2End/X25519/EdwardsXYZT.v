@@ -1,4 +1,5 @@
 From Coq Require Import Zmod.
+Require Import coqutil.Word.Properties.
 Require Import bedrock2.Array.
 Require Import bedrock2.bottom_up_simpl.
 Require Import bedrock2.Loops.
@@ -19,8 +20,6 @@ Require Import coqutil.Map.OfListWord.
 From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference_to_string ident_of_string.
 Require Import coqutil.Word.Bitwidth32.
 Require Import coqutil.Word.Bitwidth.
-Require Import coqutil.Word.Interface.
-Require Import coqutil.Word.Naive.
 From Coq Require Import Init.Byte.
 From Coq Require Import List.
 From Coq Require Import String.
@@ -174,7 +173,7 @@ Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
 Local Notation FElem := (FElem(FieldRepresentation:=frep25519)).
 Local Notation felem_size_in_bytes := (felem_size_in_bytes(FieldRepresentation:=frep25519)).
 Local Notation bounded_by := (bounded_by(FieldRepresentation:=frep25519)).
-Local Notation word := (Naive.word 32).
+Local Notation word := (bits 32).
 Local Notation felem := (felem(FieldRepresentation:=frep25519)).
 Local Notation point := (Extended.point(Feq:=Logic.eq)(Fzero:=Zmod.zero)(Fadd:=Zmod.add)(Fmul:=Zmod.mul)(a:=a)(d:=d)).
 Local Notation cached := (cached(Fzero:=Zmod.zero)(Fadd:=Zmod.add)(Fmul:=Zmod.mul)(a:=a)(d:=d)(Feq:=Logic.eq)
@@ -210,7 +209,7 @@ Local Notation m1add_precomputed_coordinates :=
            (a:=a)(d:=d)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)
            (a_eq_minus1:=a_eq_minus1)).
 
-Local Notation "p .+ n" := (word.add p (word.of_Z n)) (at level 50, format "p .+ n", left associativity).
+Local Notation "p .+ n" := (Zmod.add p (bits.of_Z _ n)) (at level 50, format "p .+ n", left associativity).
 
 Local Notation "a <> b" := (not (a = b)) : type_scope. Local Notation "0" := Zmod.zero.
 Local Notation "1" := Zmod.one. Local Infix "+" := Zmod.add. Local Infix "*" := Zmod.mul.
@@ -398,11 +397,8 @@ Local Instance spec_of_fe25519_carry_sub : spec_of "fe25519_carry_sub" := Field.
 Local Instance spec_of_fe25519_from_word : spec_of "fe25519_from_word" := Field.spec_of_from_word.
 Local Instance spec_of_fe26619_copy: spec_of "fe25519_copy" := Field.spec_of_felem_copy.
 
-Local Arguments word.rep : simpl never.
-Local Arguments word.wrap : simpl never.
-Local Arguments word.unsigned : simpl never.
-Local Arguments word.of_Z : simpl never.
-Local Arguments word.add : simpl never.
+Local Arguments Zmod.of_Z : simpl never.
+Local Arguments Zmod.add : simpl never.
 
 Local Arguments feval : simpl never.
 
@@ -432,9 +428,9 @@ Local Ltac solve_bounds :=
     change felem_size_in_bytes with 40 in *; listZnWords.
 
 Ltac split_stack_at_n_in stack p n H := rewrite <- (firstn_skipn n stack) in H;
-  rewrite (map.of_list_word_at_app_n _ _ _ n) in H; try skipn_firstn_length;
+  rewrite (map.of_list_word_at_app_n width_pos _ _ _ n) in H; try skipn_firstn_length;
   let D := fresh in
-  unshelve(epose (sep_eq_putmany _ _ (map.adjacent_arrays_disjoint_n p (firstn n stack) (skipn n stack) n _ _)) as D);
+  unshelve(epose (sep_eq_putmany _ _ (map.adjacent_arrays_disjoint_n width_pos p (firstn n stack) (skipn n stack) n _ _)) as D);
   try skipn_firstn_length; seprewrite_in D H; rewrite ?skipn_skipn in H; bottom_up_simpl_in_hyp H; clear D.
 
 Local Ltac solve_length :=

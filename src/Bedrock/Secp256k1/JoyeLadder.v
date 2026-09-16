@@ -20,7 +20,6 @@ Require Import coqutil.Map.OfListWord.
 From coqutil.Tactics Require Import Tactics letexists eabstract rdelta reference_to_string ident_of_string.
 Require Import coqutil.Word.Bitwidth64.
 Require Import coqutil.Word.Bitwidth.
-Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
 Require Import Coq.Init.Byte.
 Require Import Coq.Lists.List.
@@ -59,7 +58,7 @@ Section WithParameters.
   Context {a b : Zmod M}.
   Context {zero_a : id a = Zmod.zero}
           {seven_b : id b = Zmod.of_Z _ 7}.
-  Context {scalarbitsz : Z} {scalarbitsz_small : word.wrap scalarbitsz = scalarbitsz}.
+  Context {scalarbitsz : Z} {scalarbitsz_small : scalarbitsz mod 2 ^ 64 = scalarbitsz}.
 
   Definition secp256k1_laddermul :=
     func! (oX, oY, k, X, Y) {
@@ -103,7 +102,7 @@ Section WithParameters.
   Add Ring Private_ring : (Zmod.ring_theory M) (morphism (Zmod.ring_morph M), constants [Zmod.is_constant]).
 
   Local Notation "m =* P" := ((P%sep) m) (at level 70, only parsing).
-  Local Notation "xs $@ a" := (Array.array ptsto (word.of_Z 1) a xs) (at level 10, format "xs $@ a").
+  Local Notation "xs $@ a" := (Array.array ptsto (bits.of_Z _ 1) a xs) (at level 10, format "xs $@ a").
 
   Local Notation FElem := (FElem(FieldRepresentation:=frep256k1)).
   Local Notation word := (BasicC64Semantics.word).
@@ -129,10 +128,7 @@ Section WithParameters.
   Local Instance spec_of_secp256k1_zaddu : spec_of "secp256k1_zaddu" := (@spec_of_zaddu field a b).
   Local Instance spec_of_secp256k1_zdau : spec_of "secp256k1_zdau" := (@spec_of_zdau field a b).
 
-  Local Arguments word.rep : simpl never.
-  Local Arguments word.wrap : simpl never.
-  Local Arguments word.unsigned : simpl never.
-  Local Arguments word.of_Z : simpl never.
+  Local Arguments Zmod.of_Z : simpl never.
 
   Local Ltac solve_length :=
     try lia;
@@ -226,13 +222,13 @@ Section WithParameters.
         end
     }.
 
-  Lemma spec_of_testbit functions tr mem loc post :
+  Lemma spec_of_testbit functions tr (mem : mem) (loc : locals) post :
     forall var kptr kbytes k wi i R,
       map.get loc "k" = Some kptr ->
       map.get loc "i" = Some wi ->
       (kbytes$@kptr * R)%sep mem ->
       LittleEndianList.le_combine kbytes = k ->
-      wi = word.of_Z i ->
+      wi = bits.of_Z _ i ->
       (0 <= i < 2 ^ 64)%Z ->
       (i < 8 * Z.of_nat (List.length kbytes)) ->
 
@@ -253,20 +249,23 @@ Section WithParameters.
     - subst wi.
       eapply load_one_of_sep.
       unshelve (
-        let Hrw := open_constr:(@bytearray_index_inbounds _ _ _ _ _ _ _ _ _ : Lift1Prop.iff1 _ _) in
+        let Hrw := open_constr:(@bytearray_index_inbounds _ _ _ _ _ _ _ _ : Lift1Prop.iff1 _ _) in
         seprewrite0_in Hrw H1; ecancel_assumption).
-      all: repeat rewrite ?Core.word.unsigned_of_Z_b2z, ?word.unsigned_of_Z, ?word.unsigned_and_nowrap, ?word.unsigned_sru_nowrap.
-      all: cbv [word.wrap]; rewrite ?Z.mod_small; try lia.
+      all: repeat rewrite ?Core.word.unsigned_b2w, ?bits.unsigned_of_Z, ?bits.unsigned_and, ?Zmod.unsigned_sru.
+      all: rewrite ?Z.mod_small; try lia.
       rewrite ?Z.shiftr_div_pow2 by lia; change (2^3) with 8. lia.
+      all: cbn; lia.
     - eapply H6. ssplit; auto.
-      f_equal.
-      eapply word.unsigned_inj.
+      apply (f_equal (map.put loc var)).
+      eapply Zmod.unsigned_inj.
       unfold Core.word.b2w, wi.
-      repeat rewrite ?Core.word.unsigned_of_Z_b2z, ?word.unsigned_of_Z, ?word.unsigned_and_nowrap, ?word.unsigned_sru_nowrap.
-      all: cbv [word.wrap]; repeat rewrite ?Z.mod_small; try lia.
-      2: match goal with | |- context [byte.unsigned ?n] => generalize (byte.unsigned_range n); lia end.
+      repeat rewrite ?Core.word.unsigned_b2w, ?bits.unsigned_of_Z, ?bits.unsigned_and, ?Zmod.unsigned_sru.
+      all: repeat rewrite ?Z.mod_small; try lia.
+      all: try (match goal with | |- context [byte.unsigned ?n] => generalize (byte.unsigned_range n); cbn; lia end).
+      all: try (case Z.testbit; cbn; lia).
       all: change 7 with (Z.ones 3); change 1 with (Z.ones 1); rewrite ?Z.land_ones by lia.
-      2: lia.
+      all: try (match goal with |- context [?a mod 2 ^ 3] => pose proof Z.mod_pos_bound a (2 ^ 3) ltac:(lia) end; cbn; lia).
+      all: try (cbn; lia).
       rewrite ?Z.shiftr_div_pow2 by lia; change (2^3) with 8; change (2^1) with 2.
       rewrite <-?List.hd_skipn_nth_default.
       rewrite <- Z.testbit_spec' by lia; f_equal.
@@ -353,7 +352,7 @@ Section WithParameters.
       spec_of_secp256k1_cswap functions ->
       spec_of_secp256k1_zdau functions ->
       map.get loc "k" = Some kptr ->
-      map.get loc "i" = Some (word.of_Z 2) ->
+      map.get loc "i" = Some (bits.of_Z _ 2) ->
       map.get loc "swap" = Some (Core.word.b2w (Z.testbit k 1)) ->
       map.get loc "X0" = Some X0ptr ->
       map.get loc "Y0" = Some Y0ptr ->
@@ -379,7 +378,7 @@ Section WithParameters.
              Loops.while.while (fun '(_, _, i) => i <? scalarbitsz)
                (fun '(R1R0, swap, i) => (zdau_co_z_points (cswap_co_z_points (xorb swap (Z.testbit k i)) R1R0), Z.testbit k i, Z.succ i)) (Z.to_nat (scalarbitsz - 2)) (R1R0, Z.testbit k 1, 2) in
            exists l, (forall s, s <> "b" -> map.get l s = map.get loc s) /\
-           loc' = map.put (map.put l "swap" (Core.word.b2w vswap)) "i" (word.of_Z scalarbitsz) /\
+           loc' = map.put (map.put l "swap" (Core.word.b2w vswap)) "i" (bits.of_Z _ scalarbitsz) /\
            exists X0' Y0' X1' Y1' Z',
              (kbytes$@kptr * FElem X0ptr X0' * FElem Y0ptr Y0' * FElem X1ptr X1' * FElem Y1ptr Y1' * FElem Zptr Z' * R)%sep mem' /\
                bounded_by loose_bounds X0' /\
@@ -428,7 +427,7 @@ Section WithParameters.
                      let '(R1R0', swap', i') := Nat.iter (Z.to_nat (i - 2)) (fun s => if test s then body s else s) (R1R0, Z.testbit k 1, 2%Z) in
                      i' = i /\
                      exists loc', (forall s, s <> "b" -> map.get loc' s = map.get loc s) /\
-                     l = map.put (map.put loc' "swap" (Core.word.b2w swap')) "i" (word.of_Z i) /\
+                     l = map.put (map.put loc' "swap" (Core.word.b2w swap')) "i" (bits.of_Z _ i) /\
                      exists X0' Y0' X1' Y1' Z',
                      (kbytes$@kptr * FElem X0ptr X0' * FElem Y0ptr Y0' * FElem X1ptr X1' * FElem Y1ptr Y1' * FElem Zptr Z' * R)%sep m /\
                      bounded_by loose_bounds X0' /\
@@ -464,7 +463,7 @@ Section WithParameters.
     reflexivity.
     all: pose proof Zlt_cases vi scalarbitsz;
          intros Hnz; destruct (vi <? scalarbitsz);
-         try (rewrite ?word.unsigned_of_Z_0, ?word.unsigned_of_Z_1 in Hnz;
+         try (rewrite ?Zmod.unsigned_0, ?(bits.unsigned_1 (n:=64) ltac:(lia)) in Hnz;
               congruence); [].
     destruct Hmem as (X0' & Y0' & X1' & Y1' & Z' & Hmem & HX0' & HY0' & HX1' & HY1' & HZ' & Hprojs).
     rewrite (surjective_pairing (proj1_sig _)) in Hprojs.
@@ -521,7 +520,8 @@ Section WithParameters.
     2: destruct (xorb _ _); cbv; auto.
     2-3: symmetry; eapply felem_length; ecancel_assumption.
     repeat rewrite car_cswap, cdr_cswap in H27.
-    rewrite word.unsigned_eqb, Core.word.unsigned_of_Z_b2z, word.unsigned_of_Z_1 in H27.
+    unfold Zmod.eqb in H27; rewrite ?Core.word.unsigned_b2w, !bits.unsigned_of_Z_small in H27
+      by first [ match goal with |- 0 <= Z.b2z ?b < _ => destruct b; cbn; lia end | cbn; lia ].
     assert (XY: forall bb, (Z.b2z bb =? 1) = bb) by (destruct bb; auto).
     rewrite XY in H27; clear XY.
     eexists; split.
@@ -558,7 +558,7 @@ Section WithParameters.
     intros; rewrite map.get_put_diff by congruence. apply Hloc'; auto.
     apply Core.map.ext_eq; intros s.
     unfold l1. destruct (String.eqb_spec s "i"); [subst s; repeat rewrite map.get_put_same|repeat rewrite map.get_put_diff by congruence].
-    rewrite word.ring_morph_add; reflexivity.
+    rewrite Zmod.of_Z_add; reflexivity.
     unfold l0. destruct (String.eqb_spec s "swap"); [subst s; repeat rewrite map.get_put_same; reflexivity|repeat rewrite map.get_put_diff by congruence].
     unfold l. repeat rewrite map.get_put_diff by congruence.
     destruct (String.eqb_spec s "b"); [subst s; repeat rewrite map.get_put_same; reflexivity|repeat rewrite map.get_put_diff by congruence; reflexivity].
@@ -630,7 +630,8 @@ Section WithParameters.
     2: destruct vswap; cbv; auto.
     2-3: symmetry; eapply felem_length; ecancel_assumption.
     repeat rewrite car_cswap, cdr_cswap in H64.
-    rewrite word.unsigned_eqb, Core.word.unsigned_b2w, word.unsigned_of_Z_1 in H64.
+    unfold Zmod.eqb in H64; rewrite ?Core.word.unsigned_b2w, !bits.unsigned_of_Z_small in H64
+      by first [ match goal with |- 0 <= Z.b2z ?b < _ => destruct b; cbn; lia end | cbn; lia ].
     assert (XY: forall bb, (Z.b2z bb =? 1) = bb) by (destruct bb; auto).
     rewrite XY in H64; clear XY.
     eexists; ssplit. repeat straightline.
@@ -645,7 +646,8 @@ Section WithParameters.
     2: destruct vswap; cbv; auto.
     2-3: symmetry; eapply felem_length; ecancel_assumption.
     repeat rewrite car_cswap, cdr_cswap in H65.
-    rewrite word.unsigned_eqb, Core.word.unsigned_b2w, word.unsigned_of_Z_1 in H65.
+    unfold Zmod.eqb in H65; rewrite ?Core.word.unsigned_b2w, !bits.unsigned_of_Z_small in H65
+      by first [ match goal with |- 0 <= Z.b2z ?b < _ => destruct b; cbn; lia end | cbn; lia ].
     assert (XY: forall bb, (Z.b2z bb =? 1) = bb) by (destruct bb; auto).
     rewrite XY in H65; clear XY.
     eexists; ssplit. repeat straightline.
@@ -738,7 +740,8 @@ Section WithParameters.
     2: destruct (Z.testbit k 0); cbv; auto.
     2-3: symmetry; eapply felem_length; ecancel_assumption_impl.
     repeat rewrite car_cswap, cdr_cswap in H90.
-    rewrite word.unsigned_eqb, Core.word.unsigned_b2w, word.unsigned_of_Z_1 in H90.
+    unfold Zmod.eqb in H90; rewrite ?Core.word.unsigned_b2w, !bits.unsigned_of_Z_small in H90
+      by first [ match goal with |- 0 <= Z.b2z ?b < _ => destruct b; cbn; lia end | cbn; lia ].
     assert (XY: forall bb, (Z.b2z bb =? 1) = bb) by (destruct bb; auto).
     rewrite XY in H90; clear XY.
     eexists; ssplit. repeat straightline.
@@ -759,7 +762,8 @@ Section WithParameters.
     2: destruct (Z.testbit k 0); cbv; auto.
     2-3: symmetry; eapply felem_length; ecancel_assumption_impl.
     repeat rewrite car_cswap, cdr_cswap in H91.
-    rewrite word.unsigned_eqb, Core.word.unsigned_b2w, word.unsigned_of_Z_1 in H91.
+    unfold Zmod.eqb in H91; rewrite ?Core.word.unsigned_b2w, !bits.unsigned_of_Z_small in H91
+      by first [ match goal with |- 0 <= Z.b2z ?b < _ => destruct b; cbn; lia end | cbn; lia ].
     assert (XY: forall bb, (Z.b2z bb =? 1) = bb) by (destruct bb; auto).
     rewrite XY in H91; clear XY.
 

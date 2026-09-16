@@ -27,15 +27,6 @@ Section Utils.
 
 End Utils.
 
-Section FElems.
-
-  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
-  Context {locals: map.map String.string word}.
-  Context {ext_spec: bedrock2.Semantics.ExtSpec}.
-  Context {word_ok : word.ok word} {mem_ok : map.ok mem}.
-  Context {locals_ok : map.ok locals}.
-  Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
-
   Section Impl.
     Context (m : Z).
     Fixpoint exp_by_squaring (x : Zmod m) (n : positive) : Zmod m :=
@@ -153,14 +144,14 @@ Section FElems.
     Lemma F_mul_1_r : forall x : Zmod m,
         (x * 1)%Zmod = x.
     Proof using Type.
-      intros.
+      intros; clear -x.
       F_lia.
     Qed.
 
     Lemma F_mul_1_l : forall x : Zmod m,
         (1 * x)%Zmod = x.
     Proof using Type.
-      intros.
+      intros; clear -x.
       F_lia.
     Qed.
 
@@ -290,13 +281,24 @@ Section FElems.
           simplify_F.
     Qed.
 
-    Lemma clean_width :
-      forall x, x < 2 ^ 32 -> x < 2 ^ width.
-    Proof using ext_spec_ok locals_ok mem_ok word_ok.
-      intros; destruct width_cases as [ -> | -> ]; lia.
-    Qed.
-
   End Proofs.
+
+Section FElems.
+
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
+  Context {mem: map.map word Byte.byte}.
+  Context {locals: map.map String.string word}.
+  Context {ext_spec: bedrock2.Semantics.ExtSpec}.
+  Context {mem_ok : map.ok mem}.
+  Context {locals_ok : map.ok locals}.
+  Context {ext_spec_ok : Semantics.ext_spec.ok ext_spec}.
+
+  Lemma clean_width :
+    forall x, x < 2 ^ 32 -> x < 2 ^ width.
+  Proof using ext_spec_ok locals_ok mem_ok.
+    intros; destruct width_cases as [ -> | -> ]; lia.
+  Qed.
 
   Section Bedrock2.
     Section Lowering.
@@ -473,7 +475,7 @@ Section FElems.
             let v := Zmod.inv x in
             forall P (pred : P v -> predicate) (k : nlet_eq_k P v) k_impl
                    (R : map.rep -> Prop) (out : Zmod M)
-                   (x_ptr : word.rep) (x_var : string) (out_ptr : word.rep) (out_var : string)
+                   (x_ptr : word) (x_var : string) (out_ptr : word) (out_var : string)
                    (out_bounds : option bounds),
 
               spec_of_exp_large functions ->
@@ -494,7 +496,7 @@ Section FElems.
               cmd.seq (cmd.call [] "fe25519_inv" [expr.var out_var; expr.var x_var]) k_impl
 
               <{ pred (let/n x as out_var eq:Heq := v in k x Heq) }>.
-      Proof using F_M ext_spec_ok field_representation_ok locals_ok mem_ok word_ok.
+      Proof using F_M ext_spec_ok field_representation_ok locals_ok mem_ok.
         repeat straightline.
         repeat (eexists; split; eauto).
         straightline_call.
@@ -630,7 +632,7 @@ Section FElems.
         map.get functions "fe25519_inv" = Some fe25519_inv ->
         spec_of_UnOp un_square functions -> spec_of_BinOp bin_mul functions ->
         spec_of_exp_large functions).
-    Proof using ext_spec_ok field_representation_ok locals_ok mem_ok word_ok.
+    Proof using ext_spec_ok field_representation_ok locals_ok mem_ok.
       intros Hm HmPrime ? ** ? **.
       eapply Proper_call; [|eapply fe25519_inv_correct_exp; eauto 1; exact I].
       intros ? ** ? ** ? ** ?; intuition idtac.
