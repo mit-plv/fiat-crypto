@@ -1,3 +1,4 @@
+Require Import coqutil.Word.Bitwidth.
 Require Rupicola.Lib.Tactics.
 From Coq Require Import Lia.
 From Coq Require Import String.
@@ -15,7 +16,6 @@ Require Import bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Byte.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Tactics.Tactics.
-Require Import coqutil.Word.Interface.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
@@ -39,8 +39,9 @@ Local Open Scope Z_scope.
 
 Section Generic.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Definition make_bedrock_func {t} insizes outsizes inlengths (res : API.Expr t)
   : func :=
     let innames := make_innames (inname_gen:=default_inname_gen) _ in
@@ -83,8 +84,9 @@ Local Hint Resolve MakeAccessSizes.bits_per_word_le_width
 
 Section WithParameters.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Context {ok : Types.ok}
           {field_parameters : FieldParameters}.
   Context (n n_bytes : nat) (weight : nat -> Z)
@@ -101,7 +103,7 @@ Section WithParameters.
           (outname_gen_varname_gen_disjoint :
              disjoint default_outname_gen varname_gen).
   Local Instance field_representation : FieldRepresentation
-    := @frep _ BW _ _ field_parameters n n_bytes weight bounds list_in_bounds loose_bounds tight_bounds
+    := @frep _ BW _ field_parameters n n_bytes weight bounds list_in_bounds loose_bounds tight_bounds
              byte_bounds eval_transformation.
 
   Context (felem_size_ok : felem_size_in_bytes <= 2 ^ width).
@@ -123,13 +125,13 @@ Section WithParameters.
   Ltac equivalence_side_conditions_hook := fail.
   Ltac solve_equivalence_side_conditions :=
     lazymatch goal with
-    | |- map word.unsigned _ = map word.unsigned _ => reflexivity
-    | |- word.unsigned _ = word.unsigned _ => reflexivity
+    | |- map Zmod.unsigned _ = map Zmod.unsigned _ => reflexivity
+    | |- Zmod.unsigned _ = Zmod.unsigned _ => reflexivity
     | |- WeakestPrecondition.get _ _ _ =>
       repeat (apply Util.get_put_diff; [ congruence | ]);
       apply Util.get_put_same; reflexivity
     | |- Forall (fun z => 0 <= z < 2 ^ (?e * 8))
-                (map word.unsigned _) =>
+                (map Zmod.unsigned _) =>
           unshelve eapply Util.Forall_word_unsigned_within_access_size;
           destruct Bitwidth.width_cases as [W|W]; rewrite W; trivial
     | |- Forall (fun z => 0 <= z < ?e)
@@ -143,7 +145,7 @@ Section WithParameters.
       felem_to_array;
       rewrite ?bytes_per_of_nat_to_nat_id, ?of_nat_bytes_per, ?felem_to_list_bs2felem in *;
       try assumption; ecancel_assumption
-    | |- map word.unsigned ?x = map byte.unsigned _ =>
+    | |- map Zmod.unsigned ?x = map byte.unsigned _ =>
       is_evar x;
       erewrite Util.map_unsigned_of_Z,MaxBounds.map_word_wrap_bounded
         by (eapply byte_unsigned_within_max_bounds; eauto);
@@ -161,12 +163,12 @@ Section WithParameters.
 
   Ltac compute_names :=
     repeat lazymatch goal with
-           | |- context [@make_innames ?w ?B ?W ?M ?L ?X ?G ?R ?p ?gen ?t] =>
-             let x := constr:(@make_innames w B W M L X G R p gen t) in
+           | |- context [@make_innames ?w ?B ?M ?L ?X ?G ?R ?p ?gen ?t] =>
+             let x := constr:(@make_innames w B M L X G R p gen t) in
              let y := (eval compute in x) in
              change x with y
-           | |- context [@make_outnames  ?w ?B ?W ?M ?L ?X ?G ?R ?p ?gen ?t] =>
-             let x := constr:(@make_outnames w B W M L X G R p gen t) in
+           | |- context [@make_outnames  ?w ?B ?M ?L ?X ?G ?R ?p ?gen ?t] =>
+             let x := constr:(@make_outnames w B M L X G R p gen t) in
              let y := (eval compute in x) in
              change x with y
            end.
@@ -176,8 +178,8 @@ Section WithParameters.
     | H: map.get ?functions ?name =
            Some (fst (translate_func ?e0 ?argns ?argls ?argszs ?retns ?retszs))
       |- WeakestPrecondition.call ?functions ?name _ _ ?arg_ptrs _ =>
-        let out_ptr := (eval compute in (hd (word.of_Z 0) arg_ptrs)) in
-        let in_ptrs := (eval compute in (tl arg_ptrs)) in
+        let out_ptr := (eval cbn [hd] in (hd (bits.of_Z width 0) arg_ptrs)) in
+        let in_ptrs := (eval cbn [tl] in (tl arg_ptrs)) in
         eapply (translate_func_correct (parameters_sentinel:=parameters_sentinel))
           with (out_ptrs:=[out_ptr]) (flat_args:=in_ptrs)
                (e:=e0) (argnames:=argns) (arglengths:=argls) (argsizes:=argszs)
@@ -198,7 +200,7 @@ Section WithParameters.
     lazymatch goal with
     | |- valid_func _ => assumption
     | |- API.Wf _ => assumption
-    | |- @eq (list word.rep) _ _ => reflexivity
+    | |- @eq (list word) _ _ => reflexivity
     | |- length [?p] = _ => reflexivity
     | |- forall _, ~ VarnameSet.varname_set_args _ _ =>
       solve [auto using make_innames_varname_gen_disjoint]
@@ -263,11 +265,11 @@ Section WithParameters.
     match goal with
     | H : context [FElem pout ?old_out]
       |- @Lift1Prop.ex1 (list Z) _ _ _ =>
-      exists (map word.unsigned old_out)
+      exists (map Zmod.unsigned old_out)
     | H : context [sepclause_of_map (?old_out$@pout)]
       |- @Lift1Prop.ex1 (list Z) _ _ _ =>
       seprewrite_in felem_from_bytes H; [assumption|];
-      exists (map word.unsigned (bs2ws (word:=word) (Z.to_nat (bytes_per_word width)) old_out))
+      exists (map Zmod.unsigned (bs2ws (width:=width) (Z.to_nat (bytes_per_word width)) old_out))
     end;
     crush_sep.
 
@@ -284,11 +286,11 @@ Section WithParameters.
     sepsimpl; [ assumption .. | ];
     repeat match goal with
            | _ => progress subst
-           | H : WeakestPrecondition.literal (word.unsigned _) _ |- _ =>
+           | H : WeakestPrecondition.literal (Zmod.unsigned _) _ |- _ =>
              cbv [WeakestPrecondition.literal dlet.dlet] in H;
-             rewrite word.of_Z_unsigned in H
-           | H : word.unsigned _ = word.unsigned _ |- _ =>
-             apply Properties.word.unsigned_inj in H
+             rewrite Zmod.of_Z_unsigned in H
+           | H : Zmod.unsigned _ = Zmod.unsigned _ |- _ =>
+             apply Zmod.unsigned_inj in H
            | |- exists _, _ => eexists
            | |- _ /\ _ => eexists
            end.
@@ -299,21 +301,21 @@ Section WithParameters.
         | _ => idtac
     end; rewrite Hlength; auto.
 
-  Lemma map_Z_map_unsigned : forall (x : list word), x = map word.of_Z (map word.unsigned x).
+  Lemma map_Z_map_unsigned : forall (x : list word), x = map (Zmod.of_Z (2 ^ width)) (map Zmod.unsigned x).
   Proof.
     intros. rewrite map_map.
     f_equal; eapply List.nth_error_ext; intros i; rewrite ListUtil.nth_error_map.
     case (nth_error _ i); cbn; trivial; []; intros; eapply f_equal.
-    symmetry; eapply word.of_Z_unsigned.
+    symmetry; eapply Zmod.of_Z_unsigned.
   Qed.
 
   Lemma map_unsigned_map_Z : forall (x : list byte),
-      map byte.unsigned x = map (word.unsigned (width:=width)) (map word.of_Z (map byte.unsigned x)).
+      map byte.unsigned x = map (Zmod.unsigned (m:=2 ^ width)) (map (Zmod.of_Z _) (map byte.unsigned x)).
     intros. rewrite map_map.
     eapply List.nth_error_ext. intros i. rewrite !ListUtil.nth_error_map.
     destruct (nth_error _ i) eqn:?; trivial; cbn.
     apply ListUtil.List.nth_error_In in Heqo. f_equal.
-    rewrite Properties.word.unsigned_of_Z_nowrap; [reflexivity|].
+    rewrite bits.unsigned_of_Z_small; [reflexivity|].
     pose proof (byte.unsigned_range b).
     destruct Bitwidth.width_cases as [W|W]; rewrite W; lia.
 Qed.
@@ -327,10 +329,10 @@ Qed.
             (res_eq : forall x y : felem,
                 bounded_by bin_xbounds x ->
                 bounded_by bin_ybounds y ->
-                feval (map word.of_Z
+                feval (map (Zmod.of_Z _)
                            (API.interp (res _)
-                                       (map word.unsigned x)
-                                       (map word.unsigned y)))
+                                       (map Zmod.unsigned x)
+                                       (map Zmod.unsigned y)))
                 = bin_model (feval x) (feval y))
             (res_bounds : forall x y,
                 list_in_bounds bin_xbounds x ->
@@ -373,7 +375,7 @@ Qed.
     Lemma res_list_length_binop (x y : felem) :
       bounded_by bin_xbounds x ->
       bounded_by bin_ybounds y ->
-      length (API.interp (res _) (map word.unsigned x) (map word.unsigned y)) = felem_size_in_words.
+      length (API.interp (res _) (map Zmod.unsigned x) (map Zmod.unsigned y)) = felem_size_in_words.
     Proof.
       intros.
       erewrite length_list_Z_bounded_by; eauto using res_bounds.
@@ -390,7 +392,7 @@ Qed.
       cleanup. eapply Proper_call.
       2: {
         use_translate_func_correct
-          constr:((map word.unsigned x, (map word.unsigned y, tt))) Rr;
+          constr:((map Zmod.unsigned x, (map Zmod.unsigned y, tt))) Rr;
         translate_func_precondition_hammer.
         {
           (* lists_reserved_with_initial_context *)
@@ -404,12 +406,12 @@ Qed.
         { (* output correctness *)
           erewrite <-res_eq; auto.
           f_equal. unfold felem_to_list at 1. cbv [proj1_sig].
-          match goal with H : map word.unsigned _ = API.interp (res _) _ _ |- _ =>
+          match goal with H : map Zmod.unsigned _ = API.interp (res _) _ _ |- _ =>
             rewrite <-H end.
           apply map_Z_map_unsigned. }
         { (* output bounds *)
           cbn [bounded_by field_representation frep proj1_sig felem_to_list] in *.
-          match goal with H : map word.unsigned _ = API.interp (res _) _ _ |- _ =>
+          match goal with H : map Zmod.unsigned _ = API.interp (res _) _ _ |- _ =>
             rewrite H end.
           eauto using res_bounds. } }
     Qed.
@@ -423,8 +425,8 @@ Qed.
     Context name (uop : UnOp name)
             (res_eq : forall x : felem,
                 bounded_by un_xbounds x ->
-                feval (map word.of_Z
-                           (API.interp (res _) (map word.unsigned x)))
+                feval (map (Zmod.of_Z _)
+                           (API.interp (res _) (map Zmod.unsigned x)))
                 = un_model (feval x))
             (res_bounds : forall x,
                 list_in_bounds un_xbounds x ->
@@ -462,7 +464,7 @@ Qed.
 
     Lemma res_list_length_unop (x : felem) :
       bounded_by un_xbounds x ->
-      length (API.interp (res _) (map word.unsigned x)) = felem_size_in_words.
+      length (API.interp (res _) (map Zmod.unsigned x)) = felem_size_in_words.
     Proof.
       intros.
       erewrite length_list_Z_bounded_by; eauto using res_bounds.
@@ -480,7 +482,7 @@ Qed.
       cbv beta; intros; subst f. cbv [make_bedrock_func] in *.
       cleanup. eapply Proper_call.
       2: {
-        use_translate_func_correct constr:((map word.unsigned x, tt)) Rr.
+        use_translate_func_correct constr:((map Zmod.unsigned x, tt)) Rr.
         all:translate_func_precondition_hammer.
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
@@ -492,12 +494,12 @@ Qed.
         { (* output correctness *)
           rewrite <- res_eq; [|assumption].
           f_equal. unfold felem_to_list at 1. cbv [proj1_sig].
-          match goal with H : map word.unsigned _ = expr.interp _ (res _) _ |- _ =>
+          match goal with H : map Zmod.unsigned _ = expr.interp _ (res _) _ |- _ =>
             rewrite <-H end.
           apply map_Z_map_unsigned. }
         { (* output bounds *)
           cbn [bounded_by field_representation frep proj1_sig felem_to_list] in *.
-          match goal with H : map word.unsigned _ = _ |- _ =>
+          match goal with H : map Zmod.unsigned _ = _ |- _ =>
             rewrite H end.
           eauto using res_bounds. }
         { (* separation-logic postcondition *)
@@ -513,13 +515,13 @@ Qed.
                valid_func (res (fun _ : API.type => unit)))
             (res_Wf : API.Wf res).
     Context (res_eq : forall w:word,
-                feval (map word.of_Z
-                           (API.interp (res _) (word.unsigned w)))
-                = Zmod.of_Z _ (word.unsigned w))
+                feval (map (Zmod.of_Z _)
+                           (API.interp (res _) (Zmod.unsigned w)))
+                = Zmod.of_Z _ (Zmod.unsigned w))
             (res_bounds : forall w:word,
                 list_in_bounds
                   tight_bounds
-                  (API.interp (res _) (word.unsigned w))).
+                  (API.interp (res _) (Zmod.unsigned w))).
     Context (tight_bounds_tighter_than_max : forall x,
                 list_in_bounds tight_bounds x -> list_Z_bounded_by (@MaxBounds.max_bounds width n) x).
 
@@ -540,7 +542,7 @@ Qed.
     Let inlengths := from_word_inlengths.
 
     Lemma res_list_length_from_word (x : word) :
-      length (API.interp (res _) (word.unsigned x)) = felem_size_in_words.
+      length (API.interp (res _) (Zmod.unsigned x)) = felem_size_in_words.
     Proof.
       erewrite length_list_Z_bounded_by; eauto using res_bounds.
       cbv [max_bounds]; rewrite repeat_length; trivial.
@@ -559,13 +561,13 @@ Qed.
       cleanup.
       eapply Proper_call.
       2:{
-        use_translate_func_correct constr:((word.unsigned x, tt)) R.
+        use_translate_func_correct constr:((Zmod.unsigned x, tt)) R.
         all:try translate_func_precondition_hammer.
         1:reflexivity.
         { cbv [Equivalence.equivalent_flat_args]; eexists 1%nat; split; [eexists|reflexivity].
           cbv [Equivalence.equivalent_flat_base rep.equiv rep.Z]; sepsimpl; [reflexivity|eexists].
           sepsimpl; trivial.
-          { cbn. cbv [WeakestPrecondition.literal dlet.dlet]. rewrite word.of_Z_unsigned; trivial. }
+          { cbn. cbv [WeakestPrecondition.literal dlet.dlet]. rewrite Zmod.of_Z_unsigned; trivial. }
           { eassumption. } }
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
@@ -579,12 +581,12 @@ Qed.
           abstract (erewrite <- map_length; rewrite H6; apply res_list_length_from_word). }
         { (* output correctness *)
           erewrite <- res_eq. f_equal. cbv [felem_to_list proj1_sig].
-          match goal with H : map word.unsigned _ = API.interp (res _) _ |- _ =>
+          match goal with H : map Zmod.unsigned _ = API.interp (res _) _ |- _ =>
             rewrite <-H end.
           apply map_Z_map_unsigned. }
         { (* output bounds *)
           cbn [bounded_by field_representation frep proj1_sig felem_to_list] in *.
-          match goal with H : map word.unsigned _ = _ |- _ =>
+          match goal with H : map Zmod.unsigned _ = _ |- _ =>
             rewrite H end.
           eauto using res_bounds. }
         { (* separation-logic postcondition *)
@@ -600,7 +602,7 @@ Qed.
             (res_Wf : API.Wf res).
     Context (res_eq : forall x : list word,
                 length x = n ->
-                (map word.of_Z (API.interp (res _) (map word.unsigned x)))
+                (map (Zmod.of_Z _) (API.interp (res _) (map Zmod.unsigned x)))
                 = x)
             (res_bounds : forall x,
                 list_Z_bounded_by (max_bounds (width:=width) n) x ->
@@ -634,14 +636,14 @@ Qed.
     Let inlengths := felem_copy_inlengths.
 
     Lemma res_list_length_copy (x : felem) :
-      length (API.interp (res _) (map word.unsigned (felem_to_list x))) = felem_size_in_words.
+      length (API.interp (res _) (map Zmod.unsigned (felem_to_list x))) = felem_size_in_words.
     Proof.
       erewrite length_list_Z_bounded_by.
       2: { apply res_bounds. erewrite max_bounds_range_iff.
       ssplit; rewrite ?map_length, ?felem_length; auto.
       eapply List.Forall_map, Forall_forall; intros;
       rewrite MakeAccessSizes.bits_per_word_eq_width;
-      eapply Properties.word.unsigned_range. }
+      eapply (bits.unsigned_range _ width_nonneg). }
       cbv [max_bounds]; rewrite repeat_length; trivial.
     Qed.
 
@@ -656,7 +658,7 @@ Qed.
       cleanup. eapply Proper_call.
       2: {
         rename R into Rr.
-        use_translate_func_correct constr:((map word.unsigned x, tt)) (FElem px x * Rr)%sep.
+        use_translate_func_correct constr:((map Zmod.unsigned x, tt)) (FElem px x * Rr)%sep.
         all:try translate_func_precondition_hammer.
         { autounfold with types access_sizes;
           first [ eapply MaxBounds.max_bounds_range_iff
@@ -668,7 +670,7 @@ Qed.
           rewrite map_length. rewrite felem_length. trivial.
           eapply List.Forall_map, Forall_forall; intros.
           rewrite MakeAccessSizes.bits_per_word_eq_width.
-          eapply Properties.word.unsigned_range. }
+          eapply (bits.unsigned_range _ width_nonneg). }
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
           all:try solve_equivalence_side_conditions.
@@ -710,7 +712,7 @@ Qed.
                 length x = encoded_felem_size_in_bytes)
             (res_eq : forall bs,
                 bytes_in_bounds bs ->
-                feval (map word.of_Z
+                feval (map (Zmod.of_Z _)
                            (API.interp (res _) (map byte.unsigned bs)))
                 = feval_bytes bs)
             (res_bounds : forall bs,
@@ -811,13 +813,13 @@ Qed.
           apply res_list_length_from_bytes; assumption). }
         { (* output correctness *)
           erewrite <- res_eq. f_equal. cbv [felem_to_list proj1_sig].
-          match goal with H : map word.unsigned _ = API.interp (res _) _ |- _ =>
+          match goal with H : map Zmod.unsigned _ = API.interp (res _) _ |- _ =>
             rewrite <-H end.
           apply map_Z_map_unsigned.
           assumption. }
         { (* output bounds *)
           cbn [bounded_by field_representation frep proj1_sig felem_to_list] in *.
-          match goal with H : map word.unsigned _ = API.interp (res _) _ |- _ =>
+          match goal with H : map Zmod.unsigned _ = API.interp (res _) _ |- _ =>
             rewrite H end.
           apply res_bounds. assumption. }
         { (* separation-logic postcondition *)
@@ -844,7 +846,7 @@ Qed.
                 length x = encoded_felem_size_in_bytes)
             (res_eq : forall x,
                 bounded_by tight_bounds x ->
-                API.interp (res _) (map word.unsigned x)
+                API.interp (res _) (map Zmod.unsigned x)
                 = Partition.partition
                     (ModOps.weight 8 1)
                     encoded_felem_size_in_bytes
@@ -854,7 +856,7 @@ Qed.
                 bytes_in_bounds
                   (map byte.of_Z
                        (API.interp (res _)
-                                   (map word.unsigned x)))).
+                                   (map Zmod.unsigned x)))).
 
     Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
@@ -918,7 +920,7 @@ Qed.
       eapply Proper_call.
       2:{
         use_translate_func_correct
-          constr:((map word.unsigned x, tt)) Rr.
+          constr:((map Zmod.unsigned x, tt)) Rr.
         all:try translate_func_precondition_hammer.
         all:cbn [type.app_curried fst snd].
         all:try rewrite res_eq by auto.
@@ -944,12 +946,12 @@ Qed.
           match goal with
           | _ =>
               progress subst
-          | H:WeakestPrecondition.literal (word.unsigned _) _
+          | H:WeakestPrecondition.literal (Zmod.unsigned _) _
           |- _ =>
               cbv[WeakestPrecondition.literal dlet.dlet] in H;
-              rewrite word.of_Z_unsigned in H
-          | H:word.unsigned _ = word.unsigned _
-          |- _ => apply Properties.word.unsigned_inj in H
+              rewrite Zmod.of_Z_unsigned in H
+          | H:Zmod.unsigned _ = Zmod.unsigned _
+          |- _ => apply Zmod.unsigned_inj in H
           | |- exists _, _ => eexists
           | |- _ /\ _ => eexists
           end;
@@ -971,14 +973,14 @@ Section SelectZnZ.
 
 Context
   (res_eq : forall (x y : list word) (c : word),
-      list_Z_bounded_by (@max_bounds width n) (map word.unsigned x) ->
-      list_Z_bounded_by (@max_bounds width n) (map word.unsigned y) ->
-      ZRange.is_bounded_by_bool (word.unsigned c) bit_range = true ->
+      list_Z_bounded_by (@max_bounds width n) (map Zmod.unsigned x) ->
+      list_Z_bounded_by (@max_bounds width n) (map Zmod.unsigned y) ->
+      ZRange.is_bounded_by_bool (Zmod.unsigned c) bit_range = true ->
                  (API.interp (res _)
-                             (word.unsigned c)
-                             (map word.unsigned x)
-                             (map word.unsigned y))
-      = map word.unsigned (if (word.unsigned c =? 0) then x else y)).
+                             (Zmod.unsigned c)
+                             (map Zmod.unsigned x)
+                             (map Zmod.unsigned y))
+      = map Zmod.unsigned (if (Zmod.unsigned c =? 0) then x else y)).
 
     Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
@@ -1011,7 +1013,7 @@ Context
         simpl in H. lia.
     Qed.
 
-    Lemma max_bounds_words : forall (x : list word) n, length x = n -> list_Z_bounded_by (@max_bounds width n) (map word.unsigned x).
+    Lemma max_bounds_words : forall (x : list word) n, length x = n -> list_Z_bounded_by (@max_bounds width n) (map Zmod.unsigned x).
     Proof.
         intros. generalize dependent x.
         induction n0; intros.
@@ -1023,10 +1025,10 @@ Context
               }
               apply Expr.is_bounded_by_bool_width_range.
               eauto.
-              pose proof Properties.word.unsigned_range. auto.
+              pose proof (fun w : word => bits.unsigned_range w width_nonneg). auto.
     Qed.
 
-    Lemma FElem_max_bounds : forall px x m R, (FElem px x * R)%sep m -> list_Z_bounded_by (@max_bounds width n) (map word.unsigned x).
+    Lemma FElem_max_bounds : forall px x m R, (FElem px x * R)%sep m -> list_Z_bounded_by (@max_bounds width n) (map Zmod.unsigned x).
     Proof.
       intros. eapply max_bounds_words. rewrite felem_length. eauto.
     Qed.
@@ -1050,7 +1052,7 @@ Context
       end.
       eapply Proper_call.
       2:{ use_translate_func_correct
-          constr:((word.unsigned pc, (map word.unsigned x, (map word.unsigned y, tt)))) Rout.
+          constr:((Zmod.unsigned pc, (map Zmod.unsigned x, (map Zmod.unsigned y, tt)))) Rout.
         all:try translate_func_precondition_hammer.
         all:cbn [type.app_curried fst snd].
         all:try rewrite res_eq by auto.
@@ -1090,7 +1092,7 @@ Context
                   erewrite <- res_eq; eauto; rewrite <- Hbit; simpl in *; eauto.
                   rewrite bytes_per_of_nat_to_nat_id in *.
                   match goal with
-                  | H : map word.unsigned _ = _ |- _ => rewrite <- H
+                  | H : map Zmod.unsigned _ = _ |- _ => rewrite <- H
                   | _ => idtac
                   end; eauto.
             - rewrite Hbit; simpl; eapply Proper_sep_iff1.
@@ -1100,7 +1102,7 @@ Context
                   erewrite <- res_eq; eauto; rewrite <- Hbit; simpl in *; eauto.
                   rewrite bytes_per_of_nat_to_nat_id in *.
                   match goal with
-                  | H : map word.unsigned _ = _ |- _ => rewrite <- H
+                  | H : map Zmod.unsigned _ = _ |- _ => rewrite <- H
                   | _ => idtac
                   end; eauto.
     Qed.

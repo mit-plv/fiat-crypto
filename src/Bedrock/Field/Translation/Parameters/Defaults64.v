@@ -25,7 +25,6 @@ Section Defaults_64.
 
   Let wordsize_bytes := Eval vm_compute in (machine_wordsize / 8)%Z.
   Instance default_parameters : Types.parameters
-    (word := BasicC64Semantics.word)
     (varname_gen := default_varname_gen)
     (error := expr.var Defaults.ERROR)
     := tt.

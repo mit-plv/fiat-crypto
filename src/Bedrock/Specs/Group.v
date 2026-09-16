@@ -1,3 +1,4 @@
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Semantics.
 Require Import Rupicola.Lib.Api. Import bedrock2.WeakestPrecondition.
 Require Import Crypto.Algebra.Group.
@@ -23,14 +24,16 @@ Class GroupParameters_ok {group_parameters : GroupParameters} :=
     scalarmult_ok : @is_scalarmult G eq add zero opp scalarmult;
   }.
 
-Class GroupRepresentation {G : Type} {width} {BW:Bitwidth.Bitwidth width} {word : word width} {mem : map.map word byte} :=
+Class GroupRepresentation {G : Type} {width} {BW:Bitwidth.Bitwidth width} {mem : map.map (bits width) byte} :=
   { gelem : Type;
     grepresents : gelem -> G -> Prop;
-    GElem : word -> gelem -> mem -> Prop;
+    GElem : bits width -> gelem -> mem -> Prop;
   }.
 
 Section FunctionSpecs.
-  Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
+  Context {mem: map.map word Byte.byte}.
   Context {locals: map.map String.string word}.
   Context {ext_spec: bedrock2.Semantics.ExtSpec}.
   Context {group_parameters : GroupParameters}
@@ -46,12 +49,12 @@ Section FunctionSpecs.
     { requires tr mem :=
         length bs = scalarbytes /\
         grepresents x X
-        /\ (GElem pout out * GElem px x * array ptsto (word.of_Z 1) pk bs * R)%sep mem;
+        /\ (GElem pout out * GElem px x * array ptsto (bits.of_Z _ 1) pk bs * R)%sep mem;
       ensures tr' mem' :=
         tr = tr' /\
         exists (xk : gelem),
           grepresents xk (scalarmult (LittleEndianList.le_combine bs) X)
-          /\ (GElem pout xk * GElem px x * array ptsto (word.of_Z 1) pk bs * R)%sep mem' }.
+          /\ (GElem pout xk * GElem px x * array ptsto (bits.of_Z _ 1) pk bs * R)%sep mem' }.
 End FunctionSpecs.
 
 Global Existing Instance spec_of_scmul.

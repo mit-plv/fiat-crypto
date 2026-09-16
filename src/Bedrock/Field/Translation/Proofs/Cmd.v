@@ -2,12 +2,12 @@ From Coq Require Import ZArith.
 From Coq Require Import List.
 From Coq Require Import Lia.
 From Coq Require Import String.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.ProgramLogic.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Map.Interface.
-Require Import coqutil.Word.Interface.
 Require Import coqutil.Datatypes.List.
 Require Import coqutil.Datatypes.PropSet.
 Require Import Crypto.Bedrock.Field.Common.Types.
@@ -34,8 +34,9 @@ Import Types.Notations.
 
 Section Cmd.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Context {ok : ok}.
 
   Local Existing Instance Types.rep.Z.

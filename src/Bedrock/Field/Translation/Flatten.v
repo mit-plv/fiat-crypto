@@ -1,6 +1,7 @@
 (* IF YOU CHANGE THIS FILE YOU MUST ALSO CHANGE src/Bedrock/Field/Stringification/FlattenVarData.v ! *)
 From Coq Require Import String.
 From Coq Require Import List.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Array.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Semantics.
@@ -17,8 +18,9 @@ Import Types.Notations.
 
 Section Flatten.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   (* these conversions should happen before loading arguments and after
        storing return values, so they use in-memory lists *)
   Local Existing Instance rep.listZ_mem.

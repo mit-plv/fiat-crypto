@@ -1,7 +1,7 @@
 From Coq Require Import ZArith.
 From Coq Require Import List.
 From Coq Require Import Lia.
-Require Import coqutil.Word.Interface.
+Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Word.Properties.
 Require Import coqutil.Datatypes.List.
 Require Import coqutil.Byte.
@@ -20,10 +20,6 @@ Import ListNotations.
 Import Partition.
 
 Section ByteBounds.
-  Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
-  Context {ok : ok}.
   Context (n : nat).
 
   Definition byte_range : ZRange.zrange :=

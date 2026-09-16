@@ -1,8 +1,8 @@
 From Coq Require Import ZArith.
 From Coq Require Import List.
 From Coq Require Import Lia.
+Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Byte.
-Require Import coqutil.Word.Interface.
 Require Import bedrock2.Semantics.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
@@ -17,8 +17,9 @@ Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 
 Section Representation.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Context {field_parameters : FieldParameters}
           {p_ok : Types.ok}.
   Context (n n_bytes : nat) (weight : nat -> Z)
@@ -35,7 +36,7 @@ Section Representation.
 
   Definition eval_words : list word -> Zmod M :=
     fun ws =>
-      Zmod.of_Z _ (Positional.eval weight n (eval_transformation (map word.unsigned ws))).
+      Zmod.of_Z _ (Positional.eval weight n (eval_transformation (map Zmod.unsigned ws))).
 
   Definition eval_bytes : list byte -> Zmod M :=
     fun bs =>
@@ -51,7 +52,7 @@ Section Representation.
       encoded_felem_size_in_bytes := n_bytes;
       bytes_in_bounds bs := list_in_bounds byte_bounds (map byte.unsigned bs);
       bounds := bounds;
-      bounded_by bs ws := list_in_bounds bs (map word.unsigned ws);
+      bounded_by bs ws := list_in_bounds bs (map Zmod.unsigned ws);
       loose_bounds := loose_bounds;
       tight_bounds := tight_bounds;
     }.

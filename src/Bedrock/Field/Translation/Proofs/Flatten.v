@@ -2,10 +2,11 @@ From Coq Require Import String.
 From Coq Require Import PeanoNat.
 From Coq Require Import List.
 From Coq Require Import Lia.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
-Require Import coqutil.Word.Interface coqutil.Word.Properties.
+Require Import coqutil.Word.Properties.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import coqutil.Datatypes.List.
 Require Import coqutil.Datatypes.PropSet.
@@ -31,8 +32,9 @@ Import Types.Notations.
 
 Section Flatten.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Context {ok : ok}.
   (* these conversions should happen before loading arguments and after
        storing return values, so they use in-memory lists *)

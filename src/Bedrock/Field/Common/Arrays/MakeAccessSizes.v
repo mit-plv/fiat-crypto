@@ -1,9 +1,10 @@
 From Coq Require Import ZArith.
 From Coq Require Import List.
 From Coq Require Import Lia.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Syntax.
 Require Import coqutil.Tactics.Tactics.
-Require Import coqutil.Word.Interface coqutil.Word.Properties.
+Require Import coqutil.Word.Properties.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.COperationSpecifications. (* for list_Z_bounded_by *)
 Require Import Crypto.Bedrock.Field.Common.Types.
@@ -23,8 +24,9 @@ Import Types.Notations.
 
 Section __.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Existing Instances rep.Z rep.listZ_mem.
 
   Let all_access_sizes :=
@@ -291,7 +293,7 @@ Section __.
        <= width).
     Proof.
       intros.
-      pose proof word.width_pos.
+      pose proof width_pos.
       pose proof make_access_size_tighter_than_word ranges size
            ltac:(assumption).
       eapply Z.le_trans; [ | apply bits_per_word_le_width ].
@@ -351,7 +353,7 @@ Section __.
     (* useful for proving byte access sizes are legal *)
     Lemma width_ge_8 : 8 <= width.
     Proof.
-      pose proof word.width_pos.
+      pose proof width_pos.
       pose proof width_0mod_8.
       let H := fresh in
       let x := fresh in
