@@ -2,6 +2,7 @@ From Coq Require Import ZArith.
 From Coq Require Import String.
 From Coq Require Import List.
 From Coq Require Import Lia.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Array.
 Require Import bedrock2.Scalars.
 Require Import bedrock2.Syntax.
@@ -9,7 +10,7 @@ Require Import bedrock2.ProgramLogic.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.WeakestPreconditionProperties.
-Require Import coqutil.Word.Interface coqutil.Word.Properties.
+Require Import coqutil.Word.Properties.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import coqutil.Datatypes.List.
 Require Import coqutil.Datatypes.PropSet.
@@ -35,8 +36,9 @@ Import Types.Notations.
 
 Section LoadStoreList.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Context {ok : ok}.
 
   Local Existing Instance rep.Z.
@@ -268,7 +270,7 @@ Section LoadStoreList.
       WeakestPrecondition.dexpr
         mem locals
         (load_list_item (width:=width) size (expr.var name) i)
-        (word.of_Z (hd 0%Z (skipn i l))).
+        (bits.of_Z _ (hd 0%Z (skipn i l))).
   Proof.
     cbv [load_list_item];
       cbn [rep.equiv rep.listZ_mem rep.Z base_rtype_of_ltype
@@ -286,13 +288,13 @@ Section LoadStoreList.
     end.
     match goal with
     | H : context[array] |- _ =>
-      rewrite !word.ring_morph_mul, !word.of_Z_unsigned in H;
-        rewrite <-!word.ring_morph_mul in H
+      rewrite !Zmod.of_Z_mul, !Zmod.of_Z_unsigned in H;
+        rewrite <-!Zmod.of_Z_mul in H
     end.
     straightline.
     eapply Proper_get; [ repeat intro |  eassumption ].
-    match goal with H : word.unsigned _ = word.unsigned _ |- _ =>
-                    apply word.unsigned_inj in H
+    match goal with H : Zmod.unsigned _ = Zmod.unsigned _ |- _ =>
+                    apply Zmod.unsigned_inj in H
     end.
     subst. rewrite Nat2Z.inj_mul.
     eexists; split.
@@ -394,19 +396,19 @@ Section LoadStoreList.
                 apply Z.pow_le_mono_r; lia).
           cbn [rep.equiv rep.listZ_mem rep.Z] in *.
           sepsimpl_hyps.
-          match goal with H : word.unsigned _ = word.unsigned _ |- _ =>
-                          apply word.unsigned_inj in H
+          match goal with H : Zmod.unsigned _ = Zmod.unsigned _ |- _ =>
+                          apply Zmod.unsigned_inj in H
           end.
           subst. eexists.
           split;[reflexivity|].
           split.
-          { rewrite <-word.unsigned_of_Z_0, map_nth_default_always.
+          { rewrite <-(Zmod.unsigned_0 (2 ^ width)), map_nth_default_always.
             reflexivity. }
           { eexists; split; [ | reflexivity ].
             rewrite map.get_put_same, hd_skipn_nth_default.
-            rewrite <-word.unsigned_of_Z_0.
+            rewrite <-(Zmod.unsigned_0 (2 ^ width)).
             rewrite skipn_map, hd_map.
-            rewrite !word.of_Z_unsigned.
+            rewrite !Zmod.of_Z_unsigned.
             reflexivity. } } } }
   Qed.
 
@@ -706,7 +708,7 @@ Section LoadStoreList.
       sepsimpl.
       ecancel_assumption. }
     { repeat match goal with
-             | H : _ |- _ => rewrite word.of_Z_unsigned in H end.
+             | H : _ |- _ => rewrite Zmod.of_Z_unsigned in H end.
       subst; eexists; split.
       { cbn [WeakestPrecondition.dexpr
                WeakestPrecondition.expr
@@ -745,7 +747,7 @@ Section LoadStoreList.
                  Semantics.interp_binop] in H;
           cbv [dlet.dlet WeakestPrecondition.literal
                          WeakestPrecondition.get] in H;
-          rewrite ?word.of_Z_unsigned in H;
+          rewrite ?Zmod.of_Z_unsigned in H;
           cleanup; subst
       end.
       match goal with
@@ -759,11 +761,11 @@ Section LoadStoreList.
               cleanup; congruence)
       end.
       repeat match goal with
-             | H: word.unsigned _ = word.unsigned _ |- _ =>
-               apply word.unsigned_inj in H; subst
+             | H: Zmod.unsigned _ = Zmod.unsigned _ |- _ =>
+               apply Zmod.unsigned_inj in H; subst
              end.
       repeat match goal with
-             | H : map word.unsigned ?x = _ :: _ |- _ =>
+             | H : map Zmod.unsigned ?x = _ :: _ |- _ =>
                destruct x; cbn [map] in H;
                  [ congruence | inversion H; clear H ]
              end.
@@ -786,7 +788,7 @@ Section LoadStoreList.
                 context [array _ _ s ?xs] => xs end in
         let r2 :=
             lazymatch type of H with
-                context [array _ _ (word.add _ _) ?xs] => xs end in
+                context [array _ _ (Zmod.add _ _) ?xs] => xs end in
         let r :=
             lazymatch type of H with
               context [truncated_scalar _ _ ?x] => x end in
@@ -802,8 +804,8 @@ Section LoadStoreList.
                           exists x end.
           sepsimpl; [ solve [eauto using Forall_snoc] .. | ].
           match goal with
-            |- context [map word.unsigned _ =
-                        map word.unsigned ?xs ++ [word.unsigned ?x] ] =>
+            |- context [map Zmod.unsigned _ =
+                        map Zmod.unsigned ?xs ++ [Zmod.unsigned ?x] ] =>
             exists (xs ++ [x])
           end.
           sepsimpl; [ rewrite map_app; reflexivity
@@ -812,10 +814,10 @@ Section LoadStoreList.
           match goal with
             H : sep _ _ ?m |- context [?m] =>
             match type of H with
-              context [array _ _ (word.add ?a ?b) ?x] =>
+              context [array _ _ (Zmod.add ?a ?b) ?x] =>
               exists x;
                 sepsimpl; [solve [auto] .. | ];
-                  exists (word.add a b)
+                  exists (Zmod.add a b)
             end
           end.
           sepsimpl; [ ].
@@ -828,17 +830,17 @@ Section LoadStoreList.
                    Semantics.interp_binop].
             cbv [WeakestPrecondition.literal dlet.dlet].
             match goal with
-            | |- context[word.add ?x (word.of_Z ?y)] =>
+            | |- context[Zmod.add ?x (bits.of_Z _ ?y)] =>
               progress match x with
-                       | word.of_Z _ => idtac
-                       | word.add _ _ => idtac
-                       | _ => rewrite <-(word.of_Z_unsigned x)
+                       | bits.of_Z _ _ => idtac
+                       | Zmod.add _ _ => idtac
+                       | _ => rewrite <-(Zmod.of_Z_unsigned x)
                        end
             end.
-            rewrite <-!word.ring_morph_add.
+            rewrite <-!Zmod.of_Z_add.
             f_equal. clear; lia. }
           { match goal with
-              H : context [array _ _ (word.add (word.add _ _) _) _] |- _ =>
+              H : context [array _ _ (Zmod.add (Zmod.add _ _) _) _] |- _ =>
               refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
             end.
             rewrite map_app, array_append. cbn [map array].
@@ -850,9 +852,9 @@ Section LoadStoreList.
               let ra := match R with
                           context [truncated_scalar _ ?ra] => ra end in
               replace ra with la
-                by (apply word.unsigned_inj;
-                    rewrite !word.unsigned_add, !word.unsigned_of_Z;
-                    cbv [word.wrap]; Modulo.pull_Zmod; f_equal; lia)
+                by (apply Zmod.unsigned_inj;
+                    rewrite !Zmod.unsigned_add, !bits.unsigned_of_Z;
+                    Modulo.pull_Zmod; f_equal; lia)
             end.
             cancel. } } }
       cbv beta in *; cleanup; subst.
@@ -1021,11 +1023,11 @@ Section LoadStoreList.
           cbn [Semantics.interp_binop].
           cbv [WeakestPrecondition.literal dlet.dlet].
           subst.
-          apply word.unsigned_inj.
-          rewrite word.unsigned_add, word.unsigned_of_Z.
+          apply Zmod.unsigned_inj.
+          rewrite Zmod.unsigned_add, bits.unsigned_of_Z.
           rewrite Nat2Z.inj_mul. change (Z.of_nat 0) with 0%Z.
           autorewrite with zsimplify_fast.
-          cbv [word.wrap]. rewrite word.wrap_unsigned.
+ rewrite bits.mod_to_Z.
           reflexivity. } }
       cbv beta in *. cleanup; subst.
       cbn [rep.rtype_of_ltype rep.listZ_local rep.Z] in *.

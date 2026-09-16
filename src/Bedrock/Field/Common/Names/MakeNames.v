@@ -2,6 +2,7 @@ From Coq Require Import ZArith.
 From Coq Require Import List.
 From Coq Require Import Lia.
 From Coq Require Import String.
+Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Datatypes.List.
 Require Import coqutil.Datatypes.PropSet.
 Require Import Crypto.Bedrock.Field.Common.Tactics.
@@ -20,8 +21,9 @@ Existing Instances rep.Z rep.listZ_mem.
 
 Section with_parameters.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Context {inname_gen outname_gen : nat -> string}.
 
   Fixpoint make_names

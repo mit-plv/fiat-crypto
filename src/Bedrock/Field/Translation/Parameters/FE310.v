@@ -4,7 +4,6 @@ From Coq Require Import List.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Semantics.
 Require Import bedrock2.FE310CSemantics.
-Require Import coqutil.Word.Naive.
 Require Import coqutil.Map.SortedListWord.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
@@ -28,7 +27,6 @@ Section Defaults_32.
   Let wordsize_bytes := Eval vm_compute in (machine_wordsize / 8)%Z.
 
   Instance default_parameters : Types.parameters
-    (word := Naive.word32)
     (mem:=SortedListWord.map _ _)
     (varname_gen := default_varname_gen)
     (error := expr.var Defaults.ERROR)

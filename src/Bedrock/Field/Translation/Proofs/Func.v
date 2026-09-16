@@ -2,12 +2,12 @@ From Coq Require Import ZArith.
 From Coq Require Import String.
 From Coq Require Import List.
 From Coq Require Import Lia.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.ProgramLogic.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.WeakestPreconditionProperties.
-Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Properties.
@@ -37,8 +37,9 @@ Import Types.Notations.
 
 Section Func.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Context {ok : ok}.
 
   Local Existing Instance rep.Z.
@@ -187,7 +188,7 @@ Section Func.
                                       WeakestPrecondition.dexprs
                                       WeakestPrecondition.expr
                                       WeakestPrecondition.expr_body]
-               | _ => rewrite word.of_Z_unsigned
+               | _ => rewrite Zmod.of_Z_unsigned
                | H : WeakestPrecondition.dexpr _ _ _ _ |- _ => destruct H
                | |- WeakestPrecondition.get _ _ _ => eexists; split; [ eassumption | ]
                | |- WeakestPrecondition.literal _ _ =>
@@ -254,7 +255,7 @@ Section Func.
              | _ => progress subst
              | _ => progress cbn [map.putmany_of_list_zip] in *
              | H : Some _ = Some _ |- _ => inversion H; clear H; subst
-             | _ => rewrite map.get_put_same, word.of_Z_unsigned
+             | _ => rewrite map.get_put_same, Zmod.of_Z_unsigned
              | _ => split; intros; cleanup; subst
              | _ => eexists; sepsimpl; [ reflexivity .. | ]
              | _ => solve [eauto]
@@ -311,10 +312,10 @@ Section Func.
                | _ => progress subst
                | H : Some _ = Some _ |- _ =>
                  inversion H; clear H; subst
-               | H : _ |- _ => rewrite word.of_Z_unsigned in H
+               | H : _ |- _ => rewrite Zmod.of_Z_unsigned in H
                | H : _ |- _ => rewrite map.get_put_same in H
                | _ => rewrite map.get_put_same
-               | _ => rewrite word.of_Z_unsigned
+               | _ => rewrite Zmod.of_Z_unsigned
                | |- Lift1Prop.ex1 _ _ => eexists
                | |- exists _, _ => eexists
                | |- _ /\ _ => split
@@ -472,7 +473,7 @@ Section Func.
       cbv [WeakestPrecondition.get].
       split; intros; sepsimpl; subst; try reflexivity.
       { eexists. sepsimpl; eauto; [ ].
-        rewrite !word.of_Z_unsigned in *.
+        rewrite !Zmod.of_Z_unsigned in *.
         eexists; sepsimpl; eauto; [ ].
         eexists; sepsimpl; eauto; [ ].
         congruence. }
@@ -480,7 +481,7 @@ Section Func.
         eexists; sepsimpl; eauto; [ ].
         eexists; sepsimpl; eauto; [ ].
         eexists; split; eauto; [ ].
-        apply word.of_Z_unsigned. } }
+        apply Zmod.of_Z_unsigned. } }
   Qed.
 
   Lemma translate_func_correct {t}

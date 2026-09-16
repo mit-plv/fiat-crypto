@@ -1,11 +1,12 @@
 From Coq Require Import ZArith.
 From Coq Require Import String.
 From Coq Require Import Lia.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
-Require Import coqutil.Word.Interface coqutil.Word.Properties.
+Require Import coqutil.Word.Properties.
 Require Import coqutil.Datatypes.PropSet.
 From Coq Require Import List. (* after SeparationLogic *)
 Require Import Crypto.Bedrock.Field.Common.Types.
@@ -22,14 +23,8 @@ Require Import Crypto.Util.ZUtil.Hints.Core.
 Import API.Compilers.
 Import ListNotations Types.Notations.
 
-Section UsedVarnames.
-  Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
-  Context {ok : ok}.
-  Local Existing Instance Types.rep.Z.
-  Local Instance varname_eqb_spec x y : BoolSpec _ _ _
-    := Decidable.String.eqb_spec x y.
+Section Varnames.
+  Context {varname_gen : nat -> String.string}.
   Local Notation varname := String.string.
 
   Definition used_varnames nextn nvars : set varname :=
@@ -57,6 +52,59 @@ Section UsedVarnames.
     { eexists; eauto with lia. }
     { congruence. }
   Qed.
+
+  Lemma used_varnames_subset n1 n2 l1 l2 :
+    (n2 <= n1)%nat ->
+    (n1 + l1 <= n2 + l2)%nat ->
+    PropSet.subset (used_varnames n1 l1)
+                   (used_varnames n2 l2).
+  Proof.
+    cbv [PropSet.subset PropSet.elem_of];
+      intros; rewrite !used_varnames_iff in *.
+    cleanup; subst.
+    eexists; split; [ reflexivity | lia ].
+  Qed.
+
+  Lemma used_varnames_shift n m l :
+    subset (used_varnames (n + m) l)
+           (used_varnames n (m + l)).
+  Proof.
+    cbv [subset]. intros.
+    match goal with H : _ |- _ =>
+                    apply used_varnames_iff in H end.
+    apply used_varnames_iff.
+    cleanup; subst. eexists; split; eauto.
+    lia.
+  Qed.
+
+  Lemma disjoint_used_varnames_lt n nvars (vset : set varname) :
+    (forall x, n <= x -> ~ vset (varname_gen x)) ->
+    disjoint (used_varnames n nvars) vset.
+  Proof.
+    cbv [disjoint elem_of]; intros.
+    apply Decidable.imp_simp.
+    { cbv [used_varnames Decidable.decidable of_list ].
+      match goal with
+        |- In ?x ?l \/ ~ In ?x ?l =>
+        destruct (in_dec string_dec x l); [left|right]
+      end; tauto. }
+    rewrite used_varnames_iff.
+    intros; cleanup; subst.
+    eauto with lia.
+  Qed.
+End Varnames.
+
+Section UsedVarnames.
+  Context
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
+  Context {ok : ok}.
+  Local Existing Instance Types.rep.Z.
+  Local Instance varname_eqb_spec x y : BoolSpec _ _ _
+    := Decidable.String.eqb_spec x y.
+  Local Notation varname := String.string.
+  Local Notation used_varnames := (used_varnames (varname_gen:=varname_gen)).
 
   Lemma used_varnames_disjoint n1 n2 l1 l2 :
     n1 + l1 <= n2 ->
@@ -105,18 +153,6 @@ Section UsedVarnames.
     apply sameset_iff. cbn. firstorder idtac.
   Qed.
 
-  Lemma used_varnames_subset n1 n2 l1 l2 :
-    (n2 <= n1)%nat ->
-    (n1 + l1 <= n2 + l2)%nat ->
-    PropSet.subset (used_varnames n1 l1)
-                   (used_varnames n2 l2).
-  Proof.
-    cbv [PropSet.subset PropSet.elem_of];
-      intros; rewrite !used_varnames_iff in *.
-    cleanup; subst.
-    eexists; split; [ reflexivity | lia ].
-  Qed.
-
   Lemma used_varnames_union n m l :
     sameset (used_varnames n (m + l))
             (union (used_varnames n m) (used_varnames (n + m) l)).
@@ -132,18 +168,6 @@ Section UsedVarnames.
     rewrite !add_union_singleton, of_list_nil, union_empty_r.
     rewrite Nat.add_succ_r.
     reflexivity.
-  Qed.
-
-  Lemma used_varnames_shift n m l :
-    subset (used_varnames (n + m) l)
-           (used_varnames n (m + l)).
-  Proof.
-    cbv [subset]. intros.
-    match goal with H : _ |- _ =>
-                    apply used_varnames_iff in H end.
-    apply used_varnames_iff.
-    cleanup; subst. eexists; split; eauto.
-    lia.
   Qed.
 
   Lemma used_varnames_subset_singleton n m l :
@@ -205,22 +229,6 @@ Section UsedVarnames.
                          rewrite in_seq, varname_gen_unique; split;
                          eauto with lia ]
            end.
-  Qed.
-
-  Lemma disjoint_used_varnames_lt n nvars (vset : set varname) :
-    (forall x, n <= x -> ~ vset (varname_gen x)) ->
-    disjoint (used_varnames n nvars) vset.
-  Proof.
-    cbv [disjoint elem_of]; intros.
-    apply Decidable.imp_simp.
-    { cbv [used_varnames Decidable.decidable of_list ].
-      match goal with
-        |- In ?x ?l \/ ~ In ?x ?l =>
-        destruct (in_dec string_dec x l); [left|right]
-      end; tauto. }
-    rewrite used_varnames_iff.
-    intros; cleanup; subst.
-    eauto with lia.
   Qed.
 
   Lemma disjoint_used_varnames_singleton n nvars m :

@@ -1,9 +1,10 @@
 From Coq Require Import String.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
-Require Import coqutil.Word.Interface coqutil.Word.Properties.
+Require Import coqutil.Word.Properties.
 Require Import coqutil.Datatypes.PropSet.
 From Coq Require Import List. (* after SeparationLogic *)
 Require Import Crypto.Bedrock.Field.Common.Types.
@@ -21,8 +22,9 @@ Import ListNotations Types.Notations.
 
 Section OnlyDiffer.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Context {ok : ok}.
   Local Existing Instance Types.rep.Z.
 
@@ -191,11 +193,11 @@ Section OnlyDiffer.
                | _ => progress sepsimpl
                | H : map _ _ = [] |- _ =>
                  apply map_eq_nil in H
-               | _ => rewrite word.of_Z_unsigned in *
+               | _ => rewrite Zmod.of_Z_unsigned in *
                | |- _ /\ _ => split
                | |- Lift1Prop.ex1 _ _ => eexists
                | |- emp _ _ => cbv [emp]
-               | _ => solve [apply word.unsigned_range]
+               | _ => solve [apply (bits.unsigned_range _ width_nonneg)]
                | _ => solve [eauto using map_nil]
                end.
     Qed.
@@ -342,8 +344,9 @@ Global Hint Resolve
 
 Section ContextEquivalence.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Context {ok : ok}.
   Local Existing Instance Types.rep.Z.
 

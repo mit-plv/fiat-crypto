@@ -3,11 +3,11 @@ From Coq Require Import String.
 From Coq Require Import List.
 From Coq Require Import Lia.
 From Coq Require Import ZArith.
+Require Import coqutil.Word.Bitwidth.
 Require Import bedrock2.Array.
 Require Import bedrock2.Scalars.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.WeakestPreconditionProperties.
-Require Import coqutil.Word.Interface.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ListUtil.
@@ -28,8 +28,9 @@ Import Types.Notations.
    loading/storing part of that process. *)
 Section Lists.
   Context
-    {width BW word mem locals ext_spec varname_gen error}
-   `{parameters_sentinel : @parameters width BW word mem locals ext_spec varname_gen error}.
+    {width BW mem locals ext_spec varname_gen error}
+   `{parameters_sentinel : @parameters width BW mem locals ext_spec varname_gen error}.
+  Local Notation word := (bits width).
   Local Existing Instance rep.Z.
 
   Fixpoint extract_listnames {t}
