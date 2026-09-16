@@ -694,6 +694,36 @@ Proof.
     Z.pull_mod. eauto.
 Qed.
 
+Lemma Z_size_le : forall n x,
+    0 <= n ->
+    0 <= x < 2^n ->
+    Z_size x <= n.
+Proof.
+    intros n x Hn Hx.
+    destruct x as [ | p | p ].
+    { (* x = 0 *)
+    simpl.
+    lia. }
+    { (* x = Z.pos p *)
+    simpl.
+    pose proof (Pos.size_le p) as Hle.
+    apply Pos2Z.pos_le_pos in Hle.
+    rewrite (Pos2Z.inj_pow 2 (Pos.size p)) in Hle.
+    rewrite (Pos2Z.inj_xO p) in Hle.
+    change (Z.pos 2) with 2 in Hle.
+    assert (Hsucc : 2 ^ (Z.pos (Pos.size p)) < 2 ^ (Z.succ n)).
+    { rewrite (Z.pow_succ_r 2 n) by lia.
+        lia. }
+    rewrite <- (Z.pow_lt_mono_r_iff 2) in Hsucc by lia.
+    lia. }
+    { (* x = Z.neg p *)
+    lia. }
+Qed.
+
+Lemma Z_size_nonneg : forall x, 0 <= Z_size x.
+Proof. destruct x; cbv [Z_size]; lia. Qed.
+
+
 Lemma helper_loop_ok : program_logic_goal_for_function! helper_loop.
 Proof.
     repeat (straightline || straightline_call); intuition try ecancel_assumption.
@@ -721,21 +751,22 @@ Proof.
                     (((eval a_) mod 2 = 1 /\ (eval b_ mod 2 = 1)) \/ ((eval a_) mod 2 = 1 /\ (eval b_ mod 2 = 0)) \/
                     ((eval a_) mod 2 = 0 /\ (eval b_ mod 2 = 1))) /\
                     (* x, y range invariants *)
-                    (if (andb ((eval a_) mod 2 =? 1) ((eval b_) mod 2 =? 1)) then
+                    (if (eval b_ =? 0) then True else (if (andb ((eval a_) mod 2 =? 1) ((eval b_) mod 2 =? 1)) then
                         0 <= 2 * (eval x) <= (2 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_)))) * (eval MOD) /\  0 <= 2 * (eval y) <= (2 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_)))) * (eval MOD) else
                     if (andb ((eval a_) mod 2 =? 1) ((eval b_) mod 2 =? 0)) then
                         0 <= (2^63) * (eval x) <= (2^63 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_))) - 2) * (eval MOD) /\
                         0 <= 2 * (eval y) <= (2 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_))) - 2) * (eval MOD)
                     else
                         0 <= (2^63) * (eval y) <= (2^63 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_))) - 2) * (eval MOD) /\
-                        0 <= 2 * (eval x) <= (2 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_))) - 2) * (eval MOD)) /\
+                        0 <= 2 * (eval x) <= (2 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_))) - 2) * (eval MOD)))/\
                     (* Gcd invariant *)
                     Z.gcd (eval a_) (eval b_) = Z.gcd (eval a) (eval b) /\
                     (* inv_m invariant *)
                     inv_m_ = inv_m /\
                     (* Congruence invariants *)
                     (eval a_) mod (eval MOD) = (-((eval y) * (eval b))) mod (eval MOD) /\
-                    (eval b_) mod (eval MOD) = ((eval x) * (eval b)) mod (eval MOD)
+                    (eval b_) mod (eval MOD) = ((eval x) * (eval b)) mod (eval MOD) /\
+                    ((Z_size (eval a) + Z_size (eval b)) - (Z_size (eval a_) + Z_size (eval b_)) >= 0)
                 )
                 (
                     fun T M P_A P_B P_X P_Y P_M INV_M CMP => T = t /\ exists (A B X Y : list word),
@@ -755,7 +786,7 @@ Proof.
     { repeat straightline; intuition try ecancel_assumption; rewrite ?H12, ?H14, ?H15; try ZnWords.
       {
         rewrite <- Z.eqb_eq, H10 in *.
-        destruct (ZLib.Z.mod2_cases (eval b)) as [Hb | Hb];
+        destruct (eval b =? 0) eqn: Hb0; eauto; destruct (ZLib.Z.mod2_cases (eval b)) as [Hb | Hb];
         rewrite Z.eqb_eq, Hb in *; cbn [Z.eqb Pos.eqb andb] in *; ssplit; lia.
       }
       { Z.push_pull_mod. rewrite Z.mul_0_l, Z.sub_0_r, Z_mod_same, Z.mod_small by lia; eauto. }
@@ -764,9 +795,27 @@ Proof.
     {
       intros; repeat (straightline || straightline_call).
       1,2,3,4: ssplit; try ecancel_assumption; eauto.
+      all:
+        destruct (eval x2 =? 0) eqn:Hx20;
+            try solve [exfalso; revert H18 H25; keep_length_equations; intros; ZnWords ].
       (* derive from H29 *)
-      1: admit.
-
+      {
+        repeat match goal with
+        | [H : context [Z_size ?a] |- _] =>
+            assert_fails (assert (0 <= Z_size a <= 256) by assumption);
+            assert (0 <= Z_size a <= 256) by
+                (split; [ eapply Z_size_nonneg | eapply Z_size_le ]; try lia; keep_length_equations; bigZnWords)
+        end.
+        destruct (ZLib.Z.mod2_cases (eval x1)) as [Hxm1 | Hxm1],
+            (ZLib.Z.mod2_cases (eval x2)) as [Hxm2 | Hxm2];
+                destruct H28 as [[? ?] | [[? ?] | [? ?]]];
+                try lia; rewrite Hxm1, Hxm2 in *;
+                cbn [Z.eqb Pos.eqb andb] in *; destruct H29 as [Hcx3 Hcx4];
+                remember ((Z_size (eval a) + Z_size (eval b)) - (Z_size (eval x1) + Z_size (eval x2))) as k eqn: Heqk;
+                assert (Hmod : 0 <= eval MOD < 2^256) by (keep_length_equations; bigZnWords);
+                assert (Hk : 0 <= k <= 512) by lia;
+                revert Hcx3 Hcx4 Hk Hmod; prune_unused; nia.
+      }
       {
         eexists _, _,_,_,_,_; ssplit; repeat straightline.
         {
@@ -774,7 +823,7 @@ Proof.
             clear_old_memory_hyps.
             do 4 try split; eauto.
             cbv [x21 x18] in *. clear x18 x21.
-            destruct (eval x1 <=? eval x2) eqn:Hcmp; destruct H42 as [Hx1 [ Hx21 [Hx4 Hx34]]];
+            destruct (eval x1 <=? eval x2) eqn:Hcmp; destruct H43 as [Hx1 [ Hx21 [Hx4 Hx34]]];
             rewrite Hx1, Hx21, Hx4, Hx34 in *; subst;
             try clear dependent x11;
             try clear dependent x13;
@@ -841,44 +890,100 @@ Proof.
                     eauto
                 end.
                 (* Mod goals *)
-                all: try solve [Z.push_pull_mod; Z.push_mod; rewrite ?H32, ?H33, ?H54, ?H48; Z.push_pull_mod; f_equal; lia].
+                all: try solve [Z.push_pull_mod; Z.push_mod; rewrite ?H32, ?H33, ?H55, ?H49; Z.push_pull_mod; f_equal; lia].
                 all: try solve [
                     eapply mod_pow2_inv with (n := Z.min (lctz 64 (eval x2 - eval x1)) 63); try lia;
                     rewrite <- Z.mul_assoc, (Z.mul_comm (eval b)), Z.mul_assoc;
-                    rewrite ?H46; Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H48; Z.push_pull_mod; f_equal; lia
+                    rewrite ?H47; Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H49; Z.push_pull_mod; f_equal; lia
                 ].
                 all: try solve [
                     eapply mod_pow2_inv with (n := Z.min (lctz 64 (eval x2 - eval x1)) 63); try lia;
                     rewrite <- Z.mul_assoc, (Z.mul_comm (eval b)), Z.mul_assoc;
-                    rewrite ?H46; Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H48; Z.push_pull_mod; f_equal; lia
+                    rewrite ?H47; Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H49; Z.push_pull_mod; f_equal; lia
                 ].
                 all: try solve [
                     eapply mod_pow2_inv with (n := Z.min (lctz 64 (eval x1)) 63); try lia;
                     Z.push_pull_mod;
                     rewrite Z.mul_sub_distr_r, Z.mul_0_l, <- Z.mul_assoc, (Z.mul_comm (eval b)), Z.mul_assoc;
-                    rewrite ?H52;
-                    Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H54; Z.push_pull_mod; eauto
+                    rewrite ?H53;
+                    Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H55; Z.push_pull_mod; eauto
                 ].
                 all: try solve [
                     eapply mod_pow2_inv with (n := Z.min (lctz 64 (eval x1 - eval x2)) 63); try lia;
                     Z.push_pull_mod; rewrite Z.mul_sub_distr_r, Z.mul_0_l, <- Z.mul_assoc, (Z.mul_comm (eval b)), Z.mul_assoc;
-                    rewrite ?H52; Z.push_mod_step; Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H54; Z.push_pull_mod;
+                    rewrite ?H53; Z.push_mod_step; Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H55; Z.push_pull_mod;
                     f_equal; lia
                 ].
                 all: try solve [
                     eapply mod_pow2_inv with (n := Z.min (lctz 64 (eval x2)) 63); try lia;
                     Z.push_pull_mod; rewrite <- Z.mul_assoc, (Z.mul_comm (eval b)), Z.mul_assoc;
-                    rewrite ?H46; Z.push_mod_step; rewrite ?H32, ?H33, ?H48; Z.push_pull_mod; f_equal; lia
+                    rewrite ?H47; Z.push_mod_step; rewrite ?H32, ?H33, ?H49; Z.push_pull_mod; f_equal; lia
                 ].
                 all: repeat match goal with
                 | [ H : context [ Z.gcd _ _ ] |- _ ] => clear H
                 | [ H : context [_ mod (fold_right _ _ ?MOD)] |- _] => clear H
                 end.
+                all: repeat match goal with
+                | [H : context [Z_size ?a] |- _] =>
+                    assert_fails (assert (0 <= Z_size a <= 256) by assumption);
+                    assert (0 <= Z_size a <= 256) by
+                        (split; [ eapply Z_size_nonneg | eapply Z_size_le ]; try lia; keep_length_equations; bigZnWords)
+                end.
 
+                2: {
+                    assert (Z_size (eval x16) <= Z_size (eval x2)).
+                    {
+                        destruct (eval x16 =? 0) eqn:Hx16;
+                        [ rewrite Z.eqb_eq in Hx16; rewrite Hx16 in *; cbn [Z_size Pos.size]; lia | ].
+                        eapply Z.le_trans with (m := Z_size (eval x2 - eval x1));
+                        [ rewrite <- H47, Z_size_mul_pow2 | eapply Z_size_sub ]; lia.
+                    }
+                    lia.
+                }
+                3: {
+                    assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)) by (eapply Z_size_sub; lia).
+                    lia.
+                }
+                4: {
+                    assert (Z_size (eval x19) <= Z_size (eval x1)).
+                    {
+                        destruct (eval x19 =? 0) eqn:Hx19;
+                        [rewrite Z.eqb_eq in Hx19; rewrite Hx19 in *; cbn [Z_size Pos.size]; lia | ].
+                        rewrite <- H53, Z_size_mul_pow2; lia.
+                    }
+                    assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)) by (eapply Z_size_sub; lia).
+                    lia.
+                }
+                5: {
+                    assert (Z_size (eval x19) <= Z_size (eval x1)).
+                    {
+                        destruct (eval x19 =? 0) eqn: Hx19;
+                        [ rewrite Z.eqb_eq in Hx19; rewrite Hx19 in *; cbn [Z_size Pos.size]; lia | ].
+                        eapply Z.le_trans with (m := Z_size (eval x1 - eval x2));
+                        [rewrite <- H53, Z_size_mul_pow2 | eapply Z_size_sub]; lia.
+                    }
+                    lia.
+                }
+                6: {
+                    assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
+                    assert (Z_size (eval x16) <= Z_size (eval x2)).
+                    {
+                        destruct (eval x16 =? 0) eqn:Hx16;
+                        [rewrite Z.eqb_eq in Hx16; rewrite Hx16 in *; cbn [Z_size Pos.size]; lia |].
+                        rewrite <- H47, Z_size_mul_pow2; lia.
+                    }
+                    lia.
+                }
+                7: {
+                    assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
+                    lia.
+                }
                 (* x,y range invariants *)
                 {
-                    destruct (ZLib.Z.mod2_cases (eval x16)) as [Hx16 | Hx16]; rewrite Hx16, Hxm1 in *;
-                    cbn [Z.eqb Pos.eqb andb] in *; ssplit; try (keep_length_equations; bigZnWords).
+                    destruct (eval x16 =? 0); try lia.
+                    destruct (ZLib.Z.mod2_cases (eval x16)) as [Hx16 | Hx16];
+                    rewrite Hxm1, Hx16 in *;
+                    cbn [Z.eqb andb Pos.eqb] in *; ssplit; try (keep_length_equations; bigZnWords).
                     all: admit.
                 }
                 {
@@ -887,11 +992,13 @@ Proof.
                     all: admit.
                 }
                 {
+                    destruct (eval x19 =? 0) eqn: Hx019; try lia.
                     destruct (ZLib.Z.mod2_cases (eval x19)) as [Hx19 | Hx19]; rewrite Hx19, Hdif in *;
                     cbn [Z.eqb Pos.eqb andb] in *; ssplit; try (keep_length_equations; bigZnWords).
                     all: admit.
                 }
                 {
+                    destruct (eval x19 =? 0) eqn: Hx19; try lia.
                     destruct (ZLib.Z.mod2_cases (eval x19)) as [Hx19 | Hx19]; rewrite Hx19, Hxm2 in *;
                     cbn [Z.eqb Pos.eqb andb] in *; ssplit; try (keep_length_equations; bigZnWords).
                     all: admit.
@@ -917,8 +1024,6 @@ Proof.
             | [H : ?a * (2^?b) = ?c |- _] =>
                 assert (a <= c) by (rewrite <- H; eapply le_mul_pow2_r; try lia; try (keep_length_equations; bigZnWords)); clear H
             end.
-            destruct (eval x2 =? 0) eqn: Hx2;
-            [exfalso; apply H18; rewrite H25; eauto | ].
             ssplit.
             1: (keep_length_equations; bigZnWords).
 
@@ -927,11 +1032,8 @@ Proof.
         }
       }
       {
-        eexists _,_,_,_; ssplit; try ecancel_assumption; eauto.
-        all:
-            destruct (eval x2 =? 0) eqn: Hx2;
-            [ rewrite <- Z.eqb_eq; eauto | exfalso; eapply H25; ZnWords ].
-        rewrite Z.eqb_eq, Hx2, Z.gcd_0_r_nonneg in * by bigZnWords.
+        eexists _,_,_,_; ssplit; try ecancel_assumption; eauto; try lia.
+        rewrite Z.eqb_eq, Hx20, Z.gcd_0_r_nonneg in * by bigZnWords.
         eauto.
       }
     }
