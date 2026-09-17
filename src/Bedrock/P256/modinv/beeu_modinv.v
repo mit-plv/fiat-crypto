@@ -3,14 +3,20 @@ From bedrock2 Require Import BasicC64Semantics WeakestPrecondition ProgramLogic 
 Import ListNotations ProgramLogic.Coercions SeparationLogic Array Scalars.
 Require Import bedrock2Examples.full_sub bedrock2Examples.full_add bedrock2Examples.u320_add.
 From coqutil Require Import Tactics.Tactics WithBaseName Z.CountTrailingZeros.
-Require Import coqutil.Z.PushPullMod.
+Require Import coqutil.Z.PushPullMod coqutil.Word.Properties.
 
 Require Import u320_muladd beeu_normalize u320_sub.
 Local Open Scope string_scope. Local Open Scope Z_scope.
 
+Local Lemma mod2_cases (n : Z) : n mod 2 = 0 \/ n mod 2 = 1.
+Proof. pose proof (Z.mod_pos_bound n 2); lia. Qed.
+
+Local Lemma Z_mod_mult' (a b : Z) : (a * b) mod a = 0.
+Proof. rewrite Z.mul_comm; apply Z_mod_mult. Qed.
+
 Local Notation eval := (fold_right (fun (a : word) (s : Z) => a + 2^64*s) 0).
 Local Notation eval_bool := (fold_right (fun (a : word) (s : Z) => Z.lor a (Z.shiftl s 64)) 0).
-Local Notation array := (array scalar (word.of_Z 8)).
+Local Notation array := (array scalar (bits.of_Z _ 8)).
 
 Definition u256_dec := func! (p_x, p_y) ~> b {
     b = $0;
@@ -160,9 +166,9 @@ Definition beeu_modinv := func! (p_out, p_a, p_m, inv_m) ~> c {
         ensures T M :=
             T = t /\ M = m /\
                 if (eval x =? w) then
-                    c = word.of_Z 0
+                    c = bits.of_Z _ 0
                 else
-                    c <> word.of_Z 0
+                    c <> bits.of_Z _ 0
     }.
 
 #[local] Instance spec_of_u256_dec : spec_of "u256_dec" :=
@@ -281,21 +287,21 @@ Definition beeu_modinv := func! (p_out, p_a, p_m, inv_m) ~> c {
             length OUT = 4%nat /\
                 if (Z.gcd (eval a) (eval MOD) =? 1)
                 then
-                    c = word.of_Z 1 /\ ((eval OUT) * (eval a)) mod (eval MOD) = 1
+                    c = bits.of_Z _ 1 /\ ((eval OUT) * (eval a)) mod (eval MOD) = 1
                 else
-                    c = word.of_Z 0
+                    c = bits.of_Z _ 0
     }.
 
 Lemma array_to_bytes ptr ws :
-    Lift1Prop.iff1 (array ptr ws) (@Array.array _ word _ mem _ ptsto (word.of_Z 1) ptr (ws2bs 8 ws)).
+    Lift1Prop.iff1 (array ptr ws) (@Array.array _ _ mem _ ptsto (bits.of_Z _ 1) ptr (ws2bs 8 ws)).
 Proof.
-    eapply (@bytes_of_words 64 _ word mem _ _).
+    eapply (@bytes_of_words 64 _ mem _ _).
 Qed.
 
 Lemma bytes_to_array ptr bs :
     (length bs mod 8)%nat = 0%nat ->
-    Lift1Prop.iff1 (@Array.array _ word _ mem _ ptsto (word.of_Z 1) ptr bs) (array ptr (bs2ws 8 bs)).
-Proof. intros H. eapply (@words_of_bytes 64 _ word mem _ _).
+    Lift1Prop.iff1 (@Array.array _ _ mem _ ptsto (bits.of_Z _ 1) ptr bs) (array ptr (bs2ws 8 bs)).
+Proof. intros H. eapply (@words_of_bytes 64 _ mem _ _).
     cbn. replace (PosDef.Pos.to_nat 8) with 8%nat by lia.
     lia.
 Qed.
@@ -418,18 +424,18 @@ Proof.
     {
         cbv [fold_right] in *.
         assert (x0 = w) by ZnWords.
-        assert (x1 = word.of_Z 0) by ZnWords.
-        assert (x2 = word.of_Z 0) by ZnWords.
-        assert (x3 = word.of_Z 0) by ZnWords.
+        assert (x1 = bits.of_Z _ 0) by ZnWords.
+        assert (x2 = bits.of_Z _ 0) by ZnWords.
+        assert (x3 = bits.of_Z _ 0) by ZnWords.
         subst. cbv [v].
-        rewrite Properties.word.xor_eq_0_iff by trivial.
-        rewrite !Properties.word.or_0_r. trivial.
+        rewrite Zmod.of_Z_0, !word.or_0_r.
+        apply bits.xor_zero_iff; reflexivity.
     }
     {
         cbv [fold_right] in *. intros contra. cbv [v] in contra.
-        repeat rewrite Properties.word.lor_0_iff in contra.
+        rewrite ?Zmod.of_Z_0 in contra. repeat rewrite word.lor_0_iff in contra.
         repeat destruct contra as [contra ?].
-        ZnWords_pre. pose proof (lxor_range w0 w1 64 H H4).
+        ZnWords_pre. pose proof (lxor_range w0 w1 64 ltac:(assumption) ltac:(assumption)).
         rewrite !Z.mod_small in * by lia.
         eapply Hn. rewrite Z.lxor_eq_0_iff in contra; lia.
     }
@@ -519,7 +525,7 @@ Qed.
 Lemma gcd_odd_iff (a b : Z) : Z.gcd a b mod 2 = 1 <-> a mod 2 = 1 \/ b mod 2 = 1.
 Proof.
     split; intros H.
-    {   destruct (ZLib.Z.mod2_cases a), (ZLib.Z.mod2_cases b);
+    {   destruct (mod2_cases a), (mod2_cases b);
         match goal with
         | [H : ?a mod 2 = 1 |- ?a mod 2 = 1 \/ _] => left; assumption
         | [H : ?b mod 2 = 1 |- _ \/ ?b mod 2 = 1] => right; assumption
@@ -531,7 +537,7 @@ Proof.
         end.
     }
     {
-        destruct (ZLib.Z.mod2_cases (Z.gcd a b)) as [Hgcd | Hgcd]; trivial.
+        destruct (mod2_cases (Z.gcd a b)) as [Hgcd | Hgcd]; trivial.
         rewrite Z.mod_divide, Z.gcd_divide_iff in Hgcd by lia.
         rewrite ?(Z.cong_iff_ex _ 1) in H.
         destruct H as [ [? ?] | [? ?]], Hgcd as [[? ?] [? ?]];
@@ -549,7 +555,7 @@ Proof.
     try match goal with
     | [H : _ (xO ?p) mod 2 = 1 |- _] =>
         rewrite ?(Pos2Z.pos_xO p), ?(Pos2Z.neg_xO p),
-                ZLib.Z.Z_mod_mult' in H
+                Z_mod_mult' in H
     | [H : _ (xH) mod 2 = 1 |- _] =>
         rewrite ?(Z.gcd_comm _ 1), ?(Z.gcd_comm _ (-1))
     end;
@@ -744,7 +750,7 @@ Proof.
                     (* length invariants *)
                     length a_ = 4%nat /\ length b_ = 4%nat /\ length x = 5%nat /\ length y = 5%nat /\
                     (* Comparison condition *)
-                    (if ((eval b_) =? 0) then cmp = word.of_Z 0 else (cmp <> (word.of_Z 0))) /\
+                    (if ((eval b_) =? 0) then cmp = bits.of_Z _ 0 else (cmp <> (bits.of_Z _ 0))) /\
                     (* a,b range invariants *)
                     1 <= eval a_ <= eval MOD /\ 0 <= eval b_ < eval MOD /\
                     (* Parity requirement *)
@@ -786,7 +792,7 @@ Proof.
     { repeat straightline; intuition try ecancel_assumption; rewrite ?H12, ?H14, ?H15; try ZnWords.
       {
         rewrite <- Z.eqb_eq, H10 in *.
-        destruct (eval b =? 0) eqn: Hb0; eauto; destruct (ZLib.Z.mod2_cases (eval b)) as [Hb | Hb];
+        destruct (eval b =? 0) eqn: Hb0; eauto; destruct (mod2_cases (eval b)) as [Hb | Hb];
         rewrite Z.eqb_eq, Hb in *; cbn [Z.eqb Pos.eqb andb] in *; ssplit; lia.
       }
       { Z.push_pull_mod. rewrite Z.mul_0_l, Z.sub_0_r, Z_mod_same, Z.mod_small by lia; eauto. }
@@ -806,8 +812,8 @@ Proof.
             assert (0 <= Z_size a <= 256) by
                 (split; [ eapply Z_size_nonneg | eapply Z_size_le ]; try lia; keep_length_equations; bigZnWords)
         end.
-        destruct (ZLib.Z.mod2_cases (eval x1)) as [Hxm1 | Hxm1],
-            (ZLib.Z.mod2_cases (eval x2)) as [Hxm2 | Hxm2];
+        destruct (mod2_cases (eval x1)) as [Hxm1 | Hxm1],
+            (mod2_cases (eval x2)) as [Hxm2 | Hxm2];
                 destruct H28 as [[? ?] | [[? ?] | [? ?]]];
                 try lia; rewrite Hxm1, Hxm2 in *;
                 cbn [Z.eqb Pos.eqb andb] in *; destruct H29 as [Hcx3 Hcx4];
@@ -870,9 +876,9 @@ Proof.
                 | [ Ha : (?a mod 2) = _, Hb : (?b mod 2) = _ |- (((?a mod 2) = _) /\ ((?b mod 2) = _)) \/ _] =>
                     intuition
                 | [ Ha : (?a mod 2) = _ |- (((?a mod 2) = _) /\ (?b mod 2 = _)) \/ _] =>
-                    destruct (ZLib.Z.mod2_cases b); intuition
+                    destruct (mod2_cases b); intuition
                 | [ Hb : (?b mod 2) = _ |- (((?a mod 2) = _) /\ (?b mod 2 = _)) \/ _] =>
-                    destruct (ZLib.Z.mod2_cases a); intuition
+                    destruct (mod2_cases a); intuition
                 end].
                 (* GCD goals *)
                 all: repeat match goal with
@@ -981,7 +987,7 @@ Proof.
                 (* x,y range invariants *)
                 {
                     destruct (eval x16 =? 0); try lia.
-                    destruct (ZLib.Z.mod2_cases (eval x16)) as [Hx16 | Hx16];
+                    destruct (mod2_cases (eval x16)) as [Hx16 | Hx16];
                     rewrite Hxm1, Hx16 in *;
                     cbn [Z.eqb andb Pos.eqb] in *; ssplit; try (keep_length_equations; bigZnWords).
                     all: admit.
@@ -993,13 +999,13 @@ Proof.
                 }
                 {
                     destruct (eval x19 =? 0) eqn: Hx019; try lia.
-                    destruct (ZLib.Z.mod2_cases (eval x19)) as [Hx19 | Hx19]; rewrite Hx19, Hdif in *;
+                    destruct (mod2_cases (eval x19)) as [Hx19 | Hx19]; rewrite Hx19, Hdif in *;
                     cbn [Z.eqb Pos.eqb andb] in *; ssplit; try (keep_length_equations; bigZnWords).
                     all: admit.
                 }
                 {
-                    destruct (eval x19 =? 0) eqn: Hx19; try lia.
-                    destruct (ZLib.Z.mod2_cases (eval x19)) as [Hx19 | Hx19]; rewrite Hx19, Hxm2 in *;
+                    destruct (eval x19 =? 0) eqn: Hx019; try lia.
+                    destruct (mod2_cases (eval x19)) as [Hx19 | Hx19]; rewrite Hx19, Hxm2 in *;
                     cbn [Z.eqb Pos.eqb andb] in *; ssplit; try (keep_length_equations; bigZnWords).
                     all: admit.
                 }
@@ -1027,7 +1033,8 @@ Proof.
             ssplit.
             1: (keep_length_equations; bigZnWords).
 
-            destruct (eval x1 <=? eval x2) eqn : Hcmp; destruct H42 as [? [? [? ?]]];
+            destruct (eval x1 <=? eval x2) eqn : Hcmp;
+            match goal with H : _ /\ _ /\ _ /\ _ |- _ => destruct H as [? [? [? ?]]] end;
             subst; lia.
         }
       }
@@ -1061,7 +1068,7 @@ Proof.
             assert ((eval x) < 2^256) by (lists_into_elements; cbv [eval] in *; ZnWords).
             assert ((eval x7) < eval x).
             {
-                rewrite H66. eapply Z.mod_pos_bound. ZnWords.
+                match goal with H : fold_right _ _ x7 = _ |- _ => rewrite H end. eapply Z.mod_pos_bound. ZnWords.
             }
             ZnWords.
         }
@@ -1073,21 +1080,21 @@ Proof.
         repeat straightline.
         eexists _; intuition try ecancel_assumption.
         cbv [c] in *. rewrite Z.gcd_comm, <- H62.
-        rewrite Properties.word.unsigned_of_Z_1 in *.
+        rewrite bits.unsigned_1 in * by lia.
         destruct (eval x2 =? 1) eqn: Hx2.
         {
             rewrite Z.eqb_eq in *.
             split; eauto.
-            assert (Hx8 : word.unsigned x8 = 0) by (lists_into_elements; cbv [eval] in *; ZnWords).
-            rewrite Hx8, Z.mul_0_r, Z.sub_0_r, H70, H66, H49 in *.
+            assert (Hx8 : Zmod.unsigned x8 = 0) by (lists_into_elements; cbv [eval] in *; ZnWords).
+            rewrite Hx8, Z.mul_0_r, Z.sub_0_r, H70, H67, H49 in *.
             Z.push_pull_mod.
             rewrite Z.mul_sub_distr_r in *.
             Z.push_mod_step.
-            rewrite ZLib.Z.Z_mod_mult', Z.sub_0_l.
+            rewrite Z_mod_mult', Z.sub_0_l.
             Z.push_pull_mod. rewrite Z.sub_0_l, <- H63, Hx2, Z.mod_1_l; ZnWords.
         }
         {
-            eapply Properties.word.eqb_ne in H65.
+            eapply word.eqb_ne in H65.
             rewrite H65 in *. contradiction.
         }
     }
@@ -1102,8 +1109,8 @@ Proof.
         cbv [c] in *. rewrite Z.gcd_comm, <- H62.
         destruct (eval x2 =? 1) eqn: Hx2; eauto.
         (* Contradiction *)
-        rewrite Z.eqb_eq, Hx2, Properties.word.unsigned_of_Z_1 in *.
-        eapply Properties.word.eqb_eq in H65.
+        rewrite Z.eqb_eq, Hx2, bits.unsigned_1 in * by lia.
+        eapply Zmod.eqb_eq in H65.
         rewrite H65 in *. discriminate.
     }
 Qed.
