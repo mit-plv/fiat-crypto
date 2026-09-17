@@ -1020,7 +1020,7 @@ Proof.
   {
     intros; simpl in *; subst.
     rewrite z_range_nil by lia.
-    rewrite List.skipn_all by lia.
+    rewrite List.skipn_all2 by lia.
     simpl.
     destruct vars; simpl in *; try lia.
     constructor.

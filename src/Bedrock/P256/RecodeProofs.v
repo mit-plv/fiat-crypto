@@ -123,7 +123,7 @@ Proof.
     destruct (Nat.eq_dec (S (Z.to_nat idx)) ((length num))) as [Hlength|?].
     { rewrite <- (le_combine_snoc_0 num).
       f_equal.
-      rewrite List.skipn_all, nth_overflow by lia.
+      rewrite List.skipn_all2, nth_overflow by lia.
       rewrite Hlength, firstn_all, app_nil_r.
       reflexivity. }
     { f_equal. rewrite firstn_nth_skipn by ZnWords. reflexivity. }}
