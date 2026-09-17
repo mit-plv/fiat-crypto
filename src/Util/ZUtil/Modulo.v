@@ -480,4 +480,7 @@ Module Z.
 
   Lemma mod_prod_mod_factor_r x a b : x mod (a*b) mod b = x mod b.
   Proof. apply Z.mod_mod_divide; exists a; ring. Qed.
+
+  Lemma mod2_square a : a^2 mod 2 = a mod 2.
+  Proof. Z.div_mod_to_equations. nia. Qed.
 End Z.
