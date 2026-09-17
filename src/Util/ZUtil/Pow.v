@@ -83,4 +83,11 @@ Module Z.
   Proof. intros; rewrite <-Z.pow_succ_r, <-Z.add_1_r by lia; reflexivity. Qed.
 #[global]
   Hint Rewrite pow_mul_base using zutil_arith : pull_Zpow.
+
+  Lemma pow_m1_l : forall n, 0 <= n -> Z.pow (-1) n = if Z.odd n then -1 else 1.
+  Proof.
+    eapply Wf_Z.natlike_ind; trivial; intros.
+    rewrite Z.pow_succ_r, Z.odd_succ, <-Z.negb_odd by trivial.
+    case Z.odd in *; cbv [negb]; lia.
+  Qed.
 End Z.

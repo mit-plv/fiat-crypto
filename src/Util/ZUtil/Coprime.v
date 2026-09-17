@@ -34,4 +34,21 @@ Module Z.
 
   Lemma coprime_sqr_l_iff a b : Z.coprime (a ^ 2) b <-> Z.coprime a b.
   Proof. apply coprime_pow_l_iff; lia. Qed.
+
+  Lemma coprime_prime_r a p (H : Z.prime p) : Z.coprime a p <-> a mod p <> 0.
+  Proof.
+    rewrite coprime_comm. etransitivity. { apply Z.coprime_prime_l_iff; trivial. }
+    pose proof Z.not_prime_0.
+    rewrite Z.mod_divide; intuition subst; contradiction.
+  Qed.
+
+  Lemma prime_odd (p : Z) : Z.prime p -> 3 <= p -> p mod 2 = 1.
+  Proof.
+    case (Z.mod_pos_bound p 2 eq_refl) as [[]%Zle_lt_or_eq ?]; trivial.
+    { intros _ _; eapply Z.le_antisymm;
+      solve [ eapply Z.lt_pred_le + eapply Zlt_succ_le; trivial ]. }
+    intros [? A] B.
+    case (A 2). { split. exact eq_refl. eapply Z.le_succ_l; trivial. }
+    apply Z.mod_divide. inversion 1. congruence.
+  Qed.
 End Z.

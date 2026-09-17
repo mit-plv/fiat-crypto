@@ -474,4 +474,10 @@ Module Z.
     apply cong_iff_ex; eexists (- x * (a/(x*c))); rewrite Z.mod_eq by auto.
     ring_simplify; trivial.
   Qed.
+
+  Lemma mod_prod_mod_factor_l x a b : x mod (a*b) mod a = x mod a.
+  Proof. apply Z.mod_mod_divide; exists b; ring. Qed.
+
+  Lemma mod_prod_mod_factor_r x a b : x mod (a*b) mod b = x mod b.
+  Proof. apply Z.mod_mod_divide; exists a; ring. Qed.
 End Z.
