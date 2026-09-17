@@ -57,4 +57,11 @@ Module Z.
   Qed.
   #[global]
    Hint Rewrite <- mod_div_mod_full using assumption : zsimplify push_Zmod.
+
+  Lemma divide_pos_pos (a b : positive) : (Z.pos a | Z.pos b) <-> Pos.divide a b.
+  Proof.
+    split.
+    { intros [[|x|x] Hx]; [lia|exists x; lia|lia]. }
+    { intros [x Hx]. exists (Z.pos x). lia. }
+  Qed.
 End Z.

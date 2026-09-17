@@ -3,6 +3,7 @@ From Coq Require Lia Arith.
 Require Crypto.Util.ZUtil.AddGetCarry.
 Require Crypto.Util.ZUtil.AddModulo.
 Require Crypto.Util.ZUtil.CC.
+Require Crypto.Util.ZUtil.Coprime.
 Require Crypto.Util.ZUtil.CPS.
 Require Crypto.Util.ZUtil.Definitions.
 Require Crypto.Util.ZUtil.DistrIf.
@@ -38,6 +39,7 @@ Require Crypto.Util.ZUtil.Odd.
 Require Crypto.Util.ZUtil.Ones.
 Require Crypto.Util.ZUtil.Opp.
 Require Crypto.Util.ZUtil.Peano.
+Require Crypto.Util.ZUtil.Pos.
 Require Crypto.Util.ZUtil.Pow.
 Require Crypto.Util.ZUtil.Pow2.
 Require Crypto.Util.ZUtil.Pow2Mod.
