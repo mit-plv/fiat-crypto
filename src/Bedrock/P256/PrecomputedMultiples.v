@@ -537,8 +537,8 @@ Proof.
       eexists (multiples ++ [_]), (skipn sizeof_point todo); ssplit.
       { rewrite (pointlist_firstn_nth_skipn multiples (v - 1)) by solve_num.
         repeat seprewrite @array_append; repeat seprewrite @array_cons;
-        repeat rewrite List.skipn_all by solve_num; repeat seprewrite @array_nil.
-        use_sep_assumption; rewrite List.skipn_all by solve_num; cancel.
+        repeat rewrite List.skipn_all2 by solve_num; repeat seprewrite @array_nil.
+        use_sep_assumption; rewrite List.skipn_all2 by solve_num; cancel.
         cancel_seps_at_indices 0%nat 0%nat; [match_up_pointers; exact eq_refl|].
         cancel_seps_at_indices 0%nat 0%nat; [match_up_pointers; exact eq_refl|].
         cancel_seps_at_indices 1%nat 0%nat; [match_up_pointers; exact eq_refl|].
