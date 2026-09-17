@@ -401,6 +401,6 @@ Module word.
   Proof.
     apply Zmod.unsigned_inj.
     rewrite bits.unsigned_and, bits.unsigned_m1.
-    rewrite Z.land_comm, Z.land_ones, bits.mod_to_Z; trivial; blia.
+    rewrite Z.land_comm, Z.land_ones, bits.mod_to_Z; trivial; lia.
   Qed.
 End word.
