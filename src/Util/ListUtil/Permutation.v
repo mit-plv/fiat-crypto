@@ -99,3 +99,15 @@ Module Z.
   : Proper (eq ==> @Permutation _ ==> eq) (fold_right Z.lxor) | 100.
   Proof using Type. apply fold_right_Proper_commutative_associative_Permutation; [ hnf; apply Z.lxor_comm | hnf; intros; symmetry; apply Z.lxor_assoc ]. Qed.
 End Z.
+
+Lemma fold_right_Permutation [A B] (f : A -> B -> B)
+  (H : forall x y z, f x (f y z) = f y (f x z)) xs ys :
+  Permutation xs ys -> forall o, fold_right f o xs = fold_right f o ys.
+Proof. induction 1; cbn [fold_right]; intuition try congruence. Qed.
+
+Lemma Permutation_filter [A] f (l l' : list A) :
+  Permutation l l' -> Permutation (filter f l) (filter f l').
+Proof.
+  induction 1; cbn [filter]; repeat (case f; [|]);
+    eauto using perm_trans, perm_swap.
+Qed.
