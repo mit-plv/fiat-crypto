@@ -139,7 +139,7 @@ Proof.
 Qed.
 
 Lemma mask_pow2_sub_1 (x : word) (H : x < 64) :
-    Zmod.unsigned (Zmod.sub (Semantics.slu (bits.of_Z 64 1) x) (bits.of_Z _ 1)) = 2^x - 1.
+    Zmod.unsigned (Zmod.sub (Semantics.slu (bits.of_Z _ 1) x) (bits.of_Z _ 1)) = 2^x - 1.
 Proof.
     cbv [Semantics.slu]; change (2 ^ Z.log2 64) with 64.
     rewrite Zmod.unsigned_sub, Zmod.unsigned_slu, Z.shiftl_mul_pow2 by ZnWords.

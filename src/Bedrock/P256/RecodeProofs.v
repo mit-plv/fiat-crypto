@@ -81,7 +81,7 @@ Lemma extract_limb_at_bit_zify a b (i : word) :
   0 <= b < 2^8 ->
   Zmod.unsigned (Zmod.and
     (Zmod.sru (Zmod.or (bits.of_Z 64 a) (Zmod.slu (bits.of_Z 64 b) (Zmod.unsigned (bits.of_Z 64 8) mod 2 ^ Z.log2 64)))
-      (Zmod.unsigned (Zmod.and i (bits.of_Z 64 7)) mod 2 ^ Z.log2 64))
+      (Zmod.unsigned (Zmod.and i (bits.of_Z _ 7)) mod 2 ^ Z.log2 64))
     (Zmod.sub (Zmod.slu (bits.of_Z 64 1) (Zmod.unsigned (bits.of_Z 64 w) mod 2 ^ Z.log2 64)) (bits.of_Z 64 1))) =
   Z.land ((Z.shiftr (Z.lor a (Z.shiftl b 8)) (Z.land (Zmod.unsigned i) (Z.ones 3)))) (Z.ones w).
 Proof.

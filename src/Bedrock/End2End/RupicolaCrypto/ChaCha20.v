@@ -295,7 +295,7 @@ Qed.
 
 Lemma quarter_ok a b c d:
   in_bounds 32 a -> in_bounds 32 b -> in_bounds 32 c -> in_bounds 32 d ->
-  quarter_gallina (bits.of_Z 32 a) (bits.of_Z _ b) (bits.of_Z _ c) (bits.of_Z _ d) =
+  quarter_gallina (bits.of_Z _ a) (bits.of_Z _ b) (bits.of_Z _ c) (bits.of_Z _ d) =
   let '(a', b', c', d') := Spec.quarter (a, b, c, d) in
   \< bits.of_Z _ a', bits.of_Z _ b', bits.of_Z _ c', bits.of_Z _ d' \>.
 Proof.
@@ -1007,7 +1007,7 @@ Qed.
 Lemma expr_load_word_of_array_helper m l len lst e ptr R (n : nat)
   : length lst = len ->
     n <= len ->
-    (array scalar (bits.of_Z 32 4) ptr lst * R)%sep m ->
+    (array scalar (bits.of_Z _ 4) ptr lst * R)%sep m ->
     forall vars,
       DEXPR m (map_remove_many l vars) e ptr ->
       length vars = (len - n)%nat ->
@@ -1093,7 +1093,7 @@ Qed.
 Lemma expr_load_word_of_array m l len lst e ptr R vars
   : length lst = len ->
     length vars = len ->
-    (array scalar (bits.of_Z 32 4) ptr lst * R)%sep m ->
+    (array scalar (bits.of_Z _ 4) ptr lst * R)%sep m ->
     DEXPR m (map_remove_many l vars) e ptr ->
     locals_array_expr m l vars (map (load_offset e) (count_to len)) lst.
 Proof.
