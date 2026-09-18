@@ -50,7 +50,7 @@ Proof.
     unfold fold_right. fold (eval w).
     fold (eval_bool w).
     rewrite IHw, Z.shiftl_mul_pow2 by lia.
-    rewrite BitOps.or_to_plus; try lia.
+    rewrite bitblast.Z.or_to_plus; try lia.
     rewrite <-Z.shiftl_mul_pow2 by lia.
     apply Z.bits_inj'; intros.
     rewrite ?Z.land_spec.
