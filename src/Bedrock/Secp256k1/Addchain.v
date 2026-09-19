@@ -40,6 +40,8 @@ Local Open Scope Z_scope.
 Import LittleEndianList.
 Import ListNotations.
 Import ProgramLogic.Coercions.
+
+#[local] Instance : bedrock2.Memory.stackalloc_as_map := {}.
 Import WeakestPrecondition.
 
 (*
