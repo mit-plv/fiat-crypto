@@ -317,6 +317,13 @@ Section SpecProperties.
     rewrite ws2bs_length. lia.
   Qed.
 
+  Lemma ws2bs_felem_length_Z (x : felem):
+    Z.of_nat (length (ws2bs (bytes_per_word width) x)) = felem_size_in_bytes.
+  Proof.
+    pose proof (ws2bs_felem_length x). pose proof felem_size_ok. pose proof width_cases.
+    cbv [felem_size_in_bytes bytes_per_word bytes_per] in *. lia.
+  Qed.
+
   Lemma bs2ws_felem_length bs :
     length bs = felem_size_in_bytes ->
     length (bs2ws (bytes_per_word width) bs) = felem_size_in_words.
@@ -546,6 +553,10 @@ Ltac ecancel_assumption_preprocess_with length_tac :=
         | context[FElem p _] =>
           seprewrite_in (sizedlistarray_to_felem p v) H; [length_tac |]
       end
+      | context[sepclause_of_map (map.of_list_word_at ?p ?v)] => match G with
+        | context[FElem p _] =>
+            seprewrite_in (felem_from_bytes p v) H; [length_tac |]
+      end
       | context[array ptsto (bits.of_Z _ 1) ?p ?v] => match G with
         | context[sepclause_of_map (map.of_list_word_at p _)] =>
             seprewrite_in (array1_iff_eq_of_list_word_at p v) H; [length_tac |]
@@ -555,11 +566,12 @@ Ltac ecancel_assumption_preprocess_with length_tac :=
     end end
   end.
 
-(* Rewrites FElem to bytearrays for deallocation.
+(* Rewrites FElem to the form straightline_stackdealloc expects: byte maps with
+   [Memory.stackalloc_as_map], byte arrays otherwise.
    The memory [m] is taken from the goal first: matching [H: ?P ?m] against
    every hypothesis and then unifying [?m] with the goal's [map.split] argument
    unfolds the field operations in unrelated hypotheses and is very slow. *)
-Ltac dealloc_preprocess :=
+Ltac dealloc_preprocess_bytes :=
     repeat match goal with
     | |- context [anybytes ?p _ _] =>
         match goal with
@@ -572,5 +584,23 @@ Ltac dealloc_preprocess :=
           end
         end
     end.
+Ltac dealloc_preprocess_map :=
+    repeat match goal with
+    | |- context [anybytes ?p _ _] =>
+        match goal with
+        | |- context [map.split ?m _ _] =>
+          match goal with
+          | H: ?P m |- _ =>
+            match P with context [FElem p ?v] =>
+              seprewrite_in (felem_to_bytes p) H;
+              pose proof (ws2bs_felem_length_Z v);
+              let Hbound := fresh "Hbound" in pose proof (ws2bs_felem_width v) as Hbound
+            end
+          end
+        end
+    end.
+Ltac dealloc_preprocess :=
+  tryif (let __ := constr:(_ : Memory.stackalloc_as_map) in idtac)
+  then dealloc_preprocess_map else dealloc_preprocess_bytes.
 
 

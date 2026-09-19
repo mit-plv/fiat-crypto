@@ -51,6 +51,8 @@ Definition p256_point_iszero := func! (p_P) ~> z {
 }.
 
 
+#[local] Instance : bedrock2.Memory.stackalloc_as_map := {}.
+
 Lemma p256_point_iszero_ok : program_logic_goal_for_function! p256_point_iszero.
 Proof.
   cbv [spec_of_fiat_p256_point_iszero].
@@ -115,25 +117,24 @@ Proof.
   pose proof (conj H3 H4) as Hm; clear H4 H3; pattern m in Hm.
   progress change (?P m) with (id P m) in Hm.
   repeat straightline.
+  pose proof Hm as Hm_and.
   eapply sep_and_l_fwd in Hm; case Hm as [Hm Hm'].
 
   letexists; split.
   { cbv [coord.to_bytes] in Hm.
     rewrite <-(firstn_skipn 8 (le_split _ _)), List.firstn_le_split, skipn_le_split, ?Z.shiftr_shiftr in Hm by lia.
     seprewrite_in_by (@Array.sep_eq_of_list_word_at_app) Hm ltac:(rewrite ?length_le_split; trivial; lia).
-    seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_le_split; lia).
-    seprewrite_in_by @Scalars.scalar_of_bytes Hm ltac:(rewrite ?length_le_split; lia).
+    seprewrite_in_by @Scalars.scalar_of_list_word_at Hm ltac:(rewrite ?length_le_split; trivial).
     rewrite le_combine_split in Hm.
     repeat straightline. }
 
+  move Hm_and at bottom.
   straightline_call; [eexists; ecancel_assumption|]; repeat straightline.
 
-  seprewrite_in_by Array.array1_iff_eq_of_list_word_at Hm0 ltac:(Lia.lia).
-
-  straightline_call; ssplit; [ ecancel_assumption | trivial | exact eq_refl | ].
+  straightline_call; ssplit; [ ecancel_assumption | Lia.lia | exact eq_refl | ].
   repeat straightline.
 
-  eapply sep_and_r_fwd in H10; case H10 as [Hm3 Hm3'].
+  match goal with H : Separation.sep _ (id _) _ |- _ => eapply sep_and_r_fwd in H; case H as [Hm3 Hm3'] end.
 
   straightline_call; ssplit.
   { eexists. cbv [coord.to_bytes] in *. ecancel_assumption. }
@@ -164,13 +165,6 @@ Proof.
   { length_tac. }
 
   repeat straightline.
-
-  (* stackdealloc *)
-  progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) H12 length_tac.
-  progress repeat match type of H12 with context [Array.array ptsto _ _ (le_split 32 ?x)] =>
-    unique pose proof (length_le_split 32 x) end.
-  progress repeat straightline.
-  progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H12 length_tac.
 
   (* postcondition *)
   use_sep_assumption.
@@ -245,7 +239,6 @@ Proof.
      ltac:(rewrite ?app_length, ?length_coord; trivial; try Lia.lia).
 
   repeat straightline.
-  repeat seprewrite_in_by Array.array1_iff_eq_of_list_word_at H25 ltac:(Lia.lia).
 
   rewrite <-(firstn_skipn 32 out) in H25.
   rewrite <-(firstn_skipn 32 (skipn _ out)) in H25.
@@ -266,23 +259,22 @@ rewrite ?app_length, ?length_coord in *.
     | repeat straightline ]).
 
   (* stackdealloc *)
-  progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) H93 ltac:(rewrite ?length_coord; Lia.lia).
-  progress repeat match type of H93 with context [Array.array ptsto _ _ (coord.to_bytes ?x)] =>
+  progress repeat match goal with H : context [map.of_list_word_at _ (coord.to_bytes ?x)] |- _ =>
     unique pose proof (length_coord x) end.
   repeat straightline.
-  progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H93 ltac:(rewrite ?length_coord; Lia.lia).
 
   (* postcondition *)
   eexists; ssplit.
   {
     cbv [proj1_sig proj2_sig fst snd point.to_bytes].
-    repeat seprewrite_in_by Array.list_word_at_app_of_adjacent_eq H93 ltac:(rewrite ?length_coord; listZnWords).
+    let Hm := match goal with |- _ ?m => match goal with H : _ m |- _ => H end end in
+    repeat seprewrite_in_by Array.list_word_at_app_of_adjacent_eq Hm ltac:(rewrite ?length_coord; listZnWords).
     (* other direction: repeat seprewrite_by Array.sep_eq_of_list_word_at_app ltac:(rewrite ?length_coord, ?app_length; trivial; try Lia.lia). *)
     ecancel_assumption. }
   { rewrite ?app_length, ?length_point, ?length_coord; trivial. }
 
   case (Zmod.eqb_spec x3 (bits.of_Z _ 0)); subst x3; rewrite word.lor_0_iff; [right|left]; split; trivial.
-  { case H121 as [Hx Hy].
+  { match goal with H121 : _ = 0%Zmod /\ _ = 0%Zmod |- _ => case H121 as [Hx Hy] end.
     subst x x0.
     rewrite !(word.broadcast_0_iff _ width_pos) in *.
     rewrite !Bool.negb_false_iff, !Zmod.eqb_eq in *.
@@ -295,9 +287,10 @@ rewrite ?app_length, ?length_coord in *.
     rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r in Hy.
     split; Field.fsatz. }
   { unshelve eexists ?[pfPneqQ].
-    { intros HX; cbv [Jacobian.eq Jacobian.iszero proj1_sig fst snd] in H122, H123, HX.
+    { intros HX; cbv [Jacobian.eq Jacobian.iszero proj1_sig fst snd] in HX;
+      repeat match goal with H : ~ Jacobian.iszero _ |- _ => cbv [Jacobian.eq Jacobian.iszero proj1_sig fst snd] in H end.
       destruct Decidable.dec in HX; try contradiction; case HX as (Hz&Hx&Hy).
-      apply H121. subst x x0.
+      match goal with H121 : ~ (_ = 0%Zmod /\ _ = 0%Zmod) |- _ => apply H121 end. subst x x0.
       rewrite !(word.broadcast_0_iff _ width_pos) in *.
       rewrite !Bool.negb_false_iff, !Zmod.eqb_eq.
       rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r, ?Hx, ?Hy, ?(proj2 (Ring.sub_zero_iff _ _)); ssplit; (ring || Field.fsatz). }
@@ -337,15 +330,11 @@ Proof.
   { eexists. ecancel_assumption. }
   straightline_call; repeat straightline. (*iszero*)
   { eexists. ecancel_assumption. }
-  (* stackalloc *)
-  seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) ltac:(newest_memory_hyp) ltac:(lia).
   straightline_call; ssplit. (*add*)
   { ecancel_assumption. }
   { lia. }
   repeat straightline.
   straightline_call; repeat straightline (* br_declassify *).
-  (* stackalloc *)
-  seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) ltac:(newest_memory_hyp) ltac:(lia).
   straightline_call; ssplit. (* memset *)
   { ecancel_assumption. }
   { ZnWords. }
@@ -371,12 +360,8 @@ Proof.
     { clear; ZnWords. }
     repeat straightline.
     (* stackdealloc *)
-    progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) ltac:(newest_memory_hyp)
-        ltac:(rewrite ?length_point in *; lia || ZnWords).
     assert (Datatypes.length x6 = 96%nat) by ZnWords.ZnWords.
     repeat straightline.
-    progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at)
-        ltac:(newest_memory_hyp) ltac:(lia || ZnWords.ZnWords).
     let Hzero := match goal with H: _ <> 0 |- _ => H end in
       rewrite <-(Zmod.unsigned_0 (2 ^ 64)), !Zmod.unsigned_inj_iff in Hzero by exact _;
       rewrite !word.lor_0_iff, !(word.broadcast_0_iff _ width_pos) in Hzero.
@@ -417,9 +402,10 @@ Proof.
       eexists; split; [ecancel_assumption|].
       rewrite Jacobian.eq_iff, Jacobian.to_affine_add, Jacobian.to_affine_add_inequal_nz_nz; trivial; reflexivity. } }
   { (* if !ok *)
-    rewrite <-(Zmod.unsigned_0 (2 ^ 64)), !Zmod.unsigned_inj_iff in H27 by exact _.
-    rewrite !word.lor_0_iff, !(word.broadcast_0_iff _ width_pos) in H27.
-    case H27 as ((HP&HQ)&->); rewrite ?HP, ?HQ in *;
+    match goal with H27 : Zmod.unsigned (Zmod.or _ _) = 0 |- _ =>
+    rewrite <-(Zmod.unsigned_0 (2 ^ 64)), !Zmod.unsigned_inj_iff in H27 by exact _;
+    rewrite !word.lor_0_iff, !(word.broadcast_0_iff _ width_pos) in H27;
+    case H27 as ((HP&HQ)&->) end; rewrite ?HP, ?HQ in *;
       repeat match goal with
              | H : _ = _ -> _ |- _ => specialize (H eq_refl)
              | H : ?x = ?y -> _ |- _ => assert (x = y -> False) as _ by inversion 1; clear H
@@ -428,12 +414,14 @@ Proof.
       rewrite ?Byte.map_xor_0_l in * by (rewrite ?length_point; ZnWords.ZnWords).
     rewrite <-Bool.not_true_iff_false in HP, HQ.
     cbv [iszero] in HP, HQ; case Decidable.dec in HP; case Decidable.dec in HQ; try congruence.
-    case (H19 ltac:(trivial) ltac:(trivial)) as [[HE ?]|[? HE]]; [case (HE eq_refl)|].
+    match goal with H19 : ~ Jacobian.iszero _ -> ~ Jacobian.iszero _ -> _ |- _ =>
+    case (H19 ltac:(trivial) ltac:(trivial)) as [[HE ?]|[? HE]] end; [case (HE eq_refl)|].
 
     straightline_call; repeat straightline.
     { split. { ecancel_assumption. }
       rewrite ?map_length, ?combine_length, ?repeat_length.
-      rewrite H18, length_point. clear; reflexivity. }
+      match goal with H18 : Datatypes.length _ = Datatypes.length (to_bytes _) |- _ => rewrite H18 end.
+      rewrite length_point. clear; reflexivity. }
 
     straightline_call; repeat straightline; ssplit (* memcpy *).
     { ecancel_assumption. }
@@ -442,13 +430,9 @@ Proof.
     { clear; ZnWords.ZnWords. }
     repeat straightline.
     (* stackdealloc *)
-    progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at)
-        ltac:(newest_memory_hyp) ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
-    progress repeat match goal with H : context [Array.array ptsto _ _ (point.to_bytes ?x)] |- _ =>
+    progress repeat match goal with H : context [map.of_list_word_at _ (point.to_bytes ?x)] |- _ =>
     unique pose proof (length_point x) end.
     repeat straightline.
-    progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at)
-        ltac:(newest_memory_hyp) ltac:(rewrite ?length_point in *; lia || ZnWords.ZnWords).
 
     eexists; ssplit. { ecancel_assumption. }
     rewrite <-HE, <-Jacobian.double_minus_3_eq_double.
@@ -504,7 +488,6 @@ Proof.
      ltac:(rewrite ?app_length, ?length_coord; trivial; try Lia.lia).
 
   repeat straightline.
-  repeat seprewrite_in_by Array.array1_iff_eq_of_list_word_at H18 ltac:(Lia.lia).
 
   rewrite <-(firstn_skipn 32 out) in H18.
   rewrite <-(firstn_skipn 32 (skipn _ out)) in H18.
@@ -528,8 +511,21 @@ rewrite ?app_length, ?length_coord in *.
       end] ..
     | repeat straightline ]).
 
-  (* stackalloc *)
-  repeat seprewrite_in_by Array.array1_iff_eq_of_list_word_at H42 ltac:(Lia.lia).
+  repeat (straightline_call; ssplit;
+    [ solve [repeat match goal with
+      | |- True => exact I
+      | |- exists _, _ => letexists
+      | |- _ =>
+          repeat match goal with x := _ : list _ |- _ => subst x end;
+          progress rewrite ?length_coord, ?firstn_length, ?skipn_length; lia
+      | _ => ecancel_assumption
+      end] ..
+    | repeat straightline ]).
+
+  (* stackdealloc *)
+  progress repeat match goal with H : context [map.of_list_word_at _ (coord.to_bytes ?x)] |- _ =>
+    unique pose proof (length_coord x) end.
+  repeat straightline.
 
   progress repeat (straightline_call; ssplit;
     [ solve [repeat match goal with
@@ -543,34 +539,15 @@ rewrite ?app_length, ?length_coord in *.
     | repeat straightline ]).
 
   (* stackdealloc *)
-  progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) H50 ltac:(rewrite ?length_coord; Lia.lia).
-  progress repeat match type of H50 with context [Array.array ptsto _ _ (coord.to_bytes ?x)] =>
+  progress repeat match goal with H : context [map.of_list_word_at _ (coord.to_bytes ?x)] |- _ =>
     unique pose proof (length_coord x) end.
   repeat straightline.
-  progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H50 ltac:(rewrite ?length_coord; Lia.lia).
-
-  progress repeat (straightline_call; ssplit;
-    [ solve [repeat match goal with
-      | |- True => exact I
-      | |- exists _, _ => letexists
-      | |- _ =>
-          repeat match goal with x := _ : list _ |- _ => subst x end;
-          progress rewrite ?length_coord, ?firstn_length, ?skipn_length; lia
-      | _ => ecancel_assumption
-      end] ..
-    | repeat straightline ]).
-
-  (* stackdealloc *)
-  progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) H69 ltac:(rewrite ?length_coord; Lia.lia).
-  progress repeat match type of H69 with context [Array.array ptsto _ _ (coord.to_bytes ?x)] =>
-    unique pose proof (length_coord x) end.
-  repeat straightline.
-  progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) H69 ltac:(rewrite ?length_coord; Lia.lia).
 
   (* postcondition *)
 
   cbv [proj1_sig proj2_sig fst snd point.to_bytes Jacobian.double_minus_3 Jacobian.double_minus3_impl Jacobian.Fsquare Jacobian.Ftriple Jacobian.Fhalve ].
-  progress repeat seprewrite_in_by Array.list_word_at_app_of_adjacent_eq H69 ltac:(rewrite ?length_coord; listZnWords).
-  rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r in H69.
+  let Hm := match goal with |- _ ?m => match goal with H : _ m |- _ => H end end in
+  progress repeat seprewrite_in_by Array.list_word_at_app_of_adjacent_eq Hm ltac:(rewrite ?length_coord; listZnWords);
+  rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r in Hm.
   ecancel_assumption.
 Qed.

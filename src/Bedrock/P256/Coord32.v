@@ -157,8 +157,7 @@ Proof.
   subst l0 l1 l2 l3 l4 l5 l6 l7.
 
   repeat (seprewrite_in_by (@sep_eq_of_list_word_at_app) Hm length_tac).
-  repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac.
-  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac.
+  repeat seprewrite_in_by @Scalars.scalar_of_list_word_at Hm ltac:(change (Memory.bytes_per access_size.word) with 4%nat; length_tac).
   rewrite ?le_combine_split, ?Z.shiftr_div_pow2 in Hm by length_tac.
   simpl Z.of_nat in *.
   simpl Z.mul in *.
@@ -205,8 +204,7 @@ Proof.
 
   let domem Hm :=
   repeat seprewrite_in_by (@sep_eq_of_list_word_at_app) Hm length_tac;
-  repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac;
-  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac;
+  repeat seprewrite_in_by @Scalars.scalar_of_list_word_at Hm ltac:(change (Memory.bytes_per access_size.word) with 4%nat; length_tac);
   rewrite ?le_combine_split in Hm by lia
   in domem H2; domem H3.
 
@@ -272,8 +270,7 @@ Proof.
          <-(firstn_skipn 4 out[_:][_:][_:][_:][_:][_:]),
     ?skipn_skipn, ?firstn_skipn in Hm.
   repeat seprewrite_in_by (@sep_eq_of_list_word_at_app) Hm length_tac.
-  repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac.
-  repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac.
+  repeat seprewrite_in_by @Scalars.scalar_of_list_word_at Hm ltac:(change (Memory.bytes_per access_size.word) with 4%nat; length_tac).
   simpl Z.of_nat in *.
 
   repeat straightline; ssplit; trivial.

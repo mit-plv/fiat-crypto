@@ -39,6 +39,8 @@ Local Open Scope Z_scope.
 Import LittleEndianList.
 Import ListNotations.
 Import ProgramLogic.Coercions.
+
+#[local] Instance : bedrock2.Memory.stackalloc_as_map := {}.
 Import WeakestPrecondition.
 Import BasicC64Semantics.
 
@@ -651,7 +653,7 @@ Section WithParameters.
     dealloc_preprocess. repeat straightline.
 
     exists x5,x6,x7,x8,x9; ssplit. 3-7:solve_bounds.
-    exact H35. exact H36.
+    eassumption. eassumption.
 
     ecancel_assumption.
   Qed.
