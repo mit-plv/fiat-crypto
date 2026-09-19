@@ -178,6 +178,8 @@ Definition p256_point_mul :=
       T = t
   }.
 
+#[local] Instance : bedrock2.Memory.stackalloc_as_map := {}.
+
 Lemma load1_sext_ok : program_logic_goal_for_function! load1_sext.
 Proof.
   repeat straightline.
@@ -237,14 +239,12 @@ Proof.
   { intros ? ?kP ? ? ? ? ?power.
      repeat straightline.
     (* Induction case. *)
-    { seprewrite_in_by Array.array1_iff_eq_of_list_word_at ltac:(newest_memory_hyp) ltac:(lia).
-      straightline_call. (* call p256_point_double *)
+    { straightline_call. (* call p256_point_double *)
       { split; [ecancel_assumption | lia]. }
       repeat straightline; straightline_call. (* call br_memcpy *)
       { ssplit; [ecancel_assumption | | | ]; ZnWords. }
       repeat straightline.
       (* Deallocate stack. *)
-      seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ Init.Byte.byte _ _ a) ltac:(newest_memory_hyp) lia.
       pose proof (length_point (Jacobian.Jacobian.double_minus_3 eq_refl kP)).
       (* Restore loop invariant. *)
       repeat straightline.
@@ -295,8 +295,7 @@ Proof.
   repeat straightline.
   rename R0 into R.
   straightline_call. (* call p256_precompute_multiples *)
-  { seprewrite_in_by (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) a) ltac:(newest_memory_hyp) ltac:(lia).
-    ssplit; try ecancel_assumption; trivial. }
+  { ssplit; try ecancel_assumption; trivial; try lia. }
   repeat straightline.
   straightline_call. (* call p256_point_set_zero *)
   { ssplit; try ecancel_assumption; trivial. }
@@ -413,8 +412,7 @@ Proof.
   straightline_call. (* call p256_get_multiple *)
   { split; [|split; [|split; [|split]]].
     4: eassumption.
-    { seprewrite_in_by (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) p_kP) ltac:(newest_memory_hyp) ltac:(lia).
-      ecancel_assumption. }
+    { ecancel_assumption. }
     { rewrite length_point. ZnWords. }
     { rewrite <-(length_map to_affine).
       erewrite Forall2_length by eassumption.
@@ -424,8 +422,8 @@ Proof.
   rename x0 into kP.
 
   straightline_call. (* call p256_point_add_vartime_if_doubling *)
-  { seprewrite_in_by (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) a3) ltac:(newest_memory_hyp) ltac:(lia).
-    ssplit; try ecancel_assumption; trivial.
+  { ssplit; try ecancel_assumption; trivial.
+    1: rewrite length_point; lia.
     intros Hnotbothzero.
     subst_weq.
     rewrite ScalarMult.scalarmult_assoc.
@@ -461,20 +459,8 @@ Proof.
     ZnWords. }
   repeat straightline.
 
-  (* Deallocate stack. *)
-  seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ Init.Byte.byte _ _ p_kP)
-      ltac:(newest_memory_hyp) lia.
   assert (length (to_bytes kP) = sizeof_point) by (rewrite length_point; trivial).
-  seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at _ _ Init.Byte.byte _ _ a3)
-      ltac:(newest_memory_hyp) lia.
   assert (length (to_bytes curr_out_new) = sizeof_point%nat) by (rewrite length_point; trivial).
-
-  (* Repeat straighline hangs here on Loops.enforce so we do it in steps. *)
-  do 2 straightline_stackdealloc.
-  eexists _, _, _, _, _.
-  split.
-  { repeat straightline. }
-  repeat straightline.
   eexists (cur_limb :: processed_limbs), (remaining_limbs'), _, _.
   repeat straightline.
   { ssplit.
@@ -522,8 +508,10 @@ Qed.
 Lemma p256_point_mul_ok : program_logic_goal_for_function! p256_point_mul.
 Proof.
   repeat straightline.
-  (* Split stack into space for sscalar and padding. *)
+  (* The callees are specified on byte arrays. *)
   let H:= ltac:(newest_memory_hyp) in rename H into Hmem.
+  seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at a stack)) Hmem ltac:(lia).
+  (* Split stack into space for sscalar and padding. *)
   rewrite <-(firstn_skipn (Z.to_nat num_limbs) stack) in Hmem.
   seprewrite_in Array.bytearray_append Hmem.
   set (sscalar := firstn (Z.to_nat num_limbs) stack) in *.

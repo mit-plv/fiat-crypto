@@ -198,6 +198,8 @@ Qed.
 
 #[local] Ltac hyp_containing a := match goal with H : context[a] |- _ => H end.
 
+#[local] Instance : bedrock2.Memory.stackalloc_as_map := {}.
+
 Lemma p256_select_point_from_table_ok : program_logic_goal_for_function! p256_select_point_from_table.
 Proof.
   repeat straightline.
@@ -348,8 +350,6 @@ Proof.
       [reflexivity|solve_num|]; rewrite ?length_coord in H).
   bottom_up_simpl_in_hyps.
 
-  seprewrite_in_by array1_iff_eq_of_list_word_at ltac:(hyp_containing a) lia.
-
   straightline_call; ssplit.
   { ecancel_assumption. }
   { solve_num. }
@@ -371,10 +371,8 @@ Proof.
 
   repeat straightline.
 
-  (* Dealloc of a. Prep ptsto and length so straightline processes. *)
-  Require Import coqutil.Macros.symmetry.
+  (* Dealloc of a. Prep the length so straightline processes. *)
   pose proof (length_coord (Zmod.opp y)).
-  seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at (value:=Byte.byte)a)) ltac:(hyp_containing a) lia.
 
   repeat straightline.
 
