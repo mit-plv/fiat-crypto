@@ -1,11 +1,11 @@
 From Coq Require Import BinInt String List InitialRing ZArith Lia.
 From bedrock2 Require Import BasicC64Semantics WeakestPrecondition ProgramLogic NotationsCustomEntry ZnWords ArrayCasts Syntax.
 Import ListNotations ProgramLogic.Coercions SeparationLogic Array Scalars.
-Require Import bedrock2Examples.full_sub bedrock2Examples.full_add bedrock2Examples.u320_add.
+Require Import bedrock2Examples.full_sub bedrock2Examples.full_add bedrock2Examples.u320_add bedrock2Examples.full_mul.
 From coqutil Require Import Tactics.Tactics WithBaseName Z.CountTrailingZeros.
 Require Import coqutil.Z.PushPullMod coqutil.Word.Properties.
 
-Require Import u320_muladd beeu_normalize u320_sub.
+Require Import u320_muladd beeu_normalize u320_sub beeu_shrtz u320_shr u256_shr br_ctz.
 Local Open Scope string_scope. Local Open Scope Z_scope.
 
 Local Lemma mod2_cases (n : Z) : n mod 2 = 0 \/ n mod 2 = 1.
@@ -236,22 +236,6 @@ Definition beeu_modinv := func! (p_out, p_a, p_m, inv_m) ~> c {
             M =* array p_x r ⋆ R /\
             length r = 5%nat /\
             eval r = x
-    }.
-
-(* TODO: Remove once beeu_shrtz is merged.  *)
-#[local] Instance spec_of_beeu_shrtz : spec_of "beeu_shrtz" :=
-    fnspec! "beeu_shrtz" (p_a p_y p_m inv_m : word) / (a y MOD : list word) R,
-    {
-        requires t m :=
-            m =* array p_a a ⋆ array p_y y ⋆ array p_m MOD ⋆ R /\
-            (eval MOD) mod 2 = 1 /\ inv_m * (eval MOD) mod (2^64) = 2^64 - 1 /\
-            length a = 4%nat /\ length y = 5%nat /\ length MOD = 4%nat;
-        ensures T M := T = t /\ exists (a' y' : list word) (s : Z),
-            M =* array p_a a' ⋆ array p_y y' ⋆ array p_m MOD ⋆ R /\
-            length a' = 4%nat /\ length y' = 5%nat /\
-            (eval a' * (2^s) = eval a) /\ (s = Z.min (lctz 64 (eval a)) 63) /\
-            (eval y' * (2^s) mod (eval MOD) = eval y mod (eval MOD)) /\
-            (eval y' * (2^s) <= (eval y + (2^s - 1) * (eval MOD)))
     }.
 
 #[local] Instance spec_of_helper_subtract : spec_of "helper_subtract" :=
@@ -1570,7 +1554,7 @@ Proof.
                 {
                     destruct (eval x2 =? 0) eqn: Hx2; try eauto.
                     destruct (eval x19 =? 0) eqn: Hx019; try lia.
-                    destruct (ZLib.Z.mod2_cases (eval x19)) as [Hx19 | Hx19]; rewrite Hx19, Hxm2 in *;
+                    destruct (mod2_cases (eval x19)) as [Hx19 | Hx19]; rewrite Hx19, Hxm2 in *;
                     cbn [Z.eqb Pos.eqb andb] in *; ssplit; try (keep_length_equations; bigZnWords).
                     {
                         destruct H29 as [[? ?] [? ?]].
@@ -1632,7 +1616,7 @@ Proof.
                 }
                 {
                     destruct (eval x16 =? 0); try eauto.
-                    destruct (ZLib.Z.mod2_cases (eval x16)) as [Hx16 | Hx16];
+                    destruct (mod2_cases (eval x16)) as [Hx16 | Hx16];
                     rewrite Hx16, Hdif in *; cbn [Z.eqb Pos.eqb andb] in *; ssplit; try (keep_length_equations; bigZnWords).
                     {
                         destruct H29 as [[? ?] [? ?]].
@@ -1835,3 +1819,59 @@ Proof.
     }
 Qed.
 
+From bedrock2Examples Require Import full_mul.
+
+Definition beeu_modinv_funcs :=
+    &[,
+        beeu_modinv;
+        beeu_normalize;
+        helper_loop;
+        helper_subtract;
+        u256_sub;
+        u256_dec;
+        u256_sub';
+        u256_to_u320;
+        u256_set;
+        u320_set_const;
+        u256_comp;
+        u320_sub;
+        beeu_shrtz;
+        u320_muladd;
+        u320_shr;
+        u256_shr;
+        br_ctz;
+        br_full_add;
+        br_full_mul;
+        br_full_sub;
+        u320_set;
+        u320_add].
+
+Lemma link_beeu_modinv : spec_of_beeu_modinv (Interface.map.of_list beeu_modinv_funcs).
+Proof.
+    apply beeu_modinv_ok;
+    repeat (
+        apply u256_set_ok ||
+        apply u256_to_u320_ok ||
+        apply u320_set_ok ||
+        apply u320_set_const_ok ||
+        apply helper_loop_ok ||
+        apply u256_comp_ok ||
+        apply beeu_shrtz_ok ||
+        apply u256_sub'_ok ||
+        apply full_sub_ok ||
+        apply u320_muladd_correct ||
+        apply full_mul_ok ||
+        apply full_add_ok ||
+        apply u256_shr_correct ||
+        apply helper_subtract_ok ||
+        apply u320_shr_correct ||
+        apply u256_sub_ok ||
+        apply u256_dec_ok ||
+        apply u320_add_correct ||
+        apply br_ctz_ok ||
+        apply beeu_normalize_ok ||
+        apply u320_sub_correct ||
+        apply u320_set_ok ||
+        trivial
+        ).
+Qed.
