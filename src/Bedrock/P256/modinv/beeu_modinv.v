@@ -15,7 +15,6 @@ Local Lemma Z_mod_mult' (a b : Z) : (a * b) mod a = 0.
 Proof. rewrite Z.mul_comm; apply Z_mod_mult. Qed.
 
 Local Notation eval := (fold_right (fun (a : word) (s : Z) => a + 2^64*s) 0).
-Local Notation eval_bool := (fold_right (fun (a : word) (s : Z) => Z.lor a (Z.shiftl s 64)) 0).
 Local Notation array := (array scalar (bits.of_Z _ 8)).
 
 Definition u256_dec := func! (p_x, p_y) ~> b {
@@ -96,19 +95,6 @@ Definition helper_loop := func! (p_a, p_b, p_x, p_y, p_m, inv_m) {
     }
 }.
 
-Definition u256_sub' := func! (p_out, p_x, p_y) ~> b {
-    b = $0;
-    unpack! d0, b = br_full_sub(load(p_x), load(p_y), b);
-    unpack! d1, b = br_full_sub(load(p_x + $8), load(p_y + $8), b);
-    unpack! d2, b = br_full_sub(load(p_x + $8 + $8), load(p_y + $8 + $8), b);
-    unpack! d3, b = br_full_sub(load(p_x + $8 + $8 + $8), load(p_y + $8 + $8 + $8), b);
-
-    store(p_out, d0);
-    store(p_out + $8, d1);
-    store(p_out + $8 + $8, d2);
-    store(p_out + $8 + $8 + $8, d3)
-}.
-
 Definition beeu_modinv := func! (p_out, p_a, p_m, inv_m) ~> c {
     (* Allocate variables on the stack *)
     stackalloc 32 as a;
@@ -131,7 +117,7 @@ Definition beeu_modinv := func! (p_out, p_a, p_m, inv_m) ~> c {
     if (cmp == $0) {
         c = $1;
         beeu_normalize(y, p_m320);
-        unpack! borrow = u256_sub'(p_out, p_m, y)
+        unpack! borrow = u256_sub(p_out, p_m, y)
     } else {
         c = $0
     }
@@ -188,18 +174,6 @@ Definition beeu_modinv := func! (p_out, p_a, p_m, inv_m) ~> c {
         requires t m :=
             m =* array p_out out ⋆ array p_x x ⋆ array p_y y ⋆ R /\
             length out = 4%nat /\ length x = 4%nat /\ length y = 4%nat;
-        ensures T M := T = t /\ exists (r : list word),
-            M =* array p_out r ⋆ array p_x x ⋆ array p_y y ⋆ R /\
-            length r = 4%nat /\ eval r - 2^256*b = eval x - eval y
-    }.
-
-#[local] Instance spec_of_u256_sub' : spec_of "u256_sub'" :=
-    fnspec! "u256_sub'" (p_out p_x p_y : word) / (out x y : list word) R ~> b,
-    {
-        requires t m :=
-            m =* array p_out out ⋆ array p_x x ⋆ array p_y y ⋆ R /\
-            length out = 4%nat /\ length x = 4%nat /\ length y = 5%nat
-            /\ (eval y) < 2^256;
         ensures T M := T = t /\ exists (r : list word),
             M =* array p_out r ⋆ array p_x x ⋆ array p_y y ⋆ R /\
             length r = 4%nat /\ eval r - 2^256*b = eval x - eval y
@@ -271,7 +245,9 @@ Definition beeu_modinv := func! (p_out, p_a, p_m, inv_m) ~> c {
             length OUT = 4%nat /\
                 if (Z.gcd (eval a) (eval MOD) =? 1)
                 then
-                    c = bits.of_Z _ 1 /\ ((eval OUT) * (eval a)) mod (eval MOD) = 1
+                    c = bits.of_Z _ 1 /\
+                    ((eval OUT) * (eval a)) mod (eval MOD) = 1 /\
+                    0 <= (eval OUT) < (eval MOD)
                 else
                     c = bits.of_Z _ 0
     }.
@@ -356,14 +332,6 @@ Proof.
     lia. }
 Qed.
 
-Lemma u256_sub'_ok : program_logic_goal_for_function! u256_sub'.
-Proof.
-    repeat straightline. lists_into_elements. cbv [array] in *.
-    repeat (straightline || straightline_call || ZnWords).
-    eexists [_; _; _; _]. intuition try ecancel_assumption. cbv [fold_right] in *.
-    ZnWords.
-Qed.
-
 Lemma u256_dec_ok : program_logic_goal_for_function! u256_dec.
 Proof.
     repeat straightline. lists_into_elements. cbv [array] in *.
@@ -446,6 +414,26 @@ Proof.
     assert (Hcond : eval a <=? eval b = true) by bigZnWords
   end;
   rewrite Hcond in *; ssplit; eauto; bigZnWords.
+Qed.
+
+#[local] Instance spec_of_u256_sub' : spec_of "u256_sub" :=
+    fnspec! "u256_sub" (p_out p_x p_y : word) / (out x y : list word) R ~> b,
+    {
+        requires t m :=
+            m =* array p_out out ⋆ array p_x x ⋆ array p_y y ⋆ R /\
+            length out = 4%nat /\ length x = 4%nat /\ length y = 5%nat
+            /\ (eval y) < 2^256;
+        ensures T M := T = t /\ exists (r : list word),
+            M =* array p_out r ⋆ array p_x x ⋆ array p_y y ⋆ R /\
+            length r = 4%nat /\ eval r - 2^256*b = eval x - eval y
+    }.
+
+Lemma u256_sub'_ok : program_logic_goal_for_function! u256_sub.
+Proof.
+    repeat straightline. lists_into_elements. cbv [array] in *.
+    repeat (straightline || straightline_call || ZnWords).
+    eexists [_; _; _; _]. intuition try ecancel_assumption. cbv [fold_right] in *.
+    ZnWords.
 Qed.
 
 Definition Z_size (z : Z) : Z :=
@@ -1272,11 +1260,6 @@ Proof.
                     rewrite ?H47; Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H49; Z.push_pull_mod; f_equal; lia
                 ].
                 all: try solve [
-                    eapply mod_pow2_inv with (n := Z.min (lctz 64 (eval x2 - eval x1)) 63); try lia;
-                    rewrite <- Z.mul_assoc, (Z.mul_comm (eval b)), Z.mul_assoc;
-                    rewrite ?H47; Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H49; Z.push_pull_mod; f_equal; lia
-                ].
-                all: try solve [
                     eapply mod_pow2_inv with (n := Z.min (lctz 64 (eval x1)) 63); try lia;
                     Z.push_pull_mod;
                     rewrite Z.mul_sub_distr_r, Z.mul_0_l, <- Z.mul_assoc, (Z.mul_comm (eval b)), Z.mul_assoc;
@@ -1788,14 +1771,27 @@ Proof.
         destruct (eval x2 =? 1) eqn: Hx2.
         {
             rewrite Z.eqb_eq in *.
-            split; eauto.
-            assert (Hx8 : Zmod.unsigned x8 = 0) by (lists_into_elements; cbv [eval] in *; ZnWords).
-            rewrite Hx8, Z.mul_0_r, Z.sub_0_r, H70, H67, H49 in *.
-            Z.push_pull_mod.
-            rewrite Z.mul_sub_distr_r in *.
-            Z.push_mod_step.
-            rewrite Z_mod_mult', Z.sub_0_l.
-            Z.push_pull_mod. rewrite Z.sub_0_l, <- H63, Hx2, Z.mod_1_l; ZnWords.
+            split; [ | split]; eauto.
+            all:
+                assert (Hx8 : Zmod.unsigned x8 = 0) by (lists_into_elements; cbv [eval] in *; ZnWords);
+                rewrite Hx8, Z.mul_0_r, Z.sub_0_r, H70, H67, H49 in *.
+            {
+                Z.push_pull_mod.
+                rewrite Z.mul_sub_distr_r in *.
+                Z.push_mod_step.
+                rewrite Z_mod_mult', Z.sub_0_l.
+                Z.push_pull_mod. rewrite Z.sub_0_l, <- H63, Hx2, Z.mod_1_l; ZnWords.
+            }
+            {
+                assert (0 <= eval x5 mod (eval MOD) < (eval MOD)).
+                { eapply Z.mod_pos_bound; lia. }
+
+                split; try lia.
+                destruct (eval x5 mod (eval MOD) =? 0) eqn :Hx5; try lia.
+                rewrite Z.eqb_eq in Hx5. rewrite Hx5 in *.
+                rewrite Hx2 in *.
+                exfalso. rewrite Z.mod_1_l, <- Z.sub_0_l, <-Zminus_mod_idemp_r, <-Zmult_mod_idemp_l, Hx5, Z.mul_0_l, Zmod_0_l in H63 by lia. lia.
+            }
         }
         {
             eapply word.eqb_ne in H65.
@@ -1819,8 +1815,6 @@ Proof.
     }
 Qed.
 
-From bedrock2Examples Require Import full_mul.
-
 Definition beeu_modinv_funcs :=
     &[,
         beeu_modinv;
@@ -1829,7 +1823,6 @@ Definition beeu_modinv_funcs :=
         helper_subtract;
         u256_sub;
         u256_dec;
-        u256_sub';
         u256_to_u320;
         u256_set;
         u320_set_const;
@@ -1871,7 +1864,7 @@ Proof.
         apply br_ctz_ok ||
         apply beeu_normalize_ok ||
         apply u320_sub_correct ||
-        apply u320_set_ok ||
         trivial
         ).
 Qed.
+
