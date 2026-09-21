@@ -124,6 +124,8 @@ Local Ltac symex_call := (straightline_call; ssplit; [ solve [
       end
     ] ..  | repeat straightline_cleanup; straightline; repeat straightline_cleanup; clear_nonsymex_sephyps; repeat straightline]).
 
+#[local] Instance : bedrock2.Memory.stackalloc_as_map := {}.
+
 Lemma p256_point_add_affine_nz_nz_neq_ok : program_logic_goal_for_function! p256_point_add_affine_nz_nz_neq.
 Proof.
   cbv [spec_of_p256_point_add_affine_nz_nz_neq of_affine].
@@ -137,7 +139,6 @@ Proof.
   progress repeat seprewrite_in_by Array.sep_eq_of_list_word_at_app Hm length_tac.
 
   repeat straightline. clear_nonsymex_sephyps.
-  repeat seprewrite_in_by Array.array1_iff_eq_of_list_word_at Hm ltac:(Lia.lia).
   progress change (Z.of_nat 32) with 32 in *.
 
   symex_call.
@@ -164,11 +165,9 @@ Proof.
   clear_nongoal_sephyps.
 
   (* stackdealloc *)
-  progress repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_coord; Lia.lia).
-  progress repeat match type of Hm with context [Array.array ptsto _ _ (coord.to_bytes ?x)] =>
+  progress repeat match type of Hm with context [map.of_list_word_at _ (coord.to_bytes ?x)] =>
     unique pose proof (length_coord x) end.
   repeat straightline. clear_nongoal_sephyps.
-  progress repeat seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) Hm ltac:(rewrite ?length_coord; Lia.lia).
   length_tac_rewrites.
 
   (* postcondition *)
@@ -187,7 +186,7 @@ Proof.
 
   intros.
   cbv [affine_point.iszero] in *.
-  destruct Q as ([[]|[]]&?) in HeqQ, H59; [|contradiction]; apply (f_equal (@proj1_sig _ _)) in HeqQ;
+  destruct Q as ([[]|[]]&?) in HeqQ, H45; [|contradiction]; apply (f_equal (@proj1_sig _ _)) in HeqQ;
       cbv [of_affine Jacobian.of_affine Jacobian.of_affine_impl fst snd Jacobian.eq proj1_sig] in HeqQ; Prod.inversion_prod; subst.
 
   case (Zmod.eqb_spec x3 $0); subst x3; rewrite word.lor_0_iff; [right|left]; split; trivial.
@@ -195,7 +194,7 @@ Proof.
     rewrite !(word.broadcast_0_iff _ width_pos) in *.
     rewrite !Bool.negb_false_iff, !Zmod.eqb_eq in *.
     cbv [of_affine Jacobian.of_affine fst snd Jacobian.eq Jacobian.iszero proj1_sig] in *.
-    case H60 as [Hx Hy].
+    case H46 as [Hx Hy].
     case Decidable.dec; intros; try contradiction; split; [apply Hierarchy.one_neq_zero|].
     rewrite Hierarchy.commutative in Hx.
     rewrite <-!Zmod.pow_succ_nonneg_r in Hx, Hy by lia; simpl Z.succ in Hx, Hy.
@@ -204,9 +203,9 @@ Proof.
     rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r in Hy.
     split; Field.fsatz. }
   { unshelve eexists ?[pfPneqQ].
-    { intros HX; cbv [Jacobian.eq Jacobian.iszero of_affine Jacobian.of_affine Jacobian.of_affine_impl proj1_sig fst snd] in H59, H60, HX.
+    { intros HX; cbv [Jacobian.eq Jacobian.iszero of_affine Jacobian.of_affine Jacobian.of_affine_impl proj1_sig fst snd] in H45, H46, HX.
       destruct Decidable.dec in HX; try contradiction; case HX as (Hz&Hx&Hy).
-      apply H60. subst x x0.
+      apply H46. subst x x0.
       rewrite !(word.broadcast_0_iff _ width_pos) in *.
       rewrite !Bool.negb_false_iff, !Zmod.eqb_eq.
       rewrite ?Zmod.pow_3_r, ?Zmod.pow_2_r, ?Hx, ?Hy, ?(proj2 (Ring.sub_zero_iff _ _)); ssplit; (ring || Field.fsatz). }
@@ -242,16 +241,12 @@ Proof.
   straightline_call; repeat straightline. (*iszero*)
   { letexists. ecancel_assumption. }
   straightline_call; repeat straightline. (*broadcast*)
-  (* stackalloc *)
-  seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) Hm ltac:(lia).
   straightline_call; ssplit. (*add*)
   { ecancel_assumption. }
   { rewrite length_point; lia. }
   repeat straightline.
   straightline_call; repeat straightline (* br_declassify *).
-  (* stackalloc *)
   clear_nonsymex_sephyps.
-  seprewrite_in_by (@Array.array1_iff_eq_of_list_word_at) Hm ltac:(lia).
   straightline_call; ssplit. (* memset *)
   { ecancel_assumption. }
   { ZnWords.ZnWords. }
@@ -259,7 +254,7 @@ Proof.
   straightline_call; repeat straightline; ssplit (* memcxor *).
   { ecancel_assumption. }
   { rewrite ?repeat_length; trivial. }
-  { rewrite H17, length_point; trivial. }
+  { match goal with H : Datatypes.length _ = Datatypes.length (to_bytes _) |- _ => rewrite H end; rewrite length_point; trivial. }
   straightline_call; repeat straightline; ssplit (* memcxor *).
   { ecancel_assumption. }
   { rewrite ?repeat_length; trivial. }
@@ -287,14 +282,13 @@ assert (word__and_broadcast : forall a b, Zmod.and (word.broadcast a) (word.broa
     { clear; ZnWords.ZnWords. }
     clear_nongoal_sephyps.
     (* stackdealloc *)
-    seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) a)) Hm ltac:(length_tac_rewrites; listZnWords).
-    progress repeat seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) a0)) Hm ltac:(length_tac_rewrites; listZnWords).
     assert (Datatypes.length x6 = 96%nat) by (length_tac_rewrites; listZnWords).
     assert (Datatypes.length x2 = 96%nat) by (length_tac_rewrites; listZnWords).
     repeat straightline; clear_nongoal_sephyps.
 
-    rewrite <-(Zmod.unsigned_0 (2 ^ 64)), !Zmod.unsigned_inj_iff in H16 by exact _.
-    rewrite !word.lor_0_iff, !(word.broadcast_0_iff _ width_pos) in H16.
+    match goal with H16 : Zmod.unsigned (Zmod.or _ _) <> 0 |- _ =>
+    rewrite <-(Zmod.unsigned_0 (2 ^ 64)), !Zmod.unsigned_inj_iff in H16 by exact _;
+    rewrite !word.lor_0_iff, !(word.broadcast_0_iff _ width_pos) in H16 end.
     destruct (iszero P) eqn:HP in *; (destruct (Zmod.eqb_spec c2 (bits.of_Z _ 0)) as [|HQ] in *; [subst c2|]);
       repeat (cbn [Z.eqb negb andb] in *; rewrite ?Z.eqb_refl in *; rewrite ?(proj2 (Z.eqb_neq _ _)) in * by ZnWords.ZnWords;
         match goal with
@@ -317,7 +311,7 @@ assert (word__and_broadcast : forall a b, Zmod.and (word.broadcast a) (word.broa
     { (* nz + nz' *)
       (* Decidable.dec_iff? *)
       cbv [iszero] in HP, HQ; case Decidable.dec in HP; try congruence.
-      destruct (H18 ltac:(trivial) ltac:(intros HX; specialize (H11 HX); congruence)) as [ [_ (?&HE)] |]; [|intuition fail].
+      match goal with H18 : ~ Jacobian.iszero _ -> _ <> _ -> _ |- _ => destruct (H18 ltac:(trivial) ltac:(intros HX; specialize (H11 HX); congruence)) as [ [_ (?&HE)] |] end; [|intuition fail].
       repeat straightline_cleanup.
       eexists; split; [ecancel_assumption|].
       rewrite Jacobian.eq_iff, Jacobian.to_affine_add, Jacobian.to_affine_add_inequal_nz_nz; trivial; [reflexivity|].
@@ -340,9 +334,8 @@ assert (word__and_broadcast : forall a b, Zmod.and (word.broadcast a) (word.broa
     repeat straightline.
     (* stackdealloc *)
     clear_nongoal_sephyps.
-    progress repeat seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) a)) Hm ltac:(length_tac_rewrites; listZnWords).
-    progress repeat seprewrite_in_by (symmetry! (Array.array1_iff_eq_of_list_word_at(value:=Byte.byte) a0)) Hm ltac:(length_tac_rewrites; listZnWords).
     assert (Datatypes.length x6 = 96%nat) by (length_tac_rewrites; listZnWords).
+    assert (Datatypes.length x2 = 96%nat) by (length_tac_rewrites; listZnWords).
     assert (Datatypes.length ((to_bytes (Jacobian.double_minus_3 eq_refl P))) = 96%nat) by (length_tac_rewrites; listZnWords).
     repeat straightline; clear_nongoal_sephyps.
 
@@ -353,7 +346,7 @@ assert (word__and_broadcast : forall a b, Zmod.and (word.broadcast a) (word.broa
     enough (Jacobian.eq P Q) as -> by reflexivity.
 
     cbv [iszero] in *; case Decidable.dec in *; try congruence.
-    destruct (H18 ltac:(trivial) ltac:(intros HX; specialize (H11 HX); congruence)) as [ [? (?&HE)] |]; [pose proof (Zmod.of_Z_0 (2 ^ 64)); congruence|intuition fail]. }
+    match goal with H18 : ~ Jacobian.iszero _ -> _ <> _ -> _ |- _ => destruct (H18 ltac:(trivial) ltac:(intros HX; specialize (H11 HX); congruence)) as [ [? (?&HE)] |] end; [pose proof (Zmod.of_Z_0 (2 ^ 64)); congruence|intuition fail]. }
 Qed.
 
 
