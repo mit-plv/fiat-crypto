@@ -297,41 +297,6 @@ Qed.
             assert (length (ws2bs 8 arr) = m) by (lists_into_elements; eauto)
     end.
 
-Lemma lxor_range : forall a b z : Z,
-      0 <= a < 2 ^ z ->
-      0 <= b < 2 ^ z ->
-      0 <= Z.lxor a b < 2 ^ z.
-Proof.
-    intros * [? ?] [? ?].
-    destruct (Z_lt_le_dec z 0) as [? | ?].
-    { rewrite Z.pow_neg_r in * by lia. lia. }
-    destruct (Z.eq_dec z 0) as [-> | ?].
-    { rewrite Z.pow_0_r in *.
-    assert (a = 0) by lia.
-    assert (b = 0) by lia.
-    subst.
-    rewrite Z.lxor_0_l.
-    lia. }
-    assert (0 <= Z.lxor a b).
-    { apply Z.lxor_nonneg; lia. }
-    split; [lia |].
-    destruct (Z.eq_dec (Z.lxor a b) 0) as [-> | ?].
-    { assert (0 < 2 ^ z) by (apply Z.pow_pos_nonneg; lia).
-    lia. }
-    { rewrite Z.log2_lt_pow2 by lia.
-    assert (Z.log2 (Z.lxor a b) <= Z.max (Z.log2 a) (Z.log2 b)).
-    { apply Z.log2_lxor; lia. }
-    assert (Z.log2 a < z).
-    { destruct (Z.eq_dec a 0) as [-> | ?].
-        { rewrite Z.log2_nonpos; lia. }
-        { apply Z.log2_lt_pow2; lia. } }
-    assert (Z.log2 b < z).
-    { destruct (Z.eq_dec b 0) as [-> | ?].
-        { rewrite Z.log2_nonpos; lia. }
-        { apply Z.log2_lt_pow2; lia. } }
-    lia. }
-Qed.
-
 Lemma u256_dec_ok : program_logic_goal_for_function! u256_dec.
 Proof.
     repeat straightline. lists_into_elements. cbv [array] in *.
@@ -385,14 +350,10 @@ Proof.
     }
     {
         cbv [fold_right] in *. intros contra. cbv [v] in contra.
-        rewrite ?Zmod.of_Z_0 in contra. repeat rewrite word.lor_0_iff in contra.
-        repeat destruct contra as [contra ?].
-        ZnWords_pre. pose proof (lxor_range w0 w1 64 ltac:(assumption) ltac:(assumption)).
-        rewrite !Z.mod_small in * by lia.
-        eapply Hn. rewrite Z.lxor_eq_0_iff in contra; lia.
+        rewrite ?Zmod.of_Z_0, !word.lor_0_iff, !bits.xor_zero_iff in contra.
+        destruct contra as [[[-> ->] ->] ->]; ZnWords.
     }
 Qed.
-
 Local Existing Instance spec_of_u320_add.
 
 Local Ltac bigZnWords :=
@@ -436,12 +397,6 @@ Proof.
     ZnWords.
 Qed.
 
-Definition Z_size (z : Z) : Z :=
-    match z with
-    | Z.pos p => Zpos (Pos.size p)
-    | 0 => 0
-    | Z.neg p => Zpos (Pos.size p)
-    end.
 
 Ltac prune_unused :=
   repeat match goal with
@@ -473,619 +428,359 @@ Ltac keep_length_equations :=
         end
     end;
     intros.
+Definition Z_size (z : Z) : Z :=
+  match z with
+  | Z.pos p => Zpos (Pos.size p)
+  | 0 => 0
+  | Z.neg p => Zpos (Pos.size p)
+  end.
 
-Lemma lctz_ge_0 (default : Z) (x : Z) : 0 <= default ->
-    0 <= lctz default x.
+Lemma Pos_size_nat_size (p : positive) : Pos.to_nat (Pos.size p) = Pos.size_nat p.
+Proof. induction p; cbn [Pos.size Pos.size_nat]; rewrite ?Pos2Nat.inj_succ; lia. Qed.
+
+Lemma Z_size_sub (a b : Z) : a >= 0 -> b >= 0 -> b <= a -> Z_size (a - b) <= Z_size a.
 Proof.
-    intros H. destruct x; cbv [lctz]; try lia.
+  intros; destruct (Z.eq_dec (a - b) 0) as [-> | ?]; [destruct a; cbv [Z_size]; lia |].
+  destruct (a - b) eqn:?, a eqn:?; try lia; cbv [Z_size].
+  assert ((p <= p0)%positive) by lia.
+  apply Pos2Z.pos_le_pos, Pos2Nat.inj_le; rewrite !Pos_size_nat_size.
+  destruct (Pos.lt_total p p0) as [? | [-> | ?]]; [apply Pos.size_nat_monotone; auto | lia | lia].
 Qed.
 
-Lemma le_mul_1 (a b : Z) : (0 <= a) -> (0 <= b) -> 1 <= a * b -> 1 <= a.
-Proof. lia. Qed.
+Lemma Z_size_mul_pow2 (a n : Z) : a > 0 -> 0 <= n -> Z_size (a * 2 ^ n) = Z_size a + n.
+Proof.
+  intros Ha Hn; pattern n; apply natlike_ind; [| | exact Hn]; [rewrite Z.pow_0_r, Z.mul_1_r; lia |].
+  intros x Hx IH; rewrite Z.pow_succ_r, Z.mul_assoc, (Z.mul_comm a 2), <- Z.mul_assoc by lia.
+  replace (Z_size a + Z.succ x) with (Z_size (a * 2 ^ x) + 1) by lia.
+  assert (a * 2 ^ x > 0) by (pose proof (Z.pow_pos_nonneg 2 x); nia).
+  destruct (a * 2 ^ x) eqn:?; try lia; change (2 * Z.pos p) with (Z.pos p~0); cbv [Z_size]; cbn [Pos.size]; rewrite Pos2Z.inj_succ; lia.
+Qed.
+
+Lemma Z_size_le (n x : Z) : 0 <= n -> 0 <= x < 2^n -> Z_size x <= n.
+Proof.
+  intros Hn Hx; destruct x as [| p | p]; [cbv [Z_size]; lia | | lia]; cbn [Z_size].
+  pose proof (Pos.size_le p) as Hle; apply Pos2Z.pos_le_pos in Hle.
+  rewrite (Pos2Z.inj_pow 2 (Pos.size p)), (Pos2Z.inj_xO p) in Hle; change (Z.pos 2) with 2 in Hle.
+  assert (2 ^ Z.pos (Pos.size p) < 2 ^ Z.succ n) by (rewrite (Z.pow_succ_r 2 n) by lia; lia).
+  rewrite <- (Z.pow_lt_mono_r_iff 2) in H by lia; lia.
+Qed.
+
+Lemma Z_size_nonneg (x : Z) : 0 <= Z_size x.
+Proof. destruct x; cbv [Z_size]; lia. Qed.
+
+Lemma lctz_ge_0 (default x : Z) : 0 <= default -> 0 <= lctz default x.
+Proof. intros; destruct x; cbv [lctz]; lia. Qed.
 
 Lemma lctz_odd (default a : Z) : a >= 0 -> a mod 2 = 1 -> lctz default a = 0.
 Proof.
-    intros H_ge H_mod.
-    destruct a as [ | p | p ].
-    { cbn in H_mod; discriminate. }
-    { destruct p as [ p' | p' | ]; [ reflexivity | | reflexivity ].
-    rewrite Pos2Z.pos_xO, Z.mul_comm, Z.mod_mul in H_mod by lia.
-    discriminate. }
-    { lia. }
+  intros; destruct a as [| [p|p|] | p]; try reflexivity; try (cbn in *; lia).
+  rewrite Pos2Z.pos_xO, Z.mul_comm, Z.mod_mul in H0 by lia; discriminate.
 Qed.
 
-Lemma gcd_odd_iff (a b : Z) : Z.gcd a b mod 2 = 1 <-> a mod 2 = 1 \/ b mod 2 = 1.
+Lemma lctz_ge_1 (default z : Z) : 0 <= default -> z > 0 -> z mod 2 = 0 -> 1 <= lctz default z.
 Proof.
-    split; intros H.
-    {   destruct (mod2_cases a), (mod2_cases b);
-        match goal with
-        | [H : ?a mod 2 = 1 |- ?a mod 2 = 1 \/ _] => left; assumption
-        | [H : ?b mod 2 = 1 |- _ \/ ?b mod 2 = 1] => right; assumption
-        | [H1 : ?a mod 2 = 0, H2 : ?b mod 2 = 0, H : Z.gcd ?a ?b mod 2 = 1 |- _] =>
-            rewrite Z.mod_divide in H1,H2 by lia;
-            rewrite (Z.cong_iff_ex _ 1) in H by lia; destruct H as [n Hn];
-            pose proof (H' := Z.gcd_greatest _ _ _ H1 H2); destruct H' as [z Hz];
-            lia
-        end.
-    }
-    {
-        destruct (mod2_cases (Z.gcd a b)) as [Hgcd | Hgcd]; trivial.
-        rewrite Z.mod_divide, Z.gcd_divide_iff in Hgcd by lia.
-        rewrite ?(Z.cong_iff_ex _ 1) in H.
-        destruct H as [ [? ?] | [? ?]], Hgcd as [[? ?] [? ?]];
-        lia.
-    }
+  intros; pose proof (lctz_ge_0 default z H); destruct (Z.eq_dec (lctz default z) 0) as [Heq0 | ?]; [|lia].
+  destruct (lctz_spec default z ltac:(lia)) as [k [Hk Hz]]; rewrite Heq0, Z.pow_0_r, Z.mul_1_r in Hz; congruence.
+Qed.
+
+Lemma lctz_even_min63 (default z : Z) :
+  0 <= default -> z > 0 -> (z / 2 ^ Z.min (lctz default z) 63) mod 2 = 0 ->
+  Z.min (lctz default z) 63 = 63.
+Proof.
+  intros; pose proof (lctz_ge_0 default z H).
+  destruct (Z_lt_ge_dec (lctz default z) 63); [|rewrite Z.min_r by lia; reflexivity].
+  rewrite Z.min_l in H1 by lia; destruct (lctz_spec default z ltac:(lia)) as [k [Hk Hz]].
+  pattern z at 1 in H1; rewrite Hz, Z.div_mul in H1 by (apply Z.pow_nonzero; lia); congruence.
 Qed.
 
 Lemma gcd_double_l (a b : Z) : b mod 2 = 1 -> Z.gcd (2 * a) b = Z.gcd a b.
 Proof.
-    intros H; destruct a as [ | p | p], b as [| p' | p'];
-    try (discriminate || reflexivity);
-    (* Trivial cases and contradictions *)
-    rewrite <- ?Pos2Z.pos_xO, <- ?Pos2Z.neg_xO;
-    destruct p' as [p' | p' | ];
-    try match goal with
-    | [H : _ (xO ?p) mod 2 = 1 |- _] =>
-        rewrite ?(Pos2Z.pos_xO p), ?(Pos2Z.neg_xO p),
-                Z_mod_mult' in H
-    | [H : _ (xH) mod 2 = 1 |- _] =>
-        rewrite ?(Z.gcd_comm _ 1), ?(Z.gcd_comm _ (-1))
-    end;
-    discriminate || reflexivity.
+  intros H; destruct a as [| p | p], b as [| [q|q|] | [q|q|]];
+  try (discriminate || reflexivity);
+  try (rewrite Pos2Z.pos_xO, Z.mul_comm, Z.mod_mul in H by lia; discriminate);
+  try (rewrite Pos2Z.neg_xO, Z.mul_comm, Z.mod_mul in H by lia; discriminate);
+  try rewrite <- Pos2Z.pos_xO; try rewrite <- Pos2Z.neg_xO;
+  try rewrite !(Z.gcd_comm _ 1); try rewrite !(Z.gcd_comm _ (-1)); reflexivity.
 Qed.
 
-Lemma gcd_double_r (a b : Z) : a mod 2 = 1 -> Z.gcd a (2 * b) = Z.gcd a b.
+Lemma gcd_pow2_l (n a b : Z) : n >= 0 -> b mod 2 = 1 -> Z.gcd (a * 2 ^ n) b = Z.gcd a b.
 Proof.
-    intros H; rewrite !(Z.gcd_comm a); eapply gcd_double_l; assumption.
-Qed.
-
-Lemma gcd_pow2_l (n a b : Z) : n >= 0 -> b mod 2 = 1 -> Z.gcd (a * (2 ^ n)) b = Z.gcd a b.
-Proof.
-    intros Hn Hb.
-    rewrite Z.mul_comm.
-    assert (0 <= n) as Hle by lia.
-    revert Hn.
-    pattern n; apply natlike_ind; [ | | exact Hle ].
-    { intros _.
-    rewrite Z.pow_0_r, Z.mul_1_l.
-    reflexivity. }
-    { intros x Hx IH _.
-    rewrite Z.pow_succ_r by lia.
-    rewrite <- Z.mul_assoc.
-    rewrite gcd_double_l by assumption.
-    apply IH; lia. }
+  intros Hn Hb; rewrite Z.mul_comm; pattern n; apply natlike_ind; [| | lia].
+  - rewrite Z.pow_0_r, Z.mul_1_l; reflexivity.
+  - intros x Hx IH; rewrite Z.pow_succ_r, <- Z.mul_assoc, gcd_double_l by lia; exact IH.
 Qed.
 
 Lemma gcd_pow2_r (n a b : Z) : n >= 0 -> a mod 2 = 1 -> Z.gcd a (b * 2 ^ n) = Z.gcd a b.
-Proof.
-    intros Hn Ha.
-    rewrite !(Z.gcd_comm a).
-    eapply gcd_pow2_l; assumption.
-Qed.
-
-(* --- Helper Lemmas for Pos.size --- *)
-
-Lemma Pos_size_nat_size (p : positive) :
-    Pos.to_nat (Pos.size p) = Pos.size_nat p.
-Proof.
-    induction p as [ p IH | p IH | ]; cbn [Pos.size Pos.size_nat]; auto.
-    { rewrite Pos2Nat.inj_succ, IH. reflexivity. }
-    { rewrite Pos2Nat.inj_succ, IH. reflexivity. }
-Qed.
-
-Lemma Pos_size_monotone (p q : positive) :
-    (p <= q)%positive -> (Pos.size p <= Pos.size q)%positive.
-Proof.
-    intros Hle.
-    apply Pos2Nat.inj_le.
-    rewrite !Pos_size_nat_size.
-    destruct (Pos.lt_total p q) as [Hlt | [Heq | Hgt]].
-    { apply Pos.size_nat_monotone; assumption. }
-    { subst; reflexivity. }
-    { lia. }
-Qed.
-
-(* --- Lemma 1: Z_size (a - b) <= Z_size a --- *)
-
-Lemma Z_size_sub (a b : Z) :
-    a >= 0 -> b >= 0 -> b <= a -> Z_size (a - b) <= Z_size a.
-Proof.
-    intros Ha Hb Hba.
-    destruct (Z.eq_dec (a - b) 0) as [Heq | Hneq].
-    { rewrite Heq.
-    cbv [Z_size].
-    destruct a as [ | pa | pa ]; lia. }
-    { assert (0 < a - b) by lia.
-    assert (0 < a) by lia.
-    destruct (a - b) as [ | pd | pd ] eqn:Eab; [ lia | | lia ].
-    destruct a as [ | pa | pa ] eqn:Ea; [ lia | | lia ].
-    cbv [Z_size].
-    assert (Hle : (pd <= pa)%positive) by lia.
-    apply Pos_size_monotone in Hle.
-    lia. }
-Qed.
-
-(* --- Helper Lemmas for Z_size (2 * z) --- *)
-
-Lemma Z_size_pos_double (p : positive) :
-    Z_size (2 * Z.pos p) = Z_size (Z.pos p) + 1.
-Proof.
-    change (2 * Z.pos p) with (Z.pos (p~0)).
-    cbv [Z_size].
-    cbn [Pos.size].
-    rewrite Pos2Z.inj_succ.
-    lia.
-Qed.
-
-Lemma Z_size_double (z : Z) :
-    z > 0 -> Z_size (2 * z) = Z_size z + 1.
-Proof.
-    intros Hz.
-    destruct z as [ | p | p ]; [ lia | | lia ].
-    apply Z_size_pos_double.
-Qed.
-
-(* --- Lemma 2: Z_size (a * 2^n) = Z_size a + n --- *)
-
-Lemma Z_size_mul_pow2 (a n : Z) :
-    a > 0 -> 0 <= n -> Z_size (a * (2 ^ n)) = Z_size a + n.
-Proof.
-    intros Ha Hn.
-    pattern n; apply natlike_ind; [ | | exact Hn ].
-    { rewrite Z.pow_0_r, Z.mul_1_r. lia. }
-    { intros x Hx IH.
-    rewrite Z.pow_succ_r by lia.
-    replace (a * (2 * 2 ^ x)) with (2 * (a * 2 ^ x)) by ring.
-    assert (Hpos : a * 2 ^ x > 0) by nia.
-    rewrite Z_size_double by exact Hpos.
-    rewrite IH.
-    lia. }
-Qed.
-
-Lemma mul_le_mono_diag_r (a b : Z) : 0 <= a -> 1 <= b -> a <= a * b.
-Proof.
-    intros Ha Hb.
-    nia.
-Qed.
-
-Lemma le_mul_pow2_r (a b : Z) : 0 <= a -> 0 <= b -> a <= a * (2 ^ b).
-Proof.
-    intros Ha Hb.
-    apply mul_le_mono_diag_r; [ exact Ha | ].
-    pose proof (Z.pow_pos_nonneg 2 b ltac:(lia) Hb).
-    lia.
-Qed.
+Proof. intros; rewrite !(Z.gcd_comm a); apply gcd_pow2_l; auto. Qed.
 
 Lemma mod_pow2_inv (m a b n : Z) : m > 1 -> m mod 2 = 1 -> n >= 0 ->
-    a * 2^n mod m = b * 2^n mod m -> a mod m = b mod m.
+  a * 2^n mod m = b * 2^n mod m -> a mod m = b mod m.
 Proof.
-    intros.
-    assert (Z.coprime (2^n) m).
-    {
-        cbv [Z.coprime].
-        rewrite <- (Z.mul_1_l (2^n)), gcd_pow2_l, Z.gcd_1_l by lia.
-        eauto.
-    }
-    rewrite <- (Z.mul_1_r a), <- (Z.mul_1_r b). Z.push_mod.
-    rewrite <- (Z.invmod_coprime (2^n) m) by (try lia; assumption).
-    Z.push_pull_mod. rewrite !(Z.mul_comm _ (2^n)), !Z.mul_assoc. Z.push_mod_step. rewrite H2.
-    Z.pull_mod. eauto.
+  intros; assert (Hg : Z.gcd (2^n) m = 1) by (rewrite <- (Z.mul_1_l (2^n)), gcd_pow2_l, Z.gcd_1_l by lia; auto).
+  destruct (Z.gcd_bezout (2^n) m 1 Hg) as [u [v Huv]].
+  replace a with (a * (u * 2^n + v * m)) by (rewrite Huv; ring).
+  replace b with (b * (u * 2^n + v * m)) by (rewrite Huv; ring).
+  replace (a * (u * 2^n + v * m)) with (a * 2^n * u + a * v * m) by ring.
+  replace (b * (u * 2^n + v * m)) with (b * 2^n * u + b * v * m) by ring.
+  rewrite !Z_mod_plus_full; Z.push_mod_step; rewrite H2; Z.pull_mod; reflexivity.
 Qed.
 
-Lemma Z_size_le : forall n x,
-    0 <= n ->
-    0 <= x < 2^n ->
-    Z_size x <= n.
+Lemma shrtz_cong (v v' u u' b0 M s : Z) :
+  M > 1 -> M mod 2 = 1 -> s >= 0 ->
+  v' * 2^s = v -> u' * 2^s mod M = u mod M ->
+  v mod M = (u * b0) mod M ->
+  v' mod M = (u' * b0) mod M.
 Proof.
-    intros n x Hn Hx.
-    destruct x as [ | p | p ].
-    { (* x = 0 *)
-    simpl.
-    lia. }
-    { (* x = Z.pos p *)
-    simpl.
-    pose proof (Pos.size_le p) as Hle.
-    apply Pos2Z.pos_le_pos in Hle.
-    rewrite (Pos2Z.inj_pow 2 (Pos.size p)) in Hle.
-    rewrite (Pos2Z.inj_xO p) in Hle.
-    change (Z.pos 2) with 2 in Hle.
-    assert (Hsucc : 2 ^ (Z.pos (Pos.size p)) < 2 ^ (Z.succ n)).
-    { rewrite (Z.pow_succ_r 2 n) by lia.
-        lia. }
-    rewrite <- (Z.pow_lt_mono_r_iff 2) in Hsucc by lia.
-    lia. }
-    { (* x = Z.neg p *)
-    lia. }
+  intros HM Hodd Hs Hv Hu Hcong.
+  eapply mod_pow2_inv with (n := s); eauto.
+  rewrite Hv, Hcong; replace (u' * b0 * 2 ^ s) with (u' * 2 ^ s * b0) by ring.
+  rewrite <- (Z.mul_mod_idemp_l (u' * 2 ^ s)), Hu, Z.mul_mod_idemp_l by lia; reflexivity.
 Qed.
 
-Lemma Z_size_nonneg : forall x, 0 <= Z_size x.
-Proof. destruct x; cbv [Z_size]; lia. Qed.
-
-Lemma pow2_bound_OO : forall s k : Z,
-  0 <= k -> 1 <= s ->
-  2 ^ (s + 1) + 2 * k + 4 <= 2 ^ s * (3 + k + s).
+Lemma pow2_bound_OO (s k : Z) : 0 <= k -> 1 <= s -> 2 ^ (s + 1) + 2 * k + 4 <= 2 ^ s * (3 + k + s).
 Proof.
-  intros s k Hk Hs.
-  assert (Hs_cases : s = 1 \/ 2 <= s) by lia.
-  destruct Hs_cases as [Hs1 | Hs2].
-  { subst s. replace (1 + 1) with 2 by lia.
-    change (2 ^ 2) with 4. change (2 ^ 1) with 2. lia. }
-  { assert (Hpow_step : 2 ^ (s + 1) = 2 * 2 ^ s).
-    { replace (s + 1) with (1 + s) by lia. rewrite Z.pow_add_r; [|lia|lia].
-      change (2 ^ 1) with 2. lia. }
-    rewrite Hpow_step.
-    assert (2 * k + 4 <= 2 ^ s * (1 + k + s)).
-    { assert (2 <= 2 ^ s).
-      { transitivity (2 ^ 1); [lia|].
-        apply Z.pow_le_mono_r; lia. }
-      assert (2 * k <= 2 ^ s * k) by (apply Z.mul_le_mono_nonneg_r; lia).
-      assert (H4 : 4 <= 2 ^ s * (1 + s)).
-      { assert (4 <= 2 ^ s).
-        { transitivity (2 ^ 2); [lia|].
-          apply Z.pow_le_mono_r; lia. }
-        assert (1 <= 1 + s) by lia.
-        rewrite <- (Z.mul_1_r 4) at 1.
-        apply Z.mul_le_mono_nonneg; lia. }
-      replace (2 ^ s * (1 + k + s)) with (2 ^ s * k + 2 ^ s * (1 + s)) by ring.
-      lia. }
-    replace (2 ^ s * (3 + k + s)) with (2 * 2 ^ s + 2 ^ s * (1 + k + s)) by ring.
-    lia. }
+  intros; destruct (Z.eq_dec s 1) as [-> | ?]; [lia |].
+  replace (2 ^ (s + 1)) with (2 * 2 ^ s) by (rewrite Z.pow_add_r by lia; lia).
+  assert (4 <= 2 ^ s) by (transitivity (2 ^ 2); [lia | apply Z.pow_le_mono_r; lia]); nia.
 Qed.
 
-(** ** Transition Group 1: OO -> OO (Odd/Odd Division Step) *)
-
-Lemma bound_OO_to_OO_shifted : forall X X_old Y_old M k_old k_new s : Z,
+Lemma bound_OO_to_OO_shifted (X X_old Y_old M k_old k_new s : Z) :
   0 <= M -> 0 <= k_old -> 1 <= s -> k_old + s <= k_new ->
-  2 * X_old <= (3 + k_old) * M ->
-  2 * Y_old <= (3 + k_old) * M ->
+  2 * X_old <= (3 + k_old) * M -> 2 * Y_old <= (3 + k_old) * M ->
   X * 2^s <= X_old + Y_old + (2^s - 1) * M ->
   2 * X <= (3 + k_new) * M.
 Proof.
-  intros X X_old Y_old M k_old k_new s HM Hk0 Hs Hks HX_old HY_old HX.
-  assert (Hsum : 2 * (X_old + Y_old) <= 2 * (3 + k_old) * M) by lia.
-  assert (Hscale : 2 * (X * 2^s) <= 2 * (X_old + Y_old) + 2 * (2^s - 1) * M) by lia.
-  assert (HX2 : 2 * X * 2^s <= (2 * (3 + k_old) + 2 * (2^s - 1)) * M).
-  { replace (2 * X * 2^s) with (2 * (X * 2^s)) by ring.
-    replace ((2 * (3 + k_old) + 2 * (2^s - 1)) * M) with (2 * (3 + k_old) * M + 2 * (2^s - 1) * M) by ring.
-    lia. }
-  assert (Hfactor : 2 * (3 + k_old) + 2 * (2^s - 1) <= 2^s * (3 + k_new)).
-  { assert (Hpow_step : 2 * (3 + k_old) + 2 * (2^s - 1) = 2^(s+1) + 2*k_old + 4).
-    { assert (2 * (2^s - 1) = 2^(s+1) - 2).
-      { replace (s + 1) with (1 + s) by lia. rewrite Z.pow_add_r; [|lia|lia].
-        change (2^1) with 2. lia. }
-      lia. }
-    rewrite Hpow_step.
-    assert (Hpow : 2^(s+1) + 2*k_old + 4 <= 2^s * (3 + k_old + s)) by (apply pow2_bound_OO; lia).
-    assert (3 + k_old + s <= 3 + k_new) by lia.
-    assert (2^s * (3 + k_old + s) <= 2^s * (3 + k_new)).
-    { apply Z.mul_le_mono_nonneg_l; [|lia].
-      apply Z.pow_nonneg. lia. }
-    lia. }
-  assert (2 * X * 2^s <= (3 + k_new) * M * 2^s).
-  { assert (Hmul : (2 * (3 + k_old) + 2 * (2^s - 1)) * M <= (2^s * (3 + k_new)) * M).
-    { apply Z.mul_le_mono_nonneg_r; lia. }
-    replace ((2^s * (3 + k_new)) * M) with ((3 + k_new) * M * 2^s) in Hmul by ring.
-    lia. }
-  assert (Hpos : 0 < 2^s) by (apply Z.pow_pos_nonneg; lia).
-  apply (Z.mul_le_mono_pos_r (2 * X) ((3 + k_new) * M) (2^s) Hpos) in H.
-  exact H.
+  intros; pose proof (pow2_bound_OO s k_old ltac:(lia) ltac:(lia)).
+  replace (2 ^ (s + 1)) with (2 * 2 ^ s) in * by (rewrite Z.pow_add_r by lia; lia); nia.
 Qed.
 
-Lemma bound_OO_to_OO_unchanged : forall Y Y_old M k_old k_new : Z,
-  0 <= M ->
-  k_old <= k_new ->
-  Y <= Y_old ->
-  2 * Y_old <= (3 + k_old) * M ->
-  2 * Y <= (3 + k_new) * M.
-Proof.
-  intros Y Y_old M k_old k_new HM Hk HY HY_old.
-  assert (2 * Y <= (3 + k_old) * M) by lia.
-  assert ((3 + k_old) * M <= (3 + k_new) * M).
-  { apply Z.mul_le_mono_nonneg_r; lia. }
-  lia.
-Qed.
-
-(** ** Transition Group 2: OO -> OE and OO -> EO (Entering Mixed Parity) *)
-
-Lemma bound_OO_to_OE_shifted : forall X X_old Y_old M k_old k_new : Z,
-  0 <= M ->
-  k_old + 4 <= k_new ->
-  2 * X_old <= (3 + k_old) * M ->
-  2 * Y_old <= (3 + k_old) * M ->
-  2^63 * X <= X_old + Y_old + (2^63 - 1) * M ->
+Lemma bound_OO_to_OE_shifted (X X_old Y_old M k_old k_new : Z) :
+  0 <= M -> k_old + 4 <= k_new ->
+  2 * X_old <= (3 + k_old) * M -> 2 * Y_old <= (3 + k_old) * M ->
+  X * 2^63 <= X_old + Y_old + (2^63 - 1) * M ->
   2^63 * X <= (2^63 + k_new - 2) * M.
-Proof.
-  intros X X_old Y_old M k_old k_new HM Hk HX_old HY_old HX.
-  assert (Hsum : 2 * (X_old + Y_old) <= 2 * (3 + k_old) * M) by lia.
-  assert (Hsum_div : X_old + Y_old <= (3 + k_old) * M) by lia.
-  assert (Hbound : 2^63 * X <= (2^63 + k_old + 2) * M).
-  { replace ((2^63 + k_old + 2) * M) with ((3 + k_old) * M + (2^63 - 1) * M) by ring.
-    lia. }
-  assert (Hmono : (2^63 + k_old + 2) * M <= (2^63 + k_new - 2) * M).
-  { apply Z.mul_le_mono_nonneg_r; lia. }
-  lia.
-Qed.
+Proof. intros; nia. Qed.
 
-Lemma bound_OO_to_OE_unchanged : forall Y Y_old M k_old k_new : Z,
-  0 <= M ->
-  k_old + 3 <= k_new ->
-  Y <= Y_old ->
-  2 * Y_old <= (3 + k_old) * M ->
-  2 * Y <= (2 + k_new - 2) * M.
-Proof.
-  intros Y Y_old M k_old k_new HM Hk HY HY_old.
-  assert (2 * Y <= (3 + k_old) * M) by lia.
-  assert ((3 + k_old) * M <= (2 + k_new - 2) * M).
-  { apply Z.mul_le_mono_nonneg_r; lia. }
-  lia.
-Qed.
+Lemma bound_OE_to_OO (X3 X4 Z_new M k_old k_new : Z) :
+  0 <= M -> k_old <= 513 -> k_old <= k_new -> Z_new <= X3 + X4 ->
+  2^63 * X3 <= (2^63 + k_old - 2) * M -> 2 * X4 <= (2 + k_old - 2) * M ->
+  2 * Z_new <= (3 + k_new) * M.
+Proof. intros; nia. Qed.
 
-Lemma bound_OO_to_EO_shifted : forall Y X_old Y_old M k_old k_new : Z,
-  0 <= M ->
-  k_old + 4 <= k_new ->
-  2 * X_old <= (3 + k_old) * M ->
-  2 * Y_old <= (3 + k_old) * M ->
-  2^63 * Y <= X_old + Y_old + (2^63 - 1) * M ->
-  2^63 * Y <= (2^63 + k_new - 2) * M.
-Proof.
-  intros Y X_old Y_old M k_old k_new HM Hk HX_old HY_old HY.
-  apply bound_OO_to_OE_shifted with (X_old := X_old) (Y_old := Y_old) (k_old := k_old); assumption.
-Qed.
-
-Lemma bound_OO_to_EO_unchanged : forall X X_old M k_old k_new : Z,
-  0 <= M ->
-  k_old + 3 <= k_new ->
-  X <= X_old ->
-  2 * X_old <= (3 + k_old) * M ->
-  2 * X <= (2 + k_new - 2) * M.
-Proof.
-  intros X X_old M k_old k_new HM Hk HX HX_old.
-  apply bound_OO_to_OE_unchanged with (Y_old := X_old) (k_old := k_old); assumption.
-Qed.
-
-(** ** Transition Group 3: OE -> OO and EO -> OO (Returning to Odd/Odd) *)
-
-Lemma bound_OE_to_OO : forall X3 X4 M k_old k_new : Z,
-  0 <= M ->
-  k_old <= 2^62 + 2 ->
-  k_old <= k_new ->
-  2^63 * X3 <= (2^63 + k_old - 2) * M ->
-  2 * X4 <= (2 + k_old - 2) * M ->
-  2 * (X3 + X4) <= (3 + k_new) * M.
-Proof.
-  intros X3 X4 M k_old k_new HM Hk_max Hkn HX3 HX4.
-  assert (Hpos : 0 < 2^62) by (apply Z.pow_pos_nonneg; lia).
-  apply (Z.mul_le_mono_pos_l (2 * (X3 + X4)) ((3 + k_new) * M) (2^62) Hpos).
-  replace (2^62 * (2 * (X3 + X4))) with (2^63 * X3 + 2^62 * (2 * X4)) by ring.
-  replace (2^62 * ((3 + k_new) * M)) with ((2^63 + 2^62 + 2^62 * k_new) * M) by ring.
-  assert (Hsum : 2^63 * X3 + 2^62 * (2 * X4) <= (2^63 + k_old - 2 + 2^62 * (2 + k_old - 2)) * M).
-  { replace ((2^63 + k_old - 2 + 2^62 * (2 + k_old - 2)) * M)
-      with ((2^63 + k_old - 2) * M + 2^62 * ((2 + k_old - 2) * M)) by ring.
-    assert (Hscaled4 : 2^62 * (2 * X4) <= 2^62 * ((2 + k_old - 2) * M)).
-    { apply Z.mul_le_mono_nonneg_l; [lia | exact HX4]. }
-    lia. }
-  etransitivity; [exact Hsum |].
-  apply Z.mul_le_mono_nonneg_r; [exact HM |].
-  replace (2^63 + k_old - 2 + 2^62 * (2 + k_old - 2))
-    with (2^63 + 2^62 * k_old + (k_old - 2)) by ring.
-  replace (2^63 + 2^62 + 2^62 * k_new)
-    with (2^63 + 2^62 * k_old + (2^62 + 2^62 * (k_new - k_old))) by ring.
-  assert (0 <= 2^62 * (k_new - k_old)).
-  { apply Z.mul_nonneg_nonneg; lia. }
-  lia.
-Qed.
-
-Lemma bound_OE_to_OO_shifted : forall X X_old M k_old k_new s : Z,
-  0 <= M ->
-  0 <= k_old ->
-  1 <= s ->
-  k_old <= k_new ->
+Lemma bound_OE_to_OO_shifted (X X_old M k_old k_new s : Z) :
+  0 <= M -> 0 <= k_old -> 1 <= s -> k_old <= k_new ->
   2^63 * X_old <= (2^63 + k_old - 2) * M ->
   X * 2^s <= X_old + (2^s - 1) * M ->
   2 * X <= (3 + k_new) * M.
 Proof.
-  intros X X_old M k_old k_new s HM Hk0 Hs Hkn HX_old HX.
-  assert (Hpos_s : 0 < 2^s) by (apply Z.pow_pos_nonneg; lia).
-  assert (Hpos_63 : 0 < 2^63) by (apply Z.pow_pos_nonneg; lia).
-  assert (Hpos : 0 < 2^63 * 2^s) by (apply Z.mul_pos_pos; lia).
-  apply (Z.mul_le_mono_pos_r (2 * X) ((3 + k_new) * M) (2^63 * 2^s) Hpos).
-  assert (Hscale : (2 * X) * (2^63 * 2^s) <= 2 * (2^63 * X_old) + 2 * 2^63 * (2^s - 1) * M).
-  { assert (Hstep : (2 * 2^63) * (X * 2^s) <= (2 * 2^63) * (X_old + (2^s - 1) * M)).
-    { apply Z.mul_le_mono_nonneg_l; lia. }
-    replace ((2 * X) * (2^63 * 2^s)) with ((2 * 2^63) * (X * 2^s)) by ring.
-    replace (2 * (2^63 * X_old) + 2 * 2^63 * (2^s - 1) * M)
-      with ((2 * 2^63) * (X_old + (2^s - 1) * M)) by ring.
-    exact Hstep. }
-  etransitivity; [exact Hscale |].
-  assert (Hsum : 2 * (2^63 * X_old) + 2 * 2^63 * (2^s - 1) * M <= (2 * 2^63 * 2^s + 2 * k_old - 4) * M).
-  { replace ((2 * 2^63 * 2^s + 2 * k_old - 4) * M)
-      with (2 * ((2^63 + k_old - 2) * M) + 2 * 2^63 * (2^s - 1) * M) by ring.
-    lia. }
-  etransitivity; [exact Hsum |].
-  replace ((3 + k_new) * M * (2^63 * 2^s))
-    with ((2^63 * 2^s * (3 + k_new)) * M) by ring.
-  apply Z.mul_le_mono_nonneg_r; [exact HM |].
-  assert (Hpow_s : 2 <= 2^s).
-  { transitivity (2^1); [lia |].
-    apply Z.pow_le_mono_r; lia. }
-  assert (Hk_scale : 2 * k_old <= (2^63 * 2^s) * k_new).
-  { assert (2 * k_old <= 2 * k_new) by lia.
-    assert (2 * k_new <= (2^63 * 2^s) * k_new).
-    { apply Z.mul_le_mono_nonneg_r; lia. }
-    lia. }
-  replace (2^63 * 2^s * (3 + k_new))
-    with (2 * 2^63 * 2^s + 2^63 * 2^s + (2^63 * 2^s) * k_new) by ring.
-  lia.
+  intros; assert (2 <= 2^s) by (transitivity (2^1); [lia | apply Z.pow_le_mono_r; lia]); nia.
 Qed.
 
-Lemma bound_OE_to_OO_unchanged : forall X4 M k_old k_new : Z,
-  0 <= M ->
-  k_old <= k_new ->
-  2 * X4 <= (2 + k_old - 2) * M ->
-  2 * X4 <= (3 + k_new) * M.
-Proof.
-  intros X4 M k_old k_new HM Hkn HX4.
-  assert (2 * X4 <= k_old * M) by lia.
-  assert (k_old * M <= (3 + k_new) * M).
-  { apply Z.mul_le_mono_nonneg_r; lia. }
-  lia.
-Qed.
-
-Lemma bound_EO_to_OO : forall X3 X4 M k_old k_new : Z,
-  0 <= M ->
-  k_old <= 2^62 + 2 ->
-  k_old <= k_new ->
-  2 * X3 <= (2 + k_old - 2) * M ->
-  2^63 * X4 <= (2^63 + k_old - 2) * M ->
-  2 * (X3 + X4) <= (3 + k_new) * M.
-Proof.
-  intros X3 X4 M k_old k_new HM Hk_max Hkn HX3 HX4.
-  rewrite Z.add_comm.
-  apply bound_OE_to_OO with (k_old := k_old); assumption.
-Qed.
-
-Lemma bound_EO_to_OO_unchanged : forall X3 M k_old k_new : Z,
-  0 <= M ->
-  k_old <= k_new ->
-  2 * X3 <= (2 + k_old - 2) * M ->
-  2 * X3 <= (3 + k_new) * M.
-Proof.
-  intros X3 M k_old k_new HM Hkn HX3.
-  apply bound_OE_to_OO_unchanged with (k_old := k_old); assumption.
-Qed.
-
-(** ** Transition Group 4: OE -> OE and EO -> EO (Remaining in Mixed Parity) *)
-
-Lemma bound_OE_to_OE_shifted : forall X X_old M k_old k_new : Z,
-  0 <= M ->
-  0 <= k_old ->
-  k_old <= 2^63 + 2 ->
-  k_old + 3 <= k_new ->
+Lemma bound_OE_to_OE_shifted (X X_old M k_old k_new : Z) :
+  0 <= M -> 0 <= k_old -> k_old <= 512 -> k_old + 3 <= k_new ->
   2^63 * X_old <= (2^63 + k_old - 2) * M ->
-  2^63 * X <= X_old + (2^63 - 1) * M ->
+  X * 2^63 <= X_old + (2^63 - 1) * M ->
   2^63 * X <= (2^63 + k_new - 2) * M.
+Proof. intros; nia. Qed.
+
+Lemma bound_OE_to_OE_sum (X3 X4 Z_new M k_old k_new : Z) :
+  0 <= M -> k_old <= 512 -> k_old + 3 <= k_new -> Z_new <= X3 + X4 ->
+  2^63 * X3 <= (2^63 + k_old - 2) * M -> 2 * X4 <= (2 + k_old - 2) * M ->
+  2 * Z_new <= (2 + k_new - 2) * M.
+Proof. intros; nia. Qed.
+
+Lemma bound_unchanged (Y Y_old M c_old c_new : Z) :
+  0 <= M -> c_old <= c_new -> Y <= Y_old -> 2 * Y_old <= c_old * M -> 2 * Y <= c_new * M.
+Proof. intros; nia. Qed.
+
+Definition xy_inv (a_ b_ x y M k : Z) : Prop :=
+  if b_ =? 0 then True
+  else if andb (a_ mod 2 =? 1) (b_ mod 2 =? 1) then
+    0 <= 2 * x <= (3 + k) * M /\ 0 <= 2 * y <= (3 + k) * M
+  else if andb (a_ mod 2 =? 1) (b_ mod 2 =? 0) then
+    0 <= 2^63 * x <= (2^63 + k - 2) * M /\ 0 <= 2 * y <= (2 + k - 2) * M
+  else
+    0 <= 2^63 * y <= (2^63 + k - 2) * M /\ 0 <= 2 * x <= (2 + k - 2) * M.
+
+Lemma xy_inv_swap (a_ b_ x y M k : Z) :
+  a_ > 0 -> b_ > 0 -> (a_ mod 2 = 1 \/ b_ mod 2 = 1) ->
+  xy_inv a_ b_ x y M k -> xy_inv b_ a_ y x M k.
 Proof.
-  intros X X_old M k_old k_new HM Hk0 Hk_max Hstep HX_old HX.
-  assert (Hpos : 0 < 2^63) by (apply Z.pow_pos_nonneg; lia).
-  apply (Z.mul_le_mono_pos_l (2^63 * X) ((2^63 + k_new - 2) * M) (2^63) Hpos).
-  assert (Hscale : 2^63 * (2^63 * X) <= 2^63 * X_old + 2^63 * (2^63 - 1) * M).
-  { assert (Hstep2 : 2^63 * (2^63 * X) <= 2^63 * (X_old + (2^63 - 1) * M)).
-    { apply Z.mul_le_mono_nonneg_l; lia. }
-    replace (2^63 * (X_old + (2^63 - 1) * M))
-      with (2^63 * X_old + 2^63 * (2^63 - 1) * M) in Hstep2 by ring.
-    exact Hstep2. }
-  etransitivity; [exact Hscale |].
-  assert (Hsum : 2^63 * X_old + 2^63 * (2^63 - 1) * M <= (2^63 + k_old - 2 + 2^63 * (2^63 - 1)) * M).
-  { replace ((2^63 + k_old - 2 + 2^63 * (2^63 - 1)) * M)
-      with ((2^63 + k_old - 2) * M + 2^63 * (2^63 - 1) * M) by ring.
-    lia. }
-  etransitivity; [exact Hsum |].
-  replace (2^63 * ((2^63 + k_new - 2) * M))
-    with ((2^63 * (2^63 + k_new - 2)) * M) by ring.
-  apply Z.mul_le_mono_nonneg_r; [exact HM |].
-  replace (2^63 + k_old - 2 + 2^63 * (2^63 - 1))
-    with (2^63 * 2^63 + (k_old - 2)) by ring.
-  replace (2^63 * (2^63 + k_new - 2))
-    with (2^63 * 2^63 + 2^63 * (k_new - 2)) by ring.
-  assert (k_old - 2 <= 2^63 * (k_new - 2)).
-  { assert (1 <= k_new - 2) by lia.
-    assert (2^63 <= 2^63 * (k_new - 2)).
-    { rewrite <- (Z.mul_1_r (2^63)) at 1.
-      apply Z.mul_le_mono_nonneg_l; lia. }
-    lia. }
-  lia.
+  intros Ha Hb Hodd; cbv [xy_inv].
+  destruct (b_ =? 0) eqn:Eb0; [rewrite Z.eqb_eq in Eb0; lia |].
+  destruct (a_ =? 0) eqn:Ea0; [rewrite Z.eqb_eq in Ea0; lia |].
+  destruct (mod2_cases a_) as [Ha_m | Ha_m], (mod2_cases b_) as [Hb_m | Hb_m];
+  rewrite Ha_m, Hb_m in *; cbn [Z.eqb Pos.eqb andb]; tauto || lia.
 Qed.
 
-Lemma bound_OE_to_OE_sum : forall X3 X4 M k_old k_new : Z,
-  0 <= M ->
-  k_old <= 2^62 + 2 ->
-  k_old + 3 <= k_new ->
-  2^63 * X3 <= (2^63 + k_old - 2) * M ->
-  2 * X4 <= (2 + k_old - 2) * M ->
-  2 * (X3 + X4) <= (2 + k_new - 2) * M.
+Lemma xy_inv_sum_lt_320 (a_ b_ x y M k : Z) :
+  b_ <> 0 -> 0 <= M < 2^256 -> 0 <= k <= 512 ->
+  (a_ mod 2 = 1 \/ b_ mod 2 = 1) ->
+  xy_inv a_ b_ x y M k ->
+  x + y < 2^320.
 Proof.
-  intros X3 X4 M k_old k_new HM Hk_max Hstep HX3 HX4.
-  assert (Hpos : 0 < 2^62) by (apply Z.pow_pos_nonneg; lia).
-  apply (Z.mul_le_mono_pos_l (2 * (X3 + X4)) ((2 + k_new - 2) * M) (2^62) Hpos).
-  replace (2^62 * (2 * (X3 + X4))) with (2^63 * X3 + 2^62 * (2 * X4)) by ring.
-  replace (2^62 * ((2 + k_new - 2) * M)) with ((2^62 * k_new) * M) by ring.
-  assert (Hsum : 2^63 * X3 + 2^62 * (2 * X4) <= (2^63 + k_old - 2 + 2^62 * (2 + k_old - 2)) * M).
-  { replace ((2^63 + k_old - 2 + 2^62 * (2 + k_old - 2)) * M)
-      with ((2^63 + k_old - 2) * M + 2^62 * ((2 + k_old - 2) * M)) by ring.
-    assert (Hscaled4 : 2^62 * (2 * X4) <= 2^62 * ((2 + k_old - 2) * M)).
-    { apply Z.mul_le_mono_nonneg_l; [lia | exact HX4]. }
-    lia. }
-  etransitivity; [exact Hsum |].
-  apply Z.mul_le_mono_nonneg_r; [exact HM |].
-  replace (2^63 + k_old - 2 + 2^62 * (2 + k_old - 2))
-    with (2^63 + 2^62 * k_old + (k_old - 2)) by ring.
-  replace (2^62 * k_new)
-    with (2^63 + 2^62 * k_old + 2^62 * (k_new - k_old - 2)) by ring.
-  assert (Hpow : 2^62 <= 2^62 * (k_new - k_old - 2)).
-  { rewrite <- (Z.mul_1_r (2^62)) at 1.
-    apply Z.mul_le_mono_nonneg_l; lia. }
-  lia.
+  intros Hb0 HM Hk Hodd Hinv; cbv [xy_inv] in Hinv.
+  destruct (b_ =? 0) eqn:Eb; [rewrite Z.eqb_eq in Eb; lia |].
+  destruct (mod2_cases a_) as [Ha | Ha], (mod2_cases b_) as [Hb | Hb];
+  rewrite Ha, Hb in *; cbn [Z.eqb Pos.eqb andb] in Hinv; revert Hinv HM Hk; clear; intros; nia.
 Qed.
 
-Lemma bound_EO_to_EO_shifted : forall Y Y_old M k_old k_new : Z,
-  0 <= M ->
-  0 <= k_old ->
-  k_old <= 2^63 + 2 ->
-  k_old + 3 <= k_new ->
-  2^63 * Y_old <= (2^63 + k_old - 2) * M ->
-  2^63 * Y <= Y_old + (2^63 - 1) * M ->
-  2^63 * Y <= (2^63 + k_new - 2) * M.
+Lemma le_mul_pow2_r (a b : Z) : 0 <= a -> 0 <= b -> a <= a * 2 ^ b.
+Proof. intros; assert (1 <= 2^b) by (pose proof (Z.pow_pos_nonneg 2 b); lia); clear H0; nia. Qed.
+
+Lemma xy_inv_step (v w v' w' u z u' z' s_v s_w M k_old k_new : Z) :
+  1 <= v <= w -> 0 <= M -> 0 <= k_old <= 512 ->
+  (v mod 2 = 1 \/ w mod 2 = 1) ->
+  xy_inv v w z u M k_old ->
+  s_v = Z.min (lctz 64 v) 63 -> v' * 2^s_v = v -> 0 <= u' -> u' * 2^s_v <= u + (2^s_v - 1) * M ->
+  s_w = Z.min (lctz 64 (w - v)) 63 -> w' * 2^s_w = w - v -> 0 <= z' -> z' * 2^s_w <= z + u + (2^s_w - 1) * M ->
+  k_old + (Z_size v + Z_size w) - (Z_size v' + Z_size w') <= k_new ->
+  0 <= v' /\ 0 <= w' ->
+  1 <= v' <= v /\ 0 <= w' < w /\ k_old <= k_new /\
+  Z.gcd v' w' = Z.gcd v w /\
+  (w' <> 0 -> (v' mod 2 = 1 \/ w' mod 2 = 1) /\ xy_inv v' w' z' u' M k_new).
 Proof.
-  intros Y Y_old M k_old k_new HM Hk0 Hk_max Hstep HY_old HY.
-  apply bound_OE_to_OE_shifted with (X_old := Y_old) (k_old := k_old); assumption.
+  intros Hvw HM Hk Hodd Hinv Hsv Hv' Hu'0 Hu' Hsw Hw' Hz'0 Hz' Hknew [Hv'0 Hw'0_ge].
+  assert (Hsv0 : 0 <= s_v) by (subst s_v; apply Z.min_glb; [apply lctz_ge_0 |]; lia).
+  assert (Hsw0 : 0 <= s_w) by (subst s_w; apply Z.min_glb; [apply lctz_ge_0 |]; lia).
+  assert (Hv'_le : v' <= v) by (rewrite <- Hv'; apply le_mul_pow2_r; lia).
+  assert (Hw'_le : w' <= w - v) by (rewrite <- Hw'; apply le_mul_pow2_r; lia).
+  assert (Hv'_ge1 : 1 <= v') by (destruct (Z.eq_dec v' 0) as [-> | ?]; [rewrite Z.mul_0_l in Hv'; lia | lia]).
+  assert (Hsz_v : Z_size v' + s_v = Z_size v) by (rewrite <- Hv', Z_size_mul_pow2 by lia; lia).
+  assert (Hsz_w : Z_size w' <= Z_size w).
+  { destruct (Z.eq_dec w' 0) as [-> | ?]; [pose proof (Z_size_nonneg w); cbn [Z_size]; lia |].
+    transitivity (Z_size (w - v)); [rewrite <- Hw', Z_size_mul_pow2 by lia; lia | apply Z_size_sub; lia]. }
+  assert (Hk_le : k_old <= k_new) by lia.
+  cbv [xy_inv] in Hinv |- *.
+  destruct (w =? 0) eqn:Ew0; [rewrite Z.eqb_eq in Ew0; lia |].
+  assert (Hsub_gcd : Z.gcd v (w - v) = Z.gcd v w) by apply Z.gcd_sub_diag_r.
+  destruct (mod2_cases v) as [Hv_m | Hv_m], (mod2_cases w) as [Hw_m | Hw_m];
+    [lia | | |]; rewrite Hv_m, Hw_m in *; cbn [Z.eqb Pos.eqb andb] in Hinv; destruct Hinv as [[? ?] [? ?]].
+  - (* Case 1: v even (0), w odd (1) -> w - v is odd (1) *)
+    assert (Hwv_odd : (w - v) mod 2 = 1) by (Z.push_mod; rewrite Hv_m, Hw_m; reflexivity).
+    assert (Hsw_eq0 : s_w = 0) by (subst s_w; rewrite lctz_odd by lia; reflexivity).
+    rewrite Hsw_eq0, Z.pow_0_r, !Z.mul_1_r in Hw', Hz'.
+    assert (Hw'_odd : w' mod 2 = 1) by congruence.
+    assert (Hgcd : Z.gcd v' w' = Z.gcd v w) by (rewrite <- (gcd_pow2_l s_v), Hv', Hw' by lia; exact Hsub_gcd).
+    assert (Hsv_ge1 : 1 <= s_v) by (subst s_v; apply Z.min_glb; [apply lctz_ge_1 |]; lia).
+    do 4 (split; [lia |]).
+    intros Hw'0; destruct (w' =? 0) eqn:Ew'0; [rewrite Z.eqb_eq in Ew'0; lia |].
+    split; [right; exact Hw'_odd |].
+    destruct (mod2_cases v') as [Hv'_m | Hv'_m]; rewrite Hv'_m, Hw'_odd; cbn [Z.eqb Pos.eqb andb].
+    + (* v' even: s_v = 63 *)
+      assert (Hs63 : s_v = 63) by (subst s_v; apply lctz_even_min63; try lia; replace (v / 2 ^ Z.min (lctz 64 v) 63) with v' by (eapply Zdiv_unique with (r := 0); lia); exact Hv'_m).
+      rewrite Hs63 in *; repeat split; try lia;
+      [ eapply bound_OE_to_OE_shifted with (X_old := u) (k_old := k_old); try eassumption; lia
+      | eapply bound_OE_to_OE_sum with (X3 := u) (X4 := z) (k_old := k_old); try eassumption; lia ].
+    + (* v' odd *)
+      repeat split; try lia;
+      [ eapply bound_OE_to_OO with (X3 := u) (X4 := z) (k_old := k_old); try eassumption; lia
+      | eapply bound_OE_to_OO_shifted with (X_old := u) (k_old := k_old) (s := s_v); try eassumption; lia ].
+  - (* Case 2: v odd (1), w even (0) -> v' = v (odd), w' = w - v (odd) *)
+    assert (Hwv_odd : (w - v) mod 2 = 1) by (Z.push_mod; rewrite Hv_m, Hw_m; reflexivity).
+    assert (Hsv_eq0 : s_v = 0) by (subst s_v; rewrite lctz_odd by lia; reflexivity).
+    assert (Hsw_eq0 : s_w = 0) by (subst s_w; rewrite lctz_odd by lia; reflexivity).
+    rewrite Hsv_eq0 in Hv', Hu'; rewrite Hsw_eq0 in Hw', Hz';
+    rewrite Z.pow_0_r, !Z.mul_1_r in Hv', Hw', Hu', Hz'.
+    subst v' w'; do 4 (split; [lia |]).
+    intros Hw'0; destruct (w - v =? 0) eqn:Ew'0; [rewrite Z.eqb_eq in Ew'0; lia |].
+    rewrite Hv_m, Hwv_odd; cbn [Z.eqb Pos.eqb andb]; split; [left; reflexivity | repeat split; try lia].
+    + eapply bound_OE_to_OO with (X3 := z) (X4 := u) (k_old := k_old); try eassumption; lia.
+    + eapply bound_unchanged with (Y_old := u) (c_old := 2 + k_old - 2); try eassumption; lia.
+  - (* Case 3: v odd (1), w odd (1) -> v' = v (odd), w - v is even (0) *)
+    assert (Hwv_even : (w - v) mod 2 = 0) by (Z.push_mod; rewrite Hv_m, Hw_m; reflexivity).
+    assert (Hsv_eq0 : s_v = 0) by (subst s_v; rewrite lctz_odd by lia; reflexivity).
+    rewrite Hsv_eq0, Z.pow_0_r, !Z.mul_1_r in Hv', Hu'; subst v'.
+    assert (Hgcd : Z.gcd v w' = Z.gcd v w) by (rewrite <- (gcd_pow2_r s_w), Hw' by lia; exact Hsub_gcd).
+    do 4 (split; [lia |]).
+    intros Hw'0; destruct (w' =? 0) eqn:Ew'0; [rewrite Z.eqb_eq in Ew'0; lia |].
+    assert (Hwv_pos : w - v > 0) by lia.
+    assert (Hsw_ge1 : 1 <= s_w) by (subst s_w; apply Z.min_glb; [apply lctz_ge_1 |]; lia).
+    assert (Hsz_w' : Z_size w' + s_w <= Z_size w) by (transitivity (Z_size (w - v)); [rewrite <- Hw', Z_size_mul_pow2 by lia; lia | apply Z_size_sub; lia]).
+    split; [left; exact Hv_m |].
+    destruct (mod2_cases w') as [Hw'_m | Hw'_m]; rewrite Hv_m, Hw'_m; cbn [Z.eqb Pos.eqb andb].
+    + (* w' even: s_w = 63 *)
+      assert (Hs63 : s_w = 63) by (subst s_w; apply lctz_even_min63; try lia; replace ((w - v) / 2 ^ Z.min (lctz 64 (w - v)) 63) with w' by (eapply Zdiv_unique with (r := 0); lia); exact Hw'_m).
+      rewrite Hs63 in *; repeat split; try lia;
+      [ eapply bound_OO_to_OE_shifted with (X_old := z) (Y_old := u) (k_old := k_old); try eassumption; lia
+      | eapply bound_unchanged with (Y_old := u) (c_old := 3 + k_old); try eassumption; lia ].
+    + (* w' odd *)
+      repeat split; try lia;
+      [ eapply bound_OO_to_OO_shifted with (X_old := z) (Y_old := u) (k_old := k_old) (s := s_w); try eassumption; lia
+      | eapply bound_unchanged with (Y_old := u) (c_old := 3 + k_old); try eassumption; lia ].
 Qed.
 
-Lemma bound_EO_to_EO_sum : forall X3 X4 M k_old k_new : Z,
-  0 <= M ->
-  k_old <= 2^62 + 2 ->
-  k_old + 3 <= k_new ->
-  2 * X3 <= (2 + k_old - 2) * M ->
-  2^63 * X4 <= (2^63 + k_old - 2) * M ->
-  2 * (X3 + X4) <= (2 + k_new - 2) * M.
-Proof.
-  intros X3 X4 M k_old k_new HM Hk_max Hstep HX3 HX4.
-  rewrite Z.add_comm.
-  apply bound_OE_to_OE_sum with (k_old := k_old); assumption.
-Qed.
+Lemma xy_inv_0 a_ x y M k : xy_inv a_ 0 x y M k.
+Proof. exact I. Qed.
+Opaque xy_inv.
 
-Lemma lctz_even_min63 (default z : Z) :
-    0 <= default ->
-    z > 0 ->
-    (z / 2 ^ (Z.min (lctz default z) 63)) mod 2 = 0 ->
-    Z.min (lctz default z) 63 = 63.
+(** Complete loop-body invariant preservation for BOTH branches (a_ <=? b_ = true and false) *)
+Lemma helper_loop_step_complete
+  (a0 b0 M a_ b_ x y a_mid b_mid x_mid y_mid a' b' x' y' s_a s_b : Z) :
+  M > 1 -> M mod 2 = 1 ->
+  (0 <= Z_size a0 <= 256 /\ 0 <= Z_size b0 <= 256 /\ 0 <= Z_size a_ /\ 0 <= Z_size b_) ->
+  1 <= a_ -> a_ <= M ->
+  (1 <= b_ < M /\ 0 <= a' /\ 0 <= b' /\ 0 <= x' /\ 0 <= y') ->
+  (a_ mod 2 = 1 \/ b_ mod 2 = 1) ->
+  xy_inv a_ b_ x y M ((Z_size a0 + Z_size b0) - (Z_size a_ + Z_size b_)) ->
+  Z.gcd a_ b_ = Z.gcd a0 b0 ->
+  a_ mod M = (- (y * b0)) mod M ->
+  b_ mod M = (x * b0) mod M ->
+  (Z_size a0 + Z_size b0) - (Z_size a_ + Z_size b_) >= 0 ->
+  (if a_ <=? b_ then a_mid = a_ /\ b_mid = b_ - a_ /\ y_mid = y /\ x_mid = x + y
+   else b_mid = b_ /\ a_mid = a_ - b_ /\ x_mid = x /\ y_mid = x + y) ->
+  s_b = Z.min (lctz 64 b_mid) 63 -> b' * 2^s_b = b_mid ->
+  x' * 2^s_b mod M = x_mid mod M -> x' * 2^s_b <= x_mid + (2^s_b - 1) * M ->
+  s_a = Z.min (lctz 64 a_mid) 63 -> a' * 2^s_a = a_mid ->
+  y' * 2^s_a mod M = y_mid mod M -> y' * 2^s_a <= y_mid + (2^s_a - 1) * M ->
+  1 <= a' /\ a' <= M /\ 0 <= b' /\ b' < M /\
+  (a' mod 2 = 1 \/ b' mod 2 = 1) /\
+  xy_inv a' b' x' y' M ((Z_size a0 + Z_size b0) - (Z_size a' + Z_size b')) /\
+  Z.gcd a' b' = Z.gcd a0 b0 /\
+  a' mod M = (- (y' * b0)) mod M /\
+  b' mod M = (x' * b0) mod M /\
+  (Z_size a0 + Z_size b0) - (Z_size a' + Z_size b') >= 0 /\
+  0 <= a' + b' /\ a' + b' < a_ + b_.
 Proof.
-    intros Hdef Hz Heven.
-    assert (Hlctz_ge : 0 <= lctz default z) by (apply lctz_ge_0; lia).
-    assert (Hlctz_cases : lctz default z < 63 \/ 63 <= lctz default z) by lia.
-    destruct Hlctz_cases as [Hlt | Hge].
-    { rewrite (Z.min_l _ 63) in Heven by lia.
-        destruct (lctz_spec default z Hz) as [k [Hk Hz_eq]].
-        pattern z at 1 in Heven.
-        rewrite Hz_eq in Heven.
-        rewrite Z.div_mul in Heven by (apply Z.pow_nonzero; lia).
-        rewrite Hk in Heven.
-        discriminate. }
-    { rewrite (Z.min_r _ 63) by lia.
-        reflexivity. }
+  intros HM1 HModd Hsz0 Ha_1 Ha_2 (Hb_ & Ha'0 & Hb'0 & Hx'0 & Hy'0) Hodd Hinv Hgcd Hca Hcb Hk0 Hsub
+         Hsb Hb' Hx'm Hx'b Hsa Ha' Hy'm Hy'b.
+  assert (Hsa0 : 0 <= s_a) by (subst s_a; apply Z.min_glb; [apply lctz_ge_0 |]; lia).
+  assert (Hsb0 : 0 <= s_b) by (subst s_b; apply Z.min_glb; [apply lctz_ge_0 |]; lia).
+  assert (Hca_neg : a_mid mod M = (y_mid * (- b0)) mod M /\ b_mid mod M = (x_mid * b0) mod M).
+  { destruct (a_ <=? b_); destruct Hsub as (-> & -> & -> & ->); split;
+    Z.push_pull_mod; Z.push_mod; rewrite ?Hca, ?Hcb; Z.push_pull_mod; f_equal; ring. }
+  destruct Hca_neg as [Hca_mid Hcb_mid].
+  assert (Hcb' : b' mod M = (x' * b0) mod M) by (eapply shrtz_cong with (s := s_b); eauto; lia).
+  assert (Hca' : a' mod M = (- (y' * b0)) mod M)
+    by (replace (- (y' * b0)) with (y' * (- b0)) by ring; eapply shrtz_cong with (s := s_a); eauto; lia).
+  destruct (a_ <=? b_) eqn:Ecmp; [rewrite Z.leb_le in Ecmp | rewrite Z.leb_gt in Ecmp];
+    destruct Hsub as (-> & -> & -> & ->).
+  - (* Branch 1: a_ <= b_ *)
+    destruct (xy_inv_step a_ b_ a' b' y x y' x' s_a s_b M
+                ((Z_size a0 + Z_size b0) - (Z_size a_ + Z_size b_))
+                ((Z_size a0 + Z_size b0) - (Z_size a' + Z_size b')))
+      as (Ha'r & Hb'r & Hkle & Hgcd' & Hrest); try assumption; try lia.
+    destruct (Z.eq_dec b' 0) as [-> | Hb'nz].
+    + assert (b_ = a_) by (rewrite Z.mul_0_l in Hb'; lia).
+      assert (a_ mod 2 = 1) by (subst b_; tauto).
+      assert (Hs0 : s_a = 0) by (subst s_a; rewrite lctz_odd by lia; reflexivity).
+      rewrite Hs0, Z.pow_0_r, Z.mul_1_r in Ha'; subst a'.
+      assert (xy_inv a_ 0 x' y' M (Z_size a0 + Z_size b0 - (Z_size a_ + Z_size 0))) by apply xy_inv_0.
+      repeat split; try assumption; try lia; try tauto; try congruence.
+    + destruct (Hrest Hb'nz) as [Hodd' Hinv']; repeat split; try assumption; try lia; try congruence.
+  - (* Branch 2: b_ < a_ -> apply xy_inv_step to (b_, a_) via xy_inv_swap *)
+    assert (Hinv_sw : xy_inv b_ a_ y x M ((Z_size a0 + Z_size b0) - (Z_size a_ + Z_size b_)))
+      by (apply xy_inv_swap; lia || tauto).
+    destruct (xy_inv_step b_ a_ b' a' x y x' y' s_b s_a M
+                ((Z_size a0 + Z_size b0) - (Z_size a_ + Z_size b_))
+                ((Z_size a0 + Z_size b0) - (Z_size a' + Z_size b')))
+      as (Hb'r & Ha'r & Hkle & Hgcd' & Hrest); try assumption; try lia; try tauto.
+    assert (Ha'nz : a' <> 0) by (intros ->; rewrite Z.mul_0_l in Ha'; lia).
+    destruct (Hrest Ha'nz) as [Hodd' Hinv'].
+    repeat split; try assumption; try lia; try tauto.
+    + apply xy_inv_swap; try lia; tauto.
+    + rewrite Z.gcd_comm, Hgcd', Z.gcd_comm; exact Hgcd.
 Qed.
-
-Lemma lctz_ge_1 (default z : Z) :
-    0 <= default ->
-    z > 0 -> z mod 2 = 0 -> 1 <= lctz default z.
-  Proof.
-    intros Hdef Hz Heven.
-    assert (Hlctz_cases : lctz default z = 0 \/ 1 <= lctz default z).
-    { pose proof (lctz_ge_0 default z Hdef). lia. }
-    destruct Hlctz_cases as [H0 | Hge]; [|assumption].
-    destruct (lctz_spec default z Hz) as [k [Hk Hz_eq]].
-    rewrite H0, Z.pow_0_r, Z.mul_1_r in Hz_eq.
-    rewrite Hz_eq in Heven. rewrite Hk in Heven. discriminate.
-  Qed.
 
 Lemma helper_loop_ok : program_logic_goal_for_function! helper_loop.
 Proof.
@@ -1111,17 +806,10 @@ Proof.
                     (* a,b range invariants *)
                     1 <= eval a_ <= eval MOD /\ 0 <= eval b_ < eval MOD /\
                     (* Parity requirement *)
-                    (((eval a_) mod 2 = 1 /\ (eval b_ mod 2 = 1)) \/ ((eval a_) mod 2 = 1 /\ (eval b_ mod 2 = 0)) \/
-                    ((eval a_) mod 2 = 0 /\ (eval b_ mod 2 = 1))) /\
+                    ((eval a_) mod 2 = 1 \/ (eval b_) mod 2 = 1) /\
                     (* x, y range invariants *)
-                    (if (eval b_ =? 0) then True else (if (andb ((eval a_) mod 2 =? 1) ((eval b_) mod 2 =? 1)) then
-                        0 <= 2 * (eval x) <= (3 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_)))) * (eval MOD) /\  0 <= 2 * (eval y) <= (3 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_)))) * (eval MOD) else
-                    if (andb ((eval a_) mod 2 =? 1) ((eval b_) mod 2 =? 0)) then
-                        0 <= (2^63) * (eval x) <= (2^63 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_))) - 2) * (eval MOD) /\
-                        0 <= 2 * (eval y) <= (2 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_))) - 2) * (eval MOD)
-                    else
-                        0 <= (2^63) * (eval y) <= (2^63 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_))) - 2) * (eval MOD) /\
-                        0 <= 2 * (eval x) <= (2 + ((Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval a_) + Z_size (eval b_))) - 2) * (eval MOD)))/\
+                    xy_inv (eval a_) (eval b_) (eval x) (eval y) (eval MOD)
+                           ((Z_size (eval a) + Z_size (eval b)) - (Z_size (eval a_) + Z_size (eval b_))) /\
                     (* Gcd invariant *)
                     Z.gcd (eval a_) (eval b_) = Z.gcd (eval a) (eval b) /\
                     (* inv_m invariant *)
@@ -1148,9 +836,11 @@ Proof.
     { eapply Z.lt_wf. }
     { repeat straightline; intuition try ecancel_assumption; rewrite ?H12, ?H14, ?H15; try ZnWords.
       {
+        Transparent xy_inv. unfold xy_inv.
         rewrite <- Z.eqb_eq, H10 in *.
-        destruct (eval b =? 0) eqn: Hb0; eauto; destruct (mod2_cases (eval b)) as [Hb | Hb];
-        rewrite Z.eqb_eq, Hb in *; cbn [Z.eqb Pos.eqb andb] in *; ssplit; lia.
+        destruct (eval b =? 0) eqn:Hb0; [exact I |].
+        destruct (mod2_cases (eval b)) as [Hb | Hb]; rewrite Hb; cbn [Z.eqb Pos.eqb andb]; split; lia.
+        Opaque xy_inv.
       }
       { Z.push_pull_mod. rewrite Z.mul_0_l, Z.sub_0_r, Z_mod_same, Z.mod_small by lia; eauto. }
       { Z.push_pull_mod. rewrite Z.mul_1_l. eauto. }
@@ -1161,569 +851,39 @@ Proof.
       all:
         destruct (eval x2 =? 0) eqn:Hx20;
             try solve [exfalso; revert H18 H25; keep_length_equations; intros; ZnWords ].
-      (* derive from H29 *)
+      all: assert (Hsz : 0 <= Z_size (eval a) <= 256 /\ 0 <= Z_size (eval b) <= 256 /\ 0 <= Z_size (eval x1) /\ 0 <= Z_size (eval x2))
+        by (repeat split; try apply Z_size_nonneg; apply Z_size_le; try (clear H16; lia); keep_length_equations; bigZnWords).
       {
-        repeat match goal with
-        | [H : context [Z_size ?a] |- _] =>
-            assert_fails (assert (0 <= Z_size a <= 256) by assumption);
-            assert (0 <= Z_size a <= 256) by
-                (split; [ eapply Z_size_nonneg | eapply Z_size_le ]; try lia; keep_length_equations; bigZnWords)
-        end.
-        destruct (mod2_cases (eval x1)) as [Hxm1 | Hxm1],
-            (mod2_cases (eval x2)) as [Hxm2 | Hxm2];
-                destruct H28 as [[? ?] | [[? ?] | [? ?]]];
-                try lia; rewrite Hxm1, Hxm2 in *;
-                cbn [Z.eqb Pos.eqb andb] in *; destruct H29 as [Hcx3 Hcx4];
-                remember ((Z_size (eval a) + Z_size (eval b)) - (Z_size (eval x1) + Z_size (eval x2))) as k eqn: Heqk;
-                assert (Hmod : 0 <= eval MOD < 2^256) by (keep_length_equations; bigZnWords);
-                assert (Hk : 0 <= k <= 512) by lia;
-                revert Hcx3 Hcx4 Hk Hmod; prune_unused; nia.
+        rewrite ?Z.eqb_neq in Hx20.
+        assert (Hmod : 0 <= eval MOD < 2^256) by (keep_length_equations; bigZnWords).
+        assert (Hk_range : 0 <= (Z_size (eval a) + Z_size (eval b)) - (Z_size (eval x1) + Z_size (eval x2)) <= 512)
+          by (clear H16 Hmod; lia).
+        eapply xy_inv_sum_lt_320 with (a_ := eval x1) (b_ := eval x2) (M := eval MOD)
+          (k := (Z_size (eval a) + Z_size (eval b)) - (Z_size (eval x1) + Z_size (eval x2)));
+          eassumption.
       }
       {
-        eexists _, _,_,_,_,_; ssplit; repeat straightline.
-        {
-            split. 1: try ecancel_assumption.
-            clear_old_memory_hyps.
-            do 4 try split; eauto.
-            cbv [x21 x18] in *. clear x18 x21.
-            destruct (eval x1 <=? eval x2) eqn:Hcmp; destruct H43 as [Hx1 [ Hx21 [Hx4 Hx34]]];
-            rewrite Hx1, Hx21, Hx4, Hx34 in *; subst;
-            try clear dependent x11;
-            try clear dependent x13;
-            try clear dependent x14;
-            try clear dependent x15;
-            destruct H28 as [ [Hxm1 Hxm2] | [[Hxm1 Hxm2] | [Hxm1 Hxm2]]];
-                rewrite Hxm1, Hxm2 in *;
-                cbn [Z.eqb Pos.eqb andb] in *;
-                match goal with
-                | [H : ?a <=? ?b = true, Ha : ?a mod 2 = ?c, Hb : ?b mod 2 = ?d |- _] =>
-                    let m := eval cbv in ((d - c) mod 2) in
-                        assert (Hdif : (b - a) mod 2 = m) by
-                            (
-                                Z.push_mod; rewrite Ha, Hb in *; eauto
-                            ); clear Hb
-                | [H : ?a <=? ?b = false, Ha : ?a mod 2 = ?c, Hb : ?b mod 2 = ?d |- _] =>
-                    let m := eval cbv in ((d - c) mod 2) in
-                        assert (Hdif : (a - b) mod 2 = m) by
-                            (
-                                Z.push_mod; rewrite Ha, Hb in *;
-                                eauto
-                            ); clear Ha
-                end;
-                (* Simplify lctz and min for odd variables *)
-                repeat match goal with
-                | [H : context [lctz 64 ?a], H' : ?a mod 2 = 1 |- _] =>
-                    progress rewrite (lctz_odd 64 a), Z.min_l, Z.pow_0_r, Z.mul_1_r, Z.sub_diag, Z.mul_0_l, Z.add_0_r in * by lia; rewrite H in *; clear H
-                end;
-                repeat match goal with
-                | [H : context [lctz 64 ?a], H' : 0 <= Z.min (lctz 64 ?a) 63 |- _] => fail 1
-                | [H : context [lctz 64 ?a] |- _] =>
-                    assert (0 <= Z.min (lctz 64 a) 63) by
-                        (eapply Z.min_glb; try eapply lctz_ge_0; lia)
-                end;
-                repeat match goal with
-                | [H : (?a * (2^?b)) = ?c, H' : (?a <= ?c) |- _ ] => fail 1
-                | [H : ?a * (2^?b) = ?c |- _] =>
-                    assert (a <= c) by (rewrite <- H; eapply le_mul_pow2_r; try lia; try (keep_length_equations; bigZnWords))
-                end;
-                ssplit; try eauto; try lia;
-                try (keep_length_equations; bigZnWords);
-                (* Parity constraints *)
-                try solve [match goal with
-                | [ Ha : (?a mod 2) = _, Hb : (?b mod 2) = _ |- (((?a mod 2) = _) /\ ((?b mod 2) = _)) \/ _] =>
-                    intuition
-                | [ Ha : (?a mod 2) = _ |- (((?a mod 2) = _) /\ (?b mod 2 = _)) \/ _] =>
-                    destruct (mod2_cases b); intuition
-                | [ Hb : (?b mod 2) = _ |- (((?a mod 2) = _) /\ (?b mod 2 = _)) \/ _] =>
-                    destruct (mod2_cases a); intuition
-                end].
-                (* GCD goals *)
-                all: repeat match goal with
-                | [H : Z.gcd _ _ = Z.gcd ?a ?b |- Z.gcd _ _ = Z.gcd ?a ?b] =>
-                    rewrite <- H in *; clear H
-                | [ H : (?a * (2^?c)) = _ |- Z.gcd ?a _ = Z.gcd _ _] =>
-                    rewrite <- (gcd_pow2_l c), -> H by lia; clear H
-                | [ H : (?a * (2^?c)) = ?b |- Z.gcd _ ?a = Z.gcd _ _] =>
-                    rewrite <- (gcd_pow2_r c), -> H by lia; clear H
-                | [ |- Z.gcd (?a - ?b) ?b = Z.gcd ?a ?b] =>
-                    rewrite !(Z.gcd_comm _ b), Z.gcd_sub_diag_r;
-                    eauto
-                | [ |- Z.gcd ?b (?a - ?b) = Z.gcd ?b ?a] =>
-                    rewrite Z.gcd_sub_diag_r;
-                    eauto
-                end.
-                (* Mod goals *)
-                all: try solve [Z.push_pull_mod; Z.push_mod; rewrite ?H32, ?H33, ?H55, ?H49; Z.push_pull_mod; f_equal; lia].
-                all: try solve [
-                    eapply mod_pow2_inv with (n := Z.min (lctz 64 (eval x2 - eval x1)) 63); try lia;
-                    rewrite <- Z.mul_assoc, (Z.mul_comm (eval b)), Z.mul_assoc;
-                    rewrite ?H47; Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H49; Z.push_pull_mod; f_equal; lia
-                ].
-                all: try solve [
-                    eapply mod_pow2_inv with (n := Z.min (lctz 64 (eval x1)) 63); try lia;
-                    Z.push_pull_mod;
-                    rewrite Z.mul_sub_distr_r, Z.mul_0_l, <- Z.mul_assoc, (Z.mul_comm (eval b)), Z.mul_assoc;
-                    rewrite ?H53;
-                    Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H55; Z.push_pull_mod; eauto
-                ].
-                all: try solve [
-                    eapply mod_pow2_inv with (n := Z.min (lctz 64 (eval x1 - eval x2)) 63); try lia;
-                    Z.push_pull_mod; rewrite Z.mul_sub_distr_r, Z.mul_0_l, <- Z.mul_assoc, (Z.mul_comm (eval b)), Z.mul_assoc;
-                    rewrite ?H53; Z.push_mod_step; Z.push_mod_step; Z.push_mod_step; rewrite ?H32, ?H33, ?H55; Z.push_pull_mod;
-                    f_equal; lia
-                ].
-                all: try solve [
-                    eapply mod_pow2_inv with (n := Z.min (lctz 64 (eval x2)) 63); try lia;
-                    Z.push_pull_mod; rewrite <- Z.mul_assoc, (Z.mul_comm (eval b)), Z.mul_assoc;
-                    rewrite ?H47; Z.push_mod_step; rewrite ?H32, ?H33, ?H49; Z.push_pull_mod; f_equal; lia
-                ].
-                all: repeat match goal with
-                | [ H : context [ Z.gcd _ _ ] |- _ ] => clear H
-                | [ H : context [_ mod (fold_right _ _ ?MOD)] |- _] => clear H
-                end.
-                all: repeat match goal with
-                | [H : context [Z_size ?a] |- _] =>
-                    assert_fails (assert (0 <= Z_size a <= 256) by assumption);
-                    assert (0 <= Z_size a <= 256) by
-                        (split; [ eapply Z_size_nonneg | eapply Z_size_le ]; try lia; keep_length_equations; bigZnWords)
-                end.
-
-                2: {
-                    assert (Z_size (eval x16) <= Z_size (eval x2)).
-                    {
-                        destruct (eval x16 =? 0) eqn:Hx16;
-                        [ rewrite Z.eqb_eq in Hx16; rewrite Hx16 in *; cbn [Z_size Pos.size]; lia | ].
-                        eapply Z.le_trans with (m := Z_size (eval x2 - eval x1));
-                        [ rewrite <- H47, Z_size_mul_pow2 | eapply Z_size_sub ]; lia.
-                    }
-                    lia.
-                }
-                3: {
-                    assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)) by (eapply Z_size_sub; lia).
-                    lia.
-                }
-                4: {
-                    assert (Z_size (eval x19) <= Z_size (eval x1)).
-                    {
-                        destruct (eval x19 =? 0) eqn:Hx19;
-                        [rewrite Z.eqb_eq in Hx19; rewrite Hx19 in *; cbn [Z_size Pos.size]; lia | ].
-                        rewrite <- H53, Z_size_mul_pow2; lia.
-                    }
-                    assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)) by (eapply Z_size_sub; lia).
-                    lia.
-                }
-                5: {
-                    assert (Z_size (eval x19) <= Z_size (eval x1)).
-                    {
-                        destruct (eval x19 =? 0) eqn: Hx19;
-                        [ rewrite Z.eqb_eq in Hx19; rewrite Hx19 in *; cbn [Z_size Pos.size]; lia | ].
-                        eapply Z.le_trans with (m := Z_size (eval x1 - eval x2));
-                        [rewrite <- H53, Z_size_mul_pow2 | eapply Z_size_sub]; lia.
-                    }
-                    lia.
-                }
-                6: {
-                    assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
-                    assert (Z_size (eval x16) <= Z_size (eval x2)).
-                    {
-                        destruct (eval x16 =? 0) eqn:Hx16;
-                        [rewrite Z.eqb_eq in Hx16; rewrite Hx16 in *; cbn [Z_size Pos.size]; lia |].
-                        rewrite <- H47, Z_size_mul_pow2; lia.
-                    }
-                    lia.
-                }
-                7: {
-                    assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
-                    lia.
-                }
-                (* x,y range invariants *)
-                {
-                    destruct (eval x16 =? 0) eqn : Hx016; try lia.
-                    destruct (mod2_cases (eval x16)) as [Hx16 | Hx16];
-                    rewrite Hxm1, Hx16 in *;
-                    cbn [Z.eqb andb Pos.eqb] in *; ssplit; try (keep_length_equations; bigZnWords).
-                    {
-                        assert (Z.min (lctz 64 (eval x2 - eval x1)) 63 = 63). {
-                            eapply lctz_even_min63; try lia.
-                            replace ((eval x2 - eval x1) / (2^(Z.min (lctz 64 (eval x2 - eval x1)) 63))) with (eval x16);
-                              revert Hx16 H47 H; prune_unused; intros; try assumption.
-                              eapply Zdiv_unique with (r := 0); try lia.
-                        }
-                        rewrite H19 in *.
-                        eapply bound_OO_to_OE_shifted with (k_old := (Z_size (eval a) + Z_size (eval b)) - (Z_size (eval x1) + Z_size (eval x2))) (X_old := (eval x3)) (Y_old := (eval x4)).
-                        1: keep_length_equations; bigZnWords.
-                        all: destruct H29.
-                        2,3,4: lia.
-
-                        assert (Z_size (eval x16) + 63 = Z_size (eval x2 - eval x1)).
-                        {
-                            rewrite <- H47. symmetry. eapply Z_size_mul_pow2; lia.
-                        }
-                        assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)).
-                        {
-                            eapply Z_size_sub; lia.
-                        }
-                        lia.
-                    }
-                    {
-                        assert (Z.min (lctz 64 (eval x2 - eval x1)) 63 = 63). {
-                            eapply lctz_even_min63; try lia.
-                            replace ((eval x2 - eval x1) / (2^(Z.min (lctz 64 (eval x2 - eval x1)) 63))) with (eval x16);
-                              revert Hx16 H47 H; prune_unused; intros; try assumption.
-                              eapply Zdiv_unique with (r := 0); try lia.
-                        }
-                        rewrite H19 in *.
-                        eapply bound_OO_to_EO_unchanged with (k_old := (Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval x1) + Z_size (eval x2))) (X_old := (eval x4));
-                        try lia; try (keep_length_equations; bigZnWords).
-                        assert (Z_size (eval x16) + 63 = Z_size (eval x2 - eval x1)).
-                        {
-                            rewrite <- H47. symmetry. eapply Z_size_mul_pow2; lia.
-                        }
-                        assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)).
-                        {
-                            eapply Z_size_sub; lia.
-                        }
-                        lia.
-                    }
-                    {
-                        eapply bound_OO_to_OO_shifted with (k_old := (Z_size (eval a) + Z_size (eval b)) - (Z_size (eval x1) + Z_size (eval x2))).
-                        1: keep_length_equations; bigZnWords.
-                        6: eassumption.
-                        1,4,5: lia.
-                        {
-                            eapply Z.min_glb; try lia.
-                            eapply lctz_ge_1; lia.
-                        }
-                        remember (Z.min (lctz 64 (eval x2 - eval x1)) 63) as s.
-                        assert (Z_size (eval x16) + s = Z_size (eval x2 - eval x1)).
-                        {
-                            rewrite <- H47. symmetry. eapply Z_size_mul_pow2; lia.
-                        }
-                        assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)).
-                        {
-                            eapply Z_size_sub; lia.
-                        }
-                        lia.
-                    }
-                    {
-                        destruct H29.
-                        eapply bound_OO_to_OO_unchanged with (k_old := (Z_size (eval a) + Z_size (eval b)) - (Z_size (eval x1) + Z_size (eval x2))) (Y_old := eval x4).
-                        1: keep_length_equations; bigZnWords.
-                        2,3: lia.
-                        remember (Z.min (lctz 64 (eval x2 - eval x1)) 63) as s.
-                        assert (Z_size (eval x16) + s = Z_size (eval x2 - eval x1)).
-                        {
-                            rewrite <- H47. symmetry. eapply Z_size_mul_pow2; lia.
-                        }
-                        assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)).
-                        {
-                            eapply Z_size_sub; lia.
-                        }
-                        lia.
-                    }
-                }
-                {
-                    rewrite Hxm1, Hdif in *.
-                    cbn [Z.eqb andb Pos.eqb] in *; ssplit; try (keep_length_equations; bigZnWords).
-                    destruct (eval x2 - eval x1 =? 0); try eauto.
-                    ssplit; try (keep_length_equations; bigZnWords).
-                    {
-                        destruct H29 as [[? ?] [? ?]]. eapply Z.le_trans with (m := 2 * (eval x3 + eval x4)); try lia.
-                        eapply bound_OE_to_OO. 1: keep_length_equations; bigZnWords.
-                        3,4: eassumption.
-                        1: lia.
-                        assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)).
-                        {
-                            eapply Z_size_sub; lia.
-                        }
-                        lia.
-                    }
-                    {
-                        destruct H29 as [[? ?] [? ?]]. eapply Z.le_trans with (m := 2* (eval x4)); try lia.
-                        eapply bound_OE_to_OO_unchanged.
-                        1: keep_length_equations; bigZnWords.
-                        2:eassumption.
-
-                        assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)).
-                        {
-                            eapply Z_size_sub; lia.
-                        }
-                        lia.
-                    }
-                }
-                {
-                    destruct (eval x2 - eval x1 =? 0); try eauto.
-                    destruct (eval x19 =? 0) eqn: Hx019; try lia.
-                    destruct (mod2_cases (eval x19)) as [Hx19 | Hx19]; rewrite Hx19, Hdif in *;
-                    cbn [Z.eqb Pos.eqb andb] in *; ssplit; try (keep_length_equations; bigZnWords).
-                    {
-                        destruct H29 as [[? ?] [? ?]].
-                        assert (Z.min (lctz 64 (eval x1)) 63 = 63). {
-                            eapply lctz_even_min63; try lia.
-                            replace ((eval x1) / (2^(Z.min (lctz 64 (eval x1)) 63))) with (eval x19);
-                            try assumption.
-                            eapply Zdiv_unique with (r := 0); try lia.
-                        }
-                        rewrite H31 in *.
-                        eapply bound_EO_to_EO_shifted.
-                        1: keep_length_equations; bigZnWords.
-                        4: eassumption.
-                        1,4: lia.
-                        1: lia.
-                        assert (Z_size (eval x19) + 63 = Z_size (eval x1)).
-                        {
-                            rewrite <- H53. symmetry. eapply Z_size_mul_pow2; lia.
-                        }
-                        assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                    {
-                        destruct H29 as [[? ?][? ?]].
-                        assert (Z.min (lctz 64 (eval x1)) 63 = 63). {
-                            eapply lctz_even_min63; try lia.
-                            replace ((eval x1) / (2^(Z.min (lctz 64 (eval x1)) 63))) with (eval x19);
-                            try assumption.
-                            eapply Zdiv_unique with (r := 0); try lia.
-                        }
-                        rewrite H31 in *.
-                        eapply Z.le_trans with (m := 2 * (eval x3 + eval x4)); try lia.
-                        eapply bound_EO_to_EO_sum.
-                        1: keep_length_equations; bigZnWords.
-                        3,4: eassumption.
-                        1: lia.
-                        assert (Z_size (eval x19) + 63 = Z_size (eval x1)).
-                        {
-                            rewrite <- H53. symmetry. eapply Z_size_mul_pow2; lia.
-                        }
-                        assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                    {
-                        destruct H29 as [[? ?] [? ?]].
-                        eapply Z.le_trans with (m := 2 * (eval x3 + eval x4)); try lia.
-                        eapply bound_EO_to_OO.
-                        1: keep_length_equations; bigZnWords.
-                        3,4: eassumption.
-                        1: lia.
-                        remember (Z.min (lctz 64 (eval x1)) 63) as s.
-                        assert (Z_size (eval x19) + s = Z_size (eval x1)).
-                        {
-                            rewrite <- H53. symmetry; eapply Z_size_mul_pow2; lia.
-                        }
-                        assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                    {
-                        destruct H29 as [[? ?] [? ?]].
-                        eapply bound_OE_to_OO_shifted with (k_old := (Z_size (eval a) + Z_size (eval b)) - (Z_size (eval x1) + Z_size (eval x2)))
-                        (X_old := eval x4).
-                        1: keep_length_equations; bigZnWords.
-                        1: lia.
-                        4: eassumption.
-                        {
-                            eapply Z.min_glb; try lia.
-                            eapply lctz_ge_1; try lia.
-                        }
-                        2: eassumption.
-                        remember (Z.min (lctz 64 (eval x1)) 63) as s.
-                        assert (Z_size (eval x19) + s = Z_size (eval x1)).
-                        {
-                            rewrite <- H53. symmetry; eapply Z_size_mul_pow2; lia.
-                        }
-                        assert (Z_size (eval x2 - eval x1) <= Z_size (eval x2)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                }
-                {
-                    destruct (eval x2 =? 0) eqn: Hx2; try eauto.
-                    destruct (eval x19 =? 0) eqn: Hx019; try lia.
-                    destruct (mod2_cases (eval x19)) as [Hx19 | Hx19]; rewrite Hx19, Hxm2 in *;
-                    cbn [Z.eqb Pos.eqb andb] in *; ssplit; try (keep_length_equations; bigZnWords).
-                    {
-                        destruct H29 as [[? ?] [? ?]].
-                        assert (Z.min (lctz 64 (eval x1 - eval x2)) 63 = 63). {
-                            eapply lctz_even_min63; try lia.
-                            replace ((eval x1 - eval x2) / (2^(Z.min (lctz 64 (eval x1 - eval x2)) 63))) with (eval x19);
-                            try assumption.
-                            eapply Zdiv_unique with (r := 0); try lia.
-                        }
-                        rewrite H31 in *.
-                        eapply bound_OO_to_OE_shifted with (k_old := (Z_size (eval a) + Z_size (eval b)) - (Z_size (eval x1) + Z_size (eval x2))) (X_old := (eval x3)) (Y_old := (eval x4)).
-                        1: keep_length_equations; bigZnWords.
-                        2,3,4: lia.
-                        assert (Z_size (eval x19) + 63 = Z_size (eval x1 - eval x2)) by (rewrite <- H53; symmetry; eapply Z_size_mul_pow2; lia).
-                        assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                    {
-                        destruct H29 as [[? ?] [? ?]].
-                        assert (Z.min (lctz 64 (eval x1 - eval x2)) 63 = 63). {
-                            eapply lctz_even_min63; try lia.
-                            replace ((eval x1 - eval x2) / (2^(Z.min (lctz 64 (eval x1 - eval x2)) 63))) with (eval x19);
-                            try assumption.
-                            eapply Zdiv_unique with (r := 0); try lia.
-                        }
-
-                        rewrite H31 in *.
-                        eapply bound_OO_to_EO_unchanged with (k_old := (Z_size (eval a) + (Z_size (eval b))) - (Z_size (eval x1) + Z_size (eval x2))) (X_old := (eval x3));
-                        try lia; try (keep_length_equations; bigZnWords).
-                        assert (Z_size (eval x19) + 63 = Z_size (eval x1 - eval x2)) by (rewrite <- H53; symmetry; eapply Z_size_mul_pow2; lia).
-                        assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                    {
-                        destruct H29.
-                        eapply bound_OO_to_OO_unchanged with (k_old := (Z_size (eval a) + Z_size (eval b)) - (Z_size (eval x1) + Z_size (eval x2))) (Y_old := eval x3).
-                        1: keep_length_equations; bigZnWords.
-                        2,3: lia.
-                        remember (Z.min (lctz 64 (eval x1 - eval x2)) 63) as s.
-                        assert (Z_size (eval x19) + s = Z_size (eval x1 - eval x2)) by (rewrite <- H53; symmetry; eapply Z_size_mul_pow2; lia).
-                        assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                    {
-
-                        eapply bound_OO_to_OO_shifted with (k_old := (Z_size (eval a) + Z_size (eval b)) - (Z_size (eval x1) + Z_size (eval x2))).
-                        1: keep_length_equations; bigZnWords.
-                        6: eassumption.
-                        1,4,5: lia.
-                        {
-                            eapply Z.min_glb; try lia.
-                            eapply lctz_ge_1; lia.
-                        }
-                        remember (Z.min (lctz 64 (eval x1 - eval x2)) 63) as s.
-                        assert (Z_size (eval x19) + s = Z_size (eval x1 - eval x2)) by (rewrite <- H53; symmetry; eapply Z_size_mul_pow2; lia).
-                        assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                }
-                {
-                    destruct (eval x16 =? 0); try eauto.
-                    destruct (mod2_cases (eval x16)) as [Hx16 | Hx16];
-                    rewrite Hx16, Hdif in *; cbn [Z.eqb Pos.eqb andb] in *; ssplit; try (keep_length_equations; bigZnWords).
-                    {
-                        destruct H29 as [[? ?] [? ?]].
-                        assert (Z.min (lctz 64 (eval x2)) 63 = 63). {
-                            eapply lctz_even_min63; try lia.
-                            replace ((eval x2) / (2^(Z.min (lctz 64 (eval x2)) 63))) with (eval x16);
-                            try assumption.
-                            eapply Zdiv_unique with (r := 0); lia.
-                        }
-                        rewrite H31 in *.
-                        eapply bound_EO_to_EO_shifted.
-                        1: keep_length_equations; bigZnWords.
-                        4: eassumption.
-                        1,4: lia.
-                        1: lia.
-                        assert (Z_size (eval x16) + 63 = Z_size (eval x2)).
-                        {
-                            rewrite <- H47; symmetry; eapply Z_size_mul_pow2; lia.
-                        }
-                        assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                    {
-                        destruct H29 as [[? ?][? ?]].
-                        assert (Z.min (lctz 64 (eval x2)) 63 = 63). {
-                            eapply lctz_even_min63; try lia.
-                            replace ((eval x2) / (2^(Z.min (lctz 64 (eval x2)) 63))) with (eval x16);
-                            try assumption.
-                            eapply Zdiv_unique with (r := 0); lia.
-                        }
-                        rewrite H31 in *.
-                        eapply Z.le_trans with (m := 2 * (eval x3 + eval x4)); try lia.
-                        eapply bound_OE_to_OE_sum.
-                        1: keep_length_equations; bigZnWords.
-                        3,4: eassumption.
-                        1: lia.
-                        assert (Z_size (eval x16) + 63 = Z_size (eval x2)).
-                        {
-                            rewrite <- H47; symmetry; eapply Z_size_mul_pow2; lia.
-                        }
-                        assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                    {
-                        destruct H29 as [[? ?] [? ?]].
-                        eapply bound_OE_to_OO_shifted with (k_old := (Z_size (eval a) + Z_size (eval b)) - (Z_size (eval x1) + Z_size (eval x2)))
-                        (X_old := eval x3).
-                        1: keep_length_equations; bigZnWords.
-                        1: lia.
-                        4: eassumption.
-                        {
-                            eapply Z.min_glb; try lia.
-                            eapply lctz_ge_1; try lia.
-                        }
-                        2: eassumption.
-                        remember (Z.min (lctz 64 (eval x2)) 63) as s.
-                        assert (Z_size (eval x16) + s = Z_size (eval x2)).
-                        {
-                            rewrite <- H47; symmetry; eapply Z_size_mul_pow2; lia.
-                        }
-                        assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                    {
-                        destruct H29 as [[? ?] [? ?]].
-                        eapply Z.le_trans with (m := 2 * (eval x3 + eval x4)); try lia.
-                        eapply bound_OE_to_OO.
-                        1: keep_length_equations; bigZnWords.
-                        3,4: eassumption.
-                        1: lia.
-                        remember (Z.min (lctz 64 (eval x2)) 63) as s.
-                        assert (Z_size (eval x16) + s = Z_size (eval x2)).
-                        {
-                            rewrite <- H47; symmetry; eapply Z_size_mul_pow2; lia.
-                        }
-                        assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                }
-                {
-                    destruct (eval x2 =? 0); try eauto.
-                    rewrite Hxm2, Hdif in *.
-                    cbn [Z.eqb andb Pos.eqb] in *; ssplit; try (keep_length_equations; bigZnWords);
-                    ssplit; try (keep_length_equations; bigZnWords).
-                    {
-                        destruct H29 as [[? ?] [? ?]]. eapply Z.le_trans with (m := 2 * eval x3); try lia.
-                        eapply bound_EO_to_OO_unchanged. 1: keep_length_equations; bigZnWords.
-                        2: eassumption.
-                        assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                    {
-                        destruct H29 as [[? ?] [? ?]]. eapply Z.le_trans with (m := 2* (eval x3 + eval x4)); try lia.
-                        eapply bound_EO_to_OO.
-                        1: keep_length_equations; bigZnWords.
-                        3,4: eassumption.
-                        1: lia.
-                        assert (Z_size (eval x1 - eval x2) <= Z_size (eval x1)) by (eapply Z_size_sub; lia).
-                        lia.
-                    }
-                }
-        }
-        {
-            eexists; repeat straightline.
-            2:
-            eexists _,_,_,_; ssplit; try ecancel_assumption; eauto.
-            cbv [v x21 x18] in *.
-
-            repeat match goal with
-            | [ H : context [lctz 64 ?a] |- _ ] =>
-                assert_fails (assert (0 <= Z.min (lctz 64 a) 63) by assumption);
-                assert (0 <= Z.min (lctz 64 a) 63) by
-                    (eapply Z.min_glb; try eapply lctz_ge_0; lia)
-            end;
-            repeat match goal with
-            | [H : ?a * (2^?b) = ?c |- _] =>
-                assert (a <= c) by (rewrite <- H; eapply le_mul_pow2_r; try lia; try (keep_length_equations; bigZnWords)); clear H
-            end.
-            ssplit.
-            1: (keep_length_equations; bigZnWords).
-
-            destruct (eval x1 <=? eval x2) eqn : Hcmp; destruct H43 as [? [? [? ?]]];
-            subst; lia.
-        }
+        clear_old_memory_hyps.
+        subst v.
+        cbv [x21 x18] in *; clear x18 x21.
+        rewrite ?Zmod.of_Z_0, ?Zmod.unsigned_0, ?Z.eqb_eq, ?Z.eqb_neq in *.
+        assert (Hbnds : 1 <= eval x2 < eval MOD /\ 0 <= eval x19 /\ 0 <= eval x16 /\ 0 <= eval x17 /\ 0 <= eval x20)
+          by (repeat split; try (clear H16 H47 H49 H50 H53 H55 H56; lia); keep_length_equations; bigZnWords).
+        assert (Hsub : if eval x1 <=? eval x2
+                       then eval x11 = eval x1 /\ eval x13 = eval x2 - eval x1 /\ eval x15 = eval x4 /\ eval x14 = eval x3 + eval x4
+                       else eval x13 = eval x2 /\ eval x11 = eval x1 - eval x2 /\ eval x14 = eval x3 /\ eval x15 = eval x3 + eval x4)
+          by (destruct (eval x1 <=? eval x2); destruct H43 as (-> & ? & -> & ?); repeat split; assumption).
+        destruct (helper_loop_step_complete
+                    (eval a) (eval b) (eval MOD) (eval x1) (eval x2) (eval x3) (eval x4)
+                    (eval x11) (eval x13) (eval x14) (eval x15)
+                    (eval x19) (eval x16) (eval x17) (eval x20)
+                    (Z.min (lctz 64 (eval x11)) 63) (Z.min (lctz 64 (eval x13)) 63))
+          as (Ha'1 & Ha'2 & Hb'1 & Hb'2 & Hodd' & Hinv' & Hgcd' & Hca' & Hcb' & Hk' & Hlt'1 & Hlt'2);
+          [ try reflexivity; try eassumption .. |].
+        eexists x19, x16, x17, x20, x5, _;
+        ssplit; repeat straightline;
+        cbv [Markers.right Markers.split]; repeat (intros; try assumption; split);
+        try ecancel_assumption; try assumption; try reflexivity.
       }
       {
         eexists _,_,_,_; ssplit; try ecancel_assumption; eauto; try lia.
