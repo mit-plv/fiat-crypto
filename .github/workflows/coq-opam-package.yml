@@ -9,6 +9,7 @@ on:
     - master
   schedule:
     - cron: '0 0 1 * *'
+  workflow_dispatch:
 
 jobs:
   install:
@@ -122,7 +123,15 @@ jobs:
     - run: opam update
     - run: opam pin add ocamlfind '${{ matrix.os.ocamlfind-pin }}'
       if: matrix.os.ocamlfind-pin != ''
-    - run: opam pin --kind=version add coq ${{ matrix.coq-version }} --verbose 
+    - run: opam pin --kind=version add coq ${{ matrix.coq-version }} --verbose
+      if: ${{ !(runner.os == 'Windows' && matrix.coq-version == 'dev') }}
+    - name: Work around rocq-prover/rocq#22478 (rocq-stdlib `make install` installs no .vo on Windows under the Findlib-backed package scheme)
+      # An empty ROCQPACKAGEOPTIONS makes the stdlib Makefile fall back to the classic
+      # user-contrib install, which is what Rocq 9.2 and earlier use on every platform.
+      run: opam pin --kind=version add coq ${{ matrix.coq-version }} --verbose
+      env:
+        ROCQPACKAGEOPTIONS: ''
+      if: ${{ runner.os == 'Windows' && matrix.coq-version == 'dev' }}
 
     - name: echo more build params
       run: |
