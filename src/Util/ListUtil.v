@@ -475,6 +475,25 @@ Section Relations.
 
   Global Instance Equivalence_list_eq {T} {R} {Equivalence_R:@Equivalence T R}
     : Equivalence (list_eq R). Proof. split; exact _. Qed.
+
+  Lemma list_eq_Forall2_iff {T R} (ls1 ls2: list T):
+    list_eq R ls1 ls2 <-> Forall2 R ls1 ls2.
+  Proof.
+    revert ls2; induction ls1; intros ls2; t.
+    - split; constructor.
+    - split; intro H; [elim H|inversion H].
+    - split; intro H; [elim H|inversion H].
+    - split; [intros (Hh & Ht); constructor|intro H; inversion H; subst; split]; try (apply IHls1); auto.
+  Qed.
+
+  Global Instance Equivalence_Forall2 {T} {R} `{Equivalence T R}
+    : Equivalence (Forall2 R).
+  Proof.
+    constructor; repeat intro; rewrite <- list_eq_Forall2_iff in *.
+    - reflexivity.
+    - symmetry; auto.
+    - etransitivity; eauto.
+  Qed.
 End Relations.
 
 Definition list_leq_to_eq {A} {x y : list A} : x = y -> list_eq eq x y.
@@ -1408,6 +1427,113 @@ Proof. intros; apply update_nth_nil. Qed.
 
 #[global]
 Hint Rewrite @set_nth_nil : simpl_set_nth.
+
+Lemma set_nth_set_nth {T} n (x y: T) l:
+  set_nth n x (set_nth n y l) = set_nth n x l.
+Proof.
+  apply nth_error_ext; intros i; repeat rewrite nth_set_nth.
+  rewrite length_set_nth.
+  destruct (PeanoNat.Nat.eq_dec i n); auto.
+Qed.
+
+#[global]
+Hint Rewrite @set_nth_set_nth : simpl_set_nth.
+
+Lemma set_nth_app_l {T} n (x: T) l1 l2:
+  (n < length l1)%nat ->
+  set_nth n x (l1 ++ l2) = (set_nth n x l1) ++ l2.
+Proof.
+  intro Hl; apply nth_error_ext; intro i.
+  rewrite nth_set_nth, length_app, nth_error_app.
+  rewrite nth_error_app, nth_set_nth, length_set_nth.
+  destruct (Nat.eq_dec i n) as [->|Hne]; auto.
+  destruct (lt_dec n _); [|lia].
+  destruct (lt_dec n _); [|lia].
+  reflexivity.
+Qed.
+
+#[global]
+Hint Rewrite @set_nth_app_l using (lia || distr_length; lia) : simpl_set_nth.
+
+Lemma set_nth_app_r {T} n (x: T) l1 l2:
+  (length l1 <= n)%nat ->
+  set_nth n x (l1 ++ l2) = l1 ++ (set_nth (n - length l1) x l2).
+Proof.
+  intro Hl; apply nth_error_ext; intro i.
+  rewrite nth_set_nth, length_app, nth_error_app.
+  rewrite nth_error_app, nth_set_nth.
+  destruct (Nat.eq_dec i n) as [->|Hne].
+  - destruct (lt_dec n (length l1)); [lia|].
+    destruct (Nat.eq_dec _ _) as [_|]; [|lia].
+    do 2 (destruct (lt_dec _ _)); auto; lia.
+  - destruct (lt_dec i (length l1)); [reflexivity|].
+    destruct (Nat.eq_dec _ _); auto; lia.
+Qed.
+
+#[global]
+Hint Rewrite @set_nth_app_r using (lia || distr_length; lia) : simpl_set_nth.
+
+Lemma firstn_set_nth_out_of_bounds {A} k n x (l: list A):
+  (k <= n)%nat ->
+  firstn k (set_nth n x l) = firstn k l.
+Proof.
+  intros Hk. apply nth_error_ext; intros i.
+  do 2 rewrite nth_error_firstn.
+  destruct (Nat.ltb_spec i k); auto.
+  rewrite nth_set_nth. destruct (Nat.eq_dec i n); [Lia.lia|reflexivity].
+Qed.
+
+Lemma firstn_set_nth_inbounds {A} k n x (l: list A):
+  (n < k)%nat ->
+  firstn k (set_nth n x l) = set_nth n x (firstn k l).
+Proof.
+  intros Hk. apply nth_error_ext; intros i.
+  rewrite nth_error_firstn, nth_set_nth, nth_set_nth, nth_error_firstn, length_firstn.
+  destruct (Nat.eq_dec i n) as [->|]; [|reflexivity].
+  destruct (Nat.ltb_spec n k); [|Lia.lia].
+  destruct (lt_dec n (length l)).
+  - destruct (lt_dec _ _); [reflexivity|Lia.lia].
+  - rewrite Nat.min_r by Lia.lia.
+    destruct (lt_dec _ _); [Lia.lia|reflexivity].
+Qed.
+
+Lemma skipn_set_nth_out_of_bounds {A} k n x (l: list A):
+  (n < k)%nat ->
+  skipn k (set_nth n x l) = skipn k l.
+Proof.
+  intros Hk. apply nth_error_ext; intros i.
+  do 2 rewrite nth_error_skipn.
+  rewrite nth_set_nth.
+  destruct (Nat.eq_dec _ _); [Lia.lia|]. reflexivity.
+Qed.
+
+Lemma skipn_set_nth_inbounds {A} k n x (l: list A):
+  (k <= n)%nat ->
+  skipn k (set_nth n x l) = set_nth (n - k)%nat x (skipn k l).
+Proof.
+  intros Hk. apply nth_error_ext; intros i.
+  rewrite nth_error_skipn, nth_set_nth, nth_set_nth, nth_error_skipn, length_skipn.
+  do 2 destruct (Nat.eq_dec _ _); try Lia.lia; try reflexivity.
+  do 2 destruct (lt_dec _ _); try Lia.lia; reflexivity.
+Qed.
+
+Lemma set_nth_out_of_bounds {A} n x (l: list A):
+  (length l <= n)%nat ->
+  set_nth n x l = l.
+Proof.
+  intros. rewrite <- (app_nil_r l) at 1.
+  rewrite set_nth_app_r; auto.
+  rewrite set_nth_nil, app_nil_r. reflexivity.
+Qed.
+
+Lemma map_set_nth {A B} (f: A -> B) n x (l: list A):
+  map f (set_nth n x l) = set_nth n (f x) (map f l).
+Proof.
+  apply nth_error_ext; intros i.
+  rewrite nth_error_map, nth_set_nth, nth_set_nth, length_map, nth_error_map.
+  destruct (Nat.eq_dec i n); [|reflexivity].
+  destruct (lt_dec _ _); reflexivity.
+Qed.
 
 Lemma skipn_nth_default : forall {T} n us (d : T), (n < length us)%nat ->
  skipn n us = nth_default d us n :: skipn (S n) us.
@@ -3024,6 +3150,33 @@ Proof using Type. revert xs; induction n, xs; cbn; f_equal; auto. Qed.
 Lemma flat_map_const_nil {A B} ls : @flat_map A B (fun _ => nil) ls = nil.
 Proof using Type. induction ls; cbn; auto. Qed.
 
+(* There is only equivalence if c <> 0 *)
+Lemma flat_map_constant_nth_error {A B: Type} (c: nat) (f: A -> list B) (l: list A):
+  (forall x : A, In x l -> length (f x) = c) ->
+  forall k x, nth_error (flat_map f l) k = Some x ->
+         exists y, nth_error l (Nat.div k c) = Some y /\
+                nth_error (f y) (Nat.modulo k c) = Some x.
+Proof.
+  destruct (NatUtil.nat_eq_dec c 0%nat) as [->|Hcnz].
+  { intros Hl k x Hx. apply nth_error_In in Hx.
+    apply in_flat_map in Hx. destruct Hx as [z [Hz Hzz]].
+    apply Hl in Hz. apply ListUtil.length0_nil in Hz.
+    rewrite Hz in Hzz. elim (in_nil Hzz). }
+  induction l; intros Hl k x Hx; simpl in Hx.
+  - rewrite ListUtil.nth_error_nil_error in Hx; inversion Hx.
+  - rewrite ListUtil.nth_error_app, Hl in Hx; [|apply in_eq].
+    destruct (Compare_dec.lt_dec k c).
+    + rewrite PeanoNat.Nat.div_small, PeanoNat.Nat.mod_small by Lia.lia.
+      simpl. eexists; split; eauto.
+    + apply IHl in Hx; [|intros; apply Hl; apply in_cons; auto].
+      assert (k = (k - c) + c)%nat as -> by Lia.lia.
+      rewrite NatUtil.div_minus by Lia.lia.
+      assert (k - c + c = (k - c) + 1 * c)%nat as -> by Lia.lia.
+      rewrite PeanoNat.Nat.Div0.mod_add.
+      assert (_ + 1 = S (Nat.div (k - c) c))%nat as -> by Lia.lia.
+      simpl. exact Hx.
+Qed.
+
 Lemma Forall_map_iff {A B} (f : A -> B) ls P
   : Forall P (List.map f ls) <-> Forall (fun x => P (f x)) ls.
 Proof.
@@ -3248,6 +3401,33 @@ Proof.
   cbv [groupBy]; destruct ls as [|x xs]; [ reflexivity | apply (concat_groupBy' (x :: xs)) ].
 Qed.
 
+Lemma firstn_concat_same_length {A: Type} (k c : nat) (l: list (list A)):
+  Forall (fun x => length x = c) l ->
+  firstn (k * c) (concat l) = concat (firstn k l).
+Proof.
+  revert l. induction k; intros l HF.
+  - rewrite PeanoNat.Nat.mul_0_l; reflexivity.
+  - destruct l as [|x].
+    + rewrite firstn_nil, concat_nil. reflexivity.
+    + rewrite firstn_cons, concat_cons, concat_cons, <- IHk; [|inversion HF; auto].
+      assert (S k * c = length x + k * c)%nat as -> by (inversion HF; Lia.lia).
+      rewrite firstn_app_2. reflexivity.
+Qed.
+
+Lemma skipn_concat_same_length {A: Type} (k c : nat) (l: list (list A)):
+  Forall (fun x => length x = c) l ->
+  skipn (k * c) (concat l) = concat (skipn k l).
+Proof.
+  revert l. induction k; intros l HF.
+  - rewrite PeanoNat.Nat.mul_0_l; reflexivity.
+  - destruct l as [|x].
+    + rewrite skipn_nil, concat_nil. reflexivity.
+    + rewrite skipn_cons, <- IHk; [|inversion HF; auto].
+      simpl. rewrite (Nat.add_comm c), <- skipn_skipn.
+      rewrite skipn_app_sharp; auto.
+      inversion HF; auto.
+Qed.
+
 Lemma eq_filter_nil_Forall_iff {A} f (xs : list A)
   : filter f xs = nil <-> Forall (fun x => f x = false) xs.
 Proof. induction xs; cbn; break_innermost_match; boring; inversion_list; inversion_one_head Forall; congruence. Qed.
@@ -3419,6 +3599,14 @@ Lemma fold_left_rev_higher_order A B f a ls
   : @fold_left A B f (List.rev ls) a
     = fold_left (fun acc x a => acc (f a x)) ls id a.
 Proof. symmetry; apply fold_left_higher_order. Qed.
+
+Lemma list_sum_constant c l:
+  Forall (fun x => x = c) l ->
+  (list_sum l = c * length l)%nat.
+Proof.
+  induction 1; [rewrite PeanoNat.Nat.mul_0_r; reflexivity|].
+  subst x. simpl. rewrite IHForall. Lia.lia.
+Qed.
 
 (* This module is here because the equivalent standard library functions fail to be "reified by unfolding". *)
 
