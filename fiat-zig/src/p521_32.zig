@@ -142,7 +142,7 @@ inline fn subborrowxU27(out1: *u32, out2: *u1, arg1: u1, arg2: u32, arg3: u32) v
 inline fn cmovznzU32(out1: *u32, arg1: u1, arg2: u32, arg3: u32) void {
     @setRuntimeSafety(mode == .Debug);
 
-    const x1 = (~(~arg1));
+    const x1 = @intFromBool(@intFromBool(arg1 == 0) == 0);
     const x2 = cast(u32, (cast(i64, cast(i1, (cast(i2, 0x0) - cast(i2, x1)))) & cast(i64, 0xffffffff)));
     const x3 = ((x2 & arg3) | ((~x2) & arg2));
     out1.* = x3;
