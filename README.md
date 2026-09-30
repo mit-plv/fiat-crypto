@@ -162,6 +162,12 @@ This binary takes arguments for the strategy:
 
 Passing no arguments, or passing `-h` or `--help` (or any other invalid arguments) will result in a usage message being printed.  These binaries output bedrock2/C code on stdout.
 
+Bedrock2 represents both addresses and machine words with `uintptr_t`, so the
+synthesis word size must match the target's pointer width.  In particular,
+compile `_32.c` outputs only for 32-bit targets and `_64.c` outputs only for
+64-bit targets; generated files enforce this requirement with a static
+assertion.
+
 Here are some examples of ways to invoke the binaries (from the directories that they live in):
 
     # Generate code for 2^255-19
