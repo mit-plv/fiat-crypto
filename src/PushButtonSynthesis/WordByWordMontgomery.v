@@ -227,6 +227,7 @@ Section __.
       /\ (r * r') mod m = 1
       /\ (m * m') mod r = (-1) mod r
       /\ 0 < machine_wordsize
+      /\ 1 < machine_wordsize
       /\ 1 < m
       /\ m < r^n
       /\ s = 2^Z.log2 s
@@ -268,8 +269,10 @@ Section __.
                             (CorrectnessStringification.dyn_context.cons
                                (Z.log2 m) "⌊log2 m⌋"
                                (CorrectnessStringification.dyn_context.cons
-                                  (@eval_twos_complement machine_wordsize n) "twos_complement_eval"
-                                  CorrectnessStringification.dyn_context.nil)))))))%string)
+                                  (@eval_twos_complement machine_wordsize sat_limbs) "twos_complement_eval"
+                                  (CorrectnessStringification.dyn_context.cons
+                                     (Z.twos_complement machine_wordsize) "twos_complement"
+                                     CorrectnessStringification.dyn_context.nil))))))))%string)
          (only parsing).
   Local Notation "'docstring_with_summary_from_lemma!' prefix summary correctness"
     := (docstring_with_summary_from_lemma_with_ctx!
@@ -570,19 +573,31 @@ Section __.
   Definition sbytes_eval (arg_name : string) (* s for string *)
     := Show.show (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).
 
+  (** [twos_complement_eval] is only ever applied to the saturated
+      values used by Bernstein-Yang inversion, which carry [sat_limbs]
+      limbs, so we document it at that width. *)
   Definition reval_twos_complement (* r for reified *)
     := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
-         n
+         sat_limbs
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
             (reified_eval_twos_complement_gen
                @ GallinaReify.Reify (machine_wordsize:Z)
-               @ GallinaReify.Reify n)
-            (Some bounds, tt)).
+               @ GallinaReify.Reify sat_limbs)
+            (Some larger_bounds, tt)).
 
   Definition seval_twos_complement (arg_name : string) (* s for string *)
     := Show.show (invert_expr.smart_App_curried (reval_twos_complement _) (arg_name, tt)).
+
+  (** The single-word two's complement interpretation used for the
+      [d] argument of Bernstein-Yang [divstep]; the argument is bounded
+      by [0 ~> 2^machine_wordsize-1], so [Z.twos_complement] reduces to a
+      single comparison. *)
+  Definition stwos_complement (arg_name : string) (* s for string *)
+    := ("if " ++ arg_name ++ " < 2^" ++ Decimal.Z.to_string (machine_wordsize - 1)
+         ++ " then " ++ arg_name
+         ++ " else " ++ arg_name ++ " - 2^" ++ Decimal.Z.to_string machine_wordsize)%string.
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
@@ -611,7 +626,7 @@ Section __.
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => [text_before_function_name ++ fname ++ " returns the saturated representation of the prime modulus."]%string)
-             (msat_correct machine_wordsize n m valid)).
+             (msat_correct machine_wordsize m sat_limbs)).
 
   Definition divstep_precomp
     := Pipeline.BoundsPipeline
@@ -649,7 +664,7 @@ Section __.
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " computes a divstep."]%string)
-             (divstep_correct machine_wordsize n m valid from_montgomery_res)).
+             (divstep_correct machine_wordsize n m valid from_montgomery_res sat_limbs)).
 
   Lemma bounded_by_of_valid x
         (H : valid x)
@@ -990,6 +1005,136 @@ Section __.
   Lemma Wf_one res (Hres : one = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
+  (** ** Bernstein-Yang inversion *)
+
+  Lemma list_Z_bounded_by_repeat_iff k b f
+    : list_Z_bounded_by (List.repeat (Some r[0~>b]%zrange) k) f
+      <-> (length f = k /\ forall z, In z f -> 0 <= z <= b).
+  Proof using Type.
+    cbv [list_Z_bounded_by].
+    revert f; induction k as [|k IHk]; intros [|x f]; cbn [List.repeat fold_andb_map List.length List.In];
+      rewrite ?Bool.andb_true_iff, ?IHk; cbn [lower upper]; rewrite ?Bool.andb_true_iff, ?Z.leb_le.
+    all: split; intros; destruct_head'_and; repeat apply conj; try lia; try congruence.
+    all: repeat first [ progress intros
+                      | progress subst
+                      | progress destruct_head'_or
+                      | solve [ eauto ]
+                      | match goal with
+                        | [ H : forall z, ?x = z \/ _ -> _ |- context[?x] ]
+                          => specialize (H x (or_introl eq_refl)); lia
+                        end ].
+  Qed.
+
+  Lemma sat_limbs_bound
+    : - 2 ^ (machine_wordsize * Z.of_nat sat_limbs - 1) <= m < 2 ^ (machine_wordsize * Z.of_nat sat_limbs - 1).
+  Proof using curve_good.
+    pose proof use_curve_good as use_curve_good.
+    destruct_head'_and.
+    cbv [sat_limbs r] in *.
+    rewrite <- Z.pow_mul_r in * by lia.
+    assert (2 ^ (machine_wordsize * Z.of_nat n) <= 2 ^ (machine_wordsize * Z.of_nat (n + 1) - 1))
+      by (apply Z.pow_le_mono_r; nia).
+    assert (0 < 2 ^ (machine_wordsize * Z.of_nat (n + 1) - 1)) by (apply Z.pow_pos_nonneg; nia).
+    lia.
+  Qed.
+
+  Strategy -1000 [msat]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
+  Lemma msat_correct res
+        (Hres : msat = Success res)
+    : msat_correct machine_wordsize m sat_limbs (Interp res).
+  Proof using curve_good.
+    pose proof use_curve_good as use_curve_good.
+    pose proof sat_limbs_bound as Hbound.
+    destruct_head'_and.
+    cbv [msat] in Hres; cbv [msat_correct].
+    PipelineTactics.do_unfolding.
+    split.
+    { PipelineTactics.use_compilers_correctness Hres.
+      autorewrite with interp_gen_cache interp_extra.
+      cbv [WordByWordMontgomeryInversion.msat].
+      apply eval_twos_complement_partition; cbv [sat_limbs] in *; lia. }
+    { PipelineTactics.use_compilers_correctness Hres. }
+  Qed.
+
+  Lemma Wf_msat res (Hres : msat = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
+  Strategy -1000 [divstep_precomp]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
+  Lemma divstep_precomp_correct res
+        (Hres : divstep_precomp = Success res)
+    : divstep_precomp_correct machine_wordsize n m valid from_montgomery_res (Interp res).
+  Proof using curve_good.
+    pose proof use_curve_good as use_curve_good.
+    destruct_head'_and.
+    assert (Hbound : 0 <= divstep_precompmod < m)
+      by (cbv [divstep_precompmod]; rewrite Z.modexp_correct; apply Z.mod_pos_bound; lia).
+    assert (Hmain : eval (n:=n) machine_wordsize (from_montgomery_res (Interp res)) mod m = divstep_precompmod mod m
+                    /\ valid (Interp res)).
+    { revert Hbound.
+      prove_correctness encodemod_correct. }
+    destruct Hmain as [Hmain Hvalid].
+    cbv [divstep_precomp_correct]; cbv zeta.
+    split; [ rewrite Hmain | exact Hvalid ].
+    cbv [divstep_precompmod]; rewrite Z.modexp_correct, Zmod_mod.
+    break_innermost_match; Z.ltb_to_lt; first [ reflexivity | lia ].
+  Qed.
+
+  Lemma Wf_divstep_precomp res (Hres : divstep_precomp = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
+  Lemma divstep_correct res
+        (Hres : divstep = Success res)
+    : divstep_correct machine_wordsize n m valid from_montgomery_res sat_limbs (Interp res).
+  Proof using curve_good.
+    pose proof use_curve_good as use_curve_good.
+    destruct_head'_and.
+    cbv [divstep_correct]; intros d f g v0 r0 Hd Hf Hg Hv Hr Hd' Hfodd Hf' Hg'.
+    pose proof (bounded_by_of_valid v0 Hv) as Hvb.
+    pose proof (bounded_by_of_valid r0 Hr) as Hrb.
+    pose proof (length_of_valid _ _ _ Hv) as Hvlen.
+    pose proof (length_of_valid _ _ _ Hr) as Hrlen.
+    pose proof (proj1 (list_Z_bounded_by_repeat_iff _ _ _) Hf) as [Hflen Hfin].
+    pose proof (proj1 (list_Z_bounded_by_repeat_iff _ _ _) Hg) as [Hglen Hgin].
+    cbv [list_Z_bounded_by] in Hf, Hg.
+    cbv [bounds saturated_bounds Primitives.saturated_bounds Primitives.word_bound] in Hvb, Hrb.
+    cbv [divstep divstep_input divstep_output] in Hres.
+    PipelineTactics.do_unfolding.
+    eapply Pipeline.BoundsPipeline_correct in Hres;
+      [ | try typeclasses eauto with core relax_zrange_gen_good typeclass_instances.. ];
+      [ | lazymatch goal with |- Wf _ => idtac end;
+          repeat match goal with
+                 | [ |- Wf (expr.APP _ _) ] => apply expr.Wf_APP
+                 end;
+          try typeclasses eauto with nocore wf_extra wf_gen_cache;
+          try typeclasses eauto with nocore wf wf_gen_cache ].
+    PipelineTactics.do_unfolding.
+    destruct Hres as [Hres _].
+    let lem' := PipelineTactics.curry_args Hres in
+    pose proof lem' as Hres'; clear Hres.
+    edestruct Hres' as [Hbnd Heq]; revgoals;
+      [ erewrite Heq; rewrite Heq in Hbnd; clear Heq Hres'
+      | PipelineTactics.solve_side_conditions_of_BoundsPipeline_correct .. ].
+    autorewrite with interp_gen_cache interp_extra in Hbnd |- *.
+    pose proof (divstep_correct_full machine_wordsize sat_limbs n m r' m' d f g v0 r0) as Hfull.
+    pose proof (divstep_valid machine_wordsize sat_limbs n m r' m' d f g v0 r0) as Hvalid.
+    cbv [r] in *.
+    destruct (BYInv.divstep machine_wordsize sat_limbs n m d f g v0 r0) as [ [ [ [d1 f1] g1] v1] r1] eqn:Hds.
+    cbv beta iota in Hfull, Hvalid |- *.
+    specialize (Hvalid ltac:(assumption) ltac:(assumption) ltac:(assumption) ltac:(assumption) ltac:(assumption) ltac:(lia) Hv Hr).
+    specialize (Hfull Hfodd ltac:(assumption) ltac:(assumption) ltac:(assumption) ltac:(assumption) ltac:(assumption)
+                      ltac:(cbv [sat_limbs]; lia) ltac:(lia) Hvlen Hrlen Hflen Hglen Hd' Hf' Hg'
+                      ltac:(intros; specialize (Hfin _ ltac:(eassumption)); lia)
+                      ltac:(intros; specialize (Hgin _ ltac:(eassumption)); lia)
+                      Hv Hr).
+    cbn [ZRange.type.base.option.is_bounded_by type.final_codomain fst snd] in Hbnd.
+    destruct Hvalid as [ [? [? ?] ] [? [? ?] ] ].
+    rewrite !Bool.andb_true_iff in Hbnd; destruct_head'_and.
+    repeat apply conj; assumption.
+  Qed.
+
+  Lemma Wf_divstep res (Hres : divstep = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Local Opaque Pipeline.BoundsPipeline. (* need this or else [eapply Pipeline.BoundsPipeline_correct in Hres] takes forever *)
 
   Lemma selectznz_correct res
@@ -1090,7 +1235,8 @@ Section __.
                        (fun s => "  " ++ s)%string
                        ((ToString.prefix_and_indent "eval z = " [seval "z"])
                           ++ (ToString.prefix_and_indent "bytes_eval z = " [sbytes_eval "z"])
-                          ++ (ToString.prefix_and_indent "twos_complement_eval z = " [seval_twos_complement "z"])))))
+                          ++ (ToString.prefix_and_indent "twos_complement_eval z = " [seval_twos_complement "z"])
+                          ++ (ToString.prefix_and_indent "twos_complement z = " [stwos_complement "z"])))))
            function_name_prefix requests.
   End for_stringification.
 End __.
@@ -1114,6 +1260,9 @@ Module Export Hints.
        one
        selectznz
        copy
+       msat
+       divstep_precomp
+       divstep
   : wf_op_cache.
 #[global]
   Hint Immediate
@@ -1133,5 +1282,8 @@ Module Export Hints.
        Wf_one
        Wf_selectznz
        Wf_copy
+       Wf_msat
+       Wf_divstep_precomp
+       Wf_divstep
   : wf_op_cache.
 End Hints.
