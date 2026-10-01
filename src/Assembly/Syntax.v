@@ -1,5 +1,6 @@
 From Coq Require Import ZArith.
 From Coq Require Import NArith.
+From Coq Require Import Ascii.
 From Coq Require Import String.
 From Coq Require Import List.
 From Coq Require Import Derive.
@@ -10,6 +11,8 @@ Require Import Crypto.Util.Listable.
 Require Import Crypto.Util.ListUtil.
 Require Crypto.Util.Tuple.
 Require Crypto.Util.OptionList.
+Require Import Crypto.Util.Strings.String.
+Require Crypto.Util.Strings.Ascii.
 Import ListNotations.
 
 Local Open Scope list_scope.
@@ -288,6 +291,97 @@ Notation ASCIZ := (ASCII_ true).
 Coercion INSTR : NormalInstruction >-> RawLine.
 Record Line := { indent : string ; rawline :> RawLine ; pre_comment_whitespace : string ; comment : option string ; line_number : N}.
 Definition Lines := list Line.
+
+(** ** Inert assembler directives
+
+    A [DIRECTIVE] line is an assembler directive that the parser
+    recognizes but does not otherwise interpret.  The symbolic
+    executor ([Crypto.Assembly.Symbolic.SymexRawLine]) and the
+    concrete semantics ([Crypto.Assembly.WithBedrock.Semantics.DenoteRawLine])
+    treat a directive inside a function body as a no-op if and only if
+    [inert_directive] returns [true] on it; every other directive is
+    rejected (fail closed).
+
+    Only directives that provably cannot change the machine code
+    emitted for the surrounding instructions belong here: CFI unwind
+    information, debug line information, symbol metadata, and the
+    like.  Directives that emit bytes into the current section
+    ([.byte], [.ascii], [.asciz], [.fill], [.zero], [.incbin], ...)
+    must never be listed, because inside a function body those bytes
+    are placed in the instruction stream and executed as instructions
+    that the checker never saw.  Some otherwise-harmless directives
+    are inert only for certain argument forms; those are checked
+    explicitly below:
+
+    - [.p2align n[, fill[, max]]] pads code sections with no-ops when
+      no fill value is given, but inserts copies of [fill] otherwise.
+    - [.intel_syntax prefix] would change how every subsequent operand
+      is assembled relative to what the parser assumed.
+    - [.text subsection] moves the following instructions into another
+      subsection, i.e. out of the fall-through path.
+    - [.type sym, @gnu_indirect_function] turns the function into an
+      IFUNC resolver whose return value is called instead. *)
+
+(** Split a directive line into its lower-cased mnemonic and its
+    (trimmed) arguments. *)
+Definition directive_mnemonic_and_args (d : string) : string * string
+  := let '(mnemonic, args) := String.take_while_drop_while (fun c0 => negb (Ascii.is_whitespace c0)) (String.trim d) in
+     (String.to_lower mnemonic, String.trim args).
+
+(** Directives that are inert regardless of their arguments. *)
+Definition inert_directives_with_any_args : list string
+  := [".addrsig"
+      ; ".addrsig_sym"
+      ; ".cfi_def_cfa"
+      ; ".cfi_def_cfa_offset"
+      ; ".cfi_def_cfa_register"
+      ; ".cfi_endproc"
+      ; ".cfi_offset"
+      ; ".cfi_startproc"
+      ; ".file"
+      ; ".ident"
+      ; ".loc"
+      ; ".size"
+     ]%string.
+
+(** Symbol types accepted in [.type sym, <type>].  GAS accepts the
+    type with a [@], [%], or [#] prefix, in double quotes, or bare. *)
+Definition inert_symbol_types : list string
+  := ["function"; "stt_func"; "object"; "stt_object"; "notype"; "stt_notype"]%string.
+
+Definition strip_symbol_type_decoration (ty : string) : string
+  := let ty := String.trim ty in
+     let ty := match ty with
+               | String c0 rest
+                 => if (Ascii.eqb c0 "@" || Ascii.eqb c0 "%" || Ascii.eqb c0 "#")%bool
+                    then rest
+                    else ty
+               | EmptyString => ty
+               end in
+     if (String.startswith """" ty && String.endswith """" ty && (2 <=? String.length ty)%nat)%bool
+     then String.substring 1 (String.length ty - 2) ty
+     else ty.
+
+Definition inert_directive (d : string) : bool
+  := let '(mnemonic, args) := directive_mnemonic_and_args d in
+     let fields := List.map String.trim (String.split "," args) in
+     if List.existsb (String.eqb mnemonic) inert_directives_with_any_args
+     then true
+     else if (mnemonic =? ".text")%string
+     then (args =? EmptyString)%string
+     else if (mnemonic =? ".intel_syntax")%string
+     then (String.to_lower args =? "noprefix")%string
+     else if (mnemonic =? ".type")%string
+     then match fields with
+          | [_; ty] => List.existsb (String.eqb (String.to_lower (strip_symbol_type_decoration ty))) inert_symbol_types
+          | _ => false
+          end
+     else if (mnemonic =? ".p2align")%string
+     then match fields with
+          | [_] | [_; EmptyString] | [_; EmptyString; _] => true
+          | _ => false
+          end
+     else false.
 
 Definition reg_size (r : REG) : N :=
       match r with

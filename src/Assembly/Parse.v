@@ -247,6 +247,11 @@ Definition parse_RawLine {opts : assembly_program_options} : ParserAction RawLin
         then [(ASCIZ (unescape_string (String.substring 1 (String.length args - 2) args)), "")]
         else if (s =? "")
         then [(EMPTY, "")]
+        (* N.B. Recognizing a directive here only makes it parse.  Whether
+           it is treated as a no-op inside a function body (rather than
+           rejected) is decided by [Syntax.inert_directive]; keep the two
+           in sync when adding directives, and never add data-emitting
+           ones there. *)
         else if (List.find (String.eqb (String.to_lower mnemonic))
           [".addrsig"
            ; ".addrsig_sym"
