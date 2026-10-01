@@ -24,6 +24,9 @@ FIAT_CURVE25519_SOLINAS_FIAT_EXTENSION typedef unsigned __int128 fiat_curve25519
 #if (-1 & 3) != 3
 #error "This code only works on a two's complement system"
 #endif
+#if ((-1) >> 1) != -1
+#error "This code only works on a system with arithmetic right shift of negative signed values"
+#endif
 
 #if !defined(FIAT_CURVE25519_SOLINAS_NO_ASM) && (defined(__GNUC__) || defined(__clang__))
 static __inline__ uint64_t fiat_curve25519_solinas_value_barrier_u64(uint64_t a) {
