@@ -150,6 +150,7 @@ for item in asm_op_names_items:
                 op,
                 "--no-wide-int",
                 "--shiftr-avoid-uint1",
+                "--asm-aliasing-check",
             ]
             + [
                 item
@@ -169,6 +170,7 @@ for item in asm_op_names_items:
                 op,
                 "--no-wide-int",
                 "--shiftr-avoid-uint1",
+                "--asm-aliasing-check",
             ]
             + [
                 item
@@ -188,6 +190,7 @@ for item in asm_op_names_items:
                 op,
                 "--no-wide-int",
                 "--shiftr-avoid-uint1",
+                "--asm-aliasing-check",
             ]
             + [
                 item
@@ -208,6 +211,7 @@ for item in asm_op_names_items:
                 op,
                 "--no-wide-int",
                 "--shiftr-avoid-uint1",
+                "--asm-aliasing-check",
                 "--tight-bounds-mul-by",
                 "1.000001",
             ]

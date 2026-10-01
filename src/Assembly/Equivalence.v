@@ -40,6 +40,18 @@ Class assembly_labels_fuzzy_prefixes_opt := assembly_labels_fuzzy_prefixes : boo
 #[global]
 Typeclasses Opaque assembly_labels_fuzzy_prefixes_opt.
 Definition default_assembly_labels_fuzzy_prefixes : assembly_labels_fuzzy_prefixes_opt := true.
+(** Should we additionally check that the assembly computes the
+    reference function when output arrays share memory with input
+    arrays of the same length (e.g., [mul(x, x, y)])?  The generated
+    C code supports this (see the let-binder pass in UnderLets.v),
+    so assembly meant as a drop-in replacement should too.  This
+    check is not covered by the soundness proofs in
+    WithBedrock/Proofs.v, which assume disjoint buffers; it is an
+    additional reject condition.  See [check_equivalence_under_aliasing]. *)
+Class assembly_check_aliasing_opt := assembly_check_aliasing : bool.
+#[global]
+Typeclasses Opaque assembly_check_aliasing_opt.
+Definition default_assembly_check_aliasing : assembly_check_aliasing_opt := true.
 (** List of registers used for outputs/inputs *)
 Class assembly_calling_registers_opt := assembly_calling_registers' : option (list REG).
 #[global]
@@ -153,6 +165,7 @@ Class assembly_conventions_opt :=
   ; #[global] assembly_callee_saved_registers_ :: assembly_callee_saved_registers_opt
   ; #[global] assembly_labels_fuzzy_suffixes_ :: assembly_labels_fuzzy_suffixes_opt
   ; #[global] assembly_labels_fuzzy_prefixes_ :: assembly_labels_fuzzy_prefixes_opt
+  ; #[global] assembly_check_aliasing_ :: assembly_check_aliasing_opt
   }.
 Definition default_assembly_conventions : assembly_conventions_opt
   := {| assembly_calling_registers_ := None
@@ -162,6 +175,7 @@ Definition default_assembly_conventions : assembly_conventions_opt
      ; assembly_callee_saved_registers_ := default_assembly_callee_saved_registers
      ; assembly_labels_fuzzy_suffixes_ := default_assembly_labels_fuzzy_suffixes
      ; assembly_labels_fuzzy_prefixes_ := default_assembly_labels_fuzzy_prefixes
+     ; assembly_check_aliasing_ := default_assembly_check_aliasing
      |}.
 
 Module Export Options.
@@ -217,6 +231,26 @@ include enough information in the error message to generate .dot files
 of the equivalence graphs.  If desired, we can parameterize the error
 printing functions on command-lines options indicating how verbose to
 be in printing the error message. *)
+(** An aliasing specification records, for each input argument (by
+    position), the position of the output argument whose memory it
+    shares, if any; [None] means the input has its own memory.  See
+    [check_equivalence_under_aliasing]. *)
+Definition aliasing_spec := list (option nat).
+
+(** Describe an aliasing specification using the argument names of
+    the generated C code, e.g., "out1 = arg1, out1 = arg2" *)
+Definition show_aliasing_spec (aliasing : aliasing_spec) : string
+  := match List.flat_map
+             (fun '(k, o) => match o with
+                             | Some j => ["out" ++ show (S j) ++ " = arg" ++ show (S k)]
+                             | None => []
+                             end)
+             (List.enumerate aliasing)
+     with
+     | [] => "no aliasing"
+     | ls => String.concat ", " ls
+     end%string%list.
+
 Inductive EquivalenceCheckingError :=
 | Symbolic_execution_failed (_ : Symbolic.error) (_ : symbolic_state)
 | Internal_error_output_load_failed (_ : option Symbolic.error) (_ : list ((REG + idx) + idx)) (_ : symbolic_state)
@@ -244,10 +278,13 @@ Inductive EquivalenceCheckingError :=
 | Unable_to_unify (_ _ : list (idx + list idx)) (first_new_idx_after_all_old_idxs : option idx) (_ : symbolic_state)
 | Missing_ret
 | Code_after_ret (significant : Lines) (l : Lines)
+| Aliasing_check_failed (aliasing : aliasing_spec) (err : EquivalenceCheckingError)
 .
 
-Definition symbolic_state_of_EquivalenceCheckingError (e : EquivalenceCheckingError) : option symbolic_state
+Fixpoint symbolic_state_of_EquivalenceCheckingError (e : EquivalenceCheckingError) : option symbolic_state
   := match e with
+     | Aliasing_check_failed _ err
+       => symbolic_state_of_EquivalenceCheckingError err
      | Symbolic_execution_failed _ s
      | Internal_error_output_load_failed _ _ s
      | Internal_error_lingering_memory s
@@ -669,7 +706,11 @@ Fixpoint explain_unification_error (asm_output PHOAS_output : list (idx + list i
      end%string%list.
 
 Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheckingError
-  := fun err => match err with
+  := fix show_lines_EquivalenceCheckingError err
+     := match err with
+                | Aliasing_check_failed aliasing err
+                  => (["While checking the assembly with memory shared between arguments (" ++ show_aliasing_spec aliasing ++ "):"]%string)
+                       ++ show_lines_EquivalenceCheckingError err
                 | Symbolic_execution_failed l r
                   => ["In combined state:"]
                        ++ show_lines r ++ ["Symbolic execution failed:"] ++ show_lines l
@@ -872,6 +913,115 @@ Fixpoint build_merge_base_addresses {opts : symbolic_options_computed_opt} {desc
                        ret (inl r)));
            rest <- build_merge_base_addresses (dereference_scalar:=dereference_scalar) xs reg_available;
            Symbolic.ret (inl addr :: rest))
+     end%N%x86symex.
+
+(** * Aliasing between output and input arrays
+
+    The generated C code loads all of its inputs before storing any
+    output, so calling it with an output array that is the same array
+    as one (or more) of the input arrays of the same type is fine.
+    The symbolic memory model above gives every array its own fresh
+    base address, so [symex_asm_func_M] only checks the assembly for
+    disjoint buffers.  The definitions below re-run the symbolic
+    execution with the output arrays pointed at the memory of the
+    input arrays they are declared to alias, so that stores to an
+    output clobber the (not yet loaded) input in symbolic memory. *)
+
+(** Which outputs (by position) may input [input] share memory with?
+    Only arrays of the same length. *)
+Definition aliasable_outputs (output_types : type_spec) (input : idx + list idx) : list nat
+  := match input with
+     | inl _ => []
+     | inr idxs
+       => List.flat_map
+            (fun '(j, ty)
+             => match ty with
+                | Some len => if (len =? List.length idxs)%nat then [j] else []
+                | None => []
+                end)
+            (List.enumerate output_types)
+     end.
+
+Definition list_cartesian_product {A} (ls : list (list A)) : list (list A)
+  := List.fold_right
+       (fun choices acc => List.flat_map (fun c => List.map (cons c) acc) choices)
+       [nil]
+       ls.
+
+(** All aliasing specifications in which each input array shares
+    memory with at most one output array of the same length (several
+    inputs may share the same output, as in [mul(x, x, x)]), excluding
+    the specification with no sharing (which is [check_equivalence]). *)
+Definition all_aliasing_specs (output_types : type_spec) (inputs : list (idx + list idx)) : list aliasing_spec
+  := List.filter
+       (fun aliasing => List.existsb (fun o => match o with Some _ => true | None => false end) aliasing)
+       (list_cartesian_product
+          (List.map (fun input => None :: List.map Some (aliasable_outputs output_types input)) inputs)).
+
+(** The first input sharing memory with output [j], if any *)
+Definition first_input_aliased_with (aliasing : aliasing_spec) (j : nat) : option nat
+  := option_map fst (List.find (fun '(_, o) => option_beq Nat.eqb o (Some j)) (List.enumerate aliasing)).
+
+(** The symbolic values of the inputs as seen through shared memory:
+    every input sharing memory with output [j] holds the values of
+    the first input sharing memory with [j]. *)
+Definition apply_aliasing_spec (aliasing : aliasing_spec) (inputs : list (idx + list idx)) : list (idx + list idx)
+  := List.map
+       (fun '(input, o)
+        => match o with
+           | Some j
+             => match first_input_aliased_with aliasing j with
+                | Some k0 => nth_default input inputs k0
+                | None => input
+                end
+           | None => input
+           end)
+       (List.combine inputs (aliasing ++ List.repeat None (List.length inputs))).
+
+(** Like [build_merge_base_addresses], but an input sharing memory
+    with an output (according to [aliasing]) gets the base address of
+    that output rather than fresh memory of its own; [outputaddrs] are
+    the addresses already built for the outputs. *)
+Fixpoint build_merge_base_addresses_under_aliasing {opts : symbolic_options_computed_opt} {descr:description} {dereference_scalar:bool}
+         (outputaddrs : list ((REG + idx) + idx))
+         (items : list (idx + list idx)) (aliasing : aliasing_spec) (reg_available : list REG)
+  : M (list ((REG + idx) + idx))
+  := match items, reg_available with
+     | [], _ | _, [] => Symbolic.ret []
+     | x :: xs, r :: reg_available
+       => let '(o, aliasing) := match aliasing with
+                               | o :: aliasing => (o, aliasing)
+                               | [] => (None, [])
+                               end in
+          let shared_base
+            := match o, x with
+               | Some j, inr _
+                 => match List.nth_error outputaddrs j with
+                    | Some (inr base) => Some base
+                    | _ => None
+                    end
+               | _, _ => None
+               end in
+          (addr <- match shared_base, x with
+                   | Some base, _
+                     => (_ <- SetReg r base; (* note: overwrites initial value *)
+                         Symbolic.ret (inr base))
+                   | None, inr idxs
+                     => (base <- SetRegFresh r; (* note: overwrites initial value *)
+                         addrs <- build_merge_array_addresses base idxs; (* note: overwrites initial value *)
+                         Symbolic.ret (inr base))
+                   | None, inl idx
+                     => (addr <- (if dereference_scalar
+                                  then
+                                    (addr <- SetRegFresh r;
+                                     fun s => Success (inr addr, update_mem_with s (cons (addr, idx))))
+                                  else
+                                    (_ <- SetReg r idx; (* note: overwrites initial value *)
+                                     ret (inl r)));
+                         Symbolic.ret (inl addr))
+                   end;
+           rest <- build_merge_base_addresses_under_aliasing (dereference_scalar:=dereference_scalar) outputaddrs xs aliasing reg_available;
+           Symbolic.ret (addr :: rest))
      end%N%x86symex.
 
 Fixpoint dag_gensym_n {descr:description} (n : nat) : dag.M (list symbol) :=
@@ -1422,13 +1572,91 @@ Definition symex_asm_func
              | Success (Success asm_output, s) => Success (asm_output, s)
              end.
 
+(** Like [symex_asm_func_M], but with the memory layout described by
+    [aliasing]: an output which shares memory with some inputs
+    initially holds the symbolic values of the first such input, and
+    the registers of all inputs sharing it point at that memory.  The
+    result must be compared against the reference function evaluated
+    on [apply_aliasing_spec aliasing inputs].  Note that this is not
+    covered by the proofs in WithBedrock/Proofs.v. *)
+Definition symex_asm_func_M_under_aliasing
+           {opts : symbolic_options_computed_opt}
+           (dereference_input_scalars:=false)
+           {dereference_output_scalars:bool}
+           (callee_saved_registers : list REG)
+           (output_types : type_spec) (stack_size : nat)
+           (inputs : list (idx + list idx)) (aliasing : aliasing_spec) (reg_available : list REG) (asm : Lines)
+  : M (ErrorT EquivalenceCheckingError (list (idx + list idx)))
+  := (output_placeholders <- lift_dag (build_inputs (descr:=Build_description "output_placeholders" true) output_types);
+      let n_outputs := List.length output_placeholders in
+      (* an output sharing memory with some input initially holds that input; the others hold fresh placeholders *)
+      let output_cells
+        := List.map
+             (fun '(j, placeholder)
+              => match first_input_aliased_with aliasing j with
+                 | Some k
+                   => match List.nth_error inputs k with
+                      | Some (inr _ as input) => input
+                      | _ => placeholder
+                      end
+                 | None => placeholder
+                 end)
+             (List.enumerate output_placeholders) in
+      outputaddrs <- build_merge_base_addresses (descr:=Build_description "outputaddrs" true) (dereference_scalar:=dereference_output_scalars) output_cells (firstn n_outputs reg_available);
+      inputaddrs <- build_merge_base_addresses_under_aliasing (descr:=Build_description "inputaddrs" true) (dereference_scalar:=dereference_input_scalars) outputaddrs inputs aliasing (skipn n_outputs reg_available);
+      stack_base <- build_merge_stack_placeholders (descr:=Build_description "stack_base" true) stack_size;
+      initial_register_values <- mapM (GetReg (descr:=Build_description "initial_register_values" true)) callee_saved_registers;
+      _ <- SymexLines asm;
+      final_register_values <- mapM (GetReg (descr:=Build_description "final_register_values" true)) callee_saved_registers;
+      _ <- LoadArray (descr:=Build_description "load final stack" true) stack_base stack_size;
+      let unsaved_registers : list (REG * (idx * idx)) := List.filter (fun '(r, (init, final)) => negb (init =? final)%N) (List.combine callee_saved_registers (List.combine initial_register_values final_register_values)) in
+      asm_output <- LoadOutputs (descr:=Build_description "asm_output" true) (dereference_scalar:=dereference_output_scalars) outputaddrs output_types;
+      (* also remove the memory of the inputs which have memory of their own; the shared memory was removed together with the outputs *)
+      let input_types := List.map (fun v => match v with inl _ => None | inr ls => Some (List.length ls) end) inputs in
+      let is_shared := fun addr
+                       => match addr with
+                          | inr base => List.existsb (fun oaddr => match oaddr with inr obase => (obase =? base)%N | inl _ => false end) outputaddrs
+                          | inl _ => false
+                          end in
+      let unshared := List.filter (fun '(addr, _) => negb (is_shared addr)) (List.combine inputaddrs input_types) in
+      asm_input <- LoadOutputs (descr:=Build_description "asm_input <- LoadOutputs" true) (dereference_scalar:=dereference_input_scalars) (List.map fst unshared) (List.map snd unshared);
+      (fun s => Success
+                  (match asm_output, asm_input, unsaved_registers, s.(symbolic_mem_state) with
+                   | Success asm_output, Success _, [], []
+                     => Success asm_output
+                   | Error err, _, _, _
+                   | _, Error err, _, _
+                     => Error err
+                   | Success _, Success _, (_ :: _) as unsaved_registers, _
+                     => Error (Registers_not_saved unsaved_registers s)
+                   | Success _, Success _, _, (_ :: _) as mem_remaining
+                     => Error (Internal_error_lingering_memory s)
+                   end,
+                    s)))%N%x86symex.
+
+(** Like [symex_asm_func], but under [aliasing].  The sanity checks on
+    the register lists are not repeated here; they are performed by
+    [symex_asm_func], which is always run first. *)
+Definition symex_asm_func_under_aliasing
+           {opts : symbolic_options_computed_opt}
+           {dereference_output_scalars:bool}
+           (d : dag) (callee_saved_registers : list REG) (output_types : type_spec) (stack_size : nat)
+           (inputs : list (idx + list idx)) (aliasing : aliasing_spec) (reg_available : list REG) (asm : Lines)
+  : ErrorT EquivalenceCheckingError (list (idx + list idx) * symbolic_state)
+  := match symex_asm_func_M_under_aliasing (dereference_output_scalars:=dereference_output_scalars) callee_saved_registers output_types stack_size inputs aliasing reg_available asm (init_symbolic_state d) with
+     | Error (e, s)                    => Error (Symbolic_execution_failed e s)
+     | Success (Error err, s)          => Error err
+     | Success (Success asm_output, s) => Success (asm_output, s)
+     end.
+
 Section check_equivalence.
   Context {symbolic_opts : symbolic_options_computed_opt}
           {assembly_calling_registers' : assembly_calling_registers_opt}
           {assembly_stack_size' : assembly_stack_size_opt}
           {assembly_output_first : assembly_output_first_opt}
           {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
-          {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}.
+          {assembly_callee_saved_registers' : assembly_callee_saved_registers_opt}
+          {assembly_check_aliasing : assembly_check_aliasing_opt}.
 
   Section with_expr.
     Context {t}
@@ -1467,6 +1695,10 @@ Section check_equivalence.
                asm);
       Success ls)%error.
 
+    (** Check that each assembly function computes the reference
+        function when all of its array arguments are disjoint.  This
+        is the check covered by [check_equivalence_correct] in
+        WithBedrock/Proofs.v. *)
     Definition check_equivalence : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) unit :=
       let d := dag.empty in
       input_types <- map_err_None (simplify_input_type t arg_bounds);
@@ -1509,10 +1741,56 @@ Section check_equivalence.
       Success tt.
 
 
+    (** Additionally check that each assembly function computes the
+        reference function in every configuration where output arrays
+        share memory with input arrays of the same length (see
+        [all_aliasing_specs]), which the generated C code supports.
+        This check is not covered by the soundness proofs in
+        WithBedrock/Proofs.v; it only rejects more assembly. *)
+    Definition check_equivalence_under_aliasing : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) unit :=
+      let d := dag.empty in
+      input_types <- map_err_None (simplify_input_type t arg_bounds);
+      output_types <- map_err_None (simplify_base_type (type.final_codomain t) out_bounds);
+      let '(inputs, d) := build_inputs (descr:=Build_description "build_inputs" true) input_types d in
+      let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
+      (* the reference output is the same as in [check_equivalence] unless some inputs are identified with each other *)
+      PHOAS_output_disjoint <- map_err_None (symex_PHOAS expr inputs d);
+
+      _ <-- List.map
+              (fun aliasing =>
+                 let wrap_err := fun '(lbl, err) => (lbl, Aliasing_check_failed aliasing err) in
+                 let aliased_inputs := apply_aliasing_spec aliasing inputs in
+                 PHOAS_output <- (if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) aliased_inputs inputs
+                                  then Success PHOAS_output_disjoint
+                                  else ErrorT.map_error wrap_err (map_err_None (symex_PHOAS expr aliased_inputs d)));
+                 let '(PHOAS_output, d) := PHOAS_output in
+
+                 let first_new_idx_after_all_old_idxs : option idx := Some (dag.size d) in
+
+                 _ <-- List.map
+                         (fun '((fname, asm) as label)
+                          => ErrorT.map_error
+                               wrap_err
+                               (asm <- map_err_Some label (strip_ret asm);
+                                let stack_size : nat := N.to_nat (assembly_stack_size asm) in
+                                symevaled_asm <- map_err_Some label (symex_asm_func_under_aliasing (dereference_output_scalars:=false) d assembly_callee_saved_registers output_types stack_size inputs aliasing reg_available asm);
+                                let '(asm_output, s) := symevaled_asm in
+                                if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm_output PHOAS_output
+                                then Success tt
+                                else Error (Some label, Unable_to_unify asm_output PHOAS_output first_new_idx_after_all_old_idxs s)))
+                         asm;
+                 Success tt)
+              (all_aliasing_specs output_types inputs);
+      Success tt.
+
     (** We don't actually generate assembly, we just check equivalence and pass assembly through unchanged *)
     Definition generate_assembly_of_hinted_expr : ErrorT (option (string (* fname *) * Lines (* asm lines *)) * EquivalenceCheckingError) (list (string * Lines))
       := match check_equivalence with
-         | Success tt => Success asm (* the asm is equivalent, so we can emit this asm *)
+         | Success tt
+           => match (if assembly_check_aliasing then check_equivalence_under_aliasing else Success tt) with
+              | Success tt => Success asm (* the asm is equivalent, so we can emit this asm *)
+              | Error err => Error err
+              end
          | Error err => Error err
          end.
   End with_expr.
