@@ -112,6 +112,9 @@ static inline br_word_t _br_remu(br_word_t a, br_word_t b) {
 }
 
 
+// This file was synthesized for 64-bit words; br_word_t (uintptr_t) must be exactly that wide on the target.
+static_assert(BR_WORD_MAX == UINT64_MAX, "this file was synthesized for 64-bit words; compile it only for a target whose uintptr_t is 64 bits wide");
+
 /*
  * Input Bounds:
  *   in0: [[0x0 ~> 0xc00000000000000], [0x0 ~> 0xc00000000000000], [0x0 ~> 0xc00000000000000], [0x0 ~> 0xc00000000000000], [0x0 ~> 0xc00000000000000], [0x0 ~> 0xc00000000000000], [0x0 ~> 0xc00000000000000], [0x0 ~> 0xc00000000000000], [0x0 ~> 0x600000000000000]]
