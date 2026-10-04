@@ -2201,7 +2201,7 @@ static FIAT_P256_SCALAR_FIAT_INLINE void fiat_p256_scalar_divstep(uint64_t* out1
  * The function fiat_p256_scalar_divstep_precomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
  *
  * Postconditions:
- *   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if ⌊log2 m⌋ + 1 < 46 then ⌊(49 * (⌊log2 m⌋ + 1) + 80) / 17⌋ else ⌊(49 * (⌊log2 m⌋ + 1) + 57) / 17⌋)
+ *   eval (from_montgomery out1) = ⌊(m + 1) / 2⌋^(if ⌊log2 m⌋ + 1 < 46 then ⌊(49 * (⌊log2 m⌋ + 1) + 80) / 17⌋ else ⌊(49 * (⌊log2 m⌋ + 1) + 57) / 17⌋) mod m
  *   0 ≤ eval out1 < m
  *
  * Output Bounds:
