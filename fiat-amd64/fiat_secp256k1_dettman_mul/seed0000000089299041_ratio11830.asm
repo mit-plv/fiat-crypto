@@ -1,6 +1,18 @@
 SECTION .text
 	GLOBAL fiat_secp256k1_dettman_mul
 fiat_secp256k1_dettman_mul:
+push qword [ rdx + 0x20 ]
+push qword [ rdx + 0x18 ]
+push qword [ rdx + 0x10 ]
+push qword [ rdx + 0x8 ]
+push qword [ rdx + 0x0 ]
+mov rdx, rsp
+push qword [ rsi + 0x20 ]
+push qword [ rsi + 0x18 ]
+push qword [ rsi + 0x10 ]
+push qword [ rsi + 0x8 ]
+push qword [ rsi + 0x0 ]
+mov rsi, rsp
 mov rax, rdx; preserving value of arg2 into a new reg
 mov rdx, [ rdx + 0x0 ]; saving arg2[0] in rdx.
 mulx r11, r10, [ rsi + 0x18 ]; x10003_1, x10003_0<- arg1[3] * arg2[0] (_0*_0)
@@ -191,6 +203,7 @@ mov r12, [ rsp - 0x70 ]; pop
 mov r13, [ rsp - 0x68 ]; pop
 mov r14, [ rsp - 0x60 ]; pop
 mov r15, [ rsp - 0x58 ]; pop
+add rsp, 80
 ret
 ; cpu 13th Gen Intel(R) Core(TM) i9-13900KF
 ; ratio 1.1830
