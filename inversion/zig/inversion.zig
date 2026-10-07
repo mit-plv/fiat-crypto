@@ -94,7 +94,7 @@ test "Field inversion" {
     });
 
     var s: [Fe.bytes]u8 = undefined;
-    crypto.random.bytes(&s);
+    std.testing.io.random(&s);
     const x = Fe.fromBytes(s);
 
     const xinv = x.invert();
