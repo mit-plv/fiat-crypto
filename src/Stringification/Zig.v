@@ -136,7 +136,8 @@ Module Zig.
 
   (* Hide the all-zero/all-one range of a selection mask from LLVM.  Without
      this barrier it may replace arithmetic selection with pointer selection
-     or masked loads.  Split wide masks so asm operands fit native registers. *)
+     or masked loads.  Split wide masks so asm operands fit native registers.
+     The C and WebAssembly backends get the plain mask, as in std.crypto.ff. *)
   Definition selection_mask_helper
              {language_naming_conventions : language_naming_conventions_opt}
              (internal_private : bool) (prefix : string) (t : int.type) : list string :=
@@ -151,6 +152,10 @@ Module Zig.
      "    const value: " ++ ty ++ " = 0 -% " ++
        (if (int.bitwidth_of t =? 1)%Z then "arg1" else "@as(" ++ ty ++ ", arg1)") ++ ";";
      "    if (@inComptime()) return value;";
+     "    switch (@import(""builtin"").zig_backend) {";
+     "        .stage2_c, .stage2_wasm => return value,";
+     "        else => {},";
+     "    }";
      "    if (@bitSizeOf(" ++ ty ++ ") <= @bitSizeOf(usize)) {";
      "        return asm (""""";
      "            : [mask] ""=r"" (-> " ++ ty ++ "),";
