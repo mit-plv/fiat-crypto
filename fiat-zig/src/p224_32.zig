@@ -19,7 +19,6 @@
 
 const mode = @import("builtin").mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels
 
-
 // The type MontgomeryDomainFieldElement is a field element in the Montgomery domain.
 // Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 pub const MontgomeryDomainFieldElement = [7]u32;

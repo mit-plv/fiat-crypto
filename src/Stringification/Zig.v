@@ -201,9 +201,11 @@ Module Zig.
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
              (typedef_map : list typedef_info)
     : list string
-    := (["";
-         "const mode = @import(""builtin"").mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels";
-         ""]
+    := (* Every block below, and every function after the header, starts
+          with its own blank line.  Ending the header with one too would
+          leave a double blank line that zig fmt collapses. *)
+       (["";
+         "const mode = @import(""builtin"").mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels"]
           ++ (if skip_typedefs
               then []
               else List.flat_map

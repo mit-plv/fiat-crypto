@@ -14,7 +14,6 @@
 
 const mode = @import("builtin").mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels
 
-
 /// The function mul multiplies two field elements.
 ///
 /// Postconditions:

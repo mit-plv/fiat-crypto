@@ -9,7 +9,6 @@
 
 const mode = @import("builtin").mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels
 
-
 /// Add two limbs and a carry bit, returning the sum modulo 2^64 and the carry bit.
 fn addcarryxU64(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) void {
     @setRuntimeSafety(mode == .debug);
