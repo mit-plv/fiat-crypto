@@ -63,6 +63,10 @@ fn selectionMaskU32(arg1: u1) u32 {
 
     const value: u32 = 0 -% @as(u32, arg1);
     if (@inComptime()) return value;
+    switch (@import("builtin").zig_backend) {
+        .stage2_c, .stage2_wasm => return value,
+        else => {},
+    }
     if (@bitSizeOf(u32) <= @bitSizeOf(usize)) {
         return asm (""
             : [mask] "=r" (-> u32),
