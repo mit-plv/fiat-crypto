@@ -21,7 +21,8 @@ tramp
 
 # misc
 *.pyc
-zig-cache
+.zig-cache
+zig-out
 
 # java
 *.class

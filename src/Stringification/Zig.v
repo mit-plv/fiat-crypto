@@ -86,6 +86,112 @@ Module Zig.
                 end
                 ++ ";"]%string)%list.
 
+  Definition native_split (bw : Z) : bool :=
+    (bw =? int.bitwidth_of (int.of_bitwidth false bw))%Z.
+
+  (* Keep carry chains at limb width so Zig can lower them to native
+     overflow instructions.  Only multiplication needs a double-width
+     intermediate.  The carry output may be widened by the CLI option,
+     but the input carry is always a bit. *)
+  Definition carry_helpers
+             {language_naming_conventions : language_naming_conventions_opt}
+             {output_options : output_options_opt}
+             (internal_private : bool) (prefix : string) (bw : Z) : list string :=
+    let ty := int_type_to_string (int.of_bitwidth false bw) in
+    let carry_ty := if List.existsb (Z.eqb bw) relax_adc_sbb_return_carry_to_bitwidth
+                    then ty else "u1" in
+    List.flat_map
+      (fun '(name, op, description) =>
+         ["";
+          "/// " ++ description;
+          (if internal_private then "fn " else "pub fn ") ++
+            ToString.format_special_function_name internal_private prefix name false bw ++
+            "(out1: *" ++ ty ++ ", out2: *" ++ carry_ty ++ ", arg1: u1, arg2: " ++ ty ++ ", arg3: " ++ ty ++ ") void {";
+          "    @setRuntimeSafety(mode == .debug);";
+          "";
+          "    const x = @" ++ op ++ "WithOverflow(arg2, arg3);";
+          "    const y = @" ++ op ++ "WithOverflow(x[0], arg1);";
+          "    out1.* = y[0];";
+          "    out2.* = x[1] | y[1];";
+          "}"]%string)
+      [("addcarryx", "add", "Add two limbs and a carry bit, returning the sum modulo 2^" ++ Decimal.Z.to_string bw ++ " and the carry bit.");
+       ("subborrowx", "sub", "Subtract two limbs and a borrow bit, returning the difference modulo 2^" ++ Decimal.Z.to_string bw ++ " and the borrow bit.")]%string.
+
+  Definition mul_helper
+             {language_naming_conventions : language_naming_conventions_opt}
+             (internal_private : bool) (prefix : string) (bw : Z) : list string :=
+    let ty := int_type_to_string (int.of_bitwidth false bw) in
+    let wide_ty := int_type_to_string (int.of_bitwidth false (2 * bw)) in
+    ["";
+     "/// Multiply two limbs, returning the low and high halves of the product.";
+     (if internal_private then "fn " else "pub fn ") ++
+       ToString.format_special_function_name internal_private prefix "mulx" false bw ++
+       "(out1: *" ++ ty ++ ", out2: *" ++ ty ++ ", arg1: " ++ ty ++ ", arg2: " ++ ty ++ ") void {";
+     "    @setRuntimeSafety(mode == .debug);";
+     "";
+     "    const x = @as(" ++ wide_ty ++ ", arg1) * arg2;";
+     "    out1.* = @truncate(x);";
+     "    out2.* = @intCast(x >> " ++ Decimal.Z.to_string bw ++ ");";
+     "}"]%string.
+
+  (* Hide the all-zero/all-one range of a selection mask from LLVM.  Without
+     this barrier it may replace arithmetic selection with pointer selection
+     or masked loads.  Split wide masks so asm operands fit native registers.
+     The C and WebAssembly backends get the plain mask, as in std.crypto.ff. *)
+  Definition selection_mask_helper
+             {language_naming_conventions : language_naming_conventions_opt}
+             (internal_private : bool) (prefix : string) (t : int.type) : list string :=
+    let ty := int_type_to_string t in
+    ["";
+     "/// Keep selection masks opaque to the optimizer without adding instructions.";
+     (if internal_private then "fn " else "pub fn ") ++
+       ToString.format_special_function_name_ty internal_private prefix "selection_mask" t ++
+       "(arg1: u1) " ++ ty ++ " {";
+     "    @setRuntimeSafety(mode == .debug);";
+     "";
+     "    const value: " ++ ty ++ " = 0 -% " ++
+       (if (int.bitwidth_of t =? 1)%Z then "arg1" else "@as(" ++ ty ++ ", arg1)") ++ ";";
+     "    if (@inComptime()) return value;";
+     "    switch (@import(""builtin"").zig_backend) {";
+     "        .stage2_c, .stage2_wasm => return value,";
+     "        else => {},";
+     "    }";
+     "    if (@bitSizeOf(" ++ ty ++ ") <= @bitSizeOf(usize)) {";
+     "        return asm (""""";
+     "            : [mask] ""=r"" (-> " ++ ty ++ "),";
+     "            : [value] ""0"" (value),";
+     "        );";
+     "    }";
+     "    var mask: " ++ ty ++ " = 0;";
+     "    inline for (0..@divExact(@bitSizeOf(" ++ ty ++ "), @bitSizeOf(usize))) |i| {";
+     "        const shift = i * @bitSizeOf(usize);";
+     "        const chunk: usize = @truncate(value >> shift);";
+     "        const part = asm (""""";
+     "            : [mask] ""=r"" (-> usize),";
+     "            : [value] ""0"" (chunk),";
+     "        );";
+     "        mask |= @as(" ++ ty ++ ", part) << shift;";
+     "    }";
+     "    return mask;";
+     "}"]%string.
+
+  (* A full-width unsigned mask selects a word without branches. *)
+  Definition cmov_helper
+             {language_naming_conventions : language_naming_conventions_opt}
+             (internal_private : bool) (prefix : string) (t : int.type) : list string :=
+    let ty := int_type_to_string t in
+    ["";
+     "/// Select arg2 when arg1 is zero and arg3 otherwise, using a bit mask.";
+     (if internal_private then "fn " else "pub fn ") ++
+       ToString.format_special_function_name_ty internal_private prefix "cmovznz" t ++
+       "(out1: *" ++ ty ++ ", arg1: u1, arg2: " ++ ty ++ ", arg3: " ++ ty ++ ") void {";
+     "    @setRuntimeSafety(mode == .debug);";
+     "";
+     "    const mask = " ++
+       ToString.format_special_function_name_ty internal_private prefix "selection_mask" t ++ "(arg1);";
+     "    out1.* = arg2 ^ ((arg2 ^ arg3) & mask);";
+     "}"]%string.
+
   Definition header
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
@@ -95,22 +201,11 @@ Module Zig.
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
              (typedef_map : list typedef_info)
     : list string
-    := (["";
-         "const std = @import(""std"");";
-         "const mode = @import(""builtin"").mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels";
-         "";
-         "inline fn cast(comptime DestType: type, target: anytype) DestType {";
-         "    @setEvalBranchQuota(10000);";
-         "    if (@typeInfo(@TypeOf(target)) == .int) {";
-         "        const dest = @typeInfo(DestType).int;";
-         "        const source = @typeInfo(@TypeOf(target)).int;";
-         "        if (dest.bits < source.bits) {";
-         "            const T = std.meta.Int(source.signedness, dest.bits);";
-         "            return @bitCast(@as(T, @truncate(target)));";
-         "        }";
-         "    }";
-         "    return target;";
-         "}"]
+    := (* Every block below, and every function after the header, starts
+          with its own blank line.  Ending the header with one too would
+          leave a double blank line that zig fmt collapses. *)
+       (["";
+         "const mode = @import(""builtin"").mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels"]
           ++ (if skip_typedefs
               then []
               else List.flat_map
@@ -119,7 +214,17 @@ Module Zig.
                         | Some td_info => [""] ++ make_typedef prefix private td_info
                         | None => ["@compilerError(""Could not find typedef info for '" ++ td_name ++ "'"");"]%string
                         end%list)
-                     (typedefs_used infos)))%list.
+                     (typedefs_used infos))
+          ++ List.flat_map (fun bw => carry_helpers internal_private prefix (Z.pos bw))
+                           (List.filter (fun bw => native_split (Z.pos bw))
+                                        (PositiveSet.elements (ToString.addcarryx_lg_splits infos)))
+          ++ List.flat_map (fun bw => mul_helper internal_private prefix (Z.pos bw))
+                           (List.filter (fun bw => native_split (Z.pos bw))
+                                        (PositiveSet.elements (ToString.mulx_lg_splits infos)))
+          ++ List.flat_map (fun t => selection_mask_helper internal_private prefix t
+                                    ++ cmov_helper internal_private prefix t)%list
+                           (List.filter int.is_unsigned
+                                        (ToString.IntSet.elements (ToString.cmovznz_bitwidths infos))))%list.
 
   (* Integer literal to string *)
   Definition int_literal_to_string (prefix : string) (t : IR.type.primitive) (v : BinInt.Z) : string :=
@@ -130,53 +235,291 @@ Module Zig.
 
   Import IR.Notations.
 
-  Fixpoint arith_to_string
+  Fixpoint literal_through_cast {t} (e : IR.arith_expr t) : option Z :=
+    match e with
+    | (IR.literal v @@@ _) => Some v
+    | (IR.Z_static_cast ty @@@ e) =>
+      match literal_through_cast e with
+      | Some v =>
+        if (0 <=? v)%Z && (v <? 2 ^ (int.bitwidth_of ty - if int.is_signed ty then 1 else 0))%Z
+        then Some v else None
+      | None => None
+      end
+    | _ => None
+    end%Cexpr.
+
+  (* Types are already known in the IR.  Keep them while printing, rather
+     than asking a generic Zig function to rediscover them at comptime. *)
+  Definition type_env := list (string * option int.type).
+  Definition lookup_type (env : type_env) (name : string) : option int.type :=
+    match List.find (fun '(n, _) => (n =? name)%string) env with
+    | Some (_, ty) => ty
+    | None => None
+    end.
+
+  Definition union_types (a b : option int.type) : option int.type :=
+    match a, b with
+    | Some a, Some b => Some (int.union a b)
+    | Some a, None => Some a
+    | None, b => b
+    end.
+
+  Fixpoint arith_type {t} (env : type_env) (e : IR.arith_expr t) : option int.type :=
+    match e with
+    | IR.Var _ name => lookup_type env name
+    | (IR.Z_static_cast ty @@@ _) => Some ty
+    | (IR.Z_bneg @@@ _) => Some _Bool
+    | (IR.Z_lnot ty @@@ _) | (IR.Z_value_barrier ty @@@ _) => Some ty
+    | (IR.List_nth _ @@@ e) | (IR.Dereference @@@ e) | (IR.Addr @@@ e)
+    | (IR.Z_shiftr _ @@@ e) | (IR.Z_shiftl _ @@@ e) => arith_type env e
+    | (IR.Z_land @@@ (a, b)) | (IR.Z_lor @@@ (a, b)) | (IR.Z_lxor @@@ (a, b))
+    | (IR.Z_add @@@ (a, b)) | (IR.Z_sub @@@ (a, b)) | (IR.Z_mul @@@ (a, b)) =>
+      union_types (arith_type env a) (arith_type env b)
+    | _ => None
+    end%Cexpr.
+
+  Definition same_type (a b : int.type) : bool :=
+    Bool.eqb (int.is_signed a) (int.is_signed b) &&
+    (int.bitwidth_of a =? int.bitwidth_of b)%Z.
+
+  Definition has_type (expected : option int.type) (ty : int.type) : bool :=
+    match expected with Some t => same_type t ty | None => false end.
+
+  (* Peer type resolution widens the smaller operand.  This is separate
+     from a result-type context: a peer cannot infer the result type of
+     @truncate or @bitCast.  Only remove value-preserving widening casts. *)
+  Definition peer_widens_cast {t} (env : type_env) (peer : option int.type)
+             (dest : int.type) (e : IR.arith_expr t) : bool :=
+    match peer with
+    | Some peer =>
+      int.is_tighter_than dest peer &&
+      match arith_type env e with
+      | Some source => int.is_tighter_than source dest
+      | None =>
+        match literal_through_cast e with
+        | Some v =>
+          ((if int.is_signed dest then -2 ^ (int.bitwidth_of dest - 1) else 0) <=? v)%Z &&
+          (v <? 2 ^ (int.bitwidth_of dest - if int.is_signed dest then 1 else 0))%Z
+        | None => false
+        end
+      end
+    | None => false
+    end.
+
+  Fixpoint operand_type {t} (env : type_env) (peer : option int.type)
+           (e : IR.arith_expr t) : option int.type :=
+    match e with
+    | (IR.Z_static_cast dest @@@ inner) =>
+      if peer_widens_cast env peer dest inner
+      then operand_type env peer inner else Some dest
+    | _ => arith_type env e
+    end%Cexpr.
+
+  Definition operand_peers {a b} (env : type_env)
+             (x : IR.arith_expr a) (y : IR.arith_expr b)
+    : option int.type * option int.type :=
+    let tx := arith_type env x in
+    let ty := arith_type env y in
+    let result := union_types tx ty in
+    match result with
+    | Some result_ty =>
+      if has_type (operand_type env result x) result_ty ||
+         has_type (operand_type env result y) result_ty
+      then (result, result)
+      (* If both operands were widened, keep one explicit widening so
+         the operation itself still computes at the original width. *)
+      else if has_type tx result_ty then (None, result)
+      else if has_type ty result_ty then (result, None)
+      else (None, None)
+    | None => (None, None)
+    end.
+
+  Definition typed_result {language_naming_conventions : language_naming_conventions_opt}
+             (expected : option int.type) (ty : int.type) (s : string) : string :=
+    if has_type expected ty then s
+    else "@as(" ++ int_type_to_string ty ++ ", " ++ s ++ ")".
+
+  Definition cast_to_string {language_naming_conventions : language_naming_conventions_opt}
+             (expected source : option int.type) (dest : int.type) (s : string) : string :=
+    match source with
+    | None => typed_result expected dest s
+    | Some source =>
+      if same_type source dest then s
+      else if (int.bitwidth_of dest <? int.bitwidth_of source)%Z then
+        if Bool.eqb (int.is_signed source) (int.is_signed dest)
+        then typed_result expected dest ("@truncate(" ++ s ++ ")")
+        else let narrow := int.of_lgbitwidth (int.is_signed source) (int.lgbitwidth_of dest) in
+             typed_result expected dest
+               ("@bitCast(@as(" ++ int_type_to_string narrow ++ ", @truncate(" ++ s ++ ")))" )
+      else if int.is_signed source && int.is_unsigned dest then
+        typed_result expected dest
+          ("@bitCast(" ++
+           (if (int.bitwidth_of source =? int.bitwidth_of dest)%Z then s
+            else typed_result None (int.signed_counterpart_of dest) s) ++ ")")
+      else if (int.bitwidth_of source =? int.bitwidth_of dest)%Z then
+        typed_result expected dest ("@bitCast(" ++ s ++ ")")
+      else typed_result expected dest s
+    end.
+
+  (* Primitive carry inputs remain bits even when CLI options widen the
+     field API's carry types.  Narrow explicitly at those call boundaries. *)
+  Definition boolean_argument_to_string
+             {language_naming_conventions : language_naming_conventions_opt}
+             (source : option int.type) (s : string) : string :=
+    cast_to_string (Some _Bool) source _Bool s.
+
+  Fixpoint arith_to_string_with_peer
            {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool)
-           (prefix : string) {t} (e : IR.arith_expr t) : string
+           (prefix : string) (env : type_env) (expected peer : option int.type)
+           {t} (e : IR.arith_expr t) {struct e} : string
     := let special_name_ty name ty := ToString.format_special_function_name_ty internal_private prefix name ty in
        let special_name name bw := ToString.format_special_function_name internal_private prefix name false(*unsigned*) bw in
        match e with
        (* integer literals *)
        | (IR.literal v @@@ _) => int_literal_to_string prefix IR.type.Z v
        (* array dereference *)
-       | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
+       | (IR.List_nth n @@@ IR.Var _ v) => v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "]"
        (* (de)referencing *)
        | (IR.Addr @@@ IR.Var _ v) => "&" ++ v
-       | (IR.Dereference @@@ e) => "( " ++ arith_to_string internal_private prefix e ++ ".* )"
+       | (IR.Dereference @@@ IR.Var _ v) => v ++ ".*"
+       | (IR.Dereference @@@ e) => "( " ++ arith_to_string_with_peer internal_private prefix env None None e ++ ".* )"
        (* bitwise operations *)
        | (IR.Z_shiftr offset @@@ e) =>
-         "(" ++ arith_to_string internal_private prefix e ++ " >> " ++ Decimal.Z.to_string offset ++ ")"
+         "(" ++ arith_to_string_with_peer internal_private prefix env None None e ++ " >> " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_shiftl offset @@@ e) =>
-         "(" ++ arith_to_string internal_private prefix e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
+         "(" ++ arith_to_string_with_peer internal_private prefix env None None e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_land @@@ (e1, e2)) =>
-         "(" ++ arith_to_string internal_private prefix e1 ++ " & " ++ arith_to_string internal_private prefix e2 ++ ")"
+         let '(p1, p2)%core := operand_peers env e1 e2 in
+         "(" ++ arith_to_string_with_peer internal_private prefix env None p1 e1 ++ " & " ++ arith_to_string_with_peer internal_private prefix env None p2 e2 ++ ")"
        | (IR.Z_lor @@@ (e1, e2)) =>
-         "(" ++ arith_to_string internal_private prefix e1 ++ " | " ++ arith_to_string internal_private prefix e2 ++ ")"
+         let '(p1, p2)%core := operand_peers env e1 e2 in
+         "(" ++ arith_to_string_with_peer internal_private prefix env None p1 e1 ++ " | " ++ arith_to_string_with_peer internal_private prefix env None p2 e2 ++ ")"
        | (IR.Z_lxor @@@ (e1, e2)) =>
-         "(" ++ arith_to_string internal_private prefix e1 ++ " ^ " ++ arith_to_string internal_private prefix e2 ++ ")"
-       | (IR.Z_lnot _ @@@ e) => "(~" ++ arith_to_string internal_private prefix e ++ ")"
+         let '(p1, p2)%core := operand_peers env e1 e2 in
+         "(" ++ arith_to_string_with_peer internal_private prefix env None p1 e1 ++ " ^ " ++ arith_to_string_with_peer internal_private prefix env None p2 e2 ++ ")"
+       | (IR.Z_lnot _ @@@ e) => "(~" ++ arith_to_string_with_peer internal_private prefix env None None e ++ ")"
        (* arithmetic operations *)
        | (IR.Z_add @@@ (x1, x2)) =>
-         "(" ++ arith_to_string internal_private prefix x1 ++ " + " ++ arith_to_string internal_private prefix x2 ++ ")"
+         let '(p1, p2)%core := operand_peers env x1 x2 in
+         "(" ++ arith_to_string_with_peer internal_private prefix env None p1 x1 ++ " + " ++ arith_to_string_with_peer internal_private prefix env None p2 x2 ++ ")"
        | (IR.Z_mul @@@ (x1, x2)) =>
-         "(" ++ arith_to_string internal_private prefix x1 ++ " * " ++ arith_to_string internal_private prefix x2 ++ ")"
+         let '(p1, p2)%core := operand_peers env x1 x2 in
+         "(" ++ arith_to_string_with_peer internal_private prefix env None p1 x1 ++ " * " ++ arith_to_string_with_peer internal_private prefix env None p2 x2 ++ ")"
        | (IR.Z_sub @@@ (x1, x2)) =>
-         "(" ++ arith_to_string internal_private prefix x1 ++ " - " ++ arith_to_string internal_private prefix x2 ++ ")"
-       | (IR.Z_bneg @@@ e) => "(~" ++ arith_to_string internal_private prefix e ++ ")"
+         let '(p1, p2)%core := operand_peers env x1 x2 in
+         "(" ++ arith_to_string_with_peer internal_private prefix env None p1 x1 ++ " - " ++ arith_to_string_with_peer internal_private prefix env None p2 x2 ++ ")"
+       | (IR.Z_bneg @@@ (IR.Z_bneg @@@ e)) =>
+         if has_type (arith_type env e) _Bool
+         then arith_to_string_with_peer internal_private prefix env expected None e
+         else "@intFromBool(" ++ arith_to_string_with_peer internal_private prefix env None None e ++ " != 0)"
+       | (IR.Z_bneg @@@ e) => "@intFromBool(" ++ arith_to_string_with_peer internal_private prefix env None None e ++ " == 0)"
+       | (IR.Z_mul_split lg2s @@@ ((out1, out2), (a, b))) =>
+         let ty := Some (int.of_bitwidth_up false lg2s) in
+         special_name "mulx" lg2s ++ "(" ++
+         arith_to_string_with_peer internal_private prefix env None None out1 ++ ", " ++
+         arith_to_string_with_peer internal_private prefix env None None out2 ++ ", " ++
+         arith_to_string_with_peer internal_private prefix env ty None a ++ ", " ++
+         arith_to_string_with_peer internal_private prefix env ty None b ++ ")"
+       | (IR.Z_add_with_get_carry lg2s @@@ ((out1, out2), (c, a, b))) =>
+         let ty := Some (int.of_bitwidth_up false lg2s) in
+         special_name "addcarryx" lg2s ++ "(" ++
+         arith_to_string_with_peer internal_private prefix env None None out1 ++ ", " ++
+         arith_to_string_with_peer internal_private prefix env None None out2 ++ ", " ++
+         boolean_argument_to_string (arith_type env c)
+           (arith_to_string_with_peer internal_private prefix env (Some _Bool) None c) ++ ", " ++
+         arith_to_string_with_peer internal_private prefix env ty None a ++ ", " ++
+         arith_to_string_with_peer internal_private prefix env ty None b ++ ")"
+       | (IR.Z_sub_with_get_borrow lg2s @@@ ((out1, out2), (c, a, b))) =>
+         let ty := Some (int.of_bitwidth_up false lg2s) in
+         special_name "subborrowx" lg2s ++ "(" ++
+         arith_to_string_with_peer internal_private prefix env None None out1 ++ ", " ++
+         arith_to_string_with_peer internal_private prefix env None None out2 ++ ", " ++
+         boolean_argument_to_string (arith_type env c)
+           (arith_to_string_with_peer internal_private prefix env (Some _Bool) None c) ++ ", " ++
+         arith_to_string_with_peer internal_private prefix env ty None a ++ ", " ++
+         arith_to_string_with_peer internal_private prefix env ty None b ++ ")"
+       | (IR.Z_zselect ty @@@ (out, (c, a, b))) =>
+         special_name_ty "cmovznz" ty ++ "(" ++
+         arith_to_string_with_peer internal_private prefix env None None out ++ ", " ++
+         boolean_argument_to_string (arith_type env c)
+           (arith_to_string_with_peer internal_private prefix env (Some _Bool) None c) ++ ", " ++
+         arith_to_string_with_peer internal_private prefix env (Some ty) None a ++ ", " ++
+         arith_to_string_with_peer internal_private prefix env (Some ty) None b ++ ")"
        | (IR.Z_mul_split lg2s @@@ args) =>
-         special_name "mulx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
+         special_name "mulx" lg2s ++ "(" ++ arith_to_string_with_peer internal_private prefix env None None args ++ ")"
        | (IR.Z_add_with_get_carry lg2s @@@ args) =>
-         special_name "addcarryx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
+         special_name "addcarryx" lg2s ++ "(" ++ arith_to_string_with_peer internal_private prefix env None None args ++ ")"
        | (IR.Z_sub_with_get_borrow lg2s @@@ args) =>
-         special_name "subborrowx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
+         special_name "subborrowx" lg2s ++ "(" ++ arith_to_string_with_peer internal_private prefix env None None args ++ ")"
        | (IR.Z_zselect ty @@@ args) =>
-         special_name_ty "cmovznz" ty ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
+         special_name_ty "cmovznz" ty ++ "(" ++ arith_to_string_with_peer internal_private prefix env None None args ++ ")"
        | (IR.Z_value_barrier ty @@@ args) =>
-         special_name_ty "value_barrier" ty ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
+         special_name_ty "value_barrier" ty ++ "(" ++ arith_to_string_with_peer internal_private prefix env None None args ++ ")"
+       (* A cast to an unsigned limb already keeps its low bits.  Drop
+          the full-width mask commonly emitted before a narrowing cast.
+          Keep partial masks, which may clear additional bits. *)
+       | (IR.Z_static_cast narrow @@@ (IR.Z_sub @@@ (zero, IR.Z_static_cast wide @@@ bit))) =>
+         if same_type narrow (int.signed_counterpart_of _Bool) &&
+            has_type (arith_type env bit) _Bool &&
+            (match literal_through_cast zero with Some z => (z =? 0)%Z | None => false end)
+         then typed_result expected narrow
+                ("@bitCast(" ++ arith_to_string_with_peer internal_private prefix env None None bit ++ ")")
+         else cast_to_string expected (union_types (arith_type env zero) (Some wide)) narrow
+                ("(" ++ arith_to_string_with_peer internal_private prefix env None None zero ++ " - " ++
+                  cast_to_string None (arith_type env bit) wide
+                    (arith_to_string_with_peer internal_private prefix env None None bit) ++ ")")
+       | (IR.Z_static_cast int_t @@@ (IR.Z_land @@@ (e1, e2))) =>
+         match literal_through_cast e2 with
+         | Some mask =>
+           if int.is_unsigned int_t && (mask =? 2 ^ int.bitwidth_of int_t - 1)%Z
+           then match e1 with
+                | (IR.Z_static_cast mid @@@ inner) =>
+                  match arith_type env inner with
+                  | Some source =>
+                    if (int.bitwidth_of int_t <=? int.bitwidth_of mid)%Z
+                    then cast_to_string expected (Some source) int_t
+                           (arith_to_string_with_peer internal_private prefix env None None inner)
+                    else cast_to_string expected (Some mid) int_t
+                           (arith_to_string_with_peer internal_private prefix env None None e1)
+                  | None => cast_to_string expected (Some mid) int_t
+                              (arith_to_string_with_peer internal_private prefix env None None e1)
+                  end
+                | _ => cast_to_string expected (arith_type env e1) int_t
+                         (arith_to_string_with_peer internal_private prefix env None None e1)
+                end
+           else let '(p1, p2)%core := operand_peers env e1 e2 in
+                  cast_to_string expected
+                  (union_types (arith_type env e1) (arith_type env e2)) int_t
+                  ("(" ++ arith_to_string_with_peer internal_private prefix env None p1 e1 ++ " & " ++ arith_to_string_with_peer internal_private prefix env None p2 e2 ++ ")")
+         | None => let '(p1, p2)%core := operand_peers env e1 e2 in
+                  cast_to_string expected
+                     (union_types (arith_type env e1) (arith_type env e2)) int_t
+                     ("(" ++ arith_to_string_with_peer internal_private prefix env None p1 e1 ++ " & " ++ arith_to_string_with_peer internal_private prefix env None p2 e2 ++ ")")
+         end
        | (IR.Z_static_cast int_t @@@ e) =>
-         "cast(" ++ primitive_type_to_string IR.type.Z (Some int_t) ++ ", " ++ arith_to_string internal_private prefix e ++ ")"
+         if peer_widens_cast env peer int_t e
+         then arith_to_string_with_peer internal_private prefix env expected peer e
+         else match e with
+         | (IR.Z_static_cast mid @@@ inner) =>
+           (* Keeping only the low destination bits makes an intermediate
+              cast to at least that width redundant.  In particular this
+              avoids widening sign masks to double width and truncating
+              them back to a limb. *)
+           match arith_type env inner with
+           | Some source =>
+             if (int.bitwidth_of int_t <=? int.bitwidth_of mid)%Z
+             then cast_to_string expected (Some source) int_t
+                    (arith_to_string_with_peer internal_private prefix env None None inner)
+             else cast_to_string expected (Some mid) int_t
+                    (arith_to_string_with_peer internal_private prefix env None None e)
+           | None => cast_to_string expected (Some mid) int_t
+                       (arith_to_string_with_peer internal_private prefix env None None e)
+           end
+         | _ => cast_to_string expected (arith_type env e) int_t
+                  (arith_to_string_with_peer internal_private prefix env None None e)
+         end
        | IR.Var _ v => v
-       | IR.Pair A B a b => arith_to_string internal_private prefix a ++ ", " ++ arith_to_string internal_private prefix b
+       | IR.Pair A B a b => arith_to_string_with_peer internal_private prefix env None None a ++ ", " ++ arith_to_string_with_peer internal_private prefix env None None b
        | (IR.Z_add_modulo @@@ (x1, x2, x3)) => "@compilerError(""addmodulo"");"
        | (IR.List_nth _ @@@ _)
        | (IR.Addr @@@ _)
@@ -190,32 +533,111 @@ Module Zig.
        | IR.TT => "@compilerError(""tt"");"
        end%string%Cexpr.
 
+  Definition arith_to_string
+             {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool)
+             (prefix : string) (env : type_env) (expected : option int.type)
+             {t} (e : IR.arith_expr t) : string :=
+    arith_to_string_with_peer internal_private prefix env expected None e.
+
   Definition stmt_to_string
              {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool)
-             (prefix : string) (e : IR.stmt) : string :=
+             (prefix : string) (env : type_env) (e : IR.stmt) : string :=
     match e with
-    | IR.Call val => arith_to_string internal_private prefix val ++ ";"
+    | IR.Call val => arith_to_string internal_private prefix env None val ++ ";"
     | IR.Assign true t sz name val =>
       (* local non-mutable declaration with initialization *)
-      "const " ++ name ++ " = " ++ arith_to_string internal_private prefix val ++ ";"
+      "const " ++ name ++
+        (match sz with Some ty => ": " ++ primitive_type_to_string t sz | None => "" end) ++
+        " = " ++ arith_to_string internal_private prefix env sz val ++ ";"
     | IR.Assign false _ sz name val =>
     (* code : name ++ " = " ++ arith_to_string internal_private prefix val ++ ";" *)
       "@compilerError(""trying to assign value to non-mutable variable"");"
     | IR.AssignZPtr name sz val =>
-      name ++ ".* = " ++ arith_to_string internal_private prefix val ++ ";"
+      name ++ ".* = " ++ arith_to_string internal_private prefix env sz val ++ ";"
     | IR.DeclareVar t sz name =>
       "var " ++ name ++ ": " ++ primitive_type_to_string t sz ++ " = undefined;"
     | IR.Comment lines _ =>
       String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
     | IR.AssignNth name n val =>
-      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string internal_private prefix val ++ ";"
+      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string internal_private prefix env (lookup_type env name) val ++ ";"
     end.
 
-  Definition to_strings {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (e : IR.expr) : list string :=
-    List.map (stmt_to_string internal_private prefix) e.
+  (* Share a mask between adjacent selections of the same immutable selector.
+     Declarations and comments cannot change it; every other statement clears
+     the cache, including calls which may write through pointers. *)
+  Fixpoint to_strings_with_mask {language_naming_conventions : language_naming_conventions_opt}
+           (internal_private : bool) (prefix : string) (env : type_env)
+           (cached : option (string * string * string)) (e : IR.expr) : list string :=
+    match e with
+    | [] => []
+    | stmt :: rest =>
+      let env' := match stmt with
+                  | IR.Assign _ _ sz name _ | IR.DeclareVar _ sz name => (name, sz) :: env
+                  | _ => env
+                  end in
+      match stmt with
+      | IR.Call (IR.Z_zselect ty @@@
+          ((IR.Addr @@@ IR.Var _ out), (IR.Var _ c, a, b))) =>
+        if int.is_unsigned ty then
+          let ty_s := int_type_to_string ty in
+          let previous := match cached with
+                          | Some (c', ty', mask) =>
+                            if (c =? c')%string && (ty_s =? ty')%string
+                            then Some mask else None
+                          | None => None
+                          end in
+          let mask := match previous with
+                      | Some mask => mask
+                      | None => (out ++ "_selection_mask")%string
+                      end in
+          let init := match previous with
+                      | Some _ => []
+                      | None => ["const " ++ mask ++ " = " ++
+                        ToString.format_special_function_name_ty internal_private prefix "selection_mask" ty ++
+                        "(" ++ boolean_argument_to_string (lookup_type env c) c ++ ");"]%string
+                      end in
+          let a_s := arith_to_string internal_private prefix env (Some ty) a in
+          let b_s := arith_to_string internal_private prefix env (Some ty) b in
+          (init ++ [out ++ " = " ++ a_s ++ " ^ ((" ++ a_s ++ " ^ " ++ b_s ++ ") & " ++ mask ++ ");"]%string ++
+            to_strings_with_mask internal_private prefix env'
+              (if (out =? c)%string then None else Some (c, ty_s, mask)) rest)%list
+        else stmt_to_string internal_private prefix env stmt ::
+               to_strings_with_mask internal_private prefix env' None rest
+      | _ => stmt_to_string internal_private prefix env stmt ::
+               to_strings_with_mask internal_private prefix env'
+                 (match stmt with
+                  | IR.DeclareVar _ _ _ | IR.Comment _ _ => cached
+                  | _ => None
+                  end) rest
+      end
+    end.
+
+  Definition to_strings {language_naming_conventions : language_naming_conventions_opt}
+           (internal_private : bool) (prefix : string) (env : type_env) (e : IR.expr) : list string :=
+    to_strings_with_mask internal_private prefix env None e.
 
   Import Rewriter.Language.Language.Compilers Crypto.Language.API.Compilers IR.OfPHOAS.
   Local Notation tZ := (base.type.type_base base.type.Z).
+
+  Fixpoint base_arg_types {t} : base_var_data t -> type_env :=
+    match t return base_var_data t -> type_env with
+    | tZ => fun '(name, _, ty, _) => [(name, ty)]
+    | base.type.list tZ => fun '(name, ty, _, _) => [(name, ty)]
+    | base.type.prod A B => fun '(a, b) => base_arg_types a ++ base_arg_types b
+    | _ => fun _ => []
+    end%list.
+
+  Definition arg_types {t} : var_data t -> type_env :=
+    match t return var_data t -> type_env with
+    | type.base _ => base_arg_types
+    | _ => fun _ => []
+    end.
+
+  Fixpoint input_types {t} : type.for_each_lhs_of_arrow var_data t -> type_env :=
+    match t return type.for_each_lhs_of_arrow var_data t -> type_env with
+    | type.base _ => fun _ => []
+    | type.arrow _ _ => fun '(a, rest) => arg_types a ++ input_types rest
+    end%list.
 
   Inductive Mode := In | Out.
 
@@ -323,9 +745,9 @@ Module Zig.
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
-    ((if private || inline then "inline fn " else "pub fn ") ++ name ++
+    ((if private then "fn " else "pub fn ") ++ name ++
       "(" ++ String.concat ", " (to_arg_list internal_private all_private prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow internal_private all_private prefix args) ++
-      ") void {")%string :: (["    @setRuntimeSafety(mode == .Debug);"; ""]%string)%list ++ (List.map (fun s => "    " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
+      ") void {")%string :: (["    @setRuntimeSafety(mode == .debug);"; ""]%string)%list ++ (List.map (fun s => "    " ++ s)%string (to_strings internal_private prefix (input_types args ++ arg_types rets)%list body)) ++ ["}"%string]%list.
 
   (** In Zig, there is no munging of return arguments (they remain
       passed by pointers), so all variables are live *)
@@ -378,6 +800,14 @@ Module Zig.
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := @header;
        ToString.footer := fun _ _ _ _ _ _ _ _ _ => [];
-       ToString.strip_special_infos machine_wordsize infos := infos |}.
+       ToString.strip_special_infos machine_wordsize infos :=
+         ToString.ident_info_with_cmovznz
+           (ToString.ident_info_with_mulx
+             (ToString.ident_info_with_addcarryx infos
+               (PositiveSet.filter (fun bw => negb (native_split (Z.pos bw)))
+                                   (ToString.addcarryx_lg_splits infos)))
+             (PositiveSet.filter (fun bw => negb (native_split (Z.pos bw)))
+                                 (ToString.mulx_lg_splits infos)))
+           (ToString.IntSet.filter int.is_signed (ToString.cmovznz_bitwidths infos)) |}.
 
 End Zig.
