@@ -4298,10 +4298,28 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
     vh <- Symeval (shrZ@(v,PreARG (Z.of_N s)));
     _ <- SetOperand lo v;
          SetOperand hi vh
-  | (Syntax.mul | imul), [src2] =>
+  | Syntax.mul, [src2] =>
     let src1 : ARG := rax in
     v  <- Symeval (mulZ@(src1,src2));
     vh <- Symeval (shrZ@(v,PreARG (Z.of_N s)));
+    lo <- resize_reg rax;
+    hi <- (if (s =? 8)%N
+           then ret ah
+           else resize_reg rdx);
+    _ <- SetOperand (lo:ARG) v;
+    _ <- SetOperand (hi:ARG) vh;
+    HavocFlags (* This is conservative and can be made more precise *)
+  | imul, [src2] =>
+    let src1 : ARG := rax in
+    (* The one-operand form of IMUL sign-extends both operands before
+       producing its double-width result.  Express [Z.signed] using the
+       existing unbounded integer operations so that the signed high word
+       remains visible in the symbolic DAG. *)
+    let sign_bit := Z.shiftl 1 (Z.of_N s - 1) in
+    let zconst z := PreApp (const z) nil in
+    let signed x := addZ@(andZ@(addZ@(zconst sign_bit,x),zconst (Z.ones (Z.of_N s))),zconst (-sign_bit)) in
+    v  <- Symeval (mulZ@(signed src1,signed src2));
+    vh <- Symeval (shrZ@(v,zconst (Z.of_N s)));
     lo <- resize_reg rax;
     hi <- (if (s =? 8)%N
            then ret ah
