@@ -26,4 +26,26 @@ jobs:
       - name: Test Zig field inversion example
         run: (cp fiat-zig/src/p256_64.zig inversion/zig && cd inversion/zig && zig build test)
       - name: Check that the compiled Zig code is constant time
-        run: (cd fiat-zig && python3 ct/check.py --self-test && python3 ct/check.py)
+        run: etc/ci/zig-constant-time/check.py --self-test && etc/ci/zig-constant-time/check.py
+
+  valgrind-zig:
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runs-on }}
+
+    concurrency:
+      group: ${{ github.workflow }}-valgrind-${{ matrix.runs-on }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: master
+      - name: Install Valgrind
+        run: sudo apt-get update && sudo apt-get install -y valgrind
+      - uses: actions/checkout@v7
+      - name: Check under Valgrind that the Zig code is constant time
+        run: etc/ci/zig-constant-time/valgrind.sh --self-test && etc/ci/zig-constant-time/valgrind.sh

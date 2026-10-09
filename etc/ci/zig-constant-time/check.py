@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check that the generated Zig code compiles to constant-time machine code.
 
-Every public function of each fiat-zig/src/*.zig file is compiled for a set of
+Every public function of each fiat-zig/src/*.zig file (except main.zig) is compiled for a set of
 targets and optimization modes, and the emitted assembly and optimized LLVM IR
 are checked for:
 
@@ -19,7 +19,7 @@ accesses.
 
 Usage: check.py [--zig ZIG] [--jobs N] [--self-test] [FILE.zig ...]
 
-With --self-test, compile ct/bad.zig instead and check that its functions are
+With --self-test, compile bad.zig (next to this script) instead and check that its functions are
 reported: all of them on x86 and aarch64, where the assembly is checked for
 select-dependent addresses, and all but tableLookup elsewhere, where the
 backend can turn its select of two loaded values into a load from a
@@ -35,7 +35,8 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
+ZIG_SRC = os.path.join(REPO, "fiat-zig", "src")
 
 # (name, zig target, extra flags, assembly dialect)
 TARGETS_64 = [
@@ -366,8 +367,7 @@ def main():
     elif args.files:
         files = [os.path.abspath(f) for f in args.files]
     else:
-        srcdir = os.path.join(ROOT, "src")
-        files = sorted(os.path.join(srcdir, f) for f in os.listdir(srcdir)
+        files = sorted(os.path.join(ZIG_SRC, f) for f in os.listdir(ZIG_SRC)
                        if f.endswith(".zig") and f != "main.zig")
 
     failures = 0  # number of (configuration, function) pairs with a problem
@@ -375,7 +375,7 @@ def main():
             concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
         results = list(pool.map(lambda j: compile_one(args.zig, *j, workdir), jobs_for(files)))
     for (src, target, mode), problems, err in results:
-        where = "%s (%s, %s)" % (os.path.relpath(src, ROOT), target, mode)
+        where = "%s (%s, %s)" % (os.path.relpath(src, REPO), target, mode)
         if err is not None:
             print("error: failed to compile %s:\n%s" % (where, err))
             failures += 1
