@@ -25,3 +25,5 @@ jobs:
         run: (cd fiat-zig && zig build && zig build test)
       - name: Test Zig field inversion example
         run: (cp fiat-zig/src/p256_64.zig inversion/zig && cd inversion/zig && zig build test)
+      - name: Check that the compiled Zig code is constant time
+        run: (cd fiat-zig && python3 ct/check.py --self-test && python3 ct/check.py)
