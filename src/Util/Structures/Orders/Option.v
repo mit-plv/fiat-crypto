@@ -216,7 +216,7 @@ Module OptionLebIsTransitive_of_TotalOrderBool (E : TotalOrderBool).
   Include OptionLebIsTransitive E' E'.
 End OptionLebIsTransitive_of_TotalOrderBool.
 
-Module Type OptionIsStrOrderBool (E : StrOrderBool).
+Module OptionIsStrOrderBool (E : StrOrderBool).
   Module Import _OptionIsStrOrderBool.
     Module E' := E <+ IsEqbFacts.
     Module O := OptionHasEqb E E <+ OptionHasLtb E E.

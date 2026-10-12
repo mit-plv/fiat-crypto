@@ -1,6 +1,7 @@
 From Coq Require Import Morphisms Setoid.
 From Coq Require Import Equalities.
 From Coq Require Import Orders.
+Require Import Crypto.Util.Structures.Equalities.
 Require Import Crypto.Util.Structures.Equalities.Unit.
 Require Import Crypto.Util.Structures.Orders.
 Require Import Crypto.Util.Unit.

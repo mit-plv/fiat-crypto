@@ -132,7 +132,7 @@ Module SumLebIsTransitive_of_TotalOrderBool (E1 : TotalOrderBool) (E2 : TotalOrd
   Include SumLebIsTransitive E1' E2' E1' E2'.
 End SumLebIsTransitive_of_TotalOrderBool.
 
-Module Type SumIsStrOrderBool (E1 : StrOrderBool) (E2 : StrOrderBool).
+Module SumIsStrOrderBool (E1 : StrOrderBool) (E2 : StrOrderBool).
   Module Import _SumIsStrOrderBool.
     Module E1' := E1 <+ IsEqbFacts.
     Module E2' := E2 <+ IsEqbFacts.

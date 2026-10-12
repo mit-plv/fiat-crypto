@@ -62,7 +62,9 @@ Module Z.
 #[global]
   Hint Rewrite div_to_inv_modulo using solve [ eassumption | lia ] : zstrip_div.
 
-  Module EquivModuloInstances (dummy : Nop). (* work around https://coq.inria.fr/bugs/show_bug.cgi?id=4973 *)
+  Module Type NopT. End NopT.
+
+  Module EquivModuloInstances (dummy : NopT). (* work around https://coq.inria.fr/bugs/show_bug.cgi?id=4973 *)
 #[global]
     Existing Instance equiv_modulo_Reflexive.
 #[global]
@@ -86,7 +88,7 @@ Module Z.
 #[global]
     Existing Instance eq_to_ProperProxy.
   End EquivModuloInstances.
-  Module RemoveEquivModuloInstances (dummy : Nop).
+  Module RemoveEquivModuloInstances (dummy : NopT).
     Global Remove Hints equiv_modulo_Reflexive equiv_modulo_Symmetric equiv_modulo_Transitive mul_mod_Proper add_mod_Proper sub_mod_Proper opp_mod_Proper pow_mod_Proper modulo_equiv_modulo_Proper eq_to_ProperProxy : typeclass_instances.
   End RemoveEquivModuloInstances.
 End Z.

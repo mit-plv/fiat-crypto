@@ -140,7 +140,7 @@ Module FlipLebIsTransitive_of_TotalOrderBool (E : TotalOrderBool).
   Include FlipLebIsTransitive E' E'.
 End FlipLebIsTransitive_of_TotalOrderBool.
 
-Module Type FlipIsStrOrderBool (E : StrOrderBool).
+Module FlipIsStrOrderBool (E : StrOrderBool).
   Module Import _FlipIsStrOrderBool.
     Module E' := E <+ IsEqbFacts.
   End _FlipIsStrOrderBool.
