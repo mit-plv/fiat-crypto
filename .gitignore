@@ -1,6 +1,7 @@
 # make
 /o/
 /.coqdep.mk
+/.coq-version
 /src/_CoqProject
 
 # vim
