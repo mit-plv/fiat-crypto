@@ -13,6 +13,10 @@ Module Type IsEqb (Import E : Typ) (Import Eb:HasEqb E).
   Declare Instance eqb_equiv : Equivalence eqb.
 End IsEqb.
 
+Module EqbNotation (T:Typ)(E:HasEqb T).
+  Infix "=?" := E.eqb (at level 70, no associativity).
+End EqbNotation.
+
 Module IsEqbFacts (Import E : Typ) (Import Eb:HasEqb E) (Import E' : IsEqb E Eb).
   #[global]
    Instance eqb_Proper : Proper (eqb ==> eqb ==> eq) eqb | 10.

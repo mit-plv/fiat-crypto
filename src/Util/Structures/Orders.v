@@ -8,6 +8,22 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 
+Module CmpNotation (T:Typ)(C:HasCmp T).
+  Infix "?=" := C.compare (at level 70, no associativity).
+End CmpNotation.
+
+Module LebNotation (T:Typ)(E:HasLeb T).
+ Infix "<=?" := E.leb (at level 70, no associativity).
+End LebNotation.
+
+Module LtbNotation (T:Typ)(E:HasLtb T).
+ Infix "<?" := E.ltb (at level 70, no associativity).
+End LtbNotation.
+
+Module EqLtNotation (E:EqLt) := EqNotation E <+ LtNotation E.
+Module EqLeNotation (E:EqLe) := EqNotation E <+ LeNotation E.
+Module EqLtLeNotation (E:EqLtLe) := EqNotation E <+ LtLeNotation E.
+
 Module Type UsualEqLt := UsualEq <+ HasLt.
 Module Type UsualEqLe := UsualEq <+ HasLe.
 Module Type UsualEqLtLe := UsualEq <+ HasLt <+ HasLe.
@@ -20,9 +36,9 @@ Module Type EqLeBool := Typ <+ HasEqb <+ HasLeb.
 Module Type EqLtBool := Typ <+ HasEqb <+ HasLtb.
 Module Type EqLtLeBool := Typ <+ HasEqb <+ HasLtb <+ HasLeb.
 
-Module Type EqLtBoolNotation (E:EqLtBool) := EqbNotation E E <+ LtbNotation E E.
-Module Type EqLeBoolNotation (E:EqLeBool) := EqbNotation E E <+ LebNotation E E.
-Module Type EqLtLeBoolNotation (E:EqLtLeBool) := EqbNotation E E <+ LtbNotation E E <+ LebNotation E E.
+Module EqLtBoolNotation (E:EqLtBool) := EqbNotation E E <+ LtbNotation E E.
+Module EqLeBoolNotation (E:EqLeBool) := EqbNotation E E <+ LebNotation E E.
+Module EqLtLeBoolNotation (E:EqLtLeBool) := EqbNotation E E <+ LtbNotation E E <+ LebNotation E E.
 
 Module Type EqLeBool' := EqLeBool <+ EqLeBoolNotation.
 Module Type EqLtBool' := EqLtBool <+ EqLtBoolNotation.

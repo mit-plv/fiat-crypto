@@ -303,7 +303,7 @@ Hint Unfold
      empty
   : trie_db.
 
-Module Type TrieShape (label : DecidableType) (map : FMapInterface.WSfun label) (Import T : TypFunctor).
+Module TrieShape (label : DecidableType) (map : FMapInterface.WSfun label) (Import T : TypFunctor).
   Notation Everything := (@EverythingGen t map.key map.t map.is_empty map.fold map.mapi map.map2 map.find).
 End TrieShape.
 

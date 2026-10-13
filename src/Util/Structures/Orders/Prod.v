@@ -287,7 +287,7 @@ Module ProdLebIsTransitive_of_TotalOrderBool (E1 : TotalOrderBool) (E2 : TotalOr
   Include ProdLebIsTransitive E1 E2' E2'.
 End ProdLebIsTransitive_of_TotalOrderBool.
 
-Module Type ProdIsStrOrderBool (E1 : StrOrderBool) (E2 : StrOrderBool).
+Module ProdIsStrOrderBool (E1 : StrOrderBool) (E2 : StrOrderBool).
   Module Import _ProdIsStrOrderBool.
     Module E1' := E1 <+ IsEqbFacts.
     Module P := ProdHasEqb E1 E2 E1 E2 <+ ProdHasLtb E1 E2 E1 E1 E2.

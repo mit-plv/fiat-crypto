@@ -300,7 +300,7 @@ Module ListLebIsTransitive (E : TotalOrderBool).
   Qed.
 End ListLebIsTransitive.
 
-Module Type ListIsStrOrderBool (E : StrOrderBool).
+Module ListIsStrOrderBool (E : StrOrderBool).
   Module Import _ListIsStrOrderBool.
     Module E' := E <+ IsEqbFacts.
     Module L := ListHasEqb E E <+ ListHasLtb E E E.
