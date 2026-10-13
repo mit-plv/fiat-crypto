@@ -12,7 +12,10 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SimplifyRepeatedIfs.
 Require Import Crypto.Util.Notations.
 
-Declare Module Nop : Nop.
+Module Type NopT.
+End NopT.
+
+Declare Module Nop : NopT.
 Module Import ImportEquivModuloInstances := Z.EquivModuloInstances Nop.
 
 Local Existing Instance eq_Reflexive. (* speed up setoid_rewrite as per https://coq.inria.fr/bugs/show_bug.cgi?id=4978 *)
