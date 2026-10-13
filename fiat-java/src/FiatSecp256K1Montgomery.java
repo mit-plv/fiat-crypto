@@ -4907,7 +4907,6 @@ public static void fiat_Secp256K1Montgomery_set_one(int[] out1) {
  * <p>
  * Postconditions: <p>
  *   twos_complement_eval out1 = m <p>
- *   0 ≤ eval out1 &lt; m <p>
  * <p>
  * Output Bounds: <p>
  *   out1: [[0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff]] <p>

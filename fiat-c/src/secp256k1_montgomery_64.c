@@ -1878,7 +1878,6 @@ static FIAT_SECP256K1_MONTGOMERY_FIAT_INLINE void fiat_secp256k1_montgomery_set_
  *
  * Postconditions:
  *   twos_complement_eval out1 = m
- *   0 ≤ eval out1 < m
  *
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
