@@ -18,7 +18,7 @@ Local Notation array := (array scalar (bits.of_Z _ 8)).
         requires t m :=
             m =* array p_y y ⋆ array p_m MOD ⋆ R /\
             length y = 5%nat /\ length MOD = 5%nat /\ eval MOD > 0;
-        ensures T M := exists (r : list word),
+        ensures T M := T = t /\ exists (r : list word),
             M =* array p_y r ⋆ array p_m MOD ⋆ R /\ length r = 5%nat /\
                 (eval r) = (eval y) mod (eval MOD)
     }.
