@@ -346,6 +346,15 @@ install-rupicola:
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) install_lib
 endif
 
+COQ_VERSION_FILE := .coq-version
+ifneq ($(COQ_VERSION),$(file <$(COQ_VERSION_FILE)))
+.PHONY: $(COQ_VERSION_FILE)
+$(COQ_VERSION_FILE): $(if $(wildcard $(COQ_VERSION_FILE)),clean-bedrock2 clean-bedrock2-compiler clean-rupicola)
+	echo '$(COQ_VERSION)' > $@
+endif
+
+$(VOFILES) $(ALLDFILES) Makefile.coq coqutil bedrock2 bedrock2-compiler rupicola: $(COQ_VERSION_FILE)
+
 Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
 	$(HIDE)"$(COQBIN)rocq" makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o $@
@@ -504,7 +513,7 @@ $(ACCEPT_OUTPUTS) : accept-% :
 	$(HIDE)cp -f $*.out output-tests/$*.expected
 
 clean::
-	rm -f Makefile.coq
+	rm -f Makefile.coq $(COQ_VERSION_FILE)
 
 cleanall:: clean
 	rm -rf src/Rewriter/PerfTesting/Specific/generated
