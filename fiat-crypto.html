@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Fiat Cryptography Web Interface</title>
+    <style>
+        .error {
+            color: red;
+            white-space: pre-wrap;
+        }
+
+        .code-container {
+            position: relative;
+        }
+
+        .code {
+            display: block;
+            white-space: pre-wrap;
+            border: 1px solid #ddd;
+            padding: 10px;
+            position: relative;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #f8f8f8;
+            padding: 5px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            z-index: 1;
+        }
+
+        /*.output-filename {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            z-index: 1;
+        }*/
+
+        .hidden {
+            display: none;
+        }
+
+        #inputArgs {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            /* margin-bottom: 10px; */
+        }
+
+        .form-row label,
+        .form-row button,
+        .status-span,
+        .permalink-span {
+            margin-right: 10px;
+        }
+
+        .status-span,
+        .permalink-span {
+            flex-grow: 1;
+            text-align: right;
+        }
+
+        .version {
+            color: #333;
+        }
+
+        /*#io-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        #io-container>div {
+            flex: 1 1 50%;
+            min-width: 300px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        #io-container h3 {
+            margin-top: 0;
+        }
+
+        .stdin-line,
+        .file-entry {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .stdin-line textarea,
+        .file-entry textarea {
+            flex: 1;
+            margin-left: 5px;
+        }
+
+        .file-entry input {
+            margin-right: 5px;
+        }*/
+        .input-columns {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .stdin-column,
+        .files-column {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .stdin-entry,
+        .file-entry {
+            display: flex;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .stdin-textarea,
+        .file-content {
+            flex-grow: 1;
+            min-height: 60px;
+            resize: vertical;
+            padding: 8px;
+            margin-right: 5px;
+        }
+
+        .file-name {
+            margin-bottom: 5px;
+            width: calc(100% - 60px);
+            padding: 5px;
+        }
+
+        .file-entry {
+            flex-direction: column;
+        }
+
+        .file-entry .remove-btn {
+            position: absolute;
+            right: 0;
+            top: 0;
+        }
+
+        .remove-btn,
+        .add-btn {
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            cursor: pointer;
+            padding: 2px 8px;
+            font-weight: bold;
+        }
+
+        .add-btn {
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .input-columns {
+                flex-direction: column;
+            }
+
+            .stdin-column,
+            .files-column {
+                width: 100%;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="versionContainer">
+        <span class="version">
+            Fiat Cryptography <span id="version"></span> (<a href="https://github.com/mit-plv/fiat-crypto">GitHub
+                Source</a>)
+        </span>
+    </div>
+    <form id="inputForm" class="hidden">
+        <div class="form-row">
+            <input type="text" id="inputArgs" placeholder="Enter arguments">
+        </div>
+        <div class="form-row">
+            <label>
+                <input type="radio" name="inputType" value="json"> Input JSON Array
+            </label>
+            <label>
+                <input type="radio" name="inputType" value="string" checked> Input String
+            </label>
+            <label>
+                <input type="checkbox" id="wasm" name="codeKind" value="wasm"> Use WASM <span
+                    id="extraWasmLabel"></span>
+            </label>
+        </div>
+        <div class="form-row">
+            <div class="input-columns">
+                <div class="stdin-column hidden">
+                    <h3>Standard Input</h3>
+                    <div class="stdin-entries" id="stdinEntries"></div>
+                    <button type="button" id="addStdinButton" class="add-btn">+</button>
+                    <textarea id="stdinTextArea" class="hidden" placeholder="Enter stdin" readonly></textarea>
+                </div>
+                <div class="files-column">
+                    <h3>Input Files <button type="button" id="addFileButton" class="add-btn">+</button></h3>
+                    <div class="file-entries" id="fileEntries">
+                        <div class="file-entry">
+                            <input type="text" class="file-name" placeholder="Filename">
+                            <textarea class="file-content" placeholder="File content"></textarea>
+                            <button type="button" class="remove-btn">-</button>
+                        </div>
+                    </div>
+                    <textarea id="filesTextArea" class="hidden" placeholder="Enter files" readonly></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="form-row">
+            <button type="button" id="synthesizeButton">Synthesize</button>
+            <button type="button" id="cancelButton" disabled>Cancel</button>
+            <span id="status" class="status-span hidden"></span>
+            <a id="permalink" class="permalink-span hidden" href="#">Pseudopermalink</a>
+            <button type="button" id="clearCacheButton">Clear Cache</button>
+        </div>
+    </form>
+    <div id="error" class="error hidden"></div>
+    <div id="output" class="hidden">
+        <div id="stdoutContainer" class="code-container">
+            <code id="stdout" class="code"></code>
+            <button class="copy-button" data-target="stdout">Copy</button>
+        </div>
+        <div id="stderrContainer" class="code-container hidden">
+            <code id="stderr" class="code"></code>
+            <button class="copy-button" data-target="stderr">Copy</button>
+        </div>
+        <div id="outputFilesContainer" class="code-container-container hidden"></div>
+    </div>
+    <script src="version.js"></script>
+    <script src="https://unpkg.com/wasm-feature-detect/dist/umd/index.js"></script>
+    <script src="file-input.js"></script>
+    <script src="main.js"></script>
+    <!-- N.B. disable-wasm-option.js must come after main.js so that the wasm box is unchecked correctly after parsing argv -->
+    <script src="disable-wasm-option.js"></script>
+    <script src="copy-button.js"></script>
+    <!-- Optional: Add script to handle dynamic addition/removal of stdin and file entries -->
+    <!-- <script>
+        // Example dynamic behavior for stdin entries
+        const stdinLines = document.getElementById('stdin-lines');
+        document.getElementById('add-stdin-line').addEventListener('click', () => {
+            const div = document.createElement('div');
+            div.className = 'stdin-line';
+            div.innerHTML = '<button type="button" class="remove-stdin-line">-</button><textarea placeholder="Enter a stdin line"></textarea>';
+            stdinLines.appendChild(div);
+        });
+        stdinLines.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-stdin-line')) {
+                e.target.parentElement.remove();
+            }
+        });
+
+        // Example dynamic behavior for file entries
+        const filesEntries = document.getElementById('files-entries');
+        document.getElementById('add-file-entry').addEventListener('click', () => {
+            const div = document.createElement('div');
+            div.className = 'file-entry';
+            div.innerHTML = '<button type="button" class="remove-file-entry">-</button><input type="text" placeholder="File Name"><textarea placeholder="File Contents"></textarea>';
+            filesEntries.appendChild(div);
+        });
+        filesEntries.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-file-entry')) {
+                e.target.parentElement.remove();
+            }
+        });
+    </script> -->
+</body>
+
+</html>
