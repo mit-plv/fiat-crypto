@@ -10,7 +10,7 @@ Require Import Crypto.Util.LetIn Crypto.Util.CPSUtil.
 Module B.
   Module Associational.
     Section Associational.
-      Context {mul_split_cps : forall {T}, Z -> Z -> Z -> (Z * Z -> T) -> T} (* first argument is where to split output; [mul_split s x y] gives ((x * y) mod s, (x * y) / s) *)
+      Context {mul_split_cps : forall {T:Type}, Z -> Z -> Z -> (Z * Z -> T) -> T} (* first argument is where to split output; [mul_split s x y] gives ((x * y) mod s, (x * y) / s) *)
               {mul_split_cps_id : forall {T} s x y f,
                   @mul_split_cps T s x y f = f (@mul_split_cps _ s x y id)}
               {mul_split_mod : forall s x y,
