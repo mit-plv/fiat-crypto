@@ -3960,6 +3960,8 @@ Module error.
   | unimplemented_prefix (_:NormalInstruction)
   | unimplemented_instruction (_ : NormalInstruction)
   | unsupported_line (_ : RawLine)
+  | unsupported_directive (_ : string)
+  | data_emitting_line (_ : RawLine)
   | ambiguous_operation_size (_ : NormalInstruction)
   .
 
@@ -4000,6 +4002,12 @@ Module error.
           | unimplemented_instruction n => ["error.unimplemented_instruction " ++ show n]
           | unimplemented_prefix n => ["error.unimplemented_prefix " ++ show n]
           | unsupported_line n => ["error.unsupported_line " ++ show n]
+          | unsupported_directive d
+            => ["error.unsupported_directive " ++ d;
+                "Only assembler directives that are known not to change the emitted machine code (see Crypto.Assembly.Syntax.inert_directive) are allowed inside a function being checked."]
+          | data_emitting_line n
+            => ["error.data_emitting_line " ++ show n;
+                "Lines that emit raw bytes (.ascii, .asciz, .byte, ...) are not allowed inside a function being checked, because the assembler would place those bytes in the instruction stream where they would execute as instructions that the checker did not model."]
           | ambiguous_operation_size n => ["error.ambiguous_operation_size " ++ show n]
           end%string.
   Global Instance Show_error : Show error := _.
@@ -4393,13 +4401,22 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
   | Some prefix => err (error.unimplemented_prefix instr) end
   | None => err (error.ambiguous_operation_size instr) end%N%x86symex.
 
+(** Every line that reaches the symbolic executor is part of the
+    machine code that will be emitted (and certified) verbatim, so
+    anything we do not model must be rejected rather than skipped.  In
+    particular, [ASCII_] lines and non-inert [DIRECTIVE]s can inject
+    arbitrary bytes into the instruction stream. *)
 Definition SymexRawLine {opts : symbolic_options_computed_opt} {descr:description} (rawline : RawLine) : M unit :=
   match rawline with
   | EMPTY
   | LABEL _
-  | DIRECTIVE _
-  | ASCII_ _ _
     => ret tt
+  | DIRECTIVE d
+    => if inert_directive d
+       then ret tt
+       else err (error.unsupported_directive d)
+  | ASCII_ _ _
+    => err (error.data_emitting_line rawline)
   | INSTR instr
     => SymexNormalInstruction instr
   | SECTION _
