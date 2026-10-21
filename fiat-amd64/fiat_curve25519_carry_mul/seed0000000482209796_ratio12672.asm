@@ -1,6 +1,18 @@
 SECTION .text
 	GLOBAL fiat_curve25519_carry_mul
 fiat_curve25519_carry_mul:
+push qword [ rdx + 0x20 ]
+push qword [ rdx + 0x18 ]
+push qword [ rdx + 0x10 ]
+push qword [ rdx + 0x8 ]
+push qword [ rdx + 0x0 ]
+mov rdx, rsp
+push qword [ rsi + 0x20 ]
+push qword [ rsi + 0x18 ]
+push qword [ rsi + 0x10 ]
+push qword [ rsi + 0x8 ]
+push qword [ rsi + 0x0 ]
+mov rsi, rsp
 mov rax, [ rdx + 0x20 ]
 lea r10, [rax + 8 * rax]
 lea r11, [rax + 2 * r10]
@@ -161,6 +173,7 @@ mov r12, [ rsp - 0x70 ]
 mov r13, [ rsp - 0x68 ]
 mov r14, [ rsp - 0x60 ]
 mov r15, [ rsp - 0x58 ]
+add rsp, 80
 ret
 ; cpu 13th Gen Intel(R) Core(TM) i9-13900KF
 ; ratio 1.2672

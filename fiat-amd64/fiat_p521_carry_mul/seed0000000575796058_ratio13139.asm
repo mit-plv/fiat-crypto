@@ -1,6 +1,26 @@
 SECTION .text
 	GLOBAL fiat_p521_carry_mul
 fiat_p521_carry_mul:
+push qword [ rdx + 0x40 ]
+push qword [ rdx + 0x38 ]
+push qword [ rdx + 0x30 ]
+push qword [ rdx + 0x28 ]
+push qword [ rdx + 0x20 ]
+push qword [ rdx + 0x18 ]
+push qword [ rdx + 0x10 ]
+push qword [ rdx + 0x8 ]
+push qword [ rdx + 0x0 ]
+mov rdx, rsp
+push qword [ rsi + 0x40 ]
+push qword [ rsi + 0x38 ]
+push qword [ rsi + 0x30 ]
+push qword [ rsi + 0x28 ]
+push qword [ rsi + 0x20 ]
+push qword [ rsi + 0x18 ]
+push qword [ rsi + 0x10 ]
+push qword [ rsi + 0x8 ]
+push qword [ rsi + 0x0 ]
+mov rsi, rsp
 sub rsp, 688
 mov rax, rdx
 mov rdx, [ rsi + 0x18 ]
@@ -548,6 +568,7 @@ mov r13, [ rsp - 0x68 ]
 mov r14, [ rsp - 0x60 ]
 mov r15, [ rsp - 0x58 ]
 add rsp, 688
+add rsp, 144
 ret
 ; cpu Intel(R) Core(TM) i7-10710U CPU @ 1.10GHz
 ; ratio 1.3139
