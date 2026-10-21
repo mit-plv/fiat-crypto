@@ -5630,7 +5630,7 @@ public static void fiat_Secp256K1MontgomeryScalar_divstep(Box<Integer> out1, int
  * The function fiat_Secp256K1MontgomeryScalar_divstep_precomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form). <p>
  * <p>
  * Postconditions: <p>
- *   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if ⌊log2 m⌋ + 1 &lt; 46 then ⌊(49 * (⌊log2 m⌋ + 1) + 80) / 17⌋ else ⌊(49 * (⌊log2 m⌋ + 1) + 57) / 17⌋) <p>
+ *   eval (from_montgomery out1) = ⌊(m + 1) / 2⌋^(if ⌊log2 m⌋ + 1 &lt; 46 then ⌊(49 * (⌊log2 m⌋ + 1) + 80) / 17⌋ else ⌊(49 * (⌊log2 m⌋ + 1) + 57) / 17⌋) mod m <p>
  *   0 ≤ eval out1 &lt; m <p>
  * <p>
  * Output Bounds: <p>
