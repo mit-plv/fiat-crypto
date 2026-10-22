@@ -15,8 +15,9 @@
 //! Computed values:
 //!   eval z = z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192)
 //!   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248)
-//!   twos_complement_eval z = let x1 := z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) in
-//!                            if x1 & (2^256-1) < 2^255 then x1 & (2^256-1) else (x1 & (2^256-1)) - 2^256
+//!   twos_complement_eval z = let x1 := z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) + (z[4] << 256) in
+//!                            if x1 & (2^320-1) < 2^319 then x1 & (2^320-1) else (x1 & (2^320-1)) - 2^320
+//!   twos_complement z = if z < 2^63 then z else z - 2^64
 //! ```
 
 #![allow(unused_parens)]
@@ -1708,7 +1709,6 @@ pub const fn fiat_25519_scalar_set_one(mut out1: &mut fiat_25519_scalar_montgome
 /// ```text
 /// Postconditions:
 ///   twos_complement_eval out1 = m
-///   0 ≤ eval out1 < m
 /// ```
 ///
 /// ```text
@@ -1730,16 +1730,18 @@ pub const fn fiat_25519_scalar_msat(mut out1: &mut [u64; 5]) {
 /// Preconditions:
 ///   0 ≤ eval arg4 < m
 ///   0 ≤ eval arg5 < m
+///   -2^(64 - 1) + 1 < twos_complement arg1 < 2^(64 - 1) - 1
+///   (twos_complement_eval arg2) is odd
+///   -2^(64 * 5 - 2) < twos_complement_eval arg2 < 2^(64 * 5 - 2)
+///   -2^(64 * 5 - 2) < twos_complement_eval arg3 < 2^(64 * 5 - 2)
 /// Postconditions:
-///   out1 = (if 0 < arg1 ∧ (twos_complement_eval arg3) is odd then 1 - arg1 else 1 + arg1)
-///   twos_complement_eval out2 = (if 0 < arg1 ∧ (twos_complement_eval arg3) is odd then twos_complement_eval arg3 else twos_complement_eval arg2)
-///   twos_complement_eval out3 = (if 0 < arg1 ∧ (twos_complement_eval arg3) is odd then ⌊(twos_complement_eval arg3 - twos_complement_eval arg2) / 2⌋ else ⌊(twos_complement_eval arg3 + (twos_complement_eval arg3 mod 2) * twos_complement_eval arg2) / 2⌋)
-///   eval (from_montgomery out4) mod m = (if 0 < arg1 ∧ (twos_complement_eval arg3) is odd then (2 * eval (from_montgomery arg5)) mod m else (2 * eval (from_montgomery arg4)) mod m)
-///   eval (from_montgomery out5) mod m = (if 0 < arg1 ∧ (twos_complement_eval arg3) is odd then (eval (from_montgomery arg4) - eval (from_montgomery arg4)) mod m else (eval (from_montgomery arg5) + (twos_complement_eval arg3 mod 2) * eval (from_montgomery arg4)) mod m)
+///   twos_complement out1 = (if 0 < twos_complement arg1 ∧ (twos_complement_eval arg3) is odd then 1 - twos_complement arg1 else 1 + twos_complement arg1)
+///   twos_complement_eval out2 = (if 0 < twos_complement arg1 ∧ (twos_complement_eval arg3) is odd then twos_complement_eval arg3 else twos_complement_eval arg2)
+///   twos_complement_eval out3 = (if 0 < twos_complement arg1 ∧ (twos_complement_eval arg3) is odd then ⌊(twos_complement_eval arg3 - twos_complement_eval arg2) / 2⌋ else ⌊(twos_complement_eval arg3 + (twos_complement_eval arg3 mod 2) * twos_complement_eval arg2) / 2⌋)
+///   eval (from_montgomery out4) mod m = (if 0 < twos_complement arg1 ∧ (twos_complement_eval arg3) is odd then (2 * eval (from_montgomery arg5)) mod m else (2 * eval (from_montgomery arg4)) mod m)
+///   eval (from_montgomery out5) mod m = (if 0 < twos_complement arg1 ∧ (twos_complement_eval arg3) is odd then (eval (from_montgomery arg5) - eval (from_montgomery arg4)) mod m else (eval (from_montgomery arg5) + (twos_complement_eval arg3 mod 2) * eval (from_montgomery arg4)) mod m)
+///   0 ≤ eval out4 < m
 ///   0 ≤ eval out5 < m
-///   0 ≤ eval out5 < m
-///   0 ≤ eval out2 < m
-///   0 ≤ eval out3 < m
 /// ```
 ///
 /// ```text
@@ -1987,7 +1989,7 @@ pub const fn fiat_25519_scalar_divstep(out1: &mut u64, mut out2: &mut [u64; 5], 
 ///
 /// ```text
 /// Postconditions:
-///   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if ⌊log2 m⌋ + 1 < 46 then ⌊(49 * (⌊log2 m⌋ + 1) + 80) / 17⌋ else ⌊(49 * (⌊log2 m⌋ + 1) + 57) / 17⌋)
+///   eval (from_montgomery out1) mod m = ⌊(m + 1) / 2⌋^(if ⌊log2 m⌋ + 1 < 46 then ⌊(49 * (⌊log2 m⌋ + 1) + 80) / 17⌋ else ⌊(49 * (⌊log2 m⌋ + 1) + 57) / 17⌋) mod m
 ///   0 ≤ eval out1 < m
 /// ```
 ///
