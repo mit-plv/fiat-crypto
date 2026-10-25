@@ -110,6 +110,7 @@ static inline br_word_t _br_remu(br_word_t a, br_word_t b) {
   if (!b) return a;
   return a%b;
 }
+static_assert(BR_WORD_MAX == UINT32_MAX, "target word size does not match synthesis word size");
 
 
 /*
