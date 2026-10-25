@@ -4184,6 +4184,25 @@ Definition rcrcnt s cnt : Z :=
   Z.land cnt (Z.of_N s-1).
 
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
+
+(** [SignedMulHigh src1 src2] is the high [s] bits of the product of the
+    [s]-bit operands [src1] and [src2] interpreted as signed (two's
+    complement) values, i.e. what the one-operand form of [imul] writes to
+    [rdx] (resp. [ah]).  [Z.signed s x] is spelled with existing operators
+    as [addZ (add s x 2^(s-1)) (-(2^(s-1)))].  This is a separate definition
+    rather than being inlined into [SymexNormalInstruction] so that the
+    proofs about [SymexNormalInstruction] can treat it as a unit, the way
+    they treat [Symeval]. *)
+Definition SignedMulHigh {opts : symbolic_options_computed_opt} {descr:description} {s : OperationSize} {sa : AddressSize} (src1 src2 : ARG) : M idx :=
+  (let half : Z := Z.shiftl 1 (Z.of_N s-1) in
+   let signed_ (x : idx) : pre_expr
+     := addZ@(add s@(x, PreApp (const half) nil), PreApp (const (-half)) nil) in
+   a  <- GetOperand src1;
+   b  <- GetOperand src2;
+   xa <- Symeval (signed_ a);
+   xb <- Symeval (signed_ b);
+   p  <- Symeval (mulZ@(xa,xb));
+   Symeval (shr s@(p, PreApp (const (Z.of_N s)) nil)))%x86symex.
 Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:description} (instr : NormalInstruction) : M unit :=
   let stack_addr_size : AddressSize := 64%N in
   let sa : AddressSize := 64%N in
@@ -4298,10 +4317,26 @@ Definition SymexNormalInstruction {opts : symbolic_options_computed_opt} {descr:
     vh <- Symeval (shrZ@(v,PreARG (Z.of_N s)));
     _ <- SetOperand lo v;
          SetOperand hi vh
-  | (Syntax.mul | imul), [src2] =>
+  | Syntax.mul, [src2] =>
     let src1 : ARG := rax in
     v  <- Symeval (mulZ@(src1,src2));
     vh <- Symeval (shrZ@(v,PreARG (Z.of_N s)));
+    lo <- resize_reg rax;
+    hi <- (if (s =? 8)%N
+           then ret ah
+           else resize_reg rdx);
+    _ <- SetOperand (lo:ARG) v;
+    _ <- SetOperand (hi:ARG) vh;
+    HavocFlags (* This is conservative and can be made more precise *)
+  | imul, [src2] =>
+    (* One-operand [imul] is a *signed* widening multiply (Intel SDM Vol. 2A,
+       IMUL): rdx:rax (ah:al for s = 8) := signed(rax) * signed(src2).  The low
+       half agrees with the unsigned product, but the high half does not
+       whenever an operand has its top bit set, so it must not share the
+       unsigned [mul] branch above. *)
+    let src1 : ARG := rax in
+    v  <- Symeval (mulZ@(src1,src2));
+    vh <- SignedMulHigh src1 src2;
     lo <- resize_reg rax;
     hi <- (if (s =? 8)%N
            then ret ah
