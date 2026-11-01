@@ -88,7 +88,7 @@ Proof.
     ?Z.testbit_mod_pow2
     by (lia || ZnWords).
 
-    repeat (trivial; case Z.ltb_spec; intros; try lia;
+    repeat (trivial; case Z.ltb_spec; intros; try ZnWords.ZnWords_legacy; (* plain lia translates every word hypothesis here, too slow *)
     repeat rewrite
       ?Z.add_sub_swap,
       ?Z.sub_sub_distr,
