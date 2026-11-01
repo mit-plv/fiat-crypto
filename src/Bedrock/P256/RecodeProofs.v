@@ -41,7 +41,7 @@ Proof.
   straightline_call.
   { trivial. }
   repeat straightline.
-  case Z.ltb_spec; split; ZnWords_legacy. (* zify path slower than 2 s or failing here *)
+  case Z.ltb_spec; split; ZnWords.
 Qed.
 
 Lemma bytearray_load_of_sep addr (addr' : word) n (values : list byte) R m
@@ -149,7 +149,7 @@ Proof.
       ?Bool.andb_false_r, ?Bool.andb_false_l,
       ?Bool.orb_true_r, ?Bool.orb_true_l,
       ?Bool.orb_false_r, ?Bool.orb_false_l;
-    repeat match goal with |- context [Z.testbit ?a ?b] => rewrite (Z.testbit_neg_r a b) by ZnWords_legacy end). (* zify path slower than 2 s or failing here *)
+    repeat match goal with |- context [Z.testbit ?a ?b] => rewrite (Z.testbit_neg_r a b) by ZnWords end).
 Qed.
 
 Lemma extract_limb_at_bit_ok : program_logic_goal_for_function! extract_limb_at_bit.
@@ -365,7 +365,7 @@ Proof.
               match goal with | H: Forall _ (_ :: _) |- _ => apply Forall_inv in H end.
               case Z.ltb_spec; case Z.eqb_spec; [ZnWords | | | ZnWords];
               repeat rewrite ?Zmod.unsigned_0, ?Zmod.unsigned_0, ?word.unsigned_sub_nowrap,
-                ?Zmod.unsigned_sub, ?word.unsigned_add_nowrap, ?byte.unsigned_of_Z, ?byte.swrap_wrap by ZnWords_legacy; intros. (* zify path slower than 2 s or failing here *)
+                ?Zmod.unsigned_sub, ?word.unsigned_add_nowrap, ?byte.unsigned_of_Z, ?byte.swrap_wrap by ZnWords; intros.
               { rewrite word.byte_swrap_word_wrap by ZnWords.
                 cbv [byte.swrap]. rewrite Z.mod_small; ZnWords. }
               { cbv [byte.swrap]. rewrite Z.mod_small; ZnWords. }
@@ -375,8 +375,8 @@ Proof.
                 match goal with | H: Forall _ (_ :: _) |- _ => apply Forall_inv in H end.
                 case Z.ltb_spec; case Z.eqb_spec;
                 repeat rewrite ?Zmod.unsigned_0, ?Zmod.unsigned_0, ?word.unsigned_sub_nowrap,
-                ?word.unsigned_add_nowrap, ?Zmod.unsigned_sub, ?bits.unsigned_of_Z_small by ZnWords_legacy; (* zify path slower than 2 s or failing here *)
-                intros; try ZnWords_legacy; unfold byte.signed; rewrite byte.unsigned_of_Z, byte.swrap_wrap; (* zify path slower than 2 s or failing here *)
+                ?word.unsigned_add_nowrap, ?Zmod.unsigned_sub, ?bits.unsigned_of_Z_small by ZnWords;
+                intros; try ZnWords; unfold byte.signed; rewrite byte.unsigned_of_Z, byte.swrap_wrap;
                 rewrite ?word.byte_swrap_word_wrap by lia;
                 cbv [byte.swrap]; rewrite Z.mod_small; try ZnWords. }
                 assumption. }
