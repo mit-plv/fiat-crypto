@@ -533,8 +533,7 @@ Proof.
   rewrite Hsscalar in *.
   straightline_call. (* call limbs_unpack *)
   { (* Solve limbs_unpack assumptions. *)
-    ssplit; try ecancel_assumption; try ZnWords.
-    rewrite bits.unsigned_of_Z_small; lia. }
+    ssplit; try ecancel_assumption; try ZnWords. }
   repeat straightline.
   straightline_call. (* call recode_wrap *)
   { (* Solve recode_wrap assumptions. *)

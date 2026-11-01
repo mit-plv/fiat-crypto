@@ -87,7 +87,6 @@ Proof.
     { 
         repeat straightline; cbv [count]; ssplit.
         all: intuition try ZnWords.
-        rewrite Zmod.unsigned_0, Z.pow_0_r. ZnWords.
     }
     { 
         repeat straightline; try eexists _;
