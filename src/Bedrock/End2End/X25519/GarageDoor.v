@@ -804,9 +804,10 @@ Optimize Proof. Optimize Heap.
   repeat match goal with H : sep _ _ _ |- _ => clear H end.
   repeat straightline.
 
-  (* with the zify word instances, a plain lia here translates every word hypothesis;
-     forget the words first *)
-  do 6 (destruct pPP as [|? pPP]; (cbn [Datatypes.length] in *; try ZnWords.lia_forget_words)).
+  (* With the zify word instances in scope, lia is slow while the word let-ins are in
+     the context; the empty-list case is a contradiction between length facts. *)
+  do 6 (destruct pPP as [|? pPP]; (cbn [Datatypes.length] in *;
+    try (exfalso; repeat match goal with x := _ |- _ => clearbody x end; lia))).
   set ((b :: b0 :: b1 :: b2 :: b3 :: b4 :: pPP)$@(Zmod.add buf (bits.of_Z _ 38))) as X in H40.
   cbn [Array.array] in X. subst X.
   repeat eplace (Zmod.add (Zmod.add buf _) _) with (Zmod.add buf _) in H40 by (ring_simplify; trivial).

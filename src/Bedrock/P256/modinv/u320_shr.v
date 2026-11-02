@@ -88,7 +88,10 @@ Proof.
     ?Z.testbit_mod_pow2
     by (lia || ZnWords).
 
-    repeat (trivial; case Z.ltb_spec; intros; try ZnWords.ZnWords_legacy; (* plain lia translates every word hypothesis here, too slow *)
+    (* The word let-ins are already unfolded in the goal; with the zify word
+       instances in scope, lia would translate their bodies at every call. *)
+    clearbody v sr1 sr2 sr3 sr4.
+    repeat (trivial; case Z.ltb_spec; intros; try (first [ reflexivity | exfalso; lia ]);
     repeat rewrite
       ?Z.add_sub_swap,
       ?Z.sub_sub_distr,

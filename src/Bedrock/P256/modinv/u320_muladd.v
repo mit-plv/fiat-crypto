@@ -67,7 +67,7 @@ Local Ltac lists_into_elements := repeat match goal with
 
 Lemma u320_muladd_correct : program_logic_goal_for_function! u320_muladd.
 Proof. repeat straightline. lists_into_elements. unfold array in *.
-        repeat (straightline || straightline_call || ZnWords_legacy). (* nonlinear 320-bit products: zify path fails or exceeds 2 s *)
+        repeat (straightline || straightline_call || ZnWords).
         eexists [_ ; _; _ ; _ ; _ ]. intuition try ecancel_assumption;
         cbn [eval carry_mul carry_mul'2 carry_mul'1 c] in *;
         assert (c_prime * m1 <= (2^64 - 1) * (2^64 - 1)) by
