@@ -253,7 +253,10 @@ Section WithParameters.
         seprewrite0_in Hrw H1; ecancel_assumption).
       all: repeat rewrite ?Core.word.unsigned_b2w, ?bits.unsigned_of_Z, ?bits.unsigned_and, ?Zmod.unsigned_sru.
       all: rewrite ?Z.mod_small; try lia.
-      rewrite ?Z.shiftr_div_pow2 by lia; change (2^3) with 8. lia.
+      (* with words registered with zify (coqutil ZifyBits), [lia] leaves other
+         goals here than before *)
+      all: try (change (Z.log2 64) with 6; lia).
+      all: try (rewrite ?Z.shiftr_div_pow2 by lia; change (2^3) with 8; lia).
       all: cbn; lia.
     - eapply H6. ssplit; auto.
       apply (f_equal (map.put loc var)).
