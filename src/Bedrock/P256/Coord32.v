@@ -133,13 +133,15 @@ Import (notations) coqutil.Map.Memory.
 
 
 Import Specs.NotationsCustomEntry Specs.coord Specs.point.
+(* The length side conditions do not need the memory hypotheses; with the zify
+   word instances in scope, lia is slow while they are in the context. *)
+Local Ltac length_lia := repeat match goal with H : context [sep] |- _ => clear H end; lia.
 Local Ltac length_tac :=
   repeat rewrite
     ?length_coord, ?length_point,
     ?app_length, ?firstn_length, ?skipn_length, ?length_le_split, ?length_nil,
     ?Nat.min_l
-    by (trivial; ZnWords.lia_forget_words); trivial; ZnWords.lia_forget_words.
-    (* with the zify word instances, a plain lia here translates every word hypothesis *)
+    by (trivial; length_lia); trivial; length_lia.
 
 
 Lemma fiat_coord_nonzero_ok : program_logic_goal_for_function! p256_coord_nonzero.
@@ -208,7 +210,7 @@ Proof.
   repeat seprewrite_in_by (@sep_eq_of_list_word_at_app) Hm length_tac;
   repeat seprewrite_in_by (symmetry! @Array.array1_iff_eq_of_list_word_at) Hm length_tac;
   repeat seprewrite_in_by @Scalars.scalar_of_bytes Hm length_tac;
-  rewrite ?le_combine_split in Hm by ZnWords.lia_forget_words
+  rewrite ?le_combine_split in Hm by length_lia
   in domem H2; domem H3.
 
   simpl Z.of_nat in *; simpl Z.mul in *; simpl Z.add in *; simpl Nat.add in *.
