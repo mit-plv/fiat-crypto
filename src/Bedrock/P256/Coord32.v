@@ -135,6 +135,12 @@ Import (notations) coqutil.Map.Memory.
 Import Specs.NotationsCustomEntry Specs.coord Specs.point.
 (* The length side conditions do not need the memory hypotheses; with the zify
    word instances in scope, lia is slow while they are in the context. *)
+(* The equations for the loaded words contain shifts by a non-literal amount; the
+   zify-based ZnWords turns those into nonlinear facts, and lia does not stop on
+   side goals that must fail.  The side goals below do not need them. *)
+Local Ltac ZnWords_no_shifts :=
+  repeat match goal with H : context [Z.shiftl] |- _ => clear H | H : context [Z.shiftr] |- _ => clear H end;
+  ZnWords.ZnWords.
 Local Ltac length_lia := repeat match goal with H : context [sep] |- _ => clear H end; lia.
 Local Ltac length_tac :=
   repeat rewrite
@@ -218,35 +224,37 @@ Proof.
 
   rename H14 into H14'; rename H22 into H14.
   cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar] in H14.
-  repeat seprewrite_in_by ptsto_bytes_iff_eq_of_list_word_at H14 ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords.ZnWords).
+  repeat seprewrite_in_by ptsto_bytes_iff_eq_of_list_word_at H14 ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords_no_shifts).
   rewrite ?Scalars.bytes_per_width_bytes_per_word in H14.
   progress change (Memory.bytes_per access_size.word) with 4%nat in H14.
-  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
-  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
-  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
-  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
-  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
-  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
-  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords_no_shifts).
+  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords_no_shifts).
+  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords_no_shifts).
+  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords_no_shifts).
+  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords_no_shifts).
+  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords_no_shifts).
+  seprewrite_in_by (@list_word_at_app_of_adjacent_eq) H14 ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords_no_shifts).
   rewrite <-?app_assoc in H14.
   revert H14;
   eassert ((_ ++ _) = _) as ->; [|intros;ecancel_assumption].
   eapply le_combine_inj; rewrite ?app_length, ?length_le_combine, ?length_le_split; trivial.
   rewrite !le_combine_app, !le_combine_split, ?length_le_split; change (2^(8%nat*8)) with (2^64).
-  rewrite ?Z.mod_small by (cbv [p256] in *; ZnWords.ZnWords).
+  rewrite ?Z.mod_small by (cbv [p256] in *; ZnWords_no_shifts).
   subst y7.
   change (2 ^ Z.log2 32) with 32 in *.
-  rewrite !(Z.mod_small (Zmod.unsigned n) 32) by (pose proof (bits.unsigned_range n width_nonneg); ZnWords.ZnWords).
-  rewrite Zmod.unsigned_sru, Z.shiftr_div_pow2 by ZnWords.ZnWords.
+  rewrite !(Z.mod_small (Zmod.unsigned n) 32) by (pose proof (bits.unsigned_range n width_nonneg); ZnWords_no_shifts).
+  rewrite Zmod.unsigned_sru, Z.shiftr_div_pow2 by ZnWords_no_shifts.
   subst x7 x6 x5 x4 x3 x2 x1 x0.
   progress rewrite ?bits.unsigned_of_Z in *; rewrite <-?Z.land_ones in * by lia.
   pose proof (bits.unsigned_range n width_nonneg).
   DestructHead.destruct_head' @and.
   simpl Z.mul.
   all : rewrite !H11, !H12, !H13, !H14', !H15, !H16, !H17.
+  (* the shift equations are not needed any more; the lia calls below are slow with them *)
+  all : clear H11 H12 H13 H14' H15 H16 H17.
   Import bitblast.
   all : apply Z.bits_inj'; intros i Hi;
-  repeat rewrite <-?Z.shiftr_div_pow2, ?Z.land_spec, ?Z.lor_spec, ?Z.shiftr_spec', ?Z.shiftl_spec', ?Z.testbit_ones by try ZnWords.ZnWords.
+  repeat rewrite <-?Z.shiftr_div_pow2, ?Z.land_spec, ?Z.lor_spec, ?Z.shiftr_spec', ?Z.shiftl_spec', ?Z.testbit_ones by try ZnWords_no_shifts.
   all: repeat (rewrite
       ?Bool.andb_true_l, ?Bool.andb_true_r, ?Bool.orb_true_l, ?Bool.orb_true_r,
       ?Bool.andb_false_l, ?Bool.andb_false_r, ?Bool.orb_false_l, ?Bool.orb_false_r,
@@ -257,7 +265,7 @@ Proof.
              apply (Z.lt_le_trans _ (y^a)), Z.pow_le_mono_r; lia
          | _ => lia
          end);
-    cbn [negb]; trivial; try lia
+    cbn [negb]; trivial; try (first [ reflexivity | exfalso; lia ])
   || ((case Z.ltb_spec; [|]; intros)||(case Z.leb_spec; [|]; intros))).
   all: try (f_equal; lia).
 Qed.
@@ -285,10 +293,10 @@ Proof.
 
   clear Hm; rename H7 into Hm.
   cbv [Scalars.scalar Scalars.truncated_word Scalars.truncated_scalar] in Hm.
-  repeat seprewrite_in_by ptsto_bytes_iff_eq_of_list_word_at Hm ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords.ZnWords).
+  repeat seprewrite_in_by ptsto_bytes_iff_eq_of_list_word_at Hm ltac:(try rewrite ?length_le_split, ?Scalars.bytes_per_width_bytes_per_word; cbv [Memory.bytes_per_word]; try ZnWords_no_shifts).
   rewrite ?HList.tuple.to_list_of_list, ?Scalars.bytes_per_width_bytes_per_word in Hm.
   change (Memory.bytes_per access_size.word) with 4%nat in Hm.
-  repeat seprewrite_in_by (@list_word_at_app_of_adjacent_eq) Hm ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords.ZnWords).
+  repeat seprewrite_in_by (@list_word_at_app_of_adjacent_eq) Hm ltac:(rewrite ?app_length, ?length_le_split, ?length_nil; try ZnWords_no_shifts).
   rewrite <-?app_assoc in Hm.
   simpl Nat.add in Hm.
 
