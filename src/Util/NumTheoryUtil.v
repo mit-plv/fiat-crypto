@@ -24,7 +24,8 @@ destruct (Z.eq_dec p 0); try subst.
 apply Coqprime.PrimalityTest.IGroup.isupport_is_inv_true in Hin.
 rewrite Coqprime.PrimalityTest.Zp.rel_prime_is_inv in Hin by auto.
 pose proof (not_rel_prime_0 n n_pos).
-destruct (rel_prime_dec 0 n) in Hin; try congruence.
+(* coqprime before 2026-11 states [rel_prime_is_inv] with [rel_prime_dec a n]; later versions use [Z.gcd a n =? 1] *)
+rewrite ?Z.gcd_0_l in Hin; break_match_hyps; rewrite ?Z.eqb_eq in *; try congruence; lia.
 lia.
 Qed.
 
