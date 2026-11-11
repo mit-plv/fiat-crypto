@@ -26,6 +26,15 @@ jobs:
     - name: Install system dependencies
       run: |
         pacman --noconfirm -Syu base-devel git make python3 which jq ghc ghc-static time diffutils rocq rocq-stdlib ocaml-zarith --needed
+    - name: Work around rocq-stdlib being built against a different rocq
+      run: |
+        pacman --noconfirm -Sw rocq-stdlib
+        want="$(bsdtar -xOf /var/cache/pacman/pkg/rocq-stdlib-*.pkg.tar.zst .BUILDINFO | sed -n 's/^installed = \(rocq-[0-9].*\)-x86_64$/\1/p')"
+        have="$(pacman -Q rocq | tr ' ' -)"
+        if [ "${want%-*}" != "${have%-*}" ]; then
+          echo "::warning::rocq-stdlib was built against ${want:?}, not ${have}; installing ${want}"
+          pacman --noconfirm -U "https://archive.archlinux.org/packages/r/rocq/${want}-x86_64.pkg.tar.zst"
+        fi
     - uses: actions/checkout@v7
       with:
         submodules: recursive
