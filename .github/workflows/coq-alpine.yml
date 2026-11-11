@@ -32,11 +32,32 @@ jobs:
     - uses: actions/checkout@v7
       with:
         submodules: recursive
-    - uses: jirutka/setup-alpine@v1
-      with:
-        branch: ${{ matrix.alpine }}
-        extra-repositories: https://dl-cdn.alpinelinux.org/alpine/edge/testing
-        packages: git make jq gcc musl-dev python3 ocaml ocaml-findlib ghc cabal rocq rocq-stdlib ocaml-zarith bash sudo
+    - name: setup alpine
+      run: |
+        docker run -d --name alpine \
+          -v "$HOME/work:$HOME/work" \
+          -w "$GITHUB_WORKSPACE" \
+          "alpine:${{ matrix.alpine }}" sleep infinity
+        docker exec alpine sh -eux -c '
+          echo https://dl-cdn.alpinelinux.org/alpine/edge/testing >> /etc/apk/repositories
+          apk add --no-cache git make jq gcc musl-dev python3 ocaml ocaml-findlib ghc cabal rocq rocq-stdlib ocaml-zarith bash sudo
+          grp="$(awk -F: -v g="$2" '\''$3 == g { print $1; exit }'\'' /etc/group)"
+          if [ -z "$grp" ]; then addgroup -g "$2" "$1"; grp="$1"; fi
+          adduser -u "$3" -G "$grp" -s /bin/sh -D "$1"
+          if [ -d /etc/sudoers.d ]; then
+            printf "%s ALL=(ALL) NOPASSWD: ALL\n" "$1" > /etc/sudoers.d/root
+            chmod 0440 /etc/sudoers.d/root
+          fi
+          if [ -d /etc/doas.d ]; then
+            printf "permit nopass keepenv %s\n" "$1" > /etc/doas.d/root.conf
+            chmod 0600 /etc/doas.d/root.conf
+          fi
+        ' -- "$(id -un)" "$(id -g)" "$(id -u)"
+        sudo tee /usr/local/bin/alpine.sh >/dev/null <<'EOF'
+        #!/bin/sh
+        exec docker exec -e CI -e GITHUB_ACTIONS -e GITHUB_STEP_SUMMARY -u "$(id -u):$(id -g)" -w "$(pwd)" alpine /bin/sh -eo pipefail "$@"
+        EOF
+        sudo chmod +x /usr/local/bin/alpine.sh
     - name: host build params
       run: etc/ci/describe-system-config.sh
     - name: chroot build params
@@ -150,13 +171,14 @@ jobs:
         ldd dist/fiat_crypto || true
         echo "::endgroup::"
         etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
-    - uses: jirutka/setup-alpine@v1
-      with:
-        branch: ${{ matrix.alpine }}
-        extra-repositories: https://dl-cdn.alpinelinux.org/alpine/edge/testing
     - name: Test files (container)
-      shell: alpine.sh {0}
-      run: etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
+      run: |
+        docker run --rm \
+          -u "$(id -u):$(id -g)" \
+          -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
+          -w "$GITHUB_WORKSPACE" \
+          "alpine:${{ matrix.alpine }}" \
+          etc/ci/test-run-fiat-crypto.sh dist/fiat_crypto
 
   publish-standalone:
     runs-on: ubuntu-latest
