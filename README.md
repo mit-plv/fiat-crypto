@@ -140,6 +140,10 @@ A collection of bedrock2/C files for popular curves can be made with
 
 The bedrock2/C files will appear in [`fiat-bedrock2/src/`](./fiat-bedrock2/src/).
 
+**Note:** the bedrock2 C backend represents every machine word as `br_word_t`, an alias of `uintptr_t`, and the limb layout of the generated code is fixed by the word size it was synthesized for.
+Each generated file must therefore be compiled only for targets whose pointer width matches that word size: the `*_32.c` files are for 32-bit targets (e.g. `-m32` on x86, or a 32-bit cross compiler), and the `*_64.c` files are for 64-bit targets.
+Every file contains a `static_assert` that rejects a mismatched target at compile time, so a `*_32.c` file will not build on x86-64 without `-m32`.
+
 Just the compilers generating these bedrock2/C files can be made with
 
     make standalone-ocaml
