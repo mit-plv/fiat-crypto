@@ -27,6 +27,9 @@ FIAT_SECP256K1_DETTMAN_FIAT_EXTENSION typedef unsigned __int128 fiat_secp256k1_d
 #if (-1 & 3) != 3
 #error "This code only works on a two's complement system"
 #endif
+#if ((-1) >> 1) != -1
+#error "This code only works on a system with arithmetic right shift of negative signed values"
+#endif
 
 
 /*
