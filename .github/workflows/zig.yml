@@ -19,7 +19,7 @@ jobs:
       - name: Install Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: master
+          version: 0.17.1
       - uses: actions/checkout@v7
       - name: Test Zig files
         run: (cd fiat-zig && zig build && zig build test)
@@ -43,7 +43,7 @@ jobs:
       - name: Install Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: master
+          version: 0.17.1
       - name: Install Valgrind
         run: sudo apt-get update && sudo apt-get install -y valgrind
       - uses: actions/checkout@v7
