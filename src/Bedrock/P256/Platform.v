@@ -153,8 +153,7 @@ Proof.
     { repeat (rewrite ?H, ?word.unsigned_add_nowrap, ?unsigned_xor_nowrap,
       ?bits.unsigned_and, ?bits.unsigned_of_Z_small,
       ?bits.unsigned_xor, ?Z.land_0_l, ?Z.lxor_0_r;
-      try (lia || ZnWords.ZnWords); try (case Z.ltb_spec; intros)).
-      div_mod_lia. }
+      try (lia || ZnWords.ZnWords); try (case Z.ltb_spec; intros)). }
     { repeat rewrite ?H, ?word.unsigned_add_nowrap, ?unsigned_xor_nowrap,
       ?bits.unsigned_and, ?bits.unsigned_of_Z_small,
       ?bits.unsigned_xor, ?Hsign, ?Z.land_ones; try (lia || ZnWords.ZnWords);
