@@ -2846,6 +2846,12 @@ Typeclasses Opaque Symeval.
 Typeclasses Transparent AddressSize OperationSize.
 
 (* TODO: move? *)
+Local Instance SignedMulHigh_reg_same {opts : symbolic_options_computed_opt} {descr:description} {sz:OperationSize} {sa:AddressSize} src1 src2 : same_reg_some_of_success (SignedMulHigh src1 src2).
+Proof. cbv [SignedMulHigh]; typeclasses eauto. Qed.
+#[global]
+Typeclasses Opaque SignedMulHigh.
+
+(* TODO: move? *)
 Local Instance SymexNormalInstruction_reg_same {opts : symbolic_options_computed_opt} {descr:description} instr : same_reg_some_of_success (SymexNormalInstruction instr).
 Proof.
   destruct instr; cbv [SymexNormalInstruction err Symbolic.bind ret Syntax.op Syntax.args ErrorT.bind same_reg_some_of_success] in *; intros.
@@ -3014,6 +3020,12 @@ Local Existing Instance Symeval_mem_same.
 Typeclasses Opaque Symeval.
 #[global]
 Typeclasses Transparent AddressSize OperationSize.
+
+(* TODO: move? *)
+Local Instance SignedMulHigh_mem_same {opts : symbolic_options_computed_opt} {descr:description} {sz:OperationSize} {sa:AddressSize} src1 src2 : same_mem_addressed_of_success (SignedMulHigh src1 src2).
+Proof. cbv [SignedMulHigh]; typeclasses eauto. Qed.
+#[global]
+Typeclasses Opaque SignedMulHigh.
 
 (* TODO: move? *)
 Local Instance SymexNormalInstruction_mem_same {opts : symbolic_options_computed_opt} {descr:description} instr : same_mem_addressed_of_success (SymexNormalInstruction instr).
