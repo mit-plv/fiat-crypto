@@ -1,0 +1,2 @@
+-Q src/bbv bbv
+-arg -w -arg -deprecated-hint-rewrite-without-locality,+deprecated-hint-without-locality,+deprecated-instance-without-locality
