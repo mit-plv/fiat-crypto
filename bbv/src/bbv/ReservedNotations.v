@@ -16,6 +16,6 @@ Reserved Notation "w1 '>s=' w2" (at level 70, w2 at next level).
 Reserved Notation "w1 '<s' w2" (at level 70, w2 at next level).
 Reserved Notation "w1 '<s=' w2" (at level 70, w2 at next level).
 Reserved Notation "$ n" (at level 9, n at level 9, format "$ n").
-Reserved Notation "# n" (at level 0).
+Reserved Notation "# n" (at level 0, n at level 0).
 Reserved Notation "l ^<< r" (at level 35).
 Reserved Notation "l ^>> r" (at level 35).
