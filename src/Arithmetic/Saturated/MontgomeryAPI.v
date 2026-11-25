@@ -443,7 +443,7 @@ Section API.
     Qed.
 
     Lemma div_nonzero_neg_iff x y : x < y -> 0 < y ->
-                                    - (x / y) = 0 <-> x <? 0 = false.
+                                    - (x / y) = 0 <-> (x <? 0) = false.
     Proof.
       repeat match goal with
              | _ => progress intros
@@ -477,7 +477,7 @@ Section API.
              end.
       let H := fresh "H" in
       match goal with |- context [- (?X / ?Y) = 0] =>
-                      assert ((- (X / Y) = 0) <-> X <? 0 = false) as H
+                      assert ((- (X / Y) = 0) <-> (X <? 0) = false) as H
                              by (apply div_nonzero_neg_iff; lia)
       end; destruct H.
       break_match;  try match goal with
@@ -537,7 +537,7 @@ Section API.
              end.
       let H := fresh "H" in
       match goal with |- context [- (?X / ?Y) = 0] =>
-                      assert ((- (X / Y) = 0) <-> X <? 0 = false) as H
+                      assert ((- (X / Y) = 0) <-> (X <? 0) = false) as H
                              by (apply div_nonzero_neg_iff; lia)
       end; destruct H.
       break_match;  try match goal with

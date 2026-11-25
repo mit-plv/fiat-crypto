@@ -173,4 +173,4 @@ Reserved Notation "##### x" (at level 9, x at level 9, format "##### x").
 Reserved Notation "\ x .. y , t" (at level 10, x binder, y binder, t at level 200, format "\  x .. y , '//' t").
 
 (* TODO: Remove these when https://github.com/mit-plv/bbv/pull/13 is merged *)
-Reserved Notation "# x" (at level 0, format "# x").
+Reserved Notation "# x" (at level 0, x at level 0, format "# x").
