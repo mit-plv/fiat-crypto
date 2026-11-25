@@ -33,6 +33,7 @@ Section language.
              | _ => progress simpl in *
              | _ => progress rewrite_hyp *
              | _ => rewrite <- surjective_pairing
+             | [ v : unit |- _ ] => destruct v
              end.
   Qed.
 
