@@ -345,6 +345,10 @@ Module CorrectnessStringification.
       => constr:(x = y /\ a <= b < c)
     | (_ = List.map (fun z => (_ mod _) / _) (List.seq _ _)) /\ (?a <= ?b < ?c)
       => constr:(a <= b < c)
+    | list_Z_bounded_by _ _ /\ ?T
+      => strip_bounds_info T
+    | ((lower ?r <=? ?v) && (?v <=? upper ?r))%bool%Z = true /\ ?T
+      => strip_bounds_info T
     | ?A /\ ?B
       => let A := strip_bounds_info A in
          let B := strip_bounds_info B in
@@ -632,6 +636,12 @@ Module CorrectnessStringification.
               | prod ?A ?B
                 => let v := (eval cbn [fst snd] in (fst x = fst y /\ snd x = snd y)) in
                    recurse v lvl
+              | bool
+                => lazymatch y with
+                   | true => recurse x lvl
+                   | _ => constr_fail_with ltac:(fun _ => idtac "Error: Unrecognized boolean equality:" correctness;
+                                                          fail 1 "Error: Unrecognized boolean equality:" correctness)
+                   end
               | ?T' => constr_fail_with ltac:(fun _ => idtac "Error: Unrecognized type for equality:" T';
                                                        fail 1 "Error: Unrecognized type for equality:" T')
               end
