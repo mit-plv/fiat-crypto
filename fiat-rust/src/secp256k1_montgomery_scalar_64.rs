@@ -1895,7 +1895,6 @@ pub const fn fiat_secp256k1_montgomery_scalar_set_one(mut out1: &mut fiat_secp25
 /// ```text
 /// Postconditions:
 ///   twos_complement_eval out1 = m
-///   0 ≤ eval out1 < m
 /// ```
 ///
 /// ```text

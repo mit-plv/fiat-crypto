@@ -4868,7 +4868,6 @@ pub const fn fiat_sm2_set_one(mut out1: &mut fiat_sm2_montgomery_domain_field_el
 /// ```text
 /// Postconditions:
 ///   twos_complement_eval out1 = m
-///   0 ≤ eval out1 < m
 /// ```
 ///
 /// ```text

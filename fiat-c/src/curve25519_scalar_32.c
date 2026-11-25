@@ -4550,7 +4550,6 @@ static FIAT_25519_SCALAR_FIAT_INLINE void fiat_25519_scalar_set_one(fiat_25519_s
  *
  * Postconditions:
  *   twos_complement_eval out1 = m
- *   0 ≤ eval out1 < m
  *
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
