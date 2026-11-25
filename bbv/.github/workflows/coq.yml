@@ -1,0 +1,34 @@
+name: CI (Coq)
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        env:
+        - { COQ_VERSION: "master", COQ_PACKAGE: "coq"       , PPA: "ppa:jgross-h/coq-master-daily"             }
+      fail-fast: false
+
+    env: ${{ matrix.env }}
+
+    steps:
+    - name: install Coq
+      run: |
+        if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
+        sudo apt-get update -q
+        sudo apt-get install $COQ_PACKAGE -y --allow-unauthenticated
+    - name: echo build params
+      run: |
+        lscpu
+        uname -a
+        lsb_release -a
+        coqc --version
+        echo | coqtop
+    - uses: actions/checkout@v2
+    - run: make

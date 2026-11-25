@@ -255,7 +255,7 @@ Module Z.
 
   Lemma compare_add_shiftl : forall x1 y1 x2 y2 n, 0 <= n ->
     Z.pow2_mod x1 n = x1 -> Z.pow2_mod x2 n = x2  ->
-    x1 + (y1 << n) ?= x2 + (y2 << n) =
+    (x1 + (y1 << n) ?= x2 + (y2 << n)) =
       if Z.eq_dec y1 y2
       then x1 ?= x2
       else y1 ?= y2.
