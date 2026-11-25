@@ -2569,7 +2569,7 @@ Module SolinasReduction.
         repeat match goal with
                | H : _ && _ = true |- _ => apply andb_prop in H
                | H : _ /\ _ |- _ => destruct H
-               | H : _ <=? _ = true |- _ => rewrite Z.leb_le in H
+               | H : (_ <=? _) = true |- _ => rewrite Z.leb_le in H
                end.
 
         repeat multimatch goal with
@@ -2630,7 +2630,7 @@ Module SolinasReduction.
         repeat match goal with
                | H : _ && _ = true |- _ => apply andb_prop in H
                | H : _ /\ _ |- _ => destruct H
-               | H : _ <=? _ = true |- _ => rewrite Z.leb_le in H
+               | H : (_ <=? _) = true |- _ => rewrite Z.leb_le in H
                end.
         push; solve_ineq; le_lt; replace x with (weight 0 * x) by (weight_comp; lia); etransitivity;
           [repeat match goal with

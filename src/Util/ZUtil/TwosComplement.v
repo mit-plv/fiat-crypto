@@ -33,7 +33,7 @@ Module Z.
 
   Lemma twos_complement_neg_equiv m a
     (Hm : 0 < m) :
-    Z.twos_complement m a <? 0 = negb (a mod 2 ^ m <? 2 ^ (m - 1)).
+    (Z.twos_complement m a <? 0) = negb (a mod 2 ^ m <? 2 ^ (m - 1)).
   Proof.
     assert (0 < 2 ^ m) by (apply Z.pow_pos_nonneg; lia).
     assert (0 <= a mod 2 ^ m < 2 ^ m) by (apply Z.mod_pos_bound; lia).
@@ -41,7 +41,7 @@ Module Z.
 
   Lemma twos_complement_cond_equiv m a
         (Hm : 0 < m) :
-    (a mod 2 ^ m) <? 2 ^ (m - 1) = negb (Z.testbit a (m - 1)).
+    ((a mod 2 ^ m) <? 2 ^ (m - 1)) = negb (Z.testbit a (m - 1)).
   Proof.
     pose proof Z.mod_pos_bound a (2 ^ m) ltac:(apply Z.pow_pos_nonneg;lia).
     destruct_ltb (a mod 2 ^ m) (2 ^ (m - 1)).
