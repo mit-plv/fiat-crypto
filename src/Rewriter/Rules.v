@@ -289,18 +289,35 @@ Definition arith_rewrite_rulesT (max_const_val : Z) : list (bool * Prop)
             ; (forall s y x,
                   Z.add_get_carry_full s (- y) x
                   = dlet vb := Z.sub_get_borrow_full s x y in (fst vb, - snd vb))
+            ; (forall s y x k,
+                  Z.add_get_carry_full s x (-y * k)
+                  = dlet vb := Z.sub_get_borrow_full s x (y * k) in (fst vb, - snd vb))
+            ; (forall s y x k,
+                  Z.add_get_carry_full s (-y * k) x
+                  = dlet vb := Z.sub_get_borrow_full s x (y * k) in (fst vb, - snd vb))
             ; (forall s y x,
                   Z.add_with_get_carry_full s 0 x (- y)
                   = dlet vb := Z.sub_get_borrow_full s x y in (fst vb, - snd vb))
             ; (forall s y x,
                   Z.add_with_get_carry_full s 0 (- y) x
                   = dlet vb := Z.sub_get_borrow_full s x y in (fst vb, - snd vb))
+
+            ; (forall s c x,
+                  Z.add_with_get_carry_full s (- c) x 0
+                  = dlet vb := Z.sub_with_get_borrow_full s c x 0 in (fst vb, - snd vb))
+
             ; (forall s c y x,
                   Z.add_with_get_carry_full s (- c) (- y) x
                   = dlet vb := Z.sub_with_get_borrow_full s c x y in (fst vb, - snd vb))
             ; (forall s c y x,
                   Z.add_with_get_carry_full s (- c) x (- y)
                   = dlet vb := Z.sub_with_get_borrow_full s c x y in (fst vb, - snd vb))
+            ; (forall s c y x k,
+                  Z.add_with_get_carry_full s c x (-y * k)
+                  = dlet vb := Z.sub_with_get_borrow_full s (-c) x (y * k) in (fst vb, - snd vb))
+            ; (forall s c y x k,
+                  Z.add_with_get_carry_full s c (-y * k) x
+                  = dlet vb := Z.sub_with_get_borrow_full s (-c) x (y * k) in (fst vb, - snd vb))
             ; (forall b x, (* inline negation when the rewriter wouldn't already inline it *)
                   ident.gets_inlined b x = false
                   -> -x = dlet v := x in -v)
@@ -398,6 +415,16 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
              ]%Z%zrange
          ; mymap
              do_again
+             [ (forall x y, cstZ r[0~>1] x * y = Z.zselect (cstZ r[0~>1] x) (cstZ r[0~>0] (' 0)) y)
+             ; (forall x y, y * cstZ r[0~>1] x = Z.zselect (cstZ r[0~>1] x) (cstZ r[0~>0] (' 0)) y)
+             ; (forall c M rv r0 rM, 0 ∈ r0 -> M ∈ rM -> M ∈ rv -> 2^Z.log2 (M+1) = M + 1 -> 1 <= M ->
+                  cstZ rv (Z.zselect (cstZ r[0~>1] c) (cstZ r0 ('0)) (cstZ rM ('M)))
+                  = (dlet vc := cstZZ rv r[0~>1] (Z.sub_with_get_borrow_full ('(M+1)) (cstZ r[0~>1] c) 0 0) in
+                     cstZ rv (fst vc)))
+              ; (forall rv c x y, cstZ rv (Z.zselect c x y) = dlet v := cstZ rv (Z.zselect c x y) in cstZ rv v)
+                  ]
+         ; mymap
+             do_again
              [ (* [do_again], so that we can trigger add/sub rules on the output *)
                (** flatten add/sub which incurs no carry/borrow *)
                (forall rv rs s rx x ry y,
@@ -416,6 +443,11 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
                      adc_no_carry_to_add = true -> s ∈ rs -> (n rx - n ry - n rc <= r[0~>s-1])%zrange
                      -> cstZZ rv r[0~>0] (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ ry y))
                         = (cstZ rv (cstZ rx x - cstZ ry y - cstZ rc c), (cstZ r[0~>0] ('0))))
+               (* 0-0-c passes through the carry *)
+               ; (forall rv rs s c rx ry,
+                     s ∈ rs -> 0 ∈ rx -> 0 ∈ ry -> -1 / s = -1
+                     -> cstZZ rv r[0~>1] (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ r[0~>1] c) (cstZ rx ('0)) (cstZ ry ('0)))
+                        = (cstZ rv (-(cstZ r[0~>1]c) mod 's), (cstZ r[0~>1] c)))
              ]%Z%zrange
          ; mymap
              dont_do_again
