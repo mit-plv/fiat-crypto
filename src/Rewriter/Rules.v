@@ -183,6 +183,13 @@ Definition nbe_rewrite_rulesT : list (bool * Prop)
                             end)
                         ('n)
                         xs)
+              ; typeof! @unfold1_nat_rect_fbb_b
+              ; typeof! @unfold1_nat_rect_fbb_b_b
+              ; typeof! @unfold1_list_rect_fbb_b
+              ; typeof! @unfold1_list_rect_fbb_b_b
+              ; typeof! @unfold1_list_rect_fbb_b_b_b
+              ; typeof! @unfold1_list_rect_fbb_b_b_b_b
+              ; typeof! @unfold1_list_rect_fbb_b_b_b_b_b
              ]
         ].
 
