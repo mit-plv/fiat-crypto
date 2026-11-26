@@ -166,6 +166,18 @@ Lemma Forall2_app_r_iff {A B R ls1 ls2 ls}
   : @List.Forall2 A B R ls (ls1 ++ ls2) <-> (List.Forall2 R (List.firstn (List.length ls1) ls) ls1 /\ List.Forall2 R (List.skipn (List.length ls1) ls) ls2).
 Proof. rewrite Forall2_flip_iff, Forall2_app_l_iff, <- !Forall2_flip_iff; reflexivity. Qed.
 
+Lemma Forall2_app_inv {A B: Type} (R: A -> B -> Prop) (l1 l2: list A) (l1' l2': list B):
+  length l1 = length l1' ->
+  Forall2 R (l1 ++ l2) (l1' ++ l2') ->
+  Forall2 R l1 l1' /\ Forall2 R l2 l2'.
+Proof.
+  intros Hlen HF.
+  rewrite Forall2_app_l_iff, Hlen in HF.
+  rewrite firstn_app, firstn_all, PeanoNat.Nat.sub_diag, firstn_O, app_nil_r in HF.
+  rewrite skipn_app, skipn_all, PeanoNat.Nat.sub_diag, skipn_O, app_nil_l in HF.
+  exact HF.
+Qed.
+
 Lemma eq_length_Forall2 {A B R ls1 ls2}
   : @List.Forall2 A B R ls1 ls2 -> List.length ls1 = List.length ls2.
 Proof using Type.
@@ -180,6 +192,11 @@ Lemma Forall2_combine {A B C D R1 R2 R3 ls1 ls2 ls3 ls4}
 Proof using Type.
   revert ls2 ls3 ls4; induction ls1, ls2, ls3, ls4; t_Forall2.
 Qed.
+
+Lemma Forall2_Forall_combine {A B: Type} (R: A -> B -> Prop) (l1: list A) (l2: list B):
+  Forall2 R l1 l2 ->
+  Forall (fun '(a, b) => R a b) (List.combine l1 l2).
+Proof using Type. induction 1; intros; simpl; constructor; auto. Qed.
 
 Lemma Forall_forall_iff_nth_error {A R ls}
   : @Forall A R ls

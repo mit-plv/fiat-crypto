@@ -16,22 +16,29 @@ Proof using Type.
   eapply Permutation.Permutation_middle.
 Qed.
 
+(* General case where the relation is an equivalence instead of equality *)
+Lemma fold_right_Proper_commutative_associative_Permutation_Equivalence {A} {R:A->A->Prop}
+  {Heq: Equivalence R} {op:A->A->A} {Hop: Proper (R ==> R ==> R) op}
+  (Hcomm : forall x y, R (op x y) (op y x))
+  (Hassoc : forall x y z, R (op x (op y z)) (op (op x y) z))
+  : Proper (R ==> @Permutation A ==> R) (fold_right op).
+Proof using Type.
+  assert (IH: forall x y, R x y -> forall l, R (fold_right op x l) (fold_right op y l)).
+  { intros x y HRxy l; induction l; cbn; auto.
+    rewrite IHl; reflexivity. }
+  intros init init' HR xs ys; specialize (IH _ _ HR); induction 1; cbn.
+  - assumption.
+  - rewrite IHPermutation. reflexivity.
+  - rewrite IH, Hassoc, Hassoc, (Hcomm y). reflexivity.
+  - rewrite IHPermutation1, <- IHPermutation2, IH. reflexivity.
+Qed.
+
 Global Instance fold_right_Proper_commutative_associative_Permutation {A op}
        (Hcomm : forall x y, op x y = op y x)
        (Hassoc : forall x y z, op x (op y z) = op (op x y) z)
   : Proper (eq ==> @Permutation A ==> eq) (fold_right op) | 1000.
 Proof using Type.
-  intros init init' <- xs ys; induction 1; cbn;
-    rewrite ?Hassoc;
-    repeat match goal with
-           | [ |- context[op ?x ?y] ]
-             => lazymatch goal with
-                | [ |- context[op y x] ]
-                  => rewrite (Hcomm x y)
-                end
-           end;
-    try reflexivity;
-    try now repeat match goal with H : _ |- _ => rewrite H; clear H end.
+  apply fold_right_Proper_commutative_associative_Permutation_Equivalence; auto.
 Qed.
 
 Module Nat.
