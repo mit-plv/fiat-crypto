@@ -1,6 +1,16 @@
 SECTION .text
 	GLOBAL fiat_p521_carry_square
 fiat_p521_carry_square:
+push qword [ rsi + 0x40 ]
+push qword [ rsi + 0x38 ]
+push qword [ rsi + 0x30 ]
+push qword [ rsi + 0x28 ]
+push qword [ rsi + 0x20 ]
+push qword [ rsi + 0x18 ]
+push qword [ rsi + 0x10 ]
+push qword [ rsi + 0x8 ]
+push qword [ rsi + 0x0 ]
+mov rsi, rsp
 sub rsp, 360
 mov rax, [ rsi + 0x28 ]
 lea r10, [rax + rax]
@@ -332,6 +342,7 @@ mov r13, [ rsp - 0x68 ]
 mov r14, [ rsp - 0x60 ]
 mov r15, [ rsp - 0x58 ]
 add rsp, 360
+add rsp, 72
 ret
 ; cpu Intel(R) Core(TM) i7-6770HQ CPU @ 2.60GHz
 ; ratio 1.4312
